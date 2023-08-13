@@ -7,7 +7,7 @@ Can also be executed as 'python -m sourmash'.
 
 def main(arglist=None):
     import sourmash
-    args = sourmash.cli.get_parser().parse_args(arglist)
+    args = sourmash.cli.parse_args(arglist)
     if hasattr(args, 'subcmd'):
         mod = getattr(sourmash.cli, args.cmd)
         submod = getattr(mod, args.subcmd)

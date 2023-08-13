@@ -332,6 +332,15 @@ def test_compare_quiet(runtmp):
     assert not c.last_result.err
 
 
+def test_compare_do_traverse_directory_parse_args(runtmp):
+    # test 'compare' on a directory, using sourmash.cli.parse_args.
+    import sourmash.commands, sourmash.cli
+    args = sourmash.cli.parse_args(['compare', '-k', '21', '--dna',
+                                    utils.get_test_data('compare')])
+
+    sourmash.commands.compare(args)
+
+
 def test_compare_do_traverse_directory(runtmp):
     # test 'compare' on a directory
     c = runtmp
