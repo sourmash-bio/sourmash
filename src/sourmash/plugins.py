@@ -139,7 +139,8 @@ def get_cli_scripts_descriptions():
 
         command = getattr(script_cls, 'command')
         description = getattr(script_cls, 'description', "")
-        description = description.splitlines()[0]
+        if description:
+            description = description.splitlines()[0]
         if not description:
             description = f"(no description provided by plugin '{name}')"
 
