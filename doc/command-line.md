@@ -474,7 +474,7 @@ searched in combination with `search`, `gather`, `compare`, etc.
 
 A motivating use case for `sourmash prefetch` is to run it on multiple
 large databases with a metagenome query using `--threshold-bp=0`,
-`--save-matching-hashes matching_hashes.sig`, and `--save-matches
+`--save-matching-hashes matching-hashes.sig`, and `--save-matches
 db-matches.sig`, and then run `sourmash gather matching-hashes.sig
 db-matches.sig`. 
 
@@ -1479,6 +1479,11 @@ then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
 
+`sig merge` can only merge compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
@@ -1510,6 +1515,11 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
+`sig subtract` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
@@ -1530,6 +1540,11 @@ in any signatures will be ignored and the output signature will have
 borrow abundances from the specified signature (which will also be added
 to the intersection).
 
+`sig intersect` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 ### `sourmash signature inflate` - transfer abundances from one signature to others
 
 Use abundances from one signature to provide abundances on other signatures.
@@ -1543,6 +1558,11 @@ will take the abundances from hashes `file1.sig` and use them to set
 the abundances on matching hashes in `file2.sig` and `file3.sig`.
 Any hashes that are not present in `file1.sig` will be removed from
 `file2.sig` and `file3.sig` as they will now have zero abundance.
+
+`sig inflate` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -1673,6 +1693,10 @@ sourmash signature overlap file1.sig file2.sig
 ```
 will display the detailed comparison of `file1.sig` and `file2.sig`.
 
+`sig overlap` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
 
 ### `sourmash signature kmers` - extract k-mers and/or sequences that match to signatures
 
