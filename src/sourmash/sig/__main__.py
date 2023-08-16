@@ -139,8 +139,8 @@ def split(args):
     _extend_signatures_with_from_file(args)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}' + args.extension
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}' + args.extension
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
@@ -487,6 +487,10 @@ def intersect(args):
                 sys.exit(-1)
 
         mins.intersection_update(sigobj.minhash.hashes)
+
+    if first_sig is None:
+        notify("no signatures provided to intersect!?")
+        sys.exit(-1)
 
     # forcibly turn off track_abundance, unless --abundances-from set.
     intersect_mh = first_sig.minhash.copy_and_clear().flatten()

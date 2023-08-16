@@ -132,3 +132,58 @@ def add_num_arg(parser, default=0):
         '-n', '--num-hashes', '--num', metavar='N', type=check_num_bounds, default=default,
         help='num value should be between 50 and 50000'
     )
+
+
+def check_rank(args):
+    """ Check '--rank'/'--position'/'--lin-position' argument matches selected taxonomy."""
+    standard_ranks =['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
+    if args.lins:
+        if args.rank.isdigit(): 
+            return str(args.rank)
+        raise argparse.ArgumentTypeError(f"Invalid '--rank'/'--position' input: '{args.rank}'. '--lins' is specified. Rank must be an integer corresponding to a LIN position.")
+    elif args.rank in standard_ranks:
+        return args.rank
+    else:
+        raise argparse.ArgumentTypeError(f"Invalid '--rank'/'--position' input: '{args.rank}'. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'")
+
+
+def add_rank_arg(parser):
+    parser.add_argument(
+        '-r', '--rank',
+        '--position', '--lin-position',
+        help="For non-default output formats. Classify to this rank (tax genome) or summarize taxonomy at this rank and above (tax metagenome). \
+              Note that the taxonomy CSV must contain lineage information at this rank, and that LIN positions start at 0. \
+              Choices: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom' or an integer LIN position"
+    )
+
+
+def check_tax_outputs(args, rank_required = ["krona"], incompatible_with_lins = None, use_lingroup_format=False):
+    "Handle ouput format combinations"
+    # check that rank is passed for formats requiring rank.
+    if not args.rank:
+        if any(x in rank_required for x in args.output_format):
+            raise ValueError(f"Rank (--rank) is required for {', '.join(rank_required)} output formats.")
+
+    if args.lins:
+        # check for outputs incompatible with lins
+        if incompatible_with_lins:
+            if any(x in args.output_format for x in incompatible_with_lins):
+                raise ValueError(f"The following outputs are incompatible with '--lins': : {', '.join(incompatible_with_lins)}")
+        # check that lingroup file exists if needed
+        if args.lingroup:
+            if use_lingroup_format and "lingroup" not in args.output_format:
+                args.output_format.append("lingroup")
+        elif "lingroup" in args.output_format:
+            raise ValueError(f"Must provide lingroup csv via '--lingroup' in order to output a lingroup report.")
+    elif args.lingroup or "lingroup" in args.output_format:
+        raise ValueError(f"Must enable LIN taxonomy via '--lins' in order to use lingroups.")
+
+    # check that only one output format is specified if writing to stdout
+    if len(args.output_format) > 1:
+        if args.output_base == "-":
+            raise ValueError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+    elif not args.output_format:
+        # change to "human" for 5.0
+        args.output_format = ["csv_summary"]
+
+    return args.output_format

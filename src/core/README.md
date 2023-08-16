@@ -3,7 +3,7 @@
 # sourmash
 
 🦀
-[![](http://meritbadge.herokuapp.com/sourmash)](https://crates.io/crates/sourmash)
+[![](https://img.shields.io/crates/v/sourmash.svg)](https://crates.io/crates/sourmash)
 [![Rust API Documentation on docs.rs](https://docs.rs/sourmash/badge.svg)](https://docs.rs/sourmash)
 [![build-status]][github-actions]
 [![codecov](https://codecov.io/gh/sourmash-bio/sourmash/branch/latest/graph/badge.svg)](https://codecov.io/gh/sourmash-bio/sourmash)
@@ -38,4 +38,4 @@ Development happens on github at
 
 ## Minimum supported Rust version
 
-Currently the minimum supported Rust version is 1.56.1.
+Currently the minimum supported Rust version is 1.64.0.

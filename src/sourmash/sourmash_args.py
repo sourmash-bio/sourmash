@@ -32,6 +32,9 @@ signature and file output functionality:
 
 * class FileOutput - file output context manager that deals w/stdout well
 * class FileOutputCSV - file output context manager for CSV files
+
+misc support:
+* FileInputCSV - context manager for reading CSVs
 """
 import sys
 import os

@@ -79,7 +79,7 @@ be stored, searched, explored, and taxonomically annotated.
 You can take a look at sourmash analyses on real data
 [in a saved Jupyter notebook](https://github.com/sourmash-bio/sourmash/blob/latest/doc/sourmash-examples.ipynb),
 and experiment with it yourself
-[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/sourmash-bio/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
+[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/sourmash-bio/sourmash/latest?labpath=doc%2Fsourmash-examples.ipynb)
 at [mybinder.org](http://mybinder.org).
 
 ## Installing sourmash
