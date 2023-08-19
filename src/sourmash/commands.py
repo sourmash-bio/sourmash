@@ -1085,7 +1085,6 @@ def multigather(args):
                 output_base = os.path.basename(query_filename) + "." + query.md5sum()
                 query_filename = query.md5sum()
 
-            output_base = os.path.basename(query_filename)
             if args.output_dir:
                 output_base = os.path.join(args.output_dir, output_base)
 
