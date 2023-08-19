@@ -3874,7 +3874,7 @@ def test_multigather_metagenome_output(runtmp):
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
-    output_csv = runtmp.output('-.csv')
+    output_csv = runtmp.output('-.csv') # @CTB
     assert os.path.exists(output_csv)
     with open(output_csv, newline='') as fp:
         x = fp.readlines()
@@ -3904,7 +3904,7 @@ def test_multigather_metagenome_output_outdir(runtmp):
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
-    output_csv = runtmp.output('savehere/-.csv')
+    output_csv = runtmp.output('savehere/-.csv') # @CTB
     assert os.path.exists(output_csv)
     with open(output_csv, newline='') as fp:
         x = fp.readlines()
@@ -5072,7 +5072,7 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
     assert "the recovered matches hit 91.0% of the abundance-weighted query." in out
     assert "the recovered matches hit 57.2% of the query k-mers (unweighted)." in out
 
-    assert os.path.exists(c.output('r3.fa.unassigned.sig'))
+    assert os.path.exists(c.output('r3.fa.unassigned.sig')) # @CTB
 
     nomatch = sourmash.load_one_signature(c.output('r3.fa.unassigned.sig'))
     assert nomatch.minhash.track_abundance

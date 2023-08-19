@@ -87,6 +87,10 @@ def subparser(subparsers):
         '--output-dir', '--outdir',
         help='output CSV results to this directory',
     )
+    subparser.add_argument(
+        '-U', '--output-add-query-md5sum',
+        help='add md5sum of each query to ensure unique output file names'
+    )
 
     add_ksize_arg(subparser)
     add_moltype_args(subparser)

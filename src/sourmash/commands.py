@@ -1077,13 +1077,17 @@ def multigather(args):
                 continue
 
             query_filename = query.filename
+            print('XYZ', query_filename)
             if not query_filename:
                 # use md5sum if query.filename not properly set
                 output_base = query.md5sum()
-            else:
+            elif args.output_add_query_md5sum:
                 # Uniquify the output file if all signatures were made from the same file (e.g. with --singleton)
                 output_base = os.path.basename(query_filename) + "." + query.md5sum()
-                query_filename = query.md5sum()
+            else:
+                output_base = os.path.basename(query_filename)
+
+            print('XXX', output_base)
 
             if args.output_dir:
                 output_base = os.path.join(args.output_dir, output_base)
