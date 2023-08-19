@@ -4001,8 +4001,8 @@ def test_multigather_metagenome_query_on_lca_db(c):
                 'NC_011663.1 Shewanella baltica OS223,' in out))
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_query_with_sbt_addl_query(c):
+def test_multigather_metagenome_query_with_sbt_addl_query(runtmp):
+    c = runtmp
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -4019,7 +4019,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
 
     assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
-    cmd = 'multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0 -U'.format(another_query, another_query)
+    cmd = 'multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0'.format(another_query, another_query)
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
@@ -4045,8 +4045,40 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
                 'NC_003198.1 Salmonella enterica subsp' in out))
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
+def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite(runtmp):
+    # provide multiple identical queries - fails
+    c = runtmp
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    cmd = 'multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query, another_query)
+    cmd = cmd.split(' ')
+
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing." in err
+
+
+def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
+    c = runtmp
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -4068,7 +4100,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     with open(query_list, 'wt') as fp:
         print('gcf_all.sbt.zip', file=fp)
 
-    cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0 -U'.format(another_query, query_list, another_query)
+    cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0'.format(another_query, query_list, another_query)
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
