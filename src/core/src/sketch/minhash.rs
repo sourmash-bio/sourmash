@@ -644,8 +644,7 @@ impl KmerMinHash {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
+            return Err(Error::NeedsAbundanceTracking);
         }
 
         // TODO: check which one is smaller, swap around if needed
@@ -778,21 +777,7 @@ impl KmerMinHash {
     // create a downsampled copy of self
     pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
         let max_hash = max_hash_for_scaled(scaled);
-
-        let mut new_mh = KmerMinHash::new(
-            max_hash, // old max_hash => max_hash arg
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-        } else {
-            new_mh.add_many(&self.mins)?;
-        }
-        Ok(new_mh)
+        self.downsample_max_hash(max_hash)
     }
 }
 
@@ -1072,7 +1057,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             values.sort();
             let mins: BTreeSet<_> = values.iter().map(|(v, _)| **v).collect();
             let abunds = values.into_iter().map(|(v, x)| (*v, *x)).collect();
-            current_max = *mins.iter().rev().next().unwrap_or(&0);
+            current_max = *mins.iter().next_back().unwrap_or(&0);
             (mins, Some(abunds))
         } else {
             current_max = 0;
@@ -1259,13 +1244,13 @@ impl KmerMinHashBTree {
 
             // is it too big now?
             if self.num != 0 && self.mins.len() > (self.num as usize) {
-                let last = *self.mins.iter().rev().next().unwrap();
+                let last = *self.mins.iter().next_back().unwrap();
                 self.mins.remove(&last);
                 self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.remove(&last);
                 }
-                self.current_max = *self.mins.iter().rev().next().unwrap();
+                self.current_max = *self.mins.iter().next_back().unwrap();
             }
         }
     }
@@ -1283,7 +1268,7 @@ impl KmerMinHashBTree {
             }
         }
         if hash == self.current_max {
-            self.current_max = *self.mins.iter().rev().next().unwrap_or(&0);
+            self.current_max = *self.mins.iter().next_back().unwrap_or(&0);
         }
     }
 
@@ -1444,8 +1429,7 @@ impl KmerMinHashBTree {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
+            return Err(Error::NeedsAbundanceTracking);
         }
 
         let abunds = self.abunds.as_ref().unwrap();
@@ -1539,6 +1523,12 @@ impl KmerMinHashBTree {
         Ok(new_mh)
     }
 
+    // create a downsampled copy of self
+    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
+        let max_hash = max_hash_for_scaled(scaled);
+        self.downsample_max_hash(max_hash)
+    }
+
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             abunds.iter().map(|(a, b)| (*a, *b)).collect()
@@ -1627,6 +1617,30 @@ impl From<KmerMinHashBTree> for KmerMinHash {
     }
 }
 
+impl From<&KmerMinHashBTree> for KmerMinHash {
+    fn from(other: &KmerMinHashBTree) -> KmerMinHash {
+        let mut new_mh = KmerMinHash::new(
+            other.scaled(),
+            other.ksize() as u32,
+            other.hash_function(),
+            other.seed(),
+            other.track_abundance(),
+            other.num(),
+        );
+
+        let mins = other.mins.iter().copied().collect();
+        let abunds = other
+            .abunds
+            .as_ref()
+            .map(|abunds| abunds.values().cloned().collect());
+
+        new_mh.mins = mins;
+        new_mh.abunds = abunds;
+
+        new_mh
+    }
+}
+
 impl From<KmerMinHash> for KmerMinHashBTree {
     fn from(other: KmerMinHash) -> KmerMinHashBTree {
         let mut new_mh = KmerMinHashBTree::new(
@@ -1641,7 +1655,7 @@ impl From<KmerMinHash> for KmerMinHashBTree {
         let mins: BTreeSet<u64> = other.mins.into_iter().collect();
         let abunds = other
             .abunds
-            .map(|abunds| mins.iter().cloned().zip(abunds.into_iter()).collect());
+            .map(|abunds| mins.iter().cloned().zip(abunds).collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;

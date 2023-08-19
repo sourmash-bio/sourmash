@@ -6,7 +6,7 @@ class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
-from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_chernoff
+from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_exact_prob
 from .logging import notify
 
 import numpy as np
@@ -103,6 +103,39 @@ def translate_codon(codon):
         raise ValueError(e.message)
 
 
+def flatten_and_downsample_scaled(mh, *scaled_vals):
+    "Flatten MinHash object and downsample to max of scaled values."
+    assert mh.scaled
+    assert all( (x > 0 for x in scaled_vals) )
+
+    mh = mh.flatten()
+    scaled = max(scaled_vals)
+    if scaled > mh.scaled:
+        return mh.downsample(scaled=scaled)
+    return mh
+
+
+def flatten_and_downsample_num(mh, *num_vals):
+    "Flatten MinHash object and downsample to min of num values."
+    assert mh.num
+    assert all( (x > 0 for x in num_vals) )
+
+    mh = mh.flatten()
+    num = min(num_vals)
+    if num < mh.num:
+        return mh.downsample(num=num)
+    return mh
+
+
+def flatten_and_intersect_scaled(mh1, mh2):
+    "Flatten and downsample two scaled MinHash objs, then return intersection."
+    scaled = max(mh1.scaled, mh2.scaled)
+    mh1 = mh1.flatten().downsample(scaled=scaled)
+    mh2 = mh2.flatten().downsample(scaled=scaled)
+
+    return mh1 & mh2
+
+
 class _HashesWrapper(Mapping):
     "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
@@ -159,6 +192,7 @@ class MinHash(RustObject):
         self,
         n,
         ksize,
+        *,
         is_protein=False,
         dayhoff=False,
         hp=False,
@@ -241,9 +275,13 @@ class MinHash(RustObject):
 
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
+
+        # note: we multiple ksize by 3 here so that
+        # pickle protocols that bypass __setstate__ <coff numpy coff>
+        # get a ksize that makes sense to the Rust layer. See #2262.
         return (
             self.num,
-            self.ksize,
+            self.ksize if self.is_dna else self.ksize*3,
             self.is_protein,
             self.dayhoff,
             self.hp,
@@ -286,12 +324,12 @@ class MinHash(RustObject):
         a = MinHash(
             self.num,
             self.ksize,
-            self.is_protein,
-            self.dayhoff,
-            self.hp,
-            self.track_abundance,
-            self.seed,
-            self._max_hash,
+            is_protein=self.is_protein,
+            dayhoff=self.dayhoff,
+            hp=self.hp,
+            track_abundance=self.track_abundance,
+            seed=self.seed,
+            max_hash=self._max_hash,
         )
         return a
 
@@ -620,8 +658,10 @@ class MinHash(RustObject):
 
         # end checks! create new object:
         a = MinHash(
-            num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            self.track_abundance, self.seed, max_hash
+            num, self.ksize,
+            is_protein=self.is_protein, dayhoff=self.dayhoff, hp=self.hp,
+            track_abundance=self.track_abundance, seed=self.seed,
+            max_hash=max_hash
         )
         # copy over hashes:
         if self.track_abundance:
@@ -636,8 +676,9 @@ class MinHash(RustObject):
         if self.track_abundance:
             # create new object:
             a = MinHash(
-                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-                False, self.seed, self._max_hash
+                self.num, self.ksize,
+                is_protein=self.is_protein, dayhoff=self.dayhoff, hp=self.hp,
+                track_abundance=False, seed=self.seed, max_hash=self._max_hash
             )
             a.add_many(self)
 
@@ -708,16 +749,24 @@ class MinHash(RustObject):
         Calculate how much of self is contained by other.
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
-        if not len(self):
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
+        denom = len(self)
+        if not denom:
             return 0.0
-        return self.count_common(other, downsample) / len(self)
-        # with bias factor
-        #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
+        total_denom = float(denom * self.scaled) # would be better if hll estimate - see #1798
+        bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
+        containment = self.count_common(other, downsample) / (denom * bias_factor)
+        # debiasing containment can lead to vals outside of 0-1 range. constrain.
+        if containment >= 1:
+            return 1.0
+        elif containment <= 0:
+            return 0.0
+        else:
+            return containment
 
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
-        "Use containment to estimate ANI between two MinHash objects."
+        "Use self contained by other to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
         self_mh = self
@@ -739,20 +788,27 @@ class MinHash(RustObject):
             c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
-
     def max_containment(self, other, downsample=False):
         """
         Calculate maximum containment.
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         min_denom = min((len(self), len(other)))
         if not min_denom:
             return 0.0
+        total_denom =  float(min_denom * self.scaled) # would be better if hll estimate - see #1798
+        bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
+        max_containment = self.count_common(other, downsample) / (min_denom * bias_factor)
+        # debiasing containment can lead to vals outside of 0-1 range. constrain.
+        if max_containment >= 1:
+            return 1.0
+        elif max_containment <= 0:
+            return 0.0
+        else:
+            return max_containment
 
-        return self.count_common(other, downsample) / min_denom
-
-    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):
+    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):  
         "Use max_containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
@@ -782,7 +838,7 @@ class MinHash(RustObject):
         Note: this is average of the containments, *not* count_common/ avg_denom
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
 
         c1 = self.contained_by(other, downsample)
         c2 = other.contained_by(self, downsample)
@@ -882,8 +938,12 @@ class MinHash(RustObject):
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
         new_mh = self.__copy__()
-        new_mh.__class__ = FrozenMinHash
+        new_mh.into_frozen()
         return new_mh
+
+    def into_frozen(self):
+        "Freeze this MinHash, preventing any changes."
+        self.__class__ = FrozenMinHash
 
     def inflate(self, from_mh):
         """return a new MinHash object with abundances taken from 'from_mh'
@@ -937,9 +997,9 @@ class MinHash(RustObject):
         if not self.scaled:
             raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
         # TODO: replace set_size with HLL estimate when that gets implemented
-        return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
+        return len(self) * self.scaled # + (self.ksize - 1) for bp estimation
 
-    def size_is_accurate(self, relative_error=0.05, confidence=0.95):
+    def size_is_accurate(self, relative_error=0.20, confidence=0.95):
         """
         Computes the probability that the estimate: sketch_size * scaled deviates from the true
         set_size by more than relative_error. This relies on the fact that the sketch_size
@@ -952,7 +1012,7 @@ class MinHash(RustObject):
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         # to do: replace unique_dataset_hashes with HLL estimation when it gets implemented 
-        probability = set_size_chernoff(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
+        probability = set_size_exact_prob(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
         return probability >= confidence
 
 
@@ -990,12 +1050,16 @@ class FrozenMinHash(MinHash):
         if num and self.num == num:
             return self
 
-        return MinHash.downsample(self, num=num, scaled=scaled).to_frozen()
+        down_mh = MinHash.downsample(self, num=num, scaled=scaled)
+        down_mh.into_frozen()
+        return down_mh
 
     def flatten(self):
         if not self.track_abundance:
             return self
-        return MinHash.flatten(self).to_frozen()
+        flat_mh = MinHash.flatten(self)
+        flat_mh.into_frozen()
+        return flat_mh
 
     def __iadd__(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
@@ -1008,17 +1072,16 @@ class FrozenMinHash(MinHash):
         mut = MinHash.__new__(MinHash)
         state_tup = self.__getstate__()
 
-        # is protein/hp/dayhoff?
-        if state_tup[2] or state_tup[3] or state_tup[4]:
-            state_tup = list(state_tup)
-            # adjust ksize.
-            state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut
 
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
         return self
+
+    def into_frozen(self):
+        "Freeze this MinHash, preventing any changes."
+        pass
 
     def __setstate__(self, tup):
         "support pickling via __getstate__/__setstate__"

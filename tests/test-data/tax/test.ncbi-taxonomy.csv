@@ -1,0 +1,7 @@
+ident,taxid,superkingdom,phylum,class,order,family,genus,species,strain,taxpath
+GCF_001881345.1,562,Bacteria,Pseudomonadota,Gammaproteobacteria,Enterobacterales,Enterobacteriaceae,Escherichia,Escherichia coli,,2|1224|1236|91347|543|561|562|
+GCF_009494285.1,165179,Bacteria,Bacteroidota,Bacteroidia,Bacteroidales,Prevotellaceae,Prevotella,Prevotella copri,,2|976|200643|171549|171552|838|165179|
+GCF_013368705.1,821,Bacteria,Bacteroidota,Bacteroidia,Bacteroidales,Bacteroidaceae,Phocaeicola,Phocaeicola vulgatus,,2|976|200643|171549|815|909656|821|
+GCF_003471795.1,165179,Bacteria,Bacteroidota,Bacteroidia,Bacteroidales,Prevotellaceae,Prevotella,Prevotella copri,,2|976|200643|171549|171552|838|165179|
+GCF_000017325.1,402882,Bacteria,Pseudomonadota,Gammaproteobacteria,Alteromonadales,Shewanellaceae,Shewanella,Shewanella baltica,Shewanella baltica OS185,2|1224|1236|135622|267890|22|62322|402882
+GCF_000021665.1,407976,Bacteria,Pseudomonadota,Gammaproteobacteria,Alteromonadales,Shewanellaceae,Shewanella,Shewanella baltica,Shewanella baltica OS223,2|1224|1236|135622|267890|22|62322|407976

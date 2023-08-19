@@ -11,6 +11,31 @@ from .signature import SourmashSignature, MinHash
 from .sketchcomparison import FracMinHashComparison, NumMinHashComparison
 
 
+def calc_threshold_from_bp(threshold_bp, scaled, query_size):
+    """
+    Convert threshold_bp (threshold in estimated bp) to
+    fraction of query & minimum number of hashes needed.
+    """
+    threshold = 0.0
+    n_threshold_hashes = 0
+
+    if threshold_bp:
+        if threshold_bp < 0:
+            raise TypeError("threshold_bp must be non-negative")
+
+        # if we have a threshold_bp of N, then that amounts to N/scaled
+        # hashes:
+        n_threshold_hashes = float(threshold_bp) / scaled
+
+        # that then requires the following containment:
+        threshold = n_threshold_hashes / query_size
+
+        # is it too high to ever match?
+        if threshold > 1.0:
+            raise ValueError("requested threshold_bp is unattainable with this query")
+    return threshold, n_threshold_hashes
+
+
 class SearchType(Enum):
     JACCARD = 1
     CONTAINMENT = 2
@@ -43,8 +68,8 @@ def make_jaccard_search_query(*,
     return search_obj
 
 
-def make_gather_query(query_mh, threshold_bp, *, best_only=True):
-    "Make a search object for gather."
+def make_containment_query(query_mh, threshold_bp, *, best_only=True):
+    "Make a search object for containment, with threshold_bp."
     if not query_mh:
         raise ValueError("query is empty!?")
 
@@ -53,21 +78,7 @@ def make_gather_query(query_mh, threshold_bp, *, best_only=True):
         raise TypeError("query signature must be calculated with scaled")
 
     # are we setting a threshold?
-    threshold = 0
-    if threshold_bp:
-        if threshold_bp < 0:
-            raise TypeError("threshold_bp must be non-negative")
-
-        # if we have a threshold_bp of N, then that amounts to N/scaled
-        # hashes:
-        n_threshold_hashes = threshold_bp / scaled
-
-        # that then requires the following containment:
-        threshold = n_threshold_hashes / len(query_mh)
-
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
-            raise ValueError("requested threshold_bp is unattainable with this query")
+    threshold, _ = calc_threshold_from_bp(threshold_bp, scaled, len(query_mh))
 
     if best_only:
         search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
@@ -224,8 +235,8 @@ class BaseResult:
         # could define in PrefetchResult instead, same reasoning as above
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
-        self.query_n_hashes = len(self.mh1.hashes)
-        self.match_n_hashes = len(self.mh2.hashes)
+        self.query_n_hashes = len(self.mh1)
+        self.match_n_hashes = len(self.mh2)
 
     @property
     def pass_threshold(self):
@@ -308,15 +319,15 @@ class SearchResult(BaseResult):
     def estimate_search_ani(self):
         #future: could estimate ANI from abund searches if we want (use query containment?)
         if self.cmp_scaled is None:
-            raise TypeError("ANI can only be estimated from scaled signatures.")
+            raise TypeError("Error: ANI can only be estimated from scaled signatures.")
         if self.searchtype == SearchType.CONTAINMENT:
-            self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
-            self.ani = self.cmp.mh1_containment_ani
+            self.cmp.estimate_ani_from_mh1_containment_in_mh2(containment = self.similarity)
+            self.ani = self.cmp.ani_from_mh1_containment_in_mh2
             if self.estimate_ani_ci:
-                self.ani_low = self.cmp.mh1_containment_ani_low
-                self.ani_high = self.cmp.mh1_containment_ani_high
+                self.ani_low = self.cmp.ani_from_mh1_containment_in_mh2_low
+                self.ani_high = self.cmp.ani_from_mh1_containment_in_mh2_high
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
-            self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
+            self.cmp.estimate_max_containment_ani()
             self.ani = self.cmp.max_containment_ani
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.max_containment_ani_low
@@ -366,8 +377,8 @@ class PrefetchResult(BaseResult):
 
     def estimate_containment_ani(self):
         self.cmp.estimate_all_containment_ani()
-        self.query_containment_ani = self.cmp.mh1_containment_ani
-        self.match_containment_ani = self.cmp.mh2_containment_ani
+        self.query_containment_ani = self.cmp.ani_from_mh1_containment_in_mh2
+        self.match_containment_ani = self.cmp.ani_from_mh2_containment_in_mh1
         self.average_containment_ani = self.cmp.avg_containment_ani
         self.max_containment_ani = self.cmp.max_containment_ani
         self.potential_false_negative = self.cmp.potential_false_negative
@@ -375,16 +386,16 @@ class PrefetchResult(BaseResult):
             self.handle_ani_ci()
 
     def handle_ani_ci(self):
-        self.query_containment_ani_low = self.cmp.mh1_containment_ani_low
-        self.query_containment_ani_high = self.cmp.mh1_containment_ani_high
-        self.match_containment_ani_low = self.cmp.mh2_containment_ani_low
-        self.match_containment_ani_high = self.cmp.mh2_containment_ani_high
+        self.query_containment_ani_low = self.cmp.ani_from_mh1_containment_in_mh2_low
+        self.query_containment_ani_high = self.cmp.ani_from_mh1_containment_in_mh2_high
+        self.match_containment_ani_low = self.cmp.ani_from_mh2_containment_in_mh1_low
+        self.match_containment_ani_high = self.cmp.ani_from_mh2_containment_in_mh1_high
 
     def build_prefetch_result(self):
         # unique prefetch values
         self.jaccard = self.cmp.jaccard
-        self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
-        self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+        self.f_query_match = self.cmp.mh2_containment_in_mh1 #db_mh.contained_by(query_mh)
+        self.f_match_query = self.cmp.mh1_containment_in_mh2 #query_mh.contained_by(db_mh)
         # set write columns for prefetch result
         self.write_cols = self.prefetch_write_cols
         if self.estimate_ani_ci:
@@ -417,9 +428,10 @@ class PrefetchResult(BaseResult):
 class GatherResult(PrefetchResult):
     gather_querymh: MinHash = None
     gather_result_rank: int = None
-    total_abund: int = None
     orig_query_len: int = None
     orig_query_abunds: list = None
+    sum_weighted_found: int = None
+    total_weighted_hashes: int = None
 
     gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
@@ -427,7 +439,9 @@ class GatherResult(PrefetchResult):
                          'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
                          'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
                          'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
-                         'potential_false_negative']
+                         'potential_false_negative',
+                         'n_unique_weighted_found', 'sum_weighted_found',
+                         'total_weighted_hashes']
 
     ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
                    "match_containment_ani_low", "match_containment_ani_high"]
@@ -446,8 +460,8 @@ class GatherResult(PrefetchResult):
             raise ValueError("Error: must provide current gather sketch (remaining hashes) for GatherResult")
         if self.gather_result_rank is None:
             raise ValueError("Error: must provide 'gather_result_rank' to GatherResult")
-        if not self.total_abund: # catch total_abund = 0 as well
-            raise ValueError("Error: must provide sum of all abundances ('total_abund') to GatherResult")
+        if not self.total_weighted_hashes: # catch total_weighted_hashes = 0 as well
+            raise ValueError("Error: must provide sum of all abundances ('total_weighted_hashes') to GatherResult")
         if not self.orig_query_abunds:
             raise ValueError("Error: must provide original query abundances ('orig_query_abunds') to GatherResult")
 
@@ -465,10 +479,10 @@ class GatherResult(PrefetchResult):
         self.unique_intersect_bp = self.gather_comparison.total_unique_intersect_hashes
     
         # calculate fraction of subject match with orig query
-        self.f_match_orig = self.cmp.mh2_containment
+        self.f_match_orig = self.cmp.mh2_containment_in_mh1
 
         # calculate fractions wrt first denominator - genome size
-        self.f_match = self.gather_comparison.mh2_containment # unique match containment
+        self.f_match = self.gather_comparison.mh2_containment_in_mh1 # unique match containment
         self.f_orig_query = len(self.cmp.intersect_mh) / self.orig_query_len
         assert self.gather_comparison.intersect_mh.contained_by(self.gather_comparison.mh1_cmp) == 1.0
     
@@ -488,10 +502,12 @@ class GatherResult(PrefetchResult):
             self.std_abund = self.query_weighted_unique_intersection.std_abundance
             # 'query' will be flattened by default. reset track abundance if we have abunds
             self.query_abundance = self.query_weighted_unique_intersection.track_abundance
-             # calculate scores weighted by abundances
-            self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
+            # calculate scores weighted by abundances
+            self.n_unique_weighted_found = self.query_weighted_unique_intersection.sum_abundances
+            self.f_unique_weighted = self.n_unique_weighted_found / self.total_weighted_hashes
         else:
             self.f_unique_weighted = self.f_unique_to_query
+            self.query_abundance = False
 
     def __post_init__(self):
         self.check_gatherresult_input()
@@ -525,8 +541,8 @@ class GatherResult(PrefetchResult):
         if self.estimate_ani_ci:
             prefetch_cols = self.prefetch_write_cols_ci
         self.jaccard = self.cmp.jaccard
-        self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
-        self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+        self.f_query_match = self.cmp.mh2_containment_in_mh1 #db_mh.contained_by(query_mh)
+        self.f_match_query = self.cmp.mh1_containment_in_mh2 #query_mh.contained_by(db_mh)
         self.prep_prefetch_result()
         return self.to_write(columns=prefetch_cols)
 
@@ -535,7 +551,7 @@ def format_bp(bp):
     "Pretty-print bp information."
     bp = float(bp)
     if bp < 500:
-        return '{:.0f} bp '.format(bp)
+        return '{:.0f} bp'.format(bp)
     elif bp <= 500e3:
         return '{:.1f} kbp'.format(round(bp / 1e3, 1))
     elif bp < 500e6:
@@ -621,7 +637,7 @@ def _find_best(counters, query, threshold_bp):
 
     # find the best score across multiple counters, without consuming
     for counter in counters:
-        result = counter.peek(query.minhash, threshold_bp)
+        result = counter.peek(query.minhash, threshold_bp=threshold_bp)
         if result:
             (sr, intersect_mh) = result
 
@@ -643,7 +659,7 @@ class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
     def __init__(self, query, counters, *,
-                 threshold_bp=0, ignore_abundance=False, noident_mh=None, estimate_ani_ci=False):
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None, ident_mh=None, estimate_ani_ci=False):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
@@ -664,11 +680,17 @@ class GatherDatabases:
             noident_mh = query_mh.copy_and_clear()
         self.noident_mh = noident_mh.to_frozen()
 
-        query_mh = query_mh.to_mutable()
-        query_mh.remove_many(noident_mh)
+        if ident_mh is None:
+            query_mh = query_mh.to_mutable()
+            query_mh.remove_many(noident_mh)
+        else:
+            query_mh = ident_mh.to_mutable()
 
         orig_query_mh = query_mh.flatten()
-        query.minhash = orig_query_mh.to_mutable()
+
+        # query.minhash will be assigned to repeatedly in gather; make mutable.
+        query = query.to_mutable()
+        query.minhash = orig_query_mh
 
         cmp_scaled = query.minhash.scaled    # initialize with resolution of query
 
@@ -761,31 +783,32 @@ class GatherDatabases:
         new_query_mh.remove_many(found_mh)
         new_query = SourmashSignature(new_query_mh)
 
-        # compute weighted_missed for remaining query hashes
+        # compute weighted information for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
-        weighted_missed += self.noident_query_sum_abunds
-        weighted_missed /= sum_abunds
+        n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
+        n_weighted_missed += self.noident_query_sum_abunds
+        sum_weighted_found = sum_abunds - n_weighted_missed
 
         # build a GatherResult
         result = GatherResult(self.orig_query, best_match,
                               cmp_scaled=scaled,
                               filename=filename,
                               gather_result_rank=self.result_n,
-                              total_abund= sum_abunds,
                               gather_querymh=query.minhash,
                               ignore_abundance= not track_abundance,
                               threshold_bp=threshold_bp,
                               orig_query_len=orig_query_len,
                               orig_query_abunds = self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
+                              sum_weighted_found=sum_weighted_found,
+                              total_weighted_hashes=sum_abunds,
                               )
 
         self.result_n += 1
         self.query = new_query
         self.orig_query_mh = orig_query_mh
 
-        return result, weighted_missed
+        return result
 
 
 ###

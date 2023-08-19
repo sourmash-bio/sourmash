@@ -5,6 +5,7 @@ on:
     branches: [latest]
   pull_request:
     paths:
+      - 'Cargo.lock'
       - 'src/core/**'
       - 'tests/test-data/**'
       - '.github/workflows/rust.yml'
@@ -63,7 +64,7 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
 
@@ -90,7 +91,7 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
 
@@ -267,26 +268,17 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.48.0
+          toolchain: "1.64.0"
           override: true
 
       - name: check if README matches MSRV defined here
-        run: grep '1.48.0' src/core/README.md
-
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.8"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
+        run: grep '1.64.0' src/core/README.md
 
       - name: Check if it builds properly
         uses: actions-rs/cargo@v1
         with:
           command: build
+          args: --all-features --tests
 
   check_cbindgen:
     name: "Check if cbindgen runs cleanly for generating the C headers"

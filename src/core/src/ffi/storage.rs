@@ -64,7 +64,7 @@ unsafe fn zipstorage_list_sbts(
     // FIXME: use the ForeignObject trait, maybe define new method there...
     let ptr_sigs: Vec<*mut SourmashStr> = sbts
         .into_iter()
-        .map(|x| Box::into_raw(Box::new(SourmashStr::from_string(x))) as *mut SourmashStr)
+        .map(|x| Box::into_raw(Box::new(SourmashStr::from_string(x))))
         .collect();
 
     let b = ptr_sigs.into_boxed_slice();
@@ -86,7 +86,7 @@ unsafe fn zipstorage_filenames(
     // FIXME: use the ForeignObject trait, maybe define new method there...
     let ptr_sigs: Vec<*mut SourmashStr> = files
         .into_iter()
-        .map(|x| Box::into_raw(Box::new(SourmashStr::from_string(x))) as *mut SourmashStr)
+        .map(|x| Box::into_raw(Box::new(SourmashStr::from_string(x))))
         .collect();
 
     let b = ptr_sigs.into_boxed_slice();

@@ -22,7 +22,7 @@ type IdxTracker = (vec_collections::VecSet<[Idx; 4]>, u64);
 type ColorToIdx = HashMap<Color, IdxTracker, BuildNoHashHasher<Color>>;
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum HashFunctions {
     murmur64_DNA = 1,
@@ -352,9 +352,9 @@ pub fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
 
         let residue = translate_codon(chunk)?;
         if dayhoff {
-            converted.push(aa_to_dayhoff(residue) as u8);
+            converted.push(aa_to_dayhoff(residue));
         } else if hp {
-            converted.push(aa_to_hp(residue) as u8);
+            converted.push(aa_to_hp(residue));
         } else {
             converted.push(residue);
         }

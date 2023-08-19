@@ -62,7 +62,7 @@ def subparser(subparsers):
         choices=['csv', 'sql'],
     )
 
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_pattern_args(subparser)
     add_picklist_args(subparser)

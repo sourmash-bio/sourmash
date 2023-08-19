@@ -11,23 +11,19 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Cache nix store
-      id: cache-nix
-      uses: actions/cache@v3
+    - uses: cachix/install-nix-action@v22
       with:
-        path: |
-          ~/.nix-portable/store
-          ~/bin/nix-portable
-        key: nix-${{ hashFiles('shell.nix') }}-${{ hashFiles('nix/**') }}-v009
+        extra_nix_config: |
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install nix-portable
-      if: steps.cache-nix.outputs.cache-hit != 'true'
-      run: |
-        mkdir ~/bin
-        wget -qO ~/bin/nix-portable https://github.com/DavHau/nix-portable/releases/download/v009/nix-portable
-        chmod +x ~/bin/nix-portable
+    - uses: cachix/cachix-action@v12
+      with:
+        name: sourmash-bio
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-    - run: ~/bin/nix-portable nix-shell --command "tox -e py39"
+    - run: nix run .# -- --version
+
+    - run: nix-shell --command "tox -e py310"
 
   mamba:
     runs-on: ubuntu-latest
@@ -46,7 +42,7 @@ jobs:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
 
     - name: setup conda
-      uses: conda-incubator/setup-miniconda@35d1405e78aa3f784fe3ce9a2eb378d5eeb62169
+      uses: conda-incubator/setup-miniconda@3b0f2504dd76ef23b6d31f291f4913fb60ab5ff3
       with:
         auto-update-conda: true
         python-version: 3.9

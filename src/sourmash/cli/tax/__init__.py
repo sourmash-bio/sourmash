@@ -8,6 +8,9 @@ from . import metagenome
 from . import genome
 from . import annotate
 from . import prepare
+from . import grep
+from . import summarize
+
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os

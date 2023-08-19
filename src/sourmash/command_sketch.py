@@ -85,7 +85,7 @@ def _parse_params_str(params_str):
     return moltype, params
 
 
-class _signatures_for_sketch_factory(object):
+class _signatures_for_sketch_factory:
     "Build sigs on demand, based on args input to 'sketch'."
     def __init__(self, params_str_list, default_moltype):
         # first, set up defaults per-moltype
@@ -424,11 +424,10 @@ def fromfile(args):
     skipped_sigs = 0
     n_missing_name = 0
     n_duplicate_name = 0
+    duplicate_names = set()
 
     for csvfile in args.csvs:
-        with open(csvfile, newline="") as fp:
-            r = csv.DictReader(fp)
-
+        with sourmash_args.FileInputCSV(csvfile) as r:
             for row in r:
                 name = row['name']
                 if not name:
@@ -441,11 +440,14 @@ def fromfile(args):
 
                 if name in all_names:
                     n_duplicate_name += 1
+                    duplicate_names.add(name)
                 else:
                     all_names[name] = (genome, proteome)
 
     fail_exit = False
     if n_duplicate_name:
+        if args.report_duplicated:
+            notify("duplicated:\n" + '\n'.join(sorted(duplicate_names)))
         error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting!")
         fail_exit = True
 

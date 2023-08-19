@@ -9,7 +9,7 @@ import glob
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import load_one_signature, SourmashSignature, sourmash_args
 
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
@@ -152,6 +152,9 @@ def test_api_create_insert_bad_ident():
                                       ksize=31)
     ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
                                       ksize=31)
+    ss1 = ss1.to_mutable()
+    ss2 = ss2.to_mutable()
+
     ss1.name = ''
     ss1.filename = ''
     ss2.name = ''
@@ -335,10 +338,10 @@ def test_api_create_gather():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
 
-    results = lca_db.gather(ss, threshold_bp=0)
-    print(results)
-    assert len(results) == 1
-    (similarity, match, filename) = results[0]
+    result = lca_db.best_containment(ss, threshold_bp=0)
+    print(result)
+    assert result
+    (similarity, match, filename) = result
     assert match.minhash == ss.minhash
 
 
@@ -416,7 +419,36 @@ def test_api_create_insert_two_then_scale():
     # downsample everything to 5000
     lca_db.downsample_scaled(5000)
 
+    minhash = ss.minhash.downsample(scaled=5000)
+    minhash2 = ss2.minhash.downsample(scaled=5000)
+
+    # & check...
+    combined_mins = set(minhash.hashes.keys())
+    combined_mins.update(set(minhash2.hashes.keys()))
+    assert len(lca_db._hashval_to_idx) == len(combined_mins)
+
+
+def test_api_create_insert_two_then_scale_then_add():
+    # construct database, THEN downsample, then add another
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    # downsample everything to 5000
+    lca_db.downsample_scaled(5000)
+
+    # insert another after downsample
+    lca_db.insert(ss2)
+
+    # now test -
+    ss = ss.to_mutable()
     ss.minhash = ss.minhash.downsample(scaled=5000)
+
+    ss2 = ss2.to_mutable()
     ss2.minhash = ss2.minhash.downsample(scaled=5000)
 
     # & check...
@@ -440,12 +472,12 @@ def test_api_create_insert_scale_two():
     lca_db.insert(ss2)
 
     # downsample sigs to 5000
-    ss.minhash = ss.minhash.downsample(scaled=5000)
-    ss2.minhash = ss2.minhash.downsample(scaled=5000)
+    minhash = ss.minhash.downsample(scaled=5000)
+    minhash2 = ss2.minhash.downsample(scaled=5000)
 
     # & check...
-    combined_mins = set(ss.minhash.hashes.keys())
-    combined_mins.update(set(ss2.minhash.hashes.keys()))
+    combined_mins = set(minhash.hashes.keys())
+    combined_mins.update(set(minhash2.hashes.keys()))
     assert len(lca_db._hashval_to_idx) == len(combined_mins)
 
 
@@ -644,20 +676,22 @@ def test_search_db_scaled_gt_sig_scaled():
     results = db.search(sig, threshold=.01, ignore_abundance=True)
     match_sig = results[0][1]
 
-    sig.minhash = sig.minhash.downsample(scaled=10000)
-    assert sig.minhash == match_sig.minhash
+    minhash = sig.minhash.downsample(scaled=10000)
+    assert minhash == match_sig.minhash
 
 
 def test_search_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+
+    sig = sig.to_mutable()
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
     results = db.search(sig, threshold=.01, ignore_abundance=True)
     print(results)
-    assert results[0][0] == 1.0
-    match = results[0][1]
+    assert results[0].score == 1.0
+    match = results[0].signature
 
     orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
@@ -668,24 +702,24 @@ def test_gather_db_scaled_gt_sig_scaled():
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
 
-    results = db.gather(sig, threshold=.01, ignore_abundance=True)
-    match_sig = results[0][1]
+    result = db.best_containment(sig, threshold=.01, ignore_abundance=True)
+    match_sig = result[1]
 
-    sig.minhash = sig.minhash.downsample(scaled=10000)
-    assert sig.minhash == match_sig.minhash
+    minhash = sig.minhash.downsample(scaled=10000)
+    assert minhash == match_sig.minhash
 
 
 def test_gather_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
-    sig.minhash = sig.minhash.downsample(scaled=100000)
+    sig_minhash = sig.minhash.downsample(scaled=100000)
 
-    results = db.gather(sig, threshold=.01, ignore_abundance=True)
-    match_sig = results[0][1]
+    result = db.best_containment(sig, threshold=.01, ignore_abundance=True)
+    match_sig = result[1]
 
-    match_sig.minhash = match_sig.minhash.downsample(scaled=100000)
-    assert sig.minhash == match_sig.minhash
+    minhash = match_sig.minhash.downsample(scaled=100000)
+    assert sig_minhash == minhash
 
 
 def test_db_lineage_to_lid():
@@ -1181,10 +1215,33 @@ def test_index_traverse_real_spreadsheet_report(runtmp, lca_db_format):
 
 
 def test_single_classify(runtmp):
+    # run a basic 'classify', check output.
     db1 = utils.get_test_data('lca/delmont-1.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_single_classify_zip_query(runtmp):
+    # run 'classify' with a query in a zipfile
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        save_sig.add(query_ss)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', query_zipfile]
     runtmp.sourmash(*cmd)
 
     print(cmd)
@@ -1838,6 +1895,28 @@ def test_single_summarize_scaled(runtmp):
     assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
 
 
+def test_single_summarize_scaled_zip_query(runtmp):
+    # check zipfile as query
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        save_sig.add(query_ss)
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', query_zipfile,
+            '--scaled', '100000']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
+
+
 def test_multi_summarize_with_unassigned_singleton(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
@@ -1884,6 +1963,73 @@ def test_multi_summarize_with_unassigned_singleton(runtmp, lca_db_format):
     remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
     remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
     remove_line_startswith('100.0%  1231   Eukaryota ', 'TARA_PSW_MAG_00136.sig:db50b713')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus ')
+    assert not out_lines
+
+
+def test_multi_summarize_with_zip_unassigned_singleton(runtmp, lca_db_format):
+    # test summarize on multiple queries, in a zipfile.
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
+           '-F', lca_db_format]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        sig1 = sourmash.load_one_signature(input_sig1, ksize=31)
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        sig2 = sourmash.load_one_signature(input_sig2, ksize=31)
+
+        save_sig.add(sig1)
+        save_sig.add(sig2)
+
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', 'query.zip',
+           '--ignore-abundance']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 2 signatures from 1 files total.' in runtmp.last_result.err
+
+    out_lines = runtmp.last_result.out.splitlines()
+    def remove_line_startswith(x, check=None):
+        for line in out_lines:
+            if line.startswith(x):
+                out_lines.remove(line)
+                if check:
+                    # make sure the check value is in there
+                    assert check in line
+                return line
+        assert 0, "couldn't find {}".format(x)
+
+    # note, proportions/percentages are now per-file
+    remove_line_startswith('100.0%   200   Bacteria ', ':5b438c6c')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
+    remove_line_startswith('100.0%  1231   Eukaryota ', ':db50b713')
     remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
     remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
     remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
@@ -2010,7 +2156,7 @@ def test_summarize_unknown_hashes_abund(runtmp, lca_db_format):
 
 
 @utils.in_thisdir
-def test_lca_summarize_abund_hmp(c):
+def test_summarize_abund_hmp(c):
     # test lca summarize --with-abundance on some real data
     queryfile = utils.get_test_data('hmp-sigs/G36354.sig.gz')
     dbname = utils.get_test_data('hmp-sigs/G36354-matches.lca.json.gz')
@@ -2021,7 +2167,7 @@ def test_lca_summarize_abund_hmp(c):
 
 
 @utils.in_thisdir
-def test_lca_summarize_abund_fake_no_abund(c):
+def test_summarize_abund_fake_no_abund(c):
     # test lca summarize on some known/fake data; see docs for explanation.
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
@@ -2035,7 +2181,7 @@ def test_lca_summarize_abund_fake_no_abund(c):
 
 
 @utils.in_thisdir
-def test_lca_summarize_abund_fake_yes_abund(c):
+def test_summarize_abund_fake_yes_abund(c):
     # test lca summarize abundance weighting on some known/fake data
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
@@ -2197,8 +2343,9 @@ def test_compare_csv_real(runtmp):
     assert '0 incompatible at rank species' in runtmp.last_result.err
 
 
-def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
-    # test on gather - create a database with ksize of 25
+def test_incompat_lca_db_ksize_2_fail(runtmp, lca_db_format):
+    # test on gather - create a database with ksize of 25 => fail
+    # because of incompatibility.
     c = runtmp
     testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
     c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
@@ -2215,6 +2362,34 @@ def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
     # no compatible ksizes.
     with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), f'test.lca.{lca_db_format}')
+
+    err = c.last_result.err
+    print(err)
+
+    if lca_db_format == 'sql':
+        assert "no compatible signatures found in 'test.lca.sql'" in err
+    else:
+        assert "ERROR: cannot use 'test.lca.json' for this query." in err
+        assert "ksize on this database is 25; this is different from requested ksize of 31"
+
+
+def test_incompat_lca_db_ksize_2_nofail(runtmp, lca_db_format):
+    # test on gather - create a database with ksize of 25, no fail
+    # because of --no-fail-on-empty-databases
+    c = runtmp
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   f'test.lca.{lca_db_format}', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000',
+                   '-F', lca_db_format)
+    print(c)
+
+    # this should not fail despite mismatched ksize, b/c of --no-fail flag.
+    c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), f'test.lca.{lca_db_format}', '--no-fail-on-empty-database')
 
     err = c.last_result.err
     print(err)
@@ -2248,9 +2423,9 @@ def test_lca_index_empty(runtmp, lca_db_format):
     lca_db_filename = c.output(f'xxx.lca.{lca_db_format}')
     db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
 
-    results = db.gather(sig63)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(sig63)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig63.minhash
     assert name == lca_db_filename
@@ -2281,22 +2456,22 @@ def test_lca_gather_threshold_1():
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        db.gather(SourmashSignature(new_mh))
+        db.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = db.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -2304,16 +2479,16 @@ def test_lca_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = db.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
 
     # check with a too-high threshold -> should be no results.
     with pytest.raises(ValueError):
-        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_lca_gather_threshold_5():
@@ -2347,17 +2522,17 @@ def test_lca_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = db.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
 
     # now, check with a threshold_bp that should be meet-able.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
@@ -2380,10 +2555,10 @@ def test_gather_multiple_return():
 
     # now, run gather. how many results do we get, and are they in the
     # right order?
-    results = db.gather(sig63)
-    print(len(results))
-    assert len(results) == 1
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig63)
+    print(result)
+    assert result
+    assert result.score == 1.0
 
 
 def test_lca_db_protein_build():
@@ -2408,8 +2583,8 @@ def test_lca_db_protein_build():
     results = db.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_tempdir
@@ -2444,8 +2619,8 @@ def test_lca_db_protein_save_load(c):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 def test_lca_db_protein_command_index(runtmp, lca_db_format):
@@ -2480,8 +2655,8 @@ def test_lca_db_protein_command_index(runtmp, lca_db_format):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_thisdir
@@ -2492,7 +2667,7 @@ def test_lca_db_protein_command_search(c):
     db_out = utils.get_test_data('prot/protein.lca.json.gz')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
@@ -2521,8 +2696,8 @@ def test_lca_db_hp_build():
     results = db.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_tempdir
@@ -2555,8 +2730,8 @@ def test_lca_db_hp_save_load(c):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 def test_lca_db_hp_command_index(runtmp, lca_db_format):
@@ -2591,8 +2766,8 @@ def test_lca_db_hp_command_index(runtmp, lca_db_format):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_thisdir
@@ -2603,7 +2778,7 @@ def test_lca_db_hp_command_search(c):
     db_out = utils.get_test_data('prot/hp.lca.json.gz')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
@@ -2632,8 +2807,8 @@ def test_lca_db_dayhoff_build():
     results = db.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_tempdir
@@ -2666,8 +2841,8 @@ def test_lca_db_dayhoff_save_load(c):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
@@ -2702,8 +2877,8 @@ def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_thisdir
@@ -2714,7 +2889,7 @@ def test_lca_db_dayhoff_command_search(c):
     db_out = utils.get_test_data('prot/dayhoff.lca.json.gz')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out

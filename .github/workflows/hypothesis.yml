@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
@@ -27,3 +27,10 @@ jobs:
 
       - name: Run Hypothesis tests
         run: tox -e hypothesis,coverage
+
+      - name: Upload Python coverage to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          flags: hypothesis-py
+          fail_ci_if_error: true
+          files: .tox/coverage.xml

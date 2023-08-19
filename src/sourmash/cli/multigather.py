@@ -72,7 +72,23 @@ def subparser(subparsers):
         '--estimate-ani-ci', action='store_true',
         help='also output confidence intervals for ANI estimates'
     )
-    add_ksize_arg(subparser, 31)
+    subparser.add_argument(
+        '--fail-on-empty-database', action='store_true',
+        help='stop at databases that contain no compatible signatures'
+    )
+    subparser.add_argument(
+        '--no-fail-on-empty-database', action='store_false',
+        dest='fail_on_empty_database',
+        help='continue past databases that contain no compatible signatures'
+    )
+    subparser.set_defaults(fail_on_empty_database=True)
+
+    subparser.add_argument(
+        '--output-dir', '--outdir',
+        help='output CSV results to this directory',
+    )
+
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_scaled_arg(subparser, 0)
 

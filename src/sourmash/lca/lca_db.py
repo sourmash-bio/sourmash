@@ -262,7 +262,8 @@ class LCA_Database(Index):
 
         Method specific to this class.
         """
-        from .lca_utils import taxlist, LineagePair
+        from .lca_utils import taxlist
+        from sourmash.tax.tax_utils import LineagePair
 
         if not os.path.isfile(db_name):
             raise ValueError(f"'{db_name}' is not a file and cannot be loaded as an LCA database")
@@ -325,7 +326,7 @@ class LCA_Database(Index):
             lid_to_lineage = {}
             lineage_to_lid = {}
             for k, v in lid_to_lineage_2.items():
-                v = dict(v)
+                v = dict( ((x[0], x[1]) for x in v) )
                 vv = []
                 for rank in taxlist():
                     name = v.get(rank, '')
@@ -460,7 +461,7 @@ class LCA_Database(Index):
         max_hash = _get_max_hash_for_scaled(scaled)
 
         # filter out all hashes over max_hash in value.
-        new_hashvals = {}
+        new_hashvals = defaultdict(set)
         for k, v in self._hashval_to_idx.items():
             if k < max_hash:
                 new_hashvals[k] = v
@@ -553,9 +554,10 @@ class LCA_Database(Index):
             ident = self._idx_to_ident[idx]
             name = self._ident_to_name[ident]
             ss = SourmashSignature(mh, name=name)
+            ss.into_frozen()
 
             if passes_all_picklists(ss, self.picklists):
-                sigd[idx] = SourmashSignature(mh, name=name)
+                sigd[idx] = ss
 
         debug('=> {} signatures!', len(sigd))
         return sigd

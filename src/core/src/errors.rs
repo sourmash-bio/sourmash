@@ -24,6 +24,9 @@ pub enum SourmashError {
     #[error("different signatures cannot be compared")]
     MismatchSignatureType,
 
+    #[error("sketch needs abundance for this operation")]
+    NeedsAbundanceTracking,
+
     #[error("Invalid hash function: {function:?}")]
     InvalidHashFunction { function: String },
 
@@ -60,7 +63,7 @@ pub enum SourmashError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
-    #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
 }
@@ -88,6 +91,7 @@ pub enum SourmashErrorCode {
     MismatchSignatureType = 1_05,
     NonEmptyMinHash = 1_06,
     MismatchNum = 1_07,
+    NeedsAbundanceTracking = 1_08,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -106,13 +110,16 @@ pub enum SourmashErrorCode {
     NifflerError = 100_005,
 }
 
-#[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 impl SourmashErrorCode {
     pub fn from_error(error: &SourmashError) -> SourmashErrorCode {
         match error {
             SourmashError::Internal { .. } => SourmashErrorCode::Internal,
             SourmashError::Panic { .. } => SourmashErrorCode::Panic,
             SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
+            SourmashError::NeedsAbundanceTracking { .. } => {
+                SourmashErrorCode::NeedsAbundanceTracking
+            }
             SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
             SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
             SourmashError::MismatchScaled => SourmashErrorCode::MismatchScaled,
