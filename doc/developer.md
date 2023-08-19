@@ -25,7 +25,7 @@ and the [`conda-forge`](https://conda-forge.org/) channel by default).
 
 Once `mamba` is installed, run
 ```
-mamba create -n sourmash_dev tox>=4.2 tox-conda rust git compilers pandoc
+mamba create -n sourmash_dev 'tox>=3.27,<4' tox-conda rust git compilers pandoc
 ```
 to create an environment called `sourmash_dev` containing the programs needed
 for development.

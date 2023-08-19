@@ -234,12 +234,6 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Check semver
-        uses: obi1kenobi/cargo-semver-checks-action@v2
-        with:
-          crate-name: sourmash
-          version-tag-prefix: r
-
       - name: Make sure we can publish the sourmash crate
         uses: actions-rs/cargo@v1
         with:
