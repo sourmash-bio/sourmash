@@ -4006,6 +4006,9 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    testdata_sigs.remove(another_query)
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
@@ -4016,9 +4019,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
 
     assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
-    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
-
-    cmd = 'multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query)
+    cmd = 'multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0 -U'.format(another_query, another_query)
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
@@ -4027,7 +4028,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
     err = c.last_result.err
     print(err)
 
-    assert 'conducted gather searches on 13 signatures' in err
+    assert 'conducted gather searches on 12 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
     #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
@@ -4049,6 +4050,9 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    testdata_sigs.remove(another_query)
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
@@ -4064,9 +4068,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     with open(query_list, 'wt') as fp:
         print('gcf_all.sbt.zip', file=fp)
 
-    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
-
-    cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query, query_list)
+    cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0 -U'.format(another_query, query_list, another_query)
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
@@ -4075,7 +4077,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     err = c.last_result.err
     print(err)
 
-    assert 'conducted gather searches on 13 signatures' in err
+    assert 'conducted gather searches on 12 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
     #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,

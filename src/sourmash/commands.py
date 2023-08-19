@@ -964,6 +964,7 @@ def multigather(args):
     # run gather on all the queries.
     n=0
     size_may_be_inaccurate = False
+    output_base_tracking = set() # make sure we are not reusing 'output_base'
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(queryfile,
@@ -1077,8 +1078,7 @@ def multigather(args):
                 continue
 
             query_filename = query.filename
-            print('XYZ', query_filename)
-            if not query_filename:
+            if not query_filename or query_filename == '-':
                 # use md5sum if query.filename not properly set
                 output_base = query.md5sum()
             elif args.output_add_query_md5sum:
@@ -1087,10 +1087,16 @@ def multigather(args):
             else:
                 output_base = os.path.basename(query_filename)
 
-            print('XXX', output_base)
-
             if args.output_dir:
                 output_base = os.path.join(args.output_dir, output_base)
+
+            # track overwrites
+            if output_base in output_base_tracking:
+                error(f"ERROR: detected overwritten outputs! '{output_base}' has already been used. Failing.")
+                error("Consider using '-U/----output-add-query-md5sum'.")
+                sys.exit(-1)
+
+            output_base_tracking.add(output_base)
 
             output_csv = output_base + '.csv'
 

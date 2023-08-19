@@ -88,7 +88,7 @@ def subparser(subparsers):
         help='output CSV results to this directory',
     )
     subparser.add_argument(
-        '-U', '--output-add-query-md5sum',
+        '-U', '--output-add-query-md5sum', action='store_true',
         help='add md5sum of each query to ensure unique output file names'
     )
 
