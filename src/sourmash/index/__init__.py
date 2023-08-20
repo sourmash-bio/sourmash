@@ -34,10 +34,14 @@ signatures on demand. No signatures are kept in memory.
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
 
+from __future__ import annotations
+
 import os
 import sourmash
 from abc import abstractmethod, ABC
-from collections import namedtuple, Counter
+from collections import defaultdict, Counter
+from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING
+import weakref
 
 from sourmash.search import (make_jaccard_search_query,
                              make_containment_query,
@@ -45,12 +49,78 @@ from sourmash.search import (make_jaccard_search_query,
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 from sourmash.signature import load_signatures, save_signatures
+from sourmash._lowlevel import ffi, lib
+from sourmash.utils import RustObject, rustcall, decode_str, encode_str
+from sourmash import SourmashSignature
+from sourmash.picklist import SignaturePicklist
 from sourmash.minhash import (flatten_and_downsample_scaled,
                               flatten_and_downsample_num,
                               flatten_and_intersect_scaled)
 
-# generic return tuple for Index.search and Index.gather
-IndexSearchResult = namedtuple('Result', 'score, signature, location')
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+
+class IndexSearchResult(NamedTuple):
+    """generic return tuple for Index.search and Index.gather"""
+    score: float
+    signature: SourmashSignature
+    location: str
+
+
+class Selection(TypedDict):
+    ksize: Optional[int]
+    moltype: Optional[str]
+    num: Optional[int]
+    scaled: Optional[int]
+    containment: Optional[bool]
+    abund: Optional[bool]
+    picklist: Optional[SignaturePicklist]
+
+
+# TypedDict can't have methods (it is a dict in runtime)
+def _selection_as_rust(selection: Selection):
+    ptr = lib.selection_new()
+
+    for key, v in selection.items():
+        if v is not None:
+            if key == "ksize":
+                rustcall(lib.selection_set_ksize, ptr, v)
+
+            elif key == "moltype":
+                hash_function = None
+                if v.lower() == "dna":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
+                elif v.lower() == "protein":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+                elif v.lower() == "dayhoff":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+                elif v.lower() == "hp":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+
+                rustcall(lib.selection_set_moltype, ptr, hash_function)
+
+            elif key == "num":
+                rustcall(lib.selection_set_num, ptr, v)
+
+            elif key == "scaled":
+                rustcall(lib.selection_set_scaled, ptr, v)
+
+            elif key ==  "containment":
+                rustcall(lib.selection_set_containment, ptr, v)
+
+            elif key == "abund":
+                rustcall(lib.selection_set_abund, ptr, bool(v))
+
+            elif key == "picklist":
+                picklist_ptr = v._as_rust()
+                rustcall(lib.selection_set_picklist, ptr, picklist_ptr)
+
+            else:
+                raise KeyError(f"Unsupported key {key} for Selection in rust")
+
+    return ptr
+
 
 class Index(ABC):
     # this will be removed soon; see sourmash#1894.
@@ -307,8 +377,7 @@ class Index(ABC):
         return counter
 
     @abstractmethod
-    def select(self, ksize=None, moltype=None, scaled=None, num=None,
-               abund=None, containment=None):
+    def select(self, **kwargs: Unpack[Selection]):
         """Return Index containing only signatures that match requirements.
 
         Current arguments can be any or all of:
@@ -326,9 +395,16 @@ class Index(ABC):
         """
 
 
-def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
-                     containment=False, abund=None, picklist=None):
+def select_signature(ss, **kwargs: Unpack[Selection]):
     "Check that the given signature matches the specified requirements."
+    ksize = kwargs.get('ksize')
+    moltype = kwargs.get('moltype')
+    scaled = kwargs.get('scaled', 0)
+    num = kwargs.get('num', 0)
+    containment = kwargs.get('containment', False)
+    abund = kwargs.get('abund')
+    picklist = kwargs.get('picklist')
+
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
         return False
@@ -408,7 +484,7 @@ class LinearIndex(Index):
         lidx = LinearIndex(si, filename=filename)
         return lidx
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         """Return new LinearIndex containing only signatures that match req's.
 
         Does not raise ValueError, but may return an empty Index.
@@ -479,7 +555,7 @@ class LazyLinearIndex(Index):
     def load(cls, path):
         raise NotImplementedError
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         """Return new object yielding only signatures that match req's.
 
         Does not raise ValueError, but may return an empty Index.
@@ -642,7 +718,7 @@ class ZipFileLinearIndex(Index):
                         if select(ss):
                             yield ss
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         "Select signatures in zip file based on ksize/moltype/etc."
 
         # if we have a manifest, run 'select' on the manifest.
@@ -1053,7 +1129,7 @@ class MultiIndex(Index):
     def save(self, *args):
         raise NotImplementedError
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(new_manifest, self.parent,
@@ -1162,7 +1238,7 @@ class StandaloneManifestIndex(Index):
     def insert(self, *args):
         raise NotImplementedError
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return StandaloneManifestIndex(new_manifest, self._location,
