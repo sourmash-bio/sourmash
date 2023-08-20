@@ -1167,3 +1167,131 @@ class StandaloneManifestIndex(Index):
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return StandaloneManifestIndex(new_manifest, self._location,
                                        prefix=self.prefix)
+
+
+class RustLinearIndex(Index, RustObject):
+    """\
+    A read-only collection of signatures in a zip file.
+
+    Does not support `insert` or `save`.
+
+    Concrete class; signatures dynamically loaded from disk; uses manifests.
+    """
+    is_database = True
+
+    __dealloc_func__ = lib.linearindex_free
+
+    def __init__(self, storage, *, selection_dict=None,
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
+
+        self._selection_dict = selection_dict
+        self._traverse_yield_all = traverse_yield_all
+        self._use_manifest = use_manifest
+
+        # Taking ownership of the storage
+        storage_ptr = storage._take_objptr()
+
+        manifest_ptr = ffi.NULL
+        # do we have a manifest already? if not, try loading.
+        if use_manifest:
+            if manifest is not None:
+                debug_literal('RustLinearIndex using passed-in manifest')
+                manifest_ptr = manifest._as_rust()._take_objptr()
+
+        selection_ptr = ffi.NULL
+
+        self._objptr = rustcall(lib.linearindex_new, storage_ptr,
+                                manifest_ptr, selection_ptr, use_manifest)
+
+        """
+        if self.manifest is not None:
+            assert not self.selection_dict, self.selection_dict
+        if self.selection_dict:
+            assert self.manifest is None
+        """
+
+    @property
+    def manifest(self):
+        return CollectionManifest._from_rust(self._methodcall(lib.linearindex_manifest))
+
+    @manifest.setter
+    def manifest(self, value):
+        if value is None:
+            return  # FIXME: can't unset manifest in a Rust Linear Index
+        self._methodcall(lib.linearindex_set_manifest, value._as_rust()._take_objptr())
+
+    def __bool__(self):
+        "Are there any matching signatures in this zipfile? Avoid calling len."
+        return self._methodcall(lib.linearindex_len) > 0
+
+    def __len__(self):
+        "calculate number of signatures."
+        return self._methodcall(lib.linearindex_len)
+
+    @property
+    def location(self):
+        return decode_str(self._methodcall(lib.linearindex_location))
+
+    @property
+    def storage(self):
+        from ..sbt_storage import ZipStorage
+
+        ptr = self._methodcall(lib.linearindex_storage)
+        return ZipStorage._from_objptr(ptr)
+
+    def insert(self, signature):
+        raise NotImplementedError
+
+    def save(self, path):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, location, traverse_yield_all=False, use_manifest=True):
+        "Class method to load a zipfile."
+        from ..sbt_storage import ZipStorage
+
+        # we can only load from existing zipfiles in this method.
+        if not os.path.exists(location):
+            raise FileNotFoundError(location)
+
+        storage = ZipStorage(location)
+        return cls(storage, traverse_yield_all=traverse_yield_all,
+                   use_manifest=use_manifest)
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
+        # list all the files, without using the Storage interface; currently,
+        # 'Storage' does not provide a way to list all the files, so :shrug:.
+        for filename in self.storage._filenames():
+            # should we load this file? if it ends in .sig OR we are forcing:
+            if filename.endswith('.sig') or \
+               filename.endswith('.sig.gz') or \
+               self._traverse_yield_all:
+                sig_data = self.storage.load(filename)
+                for ss in load_signatures(sig_data):
+                    yield ss, filename
+
+    def signatures(self):
+        "Load all signatures in the zip file."
+        attached_refs = weakref.WeakKeyDictionary()
+        iterator = self._methodcall(lib.linearindex_signatures)
+
+        next_sig = rustcall(lib.signatures_iter_next, iterator)
+        while next_sig != ffi.NULL:
+            attached_refs[next_sig] = iterator
+            yield SourmashSignature._from_objptr(next_sig)
+            next_sig = rustcall(lib.signatures_iter_next, iterator)
+
+    def select(self, **kwargs: Unpack[Selection]):
+        "Select signatures in zip file based on ksize/moltype/etc."
+
+        selection = _selection_as_rust(kwargs)
+
+        # select consumes the current index
+        ptr = self._take_objptr()
+        ptr = rustcall(lib.linearindex_select, ptr, selection)
+
+        return RustLinearIndex._from_objptr(ptr)
