@@ -1083,6 +1083,7 @@ def multigather(args):
                 output_base = query.md5sum()
             elif args.output_add_query_md5sum:
                 # Uniquify the output file if all signatures were made from the same file (e.g. with --singleton)
+                # @CTB check if query_filename is empty.
                 output_base = os.path.basename(query_filename) + "." + query.md5sum()
             else:
                 output_base = os.path.basename(query_filename)
