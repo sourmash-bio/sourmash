@@ -148,6 +148,12 @@ features = ["maturin"]
 locked = true
 module-name = "sourmash._lowlevel"
 
+# macOS deployment target SDK version
+[tool.maturin.target.x86_64-apple-darwin]
+macos-deployment-target = "11.0"
+[tool.maturin.target.aarch64-apple-darwin]
+macos-deployment-target = "11.0"
+
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
 multi_line_output = 3 
@@ -159,9 +165,25 @@ known_first_party = ["sourmash"]
 [tool.cibuildwheel]
 build = "cp39-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
-before-build = "source .ci/install_cargo.sh"
-environment = { PATH="$HOME/.cargo/bin:$PATH" }
+before-all = [
+  "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
+  "cargo update --dry-run",
+]
+macos.before-build = [
+  "rustup target add aarch64-apple-darwin",
+]
 build-verbosity = 3
+
+[tool.cibuildwheel.environment]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
+PATH="$HOME/.cargo/bin:$PATH"
+
+[tool.cibuildwheel.linux.environment]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
+PATH="$HOME/.cargo/bin:$PATH"
+LIBCLANG_PATH="/opt/rh/llvm-toolset-7.0/root/usr/lib64"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/rh/llvm-toolset-7.0/root/usr/lib64"
+C_INCLUDE_PATH="/opt/rh/devtoolset-10/root/usr/lib/gcc/aarch64-redhat-linux/10/include:/opt/rh/devtoolset-10/root/usr/lib/gcc/x86_64-redhat-linux/10/include"
 
 [tool.pytest.ini_options]
 addopts = "--doctest-glob='doc/*.md' -n4"
