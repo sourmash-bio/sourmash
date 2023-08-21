@@ -200,13 +200,7 @@ fn find_subdirs<'a>(archive: &'a piz::ZipArchive<'a>) -> Result<Option<String>, 
         .filter(|entry| entry.is_dir())
         .collect();
     if subdirs.len() == 1 {
-        Ok(Some(
-            subdirs[0]
-                .path
-                .to_str()
-                .expect("Error converting path")
-                .into(),
-        ))
+        Ok(Some(subdirs[0].path.as_str().into()))
     } else {
         Ok(None)
     }
@@ -291,7 +285,7 @@ impl ZipStorage {
             .entries()
             .iter()
             .filter_map(|entry| {
-                let path = entry.path.to_str().expect("Error converting path");
+                let path = entry.path.as_str();
                 if path.ends_with(".sbt.json") {
                     Some(path.into())
                 } else {
@@ -306,7 +300,7 @@ impl ZipStorage {
             .borrow_archive()
             .entries()
             .iter()
-            .map(|entry| entry.path.to_str().expect("Error converting path").into())
+            .map(|entry| entry.path.as_str().into())
             .collect())
     }
 }

@@ -27,7 +27,7 @@ jobs:
           - build: macos-x86_64
             os: macos-latest
             arch: x86_64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11 CARGO_BUILD_TARGET=x86_64-apple-darwin'
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_BUILD_TARGET=x86_64-apple-darwin'
           - build: macos-arm64
             os: macos-latest
             arch: arm64
