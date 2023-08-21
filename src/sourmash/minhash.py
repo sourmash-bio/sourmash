@@ -937,9 +937,8 @@ class MinHash(RustObject):
 
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
-        new_mh = self.__copy__()
-        new_mh.into_frozen()
-        return new_mh
+        new_mh_ptr = self._methodcall(lib.kmerminhash_to_frozen)
+        return FrozenMinHash._from_objptr(new_mh_ptr)
 
     def into_frozen(self):
         "Freeze this MinHash, preventing any changes."
@@ -1069,11 +1068,8 @@ class FrozenMinHash(MinHash):
 
     def to_mutable(self):
         "Return a copy of this MinHash that can be changed."
-        mut = MinHash.__new__(MinHash)
-        state_tup = self.__getstate__()
-
-        mut.__setstate__(state_tup)
-        return mut
+        new_mh_ptr = self._methodcall(lib.kmerminhash_to_mutable)
+        return MinHash._from_objptr(new_mh_ptr)
 
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."

@@ -43,9 +43,9 @@ class SourmashSignature(RustObject):
 
     @property
     def minhash(self):
-        return FrozenMinHash._from_objptr(
+        return MinHash._from_objptr(
             self._methodcall(lib.signature_first_mh)
-        )
+        ).to_frozen()
 
     @minhash.setter
     def minhash(self, value):
@@ -65,18 +65,6 @@ class SourmashSignature(RustObject):
             return "SourmashSignature({})".format(md5pref)
         else: # name != md5pref:
             return "SourmashSignature('{}', {})".format(name, md5pref)
-
-    #def minhashes(self):
-    #    size = ffi.new("uintptr_t *")
-    #    mhs_ptr = self._methodcall(lib.signature_get_mhs, size)
-    #    size = ffi.unpack(size, 1)[0]
-    #
-    #    mhs = []
-    #    for i in range(size):
-    #        mh = MinHash._from_objptr(mhs_ptr[i])
-    #        mhs.append(mh)
-    #
-    #    return mhs
 
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."

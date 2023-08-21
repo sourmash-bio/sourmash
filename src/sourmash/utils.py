@@ -29,6 +29,13 @@ class RustObject:
             raise RuntimeError("Object is closed")
         return self._objptr
 
+    def _take_objptr(self):
+        if not self._objptr:
+            raise RuntimeError("Object is closed")
+        ret = self._objptr
+        self._objptr = None
+        return ret
+
     def __del__(self):
         if self._objptr is None or self._shared:
             return

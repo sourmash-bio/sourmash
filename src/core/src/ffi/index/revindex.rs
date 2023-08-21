@@ -8,7 +8,7 @@ use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 
 use crate::ffi::index::SourmashSearchResult;
-use crate::ffi::minhash::SourmashKmerMinHash;
+use crate::ffi::minhash::{MinHash, SourmashKmerMinHash};
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
@@ -43,7 +43,7 @@ unsafe fn revindex_new_with_paths(
     let template = {
         assert!(!template_ptr.is_null());
         //TODO: avoid clone here
-        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+        SourmashKmerMinHash::as_rust(template_ptr).clone().into()
     };
 
     let queries_vec: Vec<KmerMinHash>;
@@ -52,9 +52,11 @@ unsafe fn revindex_new_with_paths(
     } else {
         queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
             .iter()
-            .map(|mh_ptr|
-            // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
+            .map(|mh_ptr| match SourmashKmerMinHash::as_rust(*mh_ptr) {
+                // TODO: avoid this clone
+                MinHash::Mutable(mh) => mh.clone().into(),
+                MinHash::Frozen(mh) => mh.clone(),
+            })
             .collect();
         Some(queries_vec.as_ref())
     };
@@ -90,7 +92,7 @@ unsafe fn revindex_new_with_sigs(
     let template = {
         assert!(!template_ptr.is_null());
         //TODO: avoid clone here
-        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+        SourmashKmerMinHash::as_rust(template_ptr).clone().into()
     };
 
     let queries_vec: Vec<KmerMinHash>;
@@ -99,9 +101,11 @@ unsafe fn revindex_new_with_sigs(
     } else {
         queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
             .iter()
-            .map(|mh_ptr|
-            // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
+            .map(|mh_ptr| match SourmashKmerMinHash::as_rust(*mh_ptr) {
+                // TODO: avoid this clone
+                MinHash::Mutable(mh) => mh.clone().into(),
+                MinHash::Frozen(mh) => mh.clone(),
+            })
             .collect();
         Some(queries_vec.as_ref())
     };

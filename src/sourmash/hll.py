@@ -43,8 +43,10 @@ class HLL(RustObject):
     def update(self, other):
         if isinstance(other, HLL):
             return self._methodcall(lib.hll_merge, other._objptr)
-        elif isinstance(other, MinHash):
+        elif isinstance(other, FrozenMinHash):
             return self._methodcall(lib.hll_update_mh, other._objptr)
+        elif isinstance(other, MinHash):
+            return self._methodcall(lib.hll_update_mh, other.to_frozen()._objptr)
         else:
             # FIXME: we could take sets here too (or anything that can be
             # converted to a list of ints...)

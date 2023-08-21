@@ -7,6 +7,7 @@ use typed_builder::TypedBuilder;
 
 use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
+use crate::sketch::minhash::MinHashOps;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
 use crate::Error;
