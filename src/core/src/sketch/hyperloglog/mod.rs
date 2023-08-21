@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
-use crate::sketch::KmerMinHash;
+use crate::sketch::{KmerMinHash, KmerMinHashBTree};
 use crate::Error;
 use crate::HashIntoType;
 
@@ -183,6 +183,16 @@ impl SigsTrait for HyperLogLog {
         HashFunctions::murmur64_DNA
     }
 
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        //TODO support other hash functions
+        if h != HashFunctions::murmur64_DNA {
+            return Err(Error::InvalidHashFunction {
+                function: h.to_string(),
+            });
+        }
+        Ok(())
+    }
+
     fn add_hash(&mut self, hash: HashIntoType) {
         let value = hash >> self.p;
         let index = (hash - (value << self.p)) as usize;
@@ -205,6 +215,15 @@ impl SigsTrait for HyperLogLog {
         } else {
             Ok(())
         }
+    }
+}
+
+impl Update<HyperLogLog> for KmerMinHashBTree {
+    fn update(&self, other: &mut HyperLogLog) -> Result<(), Error> {
+        for h in self.mins() {
+            other.add_hash(h);
+        }
+        Ok(())
     }
 }
 

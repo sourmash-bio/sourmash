@@ -263,6 +263,10 @@ double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
 
 void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
+SourmashKmerMinHash *kmerminhash_to_frozen(const SourmashKmerMinHash *ptr);
+
+SourmashKmerMinHash *kmerminhash_to_mutable(const SourmashKmerMinHash *ptr);
+
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
@@ -370,15 +374,11 @@ SourmashStr signature_get_filename(const SourmashSignature *ptr);
 
 SourmashStr signature_get_license(const SourmashSignature *ptr);
 
-SourmashKmerMinHash **signature_get_mhs(const SourmashSignature *ptr, uintptr_t *size);
-
 SourmashStr signature_get_name(const SourmashSignature *ptr);
 
 uintptr_t signature_len(const SourmashSignature *ptr);
 
 SourmashSignature *signature_new(void);
-
-void signature_push_mh(SourmashSignature *ptr, const SourmashKmerMinHash *other);
 
 SourmashStr signature_save_json(const SourmashSignature *ptr);
 

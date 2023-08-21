@@ -5,6 +5,8 @@ use crate::Error;
 pub use crate::signature::Signature;
 pub use crate::storage::Storage;
 
+pub use crate::sketch::minhash::{AbundMinHashOps, FracMinHashOps, MinHashOps};
+
 pub trait ToWriter {
     fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
     where

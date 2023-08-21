@@ -5,7 +5,7 @@ use std::slice;
 use crate::prelude::*;
 use crate::sketch::nodegraph::Nodegraph;
 
-use crate::ffi::minhash::SourmashKmerMinHash;
+use crate::ffi::minhash::{MinHash, SourmashKmerMinHash};
 use crate::ffi::utils::ForeignObject;
 
 pub struct SourmashNodegraph;
@@ -134,7 +134,11 @@ pub unsafe extern "C" fn nodegraph_matches(
 ) -> usize {
     let ng = SourmashNodegraph::as_rust(ptr);
     let mh = SourmashKmerMinHash::as_rust(mh_ptr);
-    ng.matches(mh)
+
+    match mh {
+        MinHash::Mutable(mh) => ng.matches(&mh.clone().into()),
+        MinHash::Frozen(mh) => ng.matches(mh),
+    }
 }
 
 #[no_mangle]
@@ -157,7 +161,10 @@ pub unsafe extern "C" fn nodegraph_update_mh(
     let ng = SourmashNodegraph::as_rust_mut(ptr);
     let mh = SourmashKmerMinHash::as_rust(optr);
 
-    mh.update(ng).unwrap();
+    match mh {
+        MinHash::Mutable(mh) => mh.update(ng).unwrap(),
+        MinHash::Frozen(mh) => mh.update(ng).unwrap(),
+    }
 }
 
 ffi_fn! {
