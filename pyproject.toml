@@ -1,19 +1,155 @@
 [build-system]
 requires = [
-    "setuptools >= 48, <60",
-    "setuptools_scm[toml] >= 4, <6",
-    "setuptools_scm_git_archive",
-    "milksnake",
-    "wheel >= 0.29.0",
+    "maturin>=1,<2",
+    "cffi",
 ]
-build-backend = 'setuptools.build_meta'
+build-backend = 'maturin'
 
-[tool.setuptools_scm]
-write_to = "src/sourmash/version.py"
-git_describe_command = "git describe --dirty --tags --long --match v* --first-parent"
+[project]
+name = "sourmash"
+description = "tools for comparing biological sequences with k-mer sketches"
+readme = "README.md"
+version = "4.8.4-dev"
+
+authors = [
+  { name="Luiz Irber", orcid="0000-0003-4371-9659" },
+  { name="N. Tessa Pierce-Ward", orcid="0000-0002-2942-5331" },
+  { name="Mohamed Abuelanin", orcid="0000-0002-3419-4785" },
+  { name="Harriet Alexander", orcid="0000-0003-1308-8008" },
+  { name="Abhishek Anant", orcid="0000-0002-5751-2010" },
+  { name="Keya Barve", orcid="0000-0003-3241-2117" },
+  { name="Colton Baumler", orcid="0000-0002-5926-7792" },
+  { name="Olga Botvinnik", orcid="0000-0003-4412-7970" },
+  { name="Phillip Brooks", orcid="0000-0003-3987-244X" },
+  { name="Peter Cock", orcid="0000-0001-9513-9993" },
+  { name="Daniel Dsouza", orcid="0000-0001-7843-8596" },
+  { name="Laurent Gautier", orcid="0000-0003-0638-3391" },
+  { name="Tim Head", orcid="0000-0003-0931-3698" },
+  { name="Mahmudur Rahman Hera", orcid="0000-0002-5992-9012" },
+  { name="Hannah Eve Houts", orcid="0000-0002-7954-4793" },
+  { name="Lisa K. Johnson", orcid="0000-0002-3600-7218" },
+  { name="Fabian Klötzl", orcid="0000-0002-6930-0592" },
+  { name="David Koslicki", orcid="0000-0002-0640-954X" },
+  { name="Katrin Leinweber", orcid="0000-0001-5135-5758" },
+  { name="Marisa Lim", orcid="0000-0003-2097-8818" },
+  { name="Ricky Lim", orcid="0000-0003-1313-7076" },
+  { name="Ivan Ogasawara", orcid="0000-0001-5049-4289" },
+  { name="Taylor Reiter", orcid="0000-0002-7388-421X" },
+  { name="Camille Scott", orcid="0000-0001-8822-8779" },
+  { name="Andreas Sjödin", orcid="0000-0001-5350-4219" },
+  { name="Connor T. Skennerton", orcid="0000-0003-1320-4873" },
+  { name="Jason Stajich", orcid="0000-0002-7591-0020" },
+  { name="Daniel Standage", orcid="0000-0003-0342-8531" },
+  { name="S. Joshua Swamidass", orcid="0000-0003-2191-0778" },
+  { name="Connor Tiffany", orcid="0000-0001-8188-7720" },
+  { name="Pranathi Vemuri", orcid="0000-0002-5748-9594"},
+  { name="Erik Young", orcid="0000-0002-9195-9801" },
+  { name="Nick H", orcid="0000-0002-1685-302X" },
+  { name="C. Titus Brown", orcid="0000-0001-6001-2677" },
+]
+
+maintainers = [
+  { name="Luiz Irber", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
+  { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
+]
+
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: MacOS X",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+  "screed>=1.1.2,<2",
+  "cffi>=1.14.0",
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "deprecation>=2.0.6",
+  "cachetools>=4,<6",
+  "bitstring>=3.1.9,<5",
+  "importlib_metadata>=3.6;python_version<'3.10'"
+]
+
+requires-python = ">=3.8"
+
+[metadata]
+license = { text = "BSD 3-Clause License" }
+
+[project.urls]
+"Homepage" = "https://sourmash.bio/"
+"Documentation" = "https://sourmash.readthedocs.io"
+"CI" = "https://github.com/sourmash-bio/sourmash/actions"
+"Source" = "https://github.com/sourmash-bio/sourmash"
+"Tracker" = "https://github.com/sourmash-bio/sourmash/issues"
+
+[project.scripts]
+"sourmash" = "sourmash.__main__:main"
+
+[project.optional-dependencies]
+test = [
+  "pytest>=6.2.4,<7.5.0",
+  "pytest-cov>=2.12,<5.0",
+  "pytest-xdist",
+  "pyyaml>=6,<7",
+  "recommonmark",
+  "hypothesis",
+  "build",
+]
+demo = [
+  "jupyter",
+  "jupyter_client",
+  "ipython",
+]
+doc = [
+  "sphinx>=4.4.0,<8",
+  "myst-parser==2.0.0",
+  "Jinja2==3.1.2",
+  "alabaster",
+  "sphinxcontrib-napoleon",
+  "nbsphinx",
+  "ipython",
+  "docutils>=0.17.1,<0.21",
+]
+storage = [
+  "ipfshttpclient>=0.4.13",
+  "redis",
+]
+# hmm, I think this is a hack, but it works...
+# https://github.com/pypa/pip/issues/10393#issuecomment-941885429
+all = ["sourmash[test,demo,doc,storage]"]
+
+[tool.maturin]
+python-source = "src"
+manifest-path = "src/core/Cargo.toml"
+bindings = "cffi"
+include = [
+  { path = "include/sourmash.h", format = ["sdist","wheel"] },
+  { path = "requirements.txt", format = ["sdist"] },
+  { path = "Cargo.*", format = ["sdist"] },
+  { path = "tests/**/*", format = ["sdist"] },
+  { path = "CITATION.cff", format = ["sdist", "wheel"] },
+  { path = "LICENSE", format = ["sdist"] },
+]
+exclude = [
+  { path = "**/__pycache__/*", format = ["sdist", "wheel"] },
+]
+features = ["maturin"]
+locked = true
+module-name = "sourmash._lowlevel"
 
 [tool.isort]
-known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
+known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
 multi_line_output = 3 
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -26,3 +162,18 @@ skip = "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
 before-build = "source .ci/install_cargo.sh"
 environment = { PATH="$HOME/.cargo/bin:$PATH" }
 build-verbosity = 3
+
+[tool.pytest.ini_options]
+addopts = "--doctest-glob='doc/*.md' -n4"
+norecursedirs = [
+  "utils",
+  "build",
+  "buildenv",
+  ".tox",
+  ".asv",
+  ".eggs",
+]
+testpaths = [
+  "tests",
+  "doc",
+]

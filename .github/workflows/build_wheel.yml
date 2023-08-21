@@ -16,28 +16,13 @@ jobs:
       matrix:
         build: [
           linux-x86_64,
-          linux-aarch64,
-          linux-ppc64le,
-          linux-s390x,
           macos-x86_64,
           macos-arm64,
         ]
         include:
           - build: linux-x86_64
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             arch: x86_64
-            macos_target: ''
-          - build: linux-aarch64
-            os: ubuntu-18.04
-            arch: aarch64
-            macos_target: ''
-          - build: linux-ppc64le
-            os: ubuntu-18.04
-            arch: ppc64le
-            macos_target: ''
-          - build: linux-s390x
-            os: ubuntu-18.04
-            arch: s390x
             macos_target: ''
           - build: macos-x86_64
             os: macos-latest
@@ -46,7 +31,7 @@ jobs:
           - build: macos-arm64
             os: macos-latest
             arch: arm64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11 CARGO_BUILD_TARGET=aarch64-apple-darwin'
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_BUILD_TARGET=aarch64-apple-darwin'
       fail-fast: false
 
     steps:
@@ -54,19 +39,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v4
         name: Install Python
         with:
           python-version: '3.9'
 
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: all
-
       - name: Build wheels
-        uses: pypa/cibuildwheel@2.5.0
+        uses: pypa/cibuildwheel@v2.15.0
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
@@ -76,11 +55,40 @@ jobs:
         with:
           path: './wheelhouse/sourmash*.whl'
 
+  build_wasm:
+    runs-on: ubuntu-20.04
+    env:
+        PYODIDE_VERSION: "0.23.0"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+           python-version: "3.11.2"
+      - run: |
+          pip install pyodide-build==${PYODIDE_VERSION} "pydantic<2"
+          pyodide config get emscripten_version  # trigger setup
+          echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
+      - uses: mymindstorm/setup-emsdk@v12
+        with:
+           version: ${{ env.EMSCRIPTEN_VERSION }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-emscripten
+      - run: |
+          export RUSTC_BOOTSTRAP=1
+          pyodide build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: './dist/sourmash*.whl'
+
+
   release:
     name: Publish wheels
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build_wheels
+    needs: [build_wheels, build_wasm]
 
     steps:
       - name: Fetch wheels from artifacts

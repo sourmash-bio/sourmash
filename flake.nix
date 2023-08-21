@@ -16,23 +16,11 @@
       url = "github:nix-community/naersk";
       inputs = {
         nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "utils";
       };
-    };
-
-    mach-nix = {
-      url = "github:DavHau/mach-nix/3.4.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "utils";
-      inputs.pypi-deps-db.follows = "pypi-deps-db";
-    };
-
-    pypi-deps-db = {
-      url = "github:DavHau/mach-nix/3.4.0";
     };
   };
 
-  outputs = { self, nixpkgs, naersk, rust-overlay, mach-nix, pypi-deps-db, utils }:
+  outputs = { self, nixpkgs, naersk, rust-overlay, utils }:
     utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -49,34 +37,43 @@
           rustc = rustVersion;
         };
         naersk-lib = naersk.lib."${system}".override {
-          cargo = rustPlatform.rust.cargo;
-          rustc = rustPlatform.rust.rustc;
+          cargo = rustVersion;
+          rustc = rustVersion;
         };
 
-        python = "python39";
-        mach-nix-wrapper = import mach-nix { inherit pkgs python; };
+        python = pkgs.python311Packages;
+
       in
 
       with pkgs;
       {
         packages = {
+
           lib = naersk-lib.buildPackage {
             pname = "libsourmash";
             root = ./.;
             copyLibs = true;
           };
-          sourmash = mach-nix-wrapper.buildPythonPackage {
+
+          sourmash = python.buildPythonPackage rec {
+            pname = "sourmash";
+            version = "4.8.3";
+            format = "pyproject";
+
             src = ./.;
-            version = "4.3.0";
-            requirementsExtra = ''
-              setuptools >= 48, <60
-              milksnake
-              setuptools_scm[toml] >= 4, <6
-            '';
-            SETUPTOOLS_SCM_PRETEND_VERSION = "4.3.0";
+
+            cargoDeps = rustPlatform.importCargoLock {
+              lockFile = ./Cargo.lock;
+            };
+
+            nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
+
+            buildInputs = lib.optionals stdenv.isDarwin [ libiconv ];
+            propagatedBuildInputs = with python; [ cffi deprecation cachetools bitstring numpy scipy matplotlib screed ];
+
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
-            NO_BUILD = "1";
           };
+
           docker =
             let
               bin = self.defaultPackage.${system};
@@ -101,24 +98,26 @@
           ];
 
           buildInputs = [
-            rustPlatform.rust.cargo
+            rustVersion
             openssl
             pkgconfig
 
             git
             stdenv.cc.cc.lib
-            (python310.withPackages (ps: with ps; [ virtualenv tox setuptools ]))
-            (python39.withPackages (ps: with ps; [ virtualenv setuptools ]))
-            (python38.withPackages (ps: with ps; [ virtualenv setuptools ]))
+            (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
+            (python310.withPackages (ps: with ps; [ virtualenv ]))
+            (python39.withPackages (ps: with ps; [ virtualenv ]))
+            (python38.withPackages (ps: with ps; [ virtualenv ]))
 
             rust-cbindgen
+            maturin
 
             wasmtime
             wasm-pack
-            nodejs-16_x
+            nodejs_20
 
-            py-spy
-            heaptrack
+            #py-spy
+            #heaptrack
             cargo-watch
             cargo-limit
             cargo-outdated

@@ -4,6 +4,7 @@ Tests for the 'sourmash signature grep' command line.
 import shutil
 import os
 import csv
+import gzip
 
 import pytest
 
@@ -269,6 +270,38 @@ def test_grep_6_zip_manifest_csv(runtmp):
     assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
 
 
+def test_grep_6_zip_manifest_csv_gz(runtmp):
+    # do --csv and use result as picklist
+    allzip = utils.get_test_data('prot/all.zip')
+
+    runtmp.run_sourmash('sig', 'grep', '--dna', 'OS223', allzip,
+                        '--csv', 'match.csv.gz')
+
+    out = runtmp.last_result.out
+    ss = load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+    # check that match.csv.gz is a gzip file
+    with gzip.open(runtmp.output('match.csv.gz'), 'rt', newline='') as fp:
+        fp.read()
+
+    # now run cat with picklist
+    runtmp.run_sourmash('sig', 'cat', allzip,
+                        '--picklist', 'match.csv.gz::manifest')
+
+    out = runtmp.last_result.out
+    ss = load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+
 def test_sig_grep_7_lca(runtmp):
     # extract 47 from an LCA database, with --no-require-manifest
     allzip = utils.get_test_data('lca/47+63.lca.json')
@@ -282,6 +315,8 @@ def test_sig_grep_7_lca(runtmp):
 
     ss47 = sourmash.load_file_as_signatures(sig47)
     ss47 = list(ss47)[0]
+
+    ss47 = ss47.to_mutable()
     ss47.minhash = ss47.minhash.downsample(scaled=10000)
 
     assert ss47.minhash == match.minhash

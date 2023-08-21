@@ -1,3 +1,7 @@
+```{contents} Contents
+:depth: 3
+```
+
 # Developer information
 
 ## Development environment
@@ -39,7 +43,7 @@ for setting up Nix in your system (Linux or macOS).
 
 Once Nix is installed, run
 ```
-nix-shell
+nix develop
 ```
 to start an environment ready for [running tests and checks](#running-tests-and-checks).
 
@@ -117,11 +121,17 @@ There are three main components in the sourmash repo:
 - The command-line interface (in `src/sourmash/cli`)
 - The Rust core library  (in `src/core`)
 
-`setup.py` has all the configuration to prepare a Python package containing these three components.
+`pyproject.toml` has all the configuration to prepare a Python package containing these
+three components.
 First it compiles the Rust core component into a shared library,
-which is wrapped by [CFFI] and exposed to the Python module.
+which is wrapped by [cffi] and exposed to the Python module.
+These steps are executed by [maturin],
+a modern [PEP 517]-compatible build backend for Python projects containing Rust
+extensions.
 
-[CFFI]: https://cffi.readthedocs.io/
+[cffi]: https://cffi.readthedocs.io/
+[maturin]: https://www.maturin.rs/
+[PEP 517]: https://peps.python.org/pep-0517/
 
 A short description of the high-level files and dirs in the sourmash repo:
 ```
@@ -146,14 +156,13 @@ A short description of the high-level files and dirs in the sourmash repo:
 ├── Makefile            | Entry point for most development tasks
 ├── MANIFEST.in         | Describes what files to add to the Python package
 ├── matplotlibrc        | Configuration for matplotlib
-├── shell.nix           | Nix configuration for creating a dev environment
+├── flake.nix           | Nix definitions (package, dev env)
+├── shell.nix           | Nix config  for creating a dev env (backward-compatible)
 ├── paper.bib           | References in the JOSS paper
 ├── paper.md            | JOSS paper content
 ├── pyproject.toml      | Python project definitions (build system and tooling)
 ├── README.md           | Info to get started
 ├── requirements.txt    | Python dependencies for development
-├── setup.py            | Entry point for Python package setup
-├── setup.cfg           | Python package definitions
 └── tox.ini             | Configuration for test automation
 ```
 
@@ -249,7 +258,6 @@ including some tools for evaluating performance changes.
 
 ## Versioning
 
-We use [`setuptools_scm`] to generate versions based on git tags.
 Versions are tagged in a `vMAJOR.MINOR.PATH` format,
 following the [Semantic Versioning] convention.
 From their definition:
@@ -260,11 +268,14 @@ From their definition:
 > MINOR version when you add functionality in a backwards compatible manner, and
 > PATCH version when you make backwards compatible bug fixes.
 
-[`setuptools_scm`]: https://github.com/pypa/setuptools_scm
 [Semantic Versioning]: https://semver.org/
+
+The Python version is not automated,
+and must be bumped in `pyproject.toml` and `flake.nix`.
 
 For the Rust core library we use `rMAJOR.MINOR.PATCH`
 (note it starts with `r`, and not `v`).
+
 The Rust version is not automated,
 and must be bumped in `src/core/Cargo.toml`.
 
@@ -280,7 +291,7 @@ Some installation issues can be solved by simply removing the intermediate build
 make clean
 ```
 
-## Contents
+## Additional developer-focused documents
 
 ```{toctree}
 :maxdepth: 2
@@ -289,4 +300,6 @@ release
 requirements
 storage
 release-notes/releases
+dev_plugins
 ```
+

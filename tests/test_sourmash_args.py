@@ -1,17 +1,22 @@
 """
 Tests for functions in sourmash_args module.
 """
+import sys
 import os
 import pytest
 import gzip
 import zipfile
 import io
 import contextlib
+import csv
+import argparse
+import shutil
 
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import sourmash_args, manifest
 from sourmash.index import LinearIndex
+from sourmash.cli.utils import add_ksize_arg
 
 
 def test_save_signatures_api_none():
@@ -135,6 +140,27 @@ def test_save_signatures_to_location_1_zip(runtmp):
     assert len(saved) == 2
 
 
+def test_save_signatures_to_location_1_zip_bad(runtmp):
+    # try saving to bad sigfile.zip
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    outloc = runtmp.output('foo.zip')
+
+    # create bad zip:
+    with open(outloc, 'wt') as fp:
+        pass
+
+    # now check for error
+    with pytest.raises(ValueError) as exc:
+        with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+            pass
+
+    assert 'cannot be opened as a zip file' in str(exc)
+
+
 def test_save_signatures_to_location_1_zip_dup(runtmp):
     # save to sigfile.zip
     sig2 = utils.get_test_data('2.fa.sig')
@@ -150,8 +176,11 @@ def test_save_signatures_to_location_1_zip_dup(runtmp):
 
         # here we have to change the names so the sig content is different;
         # exact duplicates will not be saved, otherwise.
+        ss2 = ss2.to_mutable()
         ss2.name = 'different name for ss2'
         save_sig.add(ss2)
+
+        ss47 = ss47.to_mutable()
         ss47.name = 'different name for ss47'
         save_sig.add(ss47)
 
@@ -227,7 +256,7 @@ def test_save_signatures_to_location_2_zip_add_dup(runtmp):
         # add ss2; here we have to change the names so the sig content is
         # different exact duplicates will not be saved, otherwise.
         import copy
-        ss2copy = copy.copy(ss2)
+        ss2copy = ss2.to_mutable()
         ss2copy.name = 'different name for ss2'
         save_sig.add(ss2copy)
 
@@ -565,3 +594,224 @@ def test_pattern_5():
 
     with pytest.raises(SystemExit):
         pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+
+
+def test_fileinput_csv_1_plain():
+    # test basic CSV input
+
+    testfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    with sourmash_args.FileInputCSV(testfile) as r:
+        rows = list(r)
+        assert len(rows) == 6
+
+
+def test_fileinput_csv_1_no_such_file(runtmp):
+    # test fail to load file
+
+    noexistfile = runtmp.output('does-not-exist.csv')
+
+    with pytest.raises(FileNotFoundError):
+        with sourmash_args.FileInputCSV(noexistfile) as r:
+            pass
+
+
+def test_fileinput_csv_2_gz(runtmp):
+    # test basic CSV input from gz file
+
+    testfile = utils.get_test_data('tax/test.taxonomy.csv')
+    gzfile = runtmp.output('test.csv.gz')
+
+    with gzip.open(gzfile, 'wt') as outfp:
+        with open(testfile, 'rt', newline='') as infp:
+            outfp.write(infp.read())
+
+    with sourmash_args.FileInputCSV(gzfile) as r:
+        rows = list(r)
+        assert len(rows) == 6
+
+
+def test_fileinput_csv_2_gz_not_csv(runtmp):
+    # test basic CSV input from gz file that's not CSV - works
+
+    gzfile = runtmp.output('test.csv.gz')
+
+    with gzip.open(gzfile, 'wt') as outfp:
+        outfp.write("hello world!")
+
+    with sourmash_args.FileInputCSV(gzfile) as r:
+        assert r.fieldnames == ['hello world!']
+
+
+def test_fileinput_csv_2_gz_bad_version_header(runtmp):
+    # test basic CSV input from gz file with bad version header
+    # currently this works; not clear to me how it should fail :grin:
+
+    gzfile = runtmp.output('test.csv.gz')
+
+    with gzip.open(gzfile, 'wt') as outfp:
+        outfp.write("# excelsior\nhello world!")
+
+    with sourmash_args.FileInputCSV(gzfile) as r:
+        assert r.fieldnames == ['hello world!']
+        print(r.version_info)
+        assert r.version_info == ['excelsior']
+
+
+def test_fileinput_csv_2_zip(runtmp):
+    # test CSV input from zip file, with component filename
+
+    testfile = utils.get_test_data('tax/test.taxonomy.csv')
+    zf_file = runtmp.output('test.zip')
+
+    with zipfile.ZipFile(zf_file, 'w') as outzip:
+        with open(testfile, 'rb') as infp:
+            with outzip.open('XYZ.csv', 'w') as outfp:
+                outfp.write(infp.read())
+
+    with sourmash_args.FileInputCSV(zf_file, default_csv_name='XYZ.csv') as r:
+        rows = list(r)
+        assert len(rows) == 6
+        print(rows)
+
+
+def test_fileinput_csv_3_load_manifest():
+    # test loading a manifest from a zipfile collection, using
+    # FileInputCSV.
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with sourmash_args.FileInputCSV(testfile, default_csv_name='SOURMASH-MANIFEST.csv') as r:
+
+        rows = list(r)
+        assert len(rows) == 8
+
+        assert r.version_info == ['SOURMASH-MANIFEST-VERSION', '1.0']
+
+
+def test_fileinput_csv_3_load_manifest_no_default():
+    # test loading a manifest from a zipfile collection, using
+    # FileInputCSV, but with no default_csv_name - should fail
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with pytest.raises(csv.Error):
+        with sourmash_args.FileInputCSV(testfile) as r:
+            print(r.fieldnames)
+
+
+def test_fileinput_csv_3_load_manifest_zipfile_obj():
+    # test loading a manifest from an open zipfile obj, using
+    # FileInputCSV.
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with zipfile.ZipFile(testfile, "r") as zf:
+        with sourmash_args.FileInputCSV(testfile,
+                                     default_csv_name='SOURMASH-MANIFEST.csv',
+                                     zipfile_obj=zf) as r:
+            rows = list(r)
+            assert len(rows) == 8
+
+            assert r.version_info == ['SOURMASH-MANIFEST-VERSION', '1.0']
+
+
+def test_fileinput_csv_3_load_manifest_zipfile_obj_no_defualt():
+    # test loading a manifest from an open zipfile obj, using
+    # FileInputCSV, but with no default csv name => should fail.
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with zipfile.ZipFile(testfile, "r") as zf:
+        with pytest.raises(ValueError):
+            with sourmash_args.FileInputCSV(testfile,
+                                            zipfile_obj=zf) as r:
+                pass
+
+
+def test_fileoutput_csv_1(runtmp):
+    # test basic behavior
+    outfile = runtmp.output('xxx.csv')
+
+    with sourmash_args.FileOutputCSV(outfile) as fp:
+        w = csv.writer(fp)
+        w.writerow(['a', 'b', 'c'])
+        w.writerow(['x', 'y', 'z'])
+
+    with open(outfile, newline="") as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row['a'] == 'x'
+        assert row['b'] == 'y'
+        assert row['c'] == 'z'
+
+
+def test_fileoutput_csv_1_gz(runtmp):
+    # test basic behavior => gz
+    outfile = runtmp.output('xxx.csv.gz')
+
+    with sourmash_args.FileOutputCSV(outfile) as fp:
+        w = csv.writer(fp)
+        w.writerow(['a', 'b', 'c'])
+        w.writerow(['x', 'y', 'z'])
+
+    with gzip.open(outfile, 'rt') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row['a'] == 'x'
+        assert row['b'] == 'y'
+        assert row['c'] == 'z'
+
+
+def test_fileoutput_csv_2_stdout():
+    # test '-' and 'None' go to sys.stdout
+
+    with sourmash_args.FileOutputCSV('-') as fp:
+        assert fp == sys.stdout
+
+    with sourmash_args.FileOutputCSV(None) as fp:
+        assert fp == sys.stdout
+
+
+def test_add_ksize_arg_no_default():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p)
+    args = p.parse_args()
+    assert args.ksize == None
+
+
+def test_add_ksize_arg_no_default_specify():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p)
+    args = p.parse_args(['-k', '21'])
+    assert args.ksize == 21
+
+
+def test_add_ksize_arg_default_31():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p, default=31)
+    args = p.parse_args()
+    assert args.ksize == 31
+
+
+def test_add_ksize_arg_default_31_specify():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p, default=31)
+    args = p.parse_args(['-k', '21'])
+    assert args.ksize == 21
+
+
+def test_bug_2370(runtmp):
+    # bug - manifest loading code does not catch gzip.BadGzipFile
+    sigfile = utils.get_test_data('63.fa.sig')
+
+    # copy sigfile over to a .gz file without compressing it -
+    shutil.copyfile(sigfile, runtmp.output('not_really_gzipped.gz'))
+
+    # try running sourmash_args.load_file_as_index
+    #runtmp.sourmash('sig', 'describe', runtmp.output('not_really_gzipped.gz'))
+    sourmash_args.load_file_as_index(runtmp.output('not_really_gzipped.gz'))

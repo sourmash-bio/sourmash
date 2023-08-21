@@ -3,6 +3,7 @@ Manifests for collections of signatures.
 """
 import csv
 import ast
+import gzip
 import os.path
 from abc import abstractmethod
 import itertools
@@ -40,8 +41,13 @@ class BaseCollectionManifest:
         if db is not None:
             return db
 
-        # not a SQLite db?
-        with open(filename, newline="") as fp:
+        # not a SQLite db? CTB: fix this to actually try loading this as .gz...
+        if filename.endswith('.gz'):
+            xopen = gzip.open
+        else:
+            xopen = open
+
+        with xopen(filename, 'rt', newline="") as fp:
             return cls.load_from_csv(fp)
 
     @classmethod
@@ -92,8 +98,9 @@ class BaseCollectionManifest:
     def write_to_filename(self, filename, *, database_format='csv',
                           ok_if_exists=False):
         if database_format == 'csv':
+            from .sourmash_args import FileOutputCSV
             if ok_if_exists or not os.path.exists(filename):
-                with open(filename, "w", newline="") as fp:
+                with FileOutputCSV(filename) as fp:
                     return self.write_to_csv(fp, write_header=True)
             elif os.path.exists(filename) and not ok_if_exists:
                 raise Exception("output manifest already exists")

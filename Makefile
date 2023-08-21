@@ -5,21 +5,20 @@ all: build
 .PHONY:
 
 build: .PHONY
-	$(PYTHON) setup.py build_ext -i
+	$(PYTHON) -m pip install -e .
 
 clean:
-	$(PYTHON) setup.py clean --all
-	rm -f src/sourmash/*.so
+	$(PYTHON) -m pip uninstall -y sourmash
+	rm -rf src/sourmash/_lowlevel
 	cd doc && make clean
 
-install: all
-	$(PYTHON) setup.py install
+install: build
 
 dist: FORCE
-	$(PYTHON) setup.py sdist
+	$(PYTHON) -m build --sdist
 
-test:
-	tox -e py38
+test: .PHONY
+	tox -e py39
 	cargo test
 
 doc: .PHONY

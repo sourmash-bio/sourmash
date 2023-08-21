@@ -214,7 +214,10 @@ The output below is the CSV output for a fictional metagenome.
 
 The first column, `f_unique_to_query`, is the fraction of the database
 match that is _unique_ with respect to the original query. It will
-always decrease as you get more matches.
+always decrease as you get more matches. The sum of
+`f_unique_to_query` across all rows is what is reported in by gather
+as the fraction of query k-mers hit by the recovered matches
+(unweighted) and should never be greater than 1!
 
 The second column, `f_match_orig`, is how much of the match is in the
 _original_ query.  For this fictional metagenome, each match is
@@ -236,6 +239,9 @@ f_unique_to_query      f_match_orig  f_match                f_orig_query
 0.10709413369713507    1.0           1.0                    0.10709413369713507
 0.10368349249658936    1.0           0.3134020618556701     0.33083219645293316
 ```
+Where there are overlapping matches (e.g. to multiple
+*E. coli* species in a gut metagenome) the overlaps will be represented
+multiple times in this column.
 
 A few quick notes for the algorithmic folk out there --
 

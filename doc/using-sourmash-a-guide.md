@@ -127,6 +127,17 @@ reads; the second takes all the trimmed read files, subsamples k-mers
 from them at 1000:1, and outputs a single merged signature named
 'SOMENAME' into the file `SOMENAME-reads.sig`.
 
+### Calculating a combined signature for multiple read files
+
+```
+sourmash sketch dna -p scaled=1000,k=21,k=31,k=51 sample_*.fq.gz \
+    --name "combined sketch for sample" -o sample.zip
+```
+
+This will build combined sketches of all `*.fq.gz` files
+in the directory for three ksizes, k=21, k=31, and k=51. The three sketches
+will be named `combined sketch for sample` and be saved to `sample.zip`.
+
 ### Creating signatures for individual genome files:
 
 ```

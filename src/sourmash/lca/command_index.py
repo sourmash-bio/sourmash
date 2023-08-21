@@ -11,7 +11,6 @@ from sourmash import sourmash_args
 from sourmash.sourmash_args import load_file_as_signatures
 from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import LineagePair
 from .lca_db import LCA_Database
 from sourmash.sourmash_args import DEFAULT_LOAD_K
 
@@ -26,7 +25,10 @@ def load_taxonomy_assignments(filename, *, delimiter=',', start_column=2,
     The 'assignments' dictionary that's returned maps identifiers to
     lineage tuples.
     """
+    from sourmash.tax.tax_utils import LineagePair
     # parse spreadsheet!
+    # CTB note: can't easily switch to FileInputCSV, because of
+    # janky way we do/don't handle headers here. See issue #2198.
     fp = open(filename, newline='')
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']

@@ -4,9 +4,9 @@ import pytest
 
 import sourmash
 from sourmash.signature import SourmashSignature, save_signatures, \
-    load_signatures, load_one_signature
+    load_signatures, load_one_signature, FrozenSourmashSignature
 import sourmash_tst_utils as utils
-from sourmash import MinHash
+from sourmash.minhash import MinHash, FrozenMinHash
 from sourmash_tst_utils import SourmashCommandFailed
 
 
@@ -139,6 +139,24 @@ def test_roundtrip(track_abundance):
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
+    assert isinstance(sig, SourmashSignature)
+    assert not isinstance(sig, FrozenSourmashSignature)
+    assert isinstance(sig2, FrozenSourmashSignature)
+
+    assert isinstance(e, MinHash)
+    assert isinstance(sig.minhash, FrozenMinHash)
+    assert isinstance(sig2.minhash, FrozenMinHash)
+
+
+def test_roundtrip_mutable_frozen(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig = SourmashSignature(e)
+    assert isinstance(sig.minhash, FrozenMinHash)
+    sig.minhash = sig.minhash.to_mutable()
+
+    sig2 = sig.to_frozen()
+    assert isinstance(sig2.minhash, FrozenMinHash)
 
 
 def test_load_signature_ksize_nonint(track_abundance):
@@ -439,17 +457,7 @@ def test_containment_ANI():
     print("\nss1 contained by ss2", s1_cont_s2)
     print("ss2 contained by ss1", s2_cont_s1)
 
-     # first, assess as-is. ANI should be None, bc 2.fa.sig size is inaccurate
-    assert s1_cont_s2.ani == s2_cont_s1.ani == None
-
-    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
-    s1_cont_s2.size_is_inaccurate = False
-    s2_cont_s1.size_is_inaccurate = False
-    
-    print("\nmh1 contained by mh2", s1_cont_s2)
-    print("mh2 contained by mh1", s2_cont_s1)
-
-    assert (round(s1_cont_s2.ani,3), s1_cont_s2.ani_low, s1_cont_s2.ani_high) == (1.0,1.0,1.0)#(1.0, None, None)
+    assert (round(s1_cont_s2.ani,3), s1_cont_s2.ani_low, s1_cont_s2.ani_high) == (1.0,1.0,1.0)
     assert (round(s2_cont_s1.ani,3), round(s2_cont_s1.ani_low,3), round(s2_cont_s1.ani_high,3)) == (0.966, 0.965, 0.967)
 
     s1_mc_s2 = ss1.max_containment_ani(ss2, estimate_ci =True)
@@ -508,6 +516,8 @@ def test_containment_ANI_downsample():
     ss3 = sourmash.load_one_signature(f3, ksize=31)
     # check that downsampling works properly
     print(ss2.minhash.scaled)
+
+    ss2 = ss2.to_mutable()
     ss2.minhash = ss2.minhash.downsample(scaled=2000)
     assert ss2.minhash.scaled != ss3.minhash.scaled
     ds_s3c = ss2.containment_ani(ss3, downsample=True)
@@ -523,6 +533,7 @@ def test_containment_ANI_downsample():
         ss2.max_containment_ani(ss3)
         assert "ValueError: mismatch in scaled; comparison fail" in e
 
+    ss3 = ss3.to_mutable()
     ss3.minhash = ss3.minhash.downsample(scaled=2000)
     assert ss2.minhash.scaled == ss3.minhash.scaled
     ds_s3c_manual = ss2.containment_ani(ss3)
@@ -543,14 +554,6 @@ def test_jaccard_ANI():
 
     s1_jani_s2 = ss1.jaccard_ani(ss2)
     s2_jani_s1 = ss2.jaccard_ani(ss1)
-
-    # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
-    assert s1_jani_s2 == s2_jani_s1
-    assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (None, 0.0, 3.891666770716877e-07)
-
-    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
-    s1_jani_s2.size_is_inaccurate = False
-    s2_jani_s1.size_is_inaccurate = False
 
     assert s1_jani_s2 == s2_jani_s1
     assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
@@ -595,6 +598,7 @@ def test_jaccard_ANI_downsample():
     ss2 = sourmash.load_one_signature(f2)
 
     print(ss1.minhash.scaled)
+    ss1 = ss1.to_mutable()
     ss1.minhash = ss1.minhash.downsample(scaled=2000)
     assert ss1.minhash.scaled != ss2.minhash.scaled
     with pytest.raises(ValueError) as e:
@@ -604,7 +608,41 @@ def test_jaccard_ANI_downsample():
     ds_s1c = ss1.jaccard_ani(ss2, downsample=True)
     ds_s2c = ss2.jaccard_ani(ss1, downsample=True)
 
+    ss2 = ss2.to_mutable()
     ss2.minhash = ss2.minhash.downsample(scaled=2000)
     assert ss1.minhash.scaled == ss2.minhash.scaled
     ds_j_manual = ss1.jaccard_ani(ss2)
     assert ds_s1c == ds_s2c == ds_j_manual
+
+
+def test_frozen_signature_update_1(track_abundance):
+    # setting .name should fail on a FrozenSourmashSignature
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    ss = SourmashSignature(e, name='foo').to_frozen()
+
+    with pytest.raises(ValueError):
+        ss.name = 'foo2'
+
+
+def test_frozen_signature_update_2(track_abundance):
+    # setting .minhash should fail on a FrozenSourmashSignature
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    e2 = e.copy_and_clear()
+    ss = SourmashSignature(e, name='foo').to_frozen()
+
+    with pytest.raises(ValueError):
+        ss.minhash = e2
+
+
+def test_frozen_signature_update_3(track_abundance):
+    # setting .minhash should succeed with update() context manager
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    ss = SourmashSignature(e, name='foo').to_frozen()
+
+    with ss.update() as ss2:
+        ss2.name = 'foo2'
+
+    assert ss2.name == 'foo2'

@@ -12,7 +12,7 @@ Please see
 [our migration guide](../support.md#migrating-from-sourmash-v3x-to-sourmash-v4x)
 for guidance on updating to sourmash v4, and post questions about
 migrating to sourmash 4.0 in the
-[sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/new).
+[sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/new).
 
 ## Major changes for 4.0
 
@@ -23,7 +23,7 @@ release; you should get the same results with v4 as you get with v3,
 except where command-line parameters need to be adjusted as noted
 below (see: protein ksize #1277, lca summarize changes #1175, sourmash
 gather on signatures without abundance #1328). Please
-[file an issue](https://github.com/dib-lab/sourmash/issues) if your
+[file an issue](https://github.com/sourmash-bio/sourmash/issues) if your
 results change!
 
 ### New or changed behavior

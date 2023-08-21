@@ -83,7 +83,7 @@ def cat(args):
     """
     concatenate all signatures into one file.
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
@@ -139,8 +139,8 @@ def split(args):
     _extend_signatures_with_from_file(args)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}' + args.extension
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}' + args.extension
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
@@ -195,8 +195,8 @@ def split(args):
             notify(f"** overwriting existing file {format(output_name)}")
 
         # save!
-        with open(output_name, 'wt') as outfp:
-            sourmash.save_signatures([sig], outfp)
+        with sourmash_args.SaveSignaturesToLocation(output_name) as save_sigs:
+            save_sigs.add(sig)
             notify(f'writing sig to {output_name}')
 
     notify(f'loaded and split {len(progress)} signatures total.')
@@ -442,8 +442,8 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh, name=args.name)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([merged_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(merged_sigobj)
 
     notify(f'loaded and merged {len(progress)} signatures')
 
@@ -488,6 +488,10 @@ def intersect(args):
 
         mins.intersection_update(sigobj.minhash.hashes)
 
+    if first_sig is None:
+        notify("no signatures provided to intersect!?")
+        sys.exit(-1)
+
     # forcibly turn off track_abundance, unless --abundances-from set.
     intersect_mh = first_sig.minhash.copy_and_clear().flatten()
     intersect_mh.add_many(mins)
@@ -505,8 +509,8 @@ def intersect(args):
         intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([intersect_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(intersect_sigobj)
 
     notify(f'loaded and intersected {len(progress)} signatures')
     if picklist:
@@ -623,8 +627,8 @@ def subtract(args):
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([subtract_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(subtract_sigobj)
 
     notify(f'loaded and subtracted {len(progress)} signatures')
 
@@ -654,6 +658,7 @@ def rename(args):
                                                 pattern=pattern_search)
 
     for sigobj, sigloc in loader:
+        sigobj = sigobj.to_mutable()
         sigobj._name = args.name
         save_sigs.add(sigobj)
 
@@ -782,6 +787,7 @@ def filter(args):
             filtered_mh = mh.copy_and_clear()
             filtered_mh.set_abundances(abunds2)
 
+            ss = ss.to_mutable()
             ss.minhash = filtered_mh
 
             save_sigs.add(ss)
@@ -823,6 +829,7 @@ def flatten(args):
             if args.name not in ss.name:
                 continue        # skip
 
+        ss = ss.to_mutable()
         ss.minhash = ss.minhash.flatten()
         save_sigs.add(ss)
 
@@ -865,7 +872,8 @@ def downsample(args):
                                                 yield_all_files=args.force,
                                                 force=args.force)
     for ss, sigloc in loader:
-        mh = ss.minhash
+        sigobj = ss.to_mutable()
+        mh = sigobj.minhash
 
         if args.scaled:
             # downsample scaled to scaled? straightforward.
@@ -894,10 +902,9 @@ def downsample(args):
                 mh_new = mh.copy()
                 _set_num_scaled(mh_new, args.num_hashes, 0)
 
-        ss.minhash = mh_new
 
-        # save!
-        save_sigs.add(ss)
+        sigobj.minhash = mh_new
+        save_sigs.add(sigobj)
 
     save_sigs.close()
 
@@ -960,8 +967,8 @@ def sig_import(args):
             siglist.append(s)
 
     notify(f'saving {len(siglist)} signatures to JSON')
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures(siglist, fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add_many(siglist)
 
 
 def export(args):
@@ -1366,9 +1373,8 @@ def check(args):
         # go through the input file and pick out missing rows.
         n_input = 0
         n_output = 0
-        with open(pickfile, newline='') as csvfp:
-            r = csv.DictReader(csvfp)
 
+        with sourmash_args.FileInputCSV(pickfile) as r:
             with open(args.output_missing, "w", newline='') as outfp:
                 w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
                 w.writeheader()

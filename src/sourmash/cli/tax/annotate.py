@@ -7,7 +7,7 @@ usage="""
 The 'tax annotate' command reads in gather results CSVs and annotates them
  with taxonomic information.
 
-By default, `tax annotate` produces a gather CSV with an additional `lineage`
+By default, 'tax annotate' produces a gather CSV with an additional 'lineage'
  column containing the taxonomic information for each database match.
 
 Please see the 'tax annotate' documentation for more details:
@@ -23,7 +23,7 @@ def subparser(subparsers):
                                       aliases=['annotate'],
                                       usage=usage)
     subparser.add_argument(
-        '-g', '--gather-csv', nargs='*', default = [],
+        '-g', '--gather-csv', nargs='*', default = [], action='extend',
         help='CSV output files from sourmash gather'
     )
     subparser.add_argument(
@@ -36,7 +36,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs="+", required=True,
+        nargs='*', required=True, action="extend",
         help='database lineages CSV'
     )
     subparser.add_argument(
@@ -59,9 +59,13 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past errors in file and taxonomy loading',
     )
+    subparser.add_argument(
+        '--lins', '--lin-taxonomy', action='store_true', default=False,
+        help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
+    )
 
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
     return sourmash.tax.__main__.annotate(args)

@@ -49,7 +49,7 @@ Finally, plot a dendrogram: ``` sourmash plot cmp.dist --labels ```
 This will output three files, `cmp.dist.dendro.png`,
 `cmp.dist.matrix.png`, and `cmp.dist.hist.png`, containing a
 clustering & dendrogram of the sequences, a similarity matrix and
-heatmap, and a histogram of the pairwise distances between the three
+heatmap, and a histogram of the pairwise similarities between the three
 genomes.
 
 Matrix:
@@ -75,8 +75,8 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 [the tutorial](tutorials.md) for a walkthrough of these commands.
 
 * `sketch` creates signatures.
-* `compare` compares signatures and builds a distance matrix.
-* `plot` plots distance matrices created by `compare`.
+* `compare` compares signatures and builds a similarity matrix.
+* `plot` plots similarity matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
 * `index` builds a fast index for many (thousands) of signatures.
@@ -91,6 +91,9 @@ information; these are grouped under the `sourmash tax` and
 * `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+* `tax prepare`    - prepare and/or combine taxonomy files.
+* `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
+* `tax summarize` - print summary information (counts of lineages) for a taxonomy lineages file or database.
 
 `sourmash lca` commands:
 
@@ -168,7 +171,7 @@ ______
 
 Usage:
 ```
-sourmash compute filename [ filename2 ... ]
+sourmash compute <filename> [<filename2> ... ]
 ```
 Optional arguments:
 ```
@@ -190,40 +193,61 @@ The `compare` subcommand compares one or more signatures
 (if signatures are created with `-p abund`) the [angular
 similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
 
-The default output
-is a text display of a similarity matrix where each entry `[i, j]`
-contains the estimated Jaccard index between input signature `i` and
-input signature `j`.  The output matrix can be saved to a file
-with `--output` and used with the `sourmash plot` subcommand (or loaded
-with `numpy.load(...)`.  Using `--csv` will output a CSV file that can
-be loaded into other languages than Python, such as R.
+The default output is a text display of a similarity matrix where each
+entry `[i, j]` contains the estimated Jaccard index between input
+signature `i` and input signature `j`.  The output matrix can be saved
+to a numpy binary file with `--output <outfile.mat>` and used with the
+`sourmash plot` subcommand (or loaded with `numpy.load(...)`.  Using
+`--csv <outfile.csv>` will output a CSV file that can be loaded into
+other languages than Python, such as R.
+
+As of sourmash 4.4.0, `compare` also supports Average Nucleotide
+Identity (ANI) estimates instead of Jaccard or containment index; use
+`--ani` to enable this.
 
 Usage:
 ```
-sourmash compare file1.sig [ file2.sig ... ]
+sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
 ```
 
 Options:
 
-* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
-* `--ksize` -- do the comparisons at this k-mer size.
+* `--output <filename>` -- save the output matrix to this file, as a numpy binary matrix.
+* `--csv <filename>` -- save the output matrix to this file in CSV format.
+* `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
+* `--ksize <k>` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
-* `--from-file` -- append the list of files in this text file to the input
-        signatures.
+* `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
+* `--from-file <filelist.txt>` -- append the list of files in this text file to the input signatures.
 * `--ignore-abundance` -- ignore abundances in signatures.
-* `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+* `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+* `--csv <outfile.csv>` -- save the output matrix in CSV format.
 
-**Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
+**Note:** compare by default produces a symmetric similarity matrix
+that can be used for clustering in downstream tasks. With `--containment`,
+however, this matrix is no longer symmetric and cannot formally be
+used for clustering.
+
+The containment matrix is organized such that the value in row A for column B is the containment of the B'th sketch in the A'th sketch, i.e.
+
+```
+C(A, B) = B.contained_by(A)
+```
+
+**Note:** The ANI estimate will be calculated based on Jaccard similarity
+by default; however, if `--containment`, `--max-containment`, or `--avg-containment` is
+specified, those values will be used instead. With `--containment --ani`, the
+ANI output matrix will be asymmetric as discussed above.
 
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
 
 The `plot` subcommand produces two plots -- a dendrogram and a
-dendrogram+matrix -- from a distance matrix created by `sourmash compare
+dendrogram+matrix -- from a matrix created by `sourmash compare
 --output <matrix>`.  The default output is two PNG files.
 
 Usage:
 ```
-sourmash plot <matrix>
+sourmash plot <matrix_file>
 ```
 
 Options:
@@ -243,39 +267,51 @@ Example output:
 
 ### `sourmash search` - search for signatures in collections or databases
 
-The `search` subcommand searches a collection of signatures or SBTs for
-matches to the query signature.  It can search for matches with either
+The `search` subcommand searches a collection of signatures
+(in any of the [formats supported by sourmash](#storing-and-searching-signatures))
+for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
-containing the matches.
+containing all of the matches with respective similarity or containment score.
 
-`search` will load all of provided signatures into memory, which can
-be slow and somewhat memory intensive for large collections.  You can
-use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
-be quickly searched on disk; this is [the same format in which we provide
-GenBank and other databases](databases.md).
+`search` makes use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash search query.sig [ list of signatures or SBTs ]
+sourmash search query.sig <database1> [ <database2> ... ]
 ```
 
 Example output:
 
 ```
-49 matches; showing first 20:
+% sourmash search tests/test-data/47.fa.sig gtdb-rs207.genomic-reps.dna.k31.zip
+
+...
+--
+loaded 65703 total signatures from 1 locations.
+after selecting signatures compatible with search, 65703 remain.
+
+2 matches above threshold 0.080:
 similarity   match
 ----------   -----
- 75.4%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
- 72.2%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
- 71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
- 70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
- 69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
-...    
+ 32.3%       GCF_900456975.1 Shewanella baltica strain=NCTC10735, 5088...
+ 14.0%       GCF_002838165.1 Shewanella sp. Pdp11 strain=Pdp11, ASM283...
 ```
 
-Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+`search` takes a number of command line options -
+* `--containment` - find matches using the containment index rather than Jaccard similarity;
+* `--max-containment` - find matches using the max containment index rather than Jaccard similarity;
+* `-t/--threshold` - lower threshold for matching; defaults to 0.08;
+* `--best-only` - find and report only the best match;
+* `-n/--num-results` - number of matches to report to stdout; defaults to 3; 0 to report all;
+
+Match information can be saved to a CSV file with `-o/--output`; with
+`-o`, all matches above the threshold will be saved, not just those
+printed to stdout (which are limited to `-n/--num-results`).
+
+As of sourmash 4.2.0, `search` supports `--picklist`, to
 [select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to search only a small subset of a large collection, or to
 exclude a few signatures from a collection, without modifying the
@@ -295,14 +331,14 @@ will be abundance weighted (unless `--ignore-abundances` is
 specified).  `-o/--output` will create a CSV file containing the
 matches.
 
-`gather`, like `search`, will load all of provided signatures into
-memory.  You can use `sourmash index` to create a Sequence Bloom Tree
-(SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.md).
+`gather`, like `search`, works with any of the
+[signature collection formats supported by sourmash](#storing-and-searching-signatures)
+and will make use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash gather query.sig [ list of signatures or SBTs ]
+sourmash gather query.sig <database1> [ <database2> ... ]
 ```
 
 Example output:
@@ -375,7 +411,7 @@ of signatures to include when running `index`.
 
 Usage:
 ```
-sourmash index database [ list of input signatures/directories/databases ]
+sourmash index <database_name> <inputfile1> [ <inputfile2> ... ]
 ```
 
 This will create a `database.sbt.zip` file containing the SBT of the
@@ -438,7 +474,7 @@ searched in combination with `search`, `gather`, `compare`, etc.
 
 A motivating use case for `sourmash prefetch` is to run it on multiple
 large databases with a metagenome query using `--threshold-bp=0`,
-`--save-matching-hashes matching_hashes.sig`, and `--save-matches
+`--save-matching-hashes matching-hashes.sig`, and `--save-matches
 db-matches.sig`, and then run `sourmash gather matching-hashes.sig
 db-matches.sig`. 
 
@@ -457,7 +493,8 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  `gather` command (we cannot combine separate `gather` runs for the
  same query). For supported databases (e.g. GTDB, NCBI), we provide
  taxonomy csv files, but they can also be generated for user-generated
- databases. For more information, see [databases](databases.md).
+ databases. As of v4.8, some sourmash taxonomy commands can also use `LIN`
+ lineage information. For more information, see [databases](databases.md).
 
 `tax` commands rely upon the fact that `gather` provides both the total
  fraction of the query matched to each database matched, as well as a
@@ -470,10 +507,9 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  taxonomic rank. For example, if the gather results for a metagenome
  include results for 30 different strains of a given species, we can sum
  the fraction uniquely matched to each strain to obtain the fraction
- uniquely matched to this species. Note that this summarization can
- also take into account abundance weighting; see
- [classifying signatures](classifying-signatures.md) for more
- information.
+ uniquely matched to this species. Alternatively, taxonomic summarization
+ can take into account abundance weighting; see
+ [classifying signatures](classifying-signatures.md) for more information.
 
 As with all reference-based analysis, results can be affected by the
  completeness of the reference database. However, summarizing taxonomic
@@ -482,7 +518,6 @@ As with all reference-based analysis, results can be affected by the
 
 For more details on how `gather` works and can be used to classify
  signatures, see [classifying-signatures](classifying-signatures.md).
-
 
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
@@ -498,8 +533,13 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-There are three possible output formats, `csv_summary`, `lineage_summary`, and
- `krona`.
+The possible output formats are:
+- `human`
+- `csv_summary`
+- `lineage_summary`
+- `krona`
+- `kreport`
+- `lingroup_report`
 
 #### `csv_summary` output format
 
@@ -572,7 +612,7 @@ sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv \
-    --output-format krona --rank species
+    --output-format lineage_summary --rank species
 ```
 
 example `lineage_summary`:
@@ -588,17 +628,211 @@ To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
 
 
+#### `kreport` output format
+
+The `kreport` output reports kraken-style `kreport` output, which may be useful for
+comparison with other taxonomic profiling methods. While this format typically
+records the percent of number of reads assigned to taxa, we create ~comparable
+output by reporting the percent of k-mers matched to each taxon and the estimated
+number of base pairs that these k-mers represent. To best represent the percent of all
+reads, we use k-mer abundance information in this output. To generate this properly, query
+FracMinHash sketches should be generated with abundance information (`-p abund`) to allow
+abundance-weighted `gather` results.
+
+Note: `sourmash gather` makes all assignments to genomes, and then `sourmash tax`
+integrates taxonomy information and uses LCA-style summarization to build assignments.
+For species-level specificity, our current recommendation is to use use our default
+k-mer size of 31.
+
+standard `kreport` columns (read-based tools):
+- `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+- `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+- `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
+- `Scientific Name`: The scientific name of the taxon.
+
+Example reads-based `kreport` with all columns:
+
+```
+    88.41	2138742	193618	K	2	Bacteria
+    0.16	3852	818	P	201174	  Actinobacteria
+    0.13	3034	0	C	1760	    Actinomycetia
+    0.13	3034	45	O	85009	      Propionibacteriales
+    0.12	2989	1847	F	31957	        Propionibacteriaceae
+    0.05	1142	352	G	1912216	          Cutibacterium
+    0.03	790	790	S	1747	            Cutibacterium acnes
+```
+
+sourmash `kreport` columns:
+- `Percent [k-mers] contained in taxon`: The cumulative percentage of k-mers for this taxon and all descendants.
+- `Estimated base pairs contained in taxon`: The cumulative estimated base pairs for this taxon and all descendants.
+- `Estimated base pairs "assigned" (species-level)`: The estimated base pairs assigned at species-level (cumulative count of base pairs assigned to individual genomes in this species).
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- `NCBI Taxon ID`: Reported (v4.7+) if using NCBI taxonomy. Otherwise blank.
+- `Scientific Name`: The scientific name of the taxon.
+
+notes:
+- `gather` assigns k-mers to specific genomes. To mimic the output of other
+  tools, we report all results as "assigned" to species-level, which summarizes
+  the k-mers matched to each genome within a given species. Hence, column 3 will
+  show all estimated base pairs at this level, and 0 for all other ranks.
+  Column 2 contains the summarized info at the higher ranks.
+- Since `gather` results are non-overlapping and all assignments are done at the
+  genome level, the percent match (first column) will sum to 100% at each rank
+  (aside from rounding issues) when including the unclassified (U) percentage.
+  Higher-rank assignments are generated using LCA-style summarization of genome
+  matches.
+- Rows are ordered by rank and then ~percent containment.
+
+
+example sourmash `{output-name}.kreport.txt`:
+
+```
+92.73    64060000                D               Bacteria
+0.44    11299000                D               Eukaryota
+6.82    284315000               U               unclassified
+60.23    30398000                P               Proteobacteria
+21.86    22526000                P               Firmicutes
+10.41    5250000         P               Bacteroidetes
+.
+.
+.
+3.94    6710000         S               Escherichia coli
+4.56    6150000         S               Pseudomonas aeruginosa
+0.71    5801000         S               Clostridium beijerinckii
+2.55    5474000         S               Bacillus cereus
+21.95    4987000         S               Escherichia sp. XD7
+28.57    4124000         S               Cereibacter sphaeroides
+0.25    4014000         S               Acinetobacter baumannii
+7.23    3934000         S               Staphylococcus haemolyticus
+0.09    3187000         S               Phocaeicola vulgatus
+0.61    2820000         S               Streptococcus agalactiae
+0.20    2499000         S               Cutibacterium acnes
+0.03    2339000         S               Deinococcus radiodurans
+10.31    2063000         S               Porphyromonas gingivalis
+9.24    2011000         S               Streptococcus mutans
+```
+
+
+#### `lingroup` output format
+
+When using LIN taxonomic information, you can optionally also provide a `lingroup` file with two required columns: `name` and `lin`. If provided, we will produce a file, `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output will select information from the full summary that match the LIN prefixes provided as groups.
+
+This output format consists of four columns:
+- `name`, `lin` columns are taken directly from the `--lingroup` file
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
+
+Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
+
+example output:
+```
+name	lin	percent_containment	num_bp_contained
+lg1	0;0;0	5.82	714000
+lg2	1;0;0	5.05	620000
+lg3	2;0;0	1.56	192000
+lg3	1;0;1	0.65	80000
+lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
+```
+
+Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
+
+#### `bioboxes` output format
+
+When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.
+
+This output format starts with some header information:
+```
+#CAMI Submission for Taxonomic Profiling
+@Version:0.9.3
+@SampleID:SAMPLEID
+@Ranks:superkingdom|phylum|class|order|family|genus|species|strain
+@__program__:sourmash
+@@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+```
+and then provides taxonomic profiling information in the tab-separated columns described by the last header line:
+
+- `TAXID` - specifies a unique alphanumeric ID for a node in a reference tree such as the NCBI taxonomy
+- `RANK` -  superkingdom --> strain
+- `TAXPATH` - the path from the root of the reference taxonomy to the respective taxon 
+- `TAXPATHSN` - scientific names of taxpath
+- `PERCENTAGE` (0-100) -  field specifies what percentage of the sample was assigned to the respective TAXID
+
+example output (using small test data):
+```
+# Taxonomic Profiling Output
+@SampleID:test1
+@Version:0.10.0
+@Ranks:superkingdom|phylum|class|order|family|genus|species
+@__program__:sourmash
+@@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+2	superkingdom	2	Bacteria	13.08
+976	phylum	2|976	Bacteria|Bacteroidota	7.27
+1224	phylum	2|1224	Bacteria|Pseudomonadota	5.82
+200643	class	2|976|200643	Bacteria|Bacteroidota|Bacteroidia	7.27
+1236	class	2|1224|1236	Bacteria|Pseudomonadota|Gammaproteobacteria	5.82
+171549	order	2|976|200643|171549	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales	7.27
+91347	order	2|1224|1236|91347	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales	5.82
+171552	family	2|976|200643|171549|171552	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae	5.70
+543	family	2|1224|1236|91347|543	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae	5.82
+815	family	2|976|200643|171549|815	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae	1.56
+838	genus	2|976|200643|171549|171552|838	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella	5.70
+561	genus	2|1224|1236|91347|543|561	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia	5.82
+909656	genus	2|976|200643|171549|815|909656	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola	1.56
+165179	species	2|976|200643|171549|171552|838|165179	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella|Prevotella copri	5.70
+562	species	2|1224|1236|91347|543|561|562	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia|Escherichia coli	5.82
+821	species	2|976|200643|171549|815|909656|821	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola|Phocaeicola vulgatus	1.56
+```
+
+
+#### `lingroup` output format
+
+When using LIN taxonomic information, you can optionally also provide a `lingroup` file with two required columns: `name` and `lin`. If provided, we will produce a file, `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output will select information from the full summary that match the LIN prefixes provided as groups.
+
+This output format consists of four columns:
+- `name`, `lin` columns are taken directly from the `--lingroup` file
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
+
+Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
+
+example output:
+```
+name	lin	percent_containment	num_bp_contained
+lg1	0;0;0	5.82	714000
+lg2	1;0;0	5.05	620000
+lg3	2;0;0	1.56	192000
+lg3	1;0;1	0.65	80000
+lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
+```
+
+Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
+
 ### `sourmash tax genome` - classify a genome using `gather` results
 
 `sourmash tax genome` reports likely classification for each query,
- based on `gather` matches. By default, classification requires at least 10% of
- the query to be matched. Thus, if 10% of the query was matched to a species, the
- species-level classification can be reported. However, if 7% of the query was
- matched to one species, and an additional 5% matched to a different species in
- the same genus, the genus-level classification will be reported.
+ based on `gather` matches. By default, classification requires at least 10%
+ of the query to be matched. Thus, if 10% of the query was matched to a species,
+ the species-level classification can be reported. However, if 7% of the query
+ was matched to one species, and an additional 5% matched to a different species
+ in the same genus, the genus-level classification will be reported.
+
+`sourmash tax genome` can use an ANI threshold (`--ani-threshold`) instead of a
+ containment threshold. This works the same way as the containment threshold
+ (and indeed, is using the same underlying information). Note that for DNA k-mers,
+ k=21 ANI is most similar to alignment-based ANI values, and ANI values should only
+ be compared if they were generated using the same ksize.
 
 Optionally, `genome` can instead report classifications at a desired `rank`,
  regardless of match threshold (`--rank` argument, e.g. `--rank species`).
+
+If using `--lins` taxonomy, you can also provide a `--lingroup` file containing two
+columns, `name`, and `lin`, which provide a series of lin prefixes of interest.
+If provided,  genome classification will be restricted to provided lingroups only.
+All other options (`--rank`, `--ani-threshold`, etc) should continue to function.
+If you specify a `--rank` that does not have an associated lingroup, sourmash will
+notify you that you eliminated all classification options.
 
 Note that these thresholds and strategies are under active testing.
 
@@ -700,21 +934,29 @@ To produce multiple output types from the same command, add the types into the
 ### `sourmash tax annotate` - annotates gather output with taxonomy
 
 `sourmash tax annotate` adds a column with taxonomic lineage information
- for each database match to gather output. Do not summarize or classify.
- Note that this is not required for either `summarize` or `classify`.
+ for each genome match in the gather output, without LCA summarization
+ or classification. This format is not required for either `metagenome`
+ or `genome`, but may be helpful for other downstream analyses.
 
-By default, `annotate` uses the name of each input gather csv to write an updated
- version with lineages information. For example, annotating `sample1.gather.csv`
- would produce `sample1.gather.with-lineages.csv`
+By default, `annotate` uses the name of each input gather csv to write
+an updated version with lineages information. For example, annotating
+`sample1.gather.csv` would produce `sample1.gather.with-lineages.csv`.
 
+This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`:
 ```
 sourmash tax annotate
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
-> This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
+
+The `with-lineages` output file format can be summarized with
+`sourmash tax summarize` and can also be used as an input taxonomy
+spreadsheet for any of the tax subcommands (new as of v4.6.0).
 
 ### `sourmash tax prepare` - prepare and/or combine taxonomy files
+
+`sourmash tax prepare` prepares taxonomy files for other `sourmash tax`
+commands.
 
 All `sourmash tax` commands must be given one or more taxonomy files as
 parameters to the `--taxonomy` argument. These files can be either CSV
@@ -739,6 +981,96 @@ can be set to CSV like so:
 ```
 sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
 ```
+
+**Note:** As of sourmash v4.6.0, the output of `sourmash tax annotate` can
+ be used as a taxonomy input spreadsheet as well.
+
+### `sourmash tax grep` - subset taxonomies and create picklists based on taxonomy string matches
+
+(`sourmash tax grep` is a new command as of sourmash v4.5.0.)
+
+`sourmash tax grep` searches taxonomies for matching strings,
+optionally restricting the string search to a specific taxonomic rank.
+It creates new files containing matching taxonomic entries; these new
+files can serve as taxonomies and can also be used as
+[picklists to restrict database matches](#using-picklists-to-subset-large-collections-of-signatures).
+
+Usage:
+```
+sourmash tax grep <pattern> -t <taxonomy-db> [<taxonomy-db> ...]
+```
+where `pattern` is a regular expression; see Python's
+[Regular Expression HOWTO for details on supported regexp features](https://docs.python.org/3/howto/regex.html#regex-howto).
+
+For example,
+```
+sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb -o shew-picklist.csv
+```
+will search for a string match to `Shew` within the entire GTDB RS207
+taxonomy, and will output a subset taxonomy in `shew-picklist.csv`.
+This picklist can be used with the GTDB
+RS207 databases like so:
+```
+sourmash search query.sig gtdb-rs207.genomic.k31.zip \
+    --picklist shew-picklist.csv:ident:ident
+```
+
+`tax grep` can also restrict string matching to a specific taxonomic rank
+with `-r/--rank`; for example,
+```
+sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb \
+    -o shew-picklist.csv -r genus
+```
+will restrict matches to the rank of genus. Available ranks are
+superkingdom, phylum, class, order, family, genus, and species.
+
+`tax grep` also takes several standard grep arguments, including `-i`
+to ignore case and `-v` to output only taxonomic lineages that do
+_not_ match the pattern.
+
+Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
+convert CSV output from `tax grep` into a sqlite3 taxonomy database.
+
+### `sourmash tax summarize` - print summary information for lineage spreadsheets or taxonomy databases
+
+(`sourmash tax summarize` is a new command as of sourmash v4.6.0.)
+
+`sourmash tax summarize` loads in one or more lineage spreadsheets,
+counts the distinct taxonomic lineages, and outputs a summary. It
+optionally will output a CSV file with a detailed count of how many
+identifiers belong to each taxonomic lineage.
+
+For example,
+```
+sourmash tax summarize gtdb-rs202.taxonomy.v2.db -o ranks.csv
+```
+outputs
+```
+number of distinct taxonomic lineages: 258406
+rank superkingdom:        2 distinct taxonomic lineages
+rank phylum:              169 distinct taxonomic lineages
+rank class:               419 distinct taxonomic lineages
+rank order:               1312 distinct taxonomic lineages
+rank family:              3264 distinct taxonomic lineages
+rank genus:               12888 distinct taxonomic lineages
+rank species:             47894 distinct taxonomic lineages
+```
+
+and creates a file `ranks.csv` with the number of distinct identifier
+counts for each lineage at each rank:
+```
+rank,lineage_count,lineage
+superkingdom,254090,d__Bacteria
+phylum,120757,d__Bacteria;p__Proteobacteria
+class,104665,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria
+order,64157,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales
+family,55347,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae
+...
+```
+That is, there are 254,090 identifiers in GTDB rs202 under `d__Bacteria`,
+and 120,757 within the `p__Proteobacteria`.
+
+`tax summarize` can also be used to summarize the output of `tax annotate`.
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
@@ -1147,8 +1479,12 @@ then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
 
-Note: `merge` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+`sig merge` can only merge compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
+Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
 
@@ -1179,8 +1515,12 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
-Note: `subtract` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+`sig subtract` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
+Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
@@ -1200,6 +1540,11 @@ in any signatures will be ignored and the output signature will have
 borrow abundances from the specified signature (which will also be added
 to the intersection).
 
+`sig intersect` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 ### `sourmash signature inflate` - transfer abundances from one signature to others
 
 Use abundances from one signature to provide abundances on other signatures.
@@ -1213,6 +1558,11 @@ will take the abundances from hashes `file1.sig` and use them to set
 the abundances on matching hashes in `file2.sig` and `file3.sig`.
 Any hashes that are not present in `file1.sig` will be removed from
 `file2.sig` and `file3.sig` as they will now have zero abundance.
+
+`sig inflate` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -1292,7 +1642,7 @@ or equal to 2, and less than or equal to 5.
 
 For example,
 ```
-sourmash signature -m 2 *.sig
+sourmash signature filter -m 2 *.sig
 ```
 
 will output new signatures containing only hashes that occur two or
@@ -1311,8 +1661,7 @@ sourmash signature import filename.msh.json -o imported.sig
 ```
 will import the contents of `filename.msh.json` into `imported.sig`.
 
-Note: `import` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `import` only creates one output file, with one signature in it.
 
 ### `sourmash signature export` - export signatures to mash.
 
@@ -1344,6 +1693,10 @@ sourmash signature overlap file1.sig file2.sig
 ```
 will display the detailed comparison of `file1.sig` and `file2.sig`.
 
+`sig overlap` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
 
 ### `sourmash signature kmers` - extract k-mers and/or sequences that match to signatures
 
@@ -1746,3 +2099,19 @@ situations where you have a **very large** collection of signatures
 in the collection (as you would have to, with a zipfile). This can be
 useful if you want to refer to different subsets of the collection
 without making multiple copies in a zip file.
+
+### Using sourmash plugins
+
+As of sourmash v4.7.0, sourmash has an experimental plugins interface!
+The plugin interface supports extending sourmash to load and save
+signatures in new ways, and also supports the addition of sourmash
+subcommands via `sourmash scripts`.
+
+In order to use a plugin with sourmash, you will need to use `pip`
+or `conda` to install the plugin the same environment that sourmash
+is installed in.
+
+In the future, we will include a list of available sourmash plugins in
+the documentation, and also provide a way to list available plugins.
+
+You can list all installed plugins with `sourmash info -v`.

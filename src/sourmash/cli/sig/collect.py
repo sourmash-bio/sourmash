@@ -53,7 +53,7 @@ def subparser(subparsers):
                            help="convert all locations to absolute paths",
                            action='store_true')
 
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
 

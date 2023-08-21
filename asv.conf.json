@@ -1,7 +1,7 @@
 {
     "version": 1,
     "project": "sourmash",
-    "project_url": "https://github.com/dib-lab/sourmash",
+    "project_url": "https://github.com/sourmash-bio/sourmash",
     "repo": ".",
     "branches": ["latest"],
     "dvcs": "git",
@@ -11,8 +11,7 @@
     "html_dir": ".asv/html",
     "build_cache_size": 8,
     "build_command": [
-      "python -m pip install 'setuptools_scm[toml]>=4,<6' milksnake",
-      "python setup.py build",
+      "python -m pip install 'setuptools_scm[toml]>=4,<6' milksnake maturin",
       "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
     ]
 }
