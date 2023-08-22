@@ -1094,8 +1094,12 @@ def multigather(args):
             # track overwrites
             if output_base in output_base_tracking:
                 error(f"ERROR: detected overwritten outputs! '{output_base}' has already been used. Failing.")
-                error("Consider using '-U/----output-add-query-md5sum'.")
-                sys.exit(-1)
+                if args.force_allow_overwrite_output:
+                    error(f"continuing because --force-allow-overwrite was specified")
+                else:
+                    error("Consider using '-U/----output-add-query-md5sum' to build unique outputs")
+                    error("and/or '--force-allow-overwrite-output'")
+                    sys.exit(-1)
 
             output_base_tracking.add(output_base)
 

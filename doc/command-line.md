@@ -514,14 +514,19 @@ query:
 * `<output_base>.unassigned.sig` - all remaining unassigned hashes
 ```
 
-As of sourmash v4.8.4, `<output_base>` is set to:
-* the query filename, if it is not empty or `-`;
+As of sourmash v4.8.4, `<output_base>` is set as follows:
+* the query filename, if it is not empty or `-`; (@CTB is this --query filename or sketch filename?)
 * the query sketch md5sum, if the query filename is empty or `-`;
 * the query filename + the query sketch md5sum
   (`<query_file>.<md5sum>`), if `-U/--output-add-query-md5sum` is
   specified;
 
-CTB more here!
+By default, `multigather` will complain and exit with an error if
+the same `<output_base>` is used repeatedly and an output file is
+going to be overwritten.  With `-U/--output-add-query-md5sum` this
+should only happen when identical sketches are present in a query
+database. Please use `--force-allow-overwrite-output`
+to allow overwriting of output files in this case.
 
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 

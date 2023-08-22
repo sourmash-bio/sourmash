@@ -4080,6 +4080,38 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite(runtmp)
     assert "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing." in err
 
 
+def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite_force(runtmp):
+    # provide multiple identical queries - fails -> overwrite with --force
+    c = runtmp
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    cmd = 'multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output'.format(another_query, another_query)
+    cmd = cmd.split(' ')
+
+
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing." in err
+    assert "continuing because --force-allow-overwrite was specified" in err
+
+
 def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
     c = runtmp
 

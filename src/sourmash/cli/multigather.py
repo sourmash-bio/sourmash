@@ -77,6 +77,10 @@ def subparser(subparsers):
         help='stop at databases that contain no compatible signatures'
     )
     subparser.add_argument(
+        '--force-allow-overwrite-output', action='store_true',
+        help='allow output files to be overwritten'
+    )
+    subparser.add_argument(
         '--no-fail-on-empty-database', action='store_false',
         dest='fail_on_empty_database',
         help='continue past databases that contain no compatible signatures'
