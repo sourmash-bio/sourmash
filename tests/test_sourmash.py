@@ -3914,8 +3914,9 @@ def test_multigather_metagenome_output_outdir(runtmp):
         assert len(x) == 13
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_query_with_sbt(c):
+def test_multigather_metagenome_query_with_sbt(runtmp):
+    # multigather should work with an SBT as a query
+    c = runtmp
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -4226,7 +4227,7 @@ def test_multigather_metagenome_lca_query_from_file(runtmp):
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 
-def test_multigather_metagenome_query_from_file_with_addl_query(c):
+def test_multigather_metagenome_query_from_file_with_addl_query(runtmp):
     # test multigather --query-from-file and --query too
     c = runtmp
 
@@ -5132,12 +5133,12 @@ def test_gather_empty_db_nofail(runtmp, prefetch_gather, linear_gather):
     assert "loaded 50 total signatures from 2 locations" in err
     assert "after selecting signatures compatible with search, 0 remain." in err
 
-def test_multigather_output_unassigned_with_abundance(runtmp):
+def test_multigather_output_unassigned_with_abundance(runtmp, sig_save_extension_abund):
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
 
-    cmd = 'multigather --query {} --db {}'.format(query, against).split()
+    cmd = 'multigather --query {} --db {} -E {}'.format(query, against, sig_save_extension_abund).split()
     c.run_sourmash(*cmd)
 
     print(c.last_result.out)
@@ -5147,9 +5148,10 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
     assert "the recovered matches hit 91.0% of the abundance-weighted query." in out
     assert "the recovered matches hit 57.2% of the query k-mers (unweighted)." in out
 
-    assert os.path.exists(c.output('r3.fa.unassigned.sig'))
+    assert os.path.exists(c.output(f'r3.fa.unassigned{sig_save_extension_abund}'))
 
-    nomatch = sourmash.load_one_signature(c.output('r3.fa.unassigned.sig'))
+    nomatch = sourmash.load_file_as_signatures(c.output(f'r3.fa.unassigned{sig_save_extension_abund}'))
+    nomatch = list(nomatch)[0]
     assert nomatch.minhash.track_abundance
 
     query_ss = sourmash.load_one_signature(query)

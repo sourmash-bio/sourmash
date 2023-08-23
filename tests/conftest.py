@@ -80,6 +80,11 @@ def sig_save_extension(request):
     return request.param
 
 
+@pytest.fixture(params=['sig', 'sig.gz', 'zip', '.d/'])
+def sig_save_extension_abund(request):
+    return request.param
+
+
 # --- BEGIN - Only run tests using a particular fixture --- #
 # Cribbed from: http://pythontesting.net/framework/pytest/pytest-run-tests-using-particular-fixture/
 def pytest_collection_modifyitems(items, config):
