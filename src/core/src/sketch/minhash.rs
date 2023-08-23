@@ -1655,7 +1655,7 @@ impl From<KmerMinHash> for KmerMinHashBTree {
         let mins: BTreeSet<u64> = other.mins.into_iter().collect();
         let abunds = other
             .abunds
-            .map(|abunds| mins.iter().cloned().zip(abunds.into_iter()).collect());
+            .map(|abunds| mins.iter().cloned().zip(abunds).collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;

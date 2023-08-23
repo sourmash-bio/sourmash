@@ -52,7 +52,7 @@ pub unsafe extern "C" fn computeparams_ksizes_free(ptr: *mut u32, insize: usize)
     if ptr.is_null() {
         return;
     }
-    Vec::from_raw_parts(ptr as *mut u32, insize, insize);
+    Vec::from_raw_parts(ptr, insize, insize);
 }
 
 ffi_fn! {
@@ -65,7 +65,7 @@ unsafe fn computeparams_set_ksizes(
 
     let ksizes = {
         assert!(!ksizes_ptr.is_null());
-        slice::from_raw_parts(ksizes_ptr as *const u32, insize)
+        slice::from_raw_parts(ksizes_ptr, insize)
     };
 
     cp.set_ksizes(ksizes.into());

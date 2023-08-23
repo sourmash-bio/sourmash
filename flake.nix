@@ -11,16 +11,9 @@
         flake-utils.follows = "utils";
       };
     };
-
-    naersk = {
-      url = "github:nix-community/naersk";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
   };
 
-  outputs = { self, nixpkgs, naersk, rust-overlay, utils }:
+  outputs = { self, nixpkgs, rust-overlay, utils }:
     utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -36,12 +29,8 @@
           cargo = rustVersion;
           rustc = rustVersion;
         };
-        naersk-lib = naersk.lib."${system}".override {
-          cargo = rustPlatform.rust.cargo;
-          rustc = rustPlatform.rust.rustc;
-        };
 
-        python = pkgs.python310Packages;
+        python = pkgs.python311Packages;
 
       in
 
@@ -49,15 +38,17 @@
       {
         packages = {
 
-          lib = naersk-lib.buildPackage {
-            pname = "libsourmash";
-            root = ./.;
+          lib = rustPlatform.buildRustPackage {
+            name = "libsourmash";
+            src = lib.cleanSource ./.;
             copyLibs = true;
+            cargoLock.lockFile = ./Cargo.lock;
+            nativeBuildInputs = with rustPlatform; [ bindgenHook ];
           };
 
           sourmash = python.buildPythonPackage rec {
             pname = "sourmash";
-            version = "4.8.2";
+            version = "4.8.4-dev";
             format = "pyproject";
 
             src = ./.;
@@ -66,7 +57,7 @@
               lockFile = ./Cargo.lock;
             };
 
-            nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
+            nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook bindgenHook ];
 
             buildInputs = lib.optionals stdenv.isDarwin [ libiconv ];
             propagatedBuildInputs = with python; [ cffi deprecation cachetools bitstring numpy scipy matplotlib screed ];
@@ -93,9 +84,7 @@
         defaultPackage = self.packages.${system}.sourmash;
 
         devShell = mkShell {
-          nativeBuildInputs = [
-            clang_13
-          ];
+          nativeBuildInputs = with rustPlatform; [ bindgenHook ];
 
           buildInputs = [
             rustVersion
@@ -104,10 +93,9 @@
 
             git
             stdenv.cc.cc.lib
-            (python310.withPackages (ps: with ps; [ virtualenv tox cffi ]))
-            (python311.withPackages (ps: with ps; [ virtualenv ]))
+            (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
+            (python310.withPackages (ps: with ps; [ virtualenv ]))
             (python39.withPackages (ps: with ps; [ virtualenv ]))
-            (python38.withPackages (ps: with ps; [ virtualenv ]))
 
             rust-cbindgen
             maturin
@@ -122,15 +110,11 @@
             cargo-limit
             cargo-outdated
             cargo-udeps
+            cargo-deny
             nixpkgs-fmt
-
-            llvmPackages_13.libclang
-            llvmPackages_13.libcxxClang
           ];
 
-          BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${llvmPackages_13.libclang.lib}/lib/clang/${lib.getVersion clang}/include";
-          LIBCLANG_PATH = "${llvmPackages_13.libclang.lib}/lib";
-          LD_LIBRARY_PATH = "${stdenv.cc.cc.lib}/lib64:$LD_LIBRARY_PATH";
+          LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
 
           # workaround for https://github.com/NixOS/nixpkgs/blob/48dfc9fa97d762bce28cc8372a2dd3805d14c633/doc/languages-frameworks/python.section.md#python-setuppy-bdist_wheel-cannot-create-whl
           SOURCE_DATE_EPOCH = 315532800; # 1980
