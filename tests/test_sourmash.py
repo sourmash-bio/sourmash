@@ -3950,8 +3950,9 @@ def test_multigather_metagenome_query_with_sbt(c):
                 'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_query_with_lca(c):
+def test_multigather_metagenome_query_with_lca(runtmp):
+    # make sure that LCA databases can be used as queries
+    c = runtmp
 
     testdata_glob = utils.get_test_data('47*.fa.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -3980,8 +3981,9 @@ def test_multigather_metagenome_query_with_lca(c):
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_query_on_lca_db(c):
+def test_multigather_metagenome_query_on_lca_db(runtmp):
+    # test multigather against LCA databases
+    c = runtmp
 
     testdata_sig1 = utils.get_test_data('47.fa.sig')
     testdata_sig2 = utils.get_test_data('63.fa.sig')
@@ -4161,8 +4163,9 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
                 'NC_003198.1 Salmonella enterica subsp' in out))
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
+def test_multigather_metagenome_sbt_query_from_file_incorrect(runtmp):
+    # use the wrong type of file with --query-from-file
+    c = runtmp
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -4187,8 +4190,10 @@ def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
     print(c.last_result.err)
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_lca_query_from_file(c):
+def test_multigather_metagenome_lca_query_from_file(runtmp):
+    # putting an LCA database in a file for a query should work
+    c = runtmp
+
     testdata_glob = utils.get_test_data('47*.fa.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -4221,9 +4226,10 @@ def test_multigather_metagenome_lca_query_from_file(c):
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 
-@utils.in_tempdir
 def test_multigather_metagenome_query_from_file_with_addl_query(c):
     # test multigather --query-from-file and --query too
+    c = runtmp
+
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
