@@ -1091,7 +1091,7 @@ def multigather(args):
             if args.output_dir:
                 output_base = os.path.join(args.output_dir, output_base)
 
-            # track overwrites
+            # track overwrites of output files!
             if output_base in output_base_tracking:
                 error(f"ERROR: detected overwritten outputs! '{output_base}' has already been used. Failing.")
                 if args.force_allow_overwrite_output:
@@ -1103,8 +1103,8 @@ def multigather(args):
 
             output_base_tracking.add(output_base)
 
+            # write out basic CSV file
             output_csv = output_base + '.csv'
-
             notify(f'saving all CSV matches to "{output_csv}"')
             w = None
             with FileOutputCSV(output_csv) as fp:
@@ -1113,36 +1113,42 @@ def multigather(args):
                         w = result.init_dictwriter(fp)
                     result.write(w)
 
-            output_matches = output_base + '.matches.sig'
+            ### save matching sketches!
+            output_matches = output_base + f'.matches{args.extension}'
             with SaveSignaturesToLocation(output_matches) as save_sig:
                 notify(f"saving all matching signatures to '{output_matches}'")
                 save_sig.add_many([ r.match for r in found ])
 
-            output_unassigned = output_base + '.unassigned.sig'
-            with open(output_unassigned, 'wt') as fp:
-                remaining_query = gather_iter.query
-                if noident_mh:
-                    remaining_mh = remaining_query.minhash.to_mutable()
-                    remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
-                    remaining_query.minhash = remaining_mh
+            ### save unassigned hashes!
+            output_unassigned = output_base + f'.unassigned{args.extension}'
+            remaining_query = gather_iter.query
+            if noident_mh:      # add hashes with no match in database
+                remaining_mh = remaining_query.minhash.to_mutable()
+                remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
+                remaining_query.minhash = remaining_mh
 
-                if is_abundance:
-                    abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
-                    remaining_query.minhash = abund_query_mh
+            if is_abundance:
+                abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                remaining_query.minhash = abund_query_mh
 
-                if not found:
-                    notify('nothing found - entire query signature unassigned.')
-                elif not remaining_query:
-                    notify('no unassigned hashes! not saving.')
-                else:
-                    notify(f'saving unassigned hashes to "{output_unassigned}"')
+            # only save if we found matches and there are things to save!
+            if found and remaining_query:
+                notify(f'saving unassigned hashes to "{output_unassigned}"')
 
                 with SaveSignaturesToLocation(output_unassigned) as save_sig:
-                    # CTB: note, multigather does not save abundances
                     save_sig.add(remaining_query)
+            elif not found:
+                notify('nothing found - entire query signature unassigned.')
+            elif not remaining_query:
+                notify('no unassigned hashes! not saving.')
+            else:
+                assert 0, "should be unreachable"
+
             n += 1
 
         # fini, next query!
+
+    # done! report at end.
     notify(f'\nconducted gather searches on {n} signatures')
     if size_may_be_inaccurate:
         notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")

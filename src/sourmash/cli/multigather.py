@@ -95,6 +95,10 @@ def subparser(subparsers):
         '-U', '--output-add-query-md5sum', action='store_true',
         help='add md5sum of each query to ensure unique output file names'
     )
+    subparser.add_argument(
+        '-E', '--extension', type=str, default='.sig',
+        help="write signature files with this extension ('.sig' by default)"
+    )
 
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
