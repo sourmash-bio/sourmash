@@ -60,6 +60,7 @@ roaring = "0.10.0"
 histogram = "0.6.9"
 numsep = "0.1.12"
 size = "0.4.0"
+clang-sys = "1.6.1"
 
 [dev-dependencies]
 assert_matches = "1.3.0"
