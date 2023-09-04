@@ -192,7 +192,8 @@ class SBT(Index):
             yield ss, k._path
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
-               containment=False, abund=None, picklist=None, filter_manifest=None):
+               containment=False, abund=None, picklist=None,
+               filter_manifest=None):
         """Make sure this database matches the requested requirements.
 
         Will always raise ValueError if a requirement cannot be met.
