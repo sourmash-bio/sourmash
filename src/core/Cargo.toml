@@ -61,10 +61,6 @@ rand = "0.8.2"
 tempfile = "3.7.1"
 
 [[bench]]
-name = "index"
-harness = false
-
-[[bench]]
 name = "compute"
 harness = false
 
