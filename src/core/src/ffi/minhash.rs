@@ -39,7 +39,7 @@ pub unsafe extern "C" fn kmerminhash_slice_free(ptr: *mut u64, insize: usize) {
     if ptr.is_null() {
         return;
     }
-    Vec::from_raw_parts(ptr as *mut u64, insize, insize);
+    Vec::from_raw_parts(ptr, insize, insize);
 }
 
 ffi_fn! {
@@ -232,7 +232,7 @@ unsafe fn kmerminhash_add_many(
     // FIXME: make a SourmashSlice_u64 type?
     let hashes = {
         assert!(!hashes_ptr.is_null());
-        slice::from_raw_parts(hashes_ptr as *const u64, insize)
+        slice::from_raw_parts(hashes_ptr, insize)
     };
 
     for hash in hashes {
@@ -277,13 +277,13 @@ unsafe fn kmerminhash_set_abundances(
     // FIXME: make a SourmashSlice_u64 type?
     let hashes = {
         assert!(!hashes_ptr.is_null());
-        slice::from_raw_parts(hashes_ptr as *const u64, insize)
+        slice::from_raw_parts(hashes_ptr, insize)
     };
 
     // FIXME: make a SourmashSlice_u64 type?
     let abunds = {
         assert!(!abunds_ptr.is_null());
-        slice::from_raw_parts(abunds_ptr as *const u64, insize)
+        slice::from_raw_parts(abunds_ptr, insize)
     };
 
     let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
