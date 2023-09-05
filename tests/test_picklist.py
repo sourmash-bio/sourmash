@@ -59,6 +59,6 @@ def test_dup_md5_picked(runtmp):
 
     # use in select
     ml3 = ml2.select(picklist=pl)
-    print(len(ml3))
+    print('picked:', len(ml3))
 
-    assert 0
+    assert len(pl.pickset) == len(ml3)

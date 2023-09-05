@@ -10,6 +10,7 @@ preprocess = {}
 preprocess['name'] = lambda x: x
 preprocess['md5'] = lambda x: x
 
+
 # identifier matches/prefix foo - space delimited identifiers
 preprocess['identprefix'] = lambda x: x.split(' ')[0].split('.')[0]
 preprocess['ident'] = lambda x: x.split(' ')[0]
@@ -17,6 +18,12 @@ preprocess['ident'] = lambda x: x.split(' ')[0]
 # match 8 characters
 preprocess['md5prefix8'] = lambda x: x[:8]
 preprocess['md5short'] = lambda x: x[:8]
+
+def manifest_combine_ident_md5(x):
+    name, md5 = x
+    ident = name.split(' ')[0]
+    return (ident, md5)
+preprocess['manifest'] = manifest_combine_ident_md5
 
 
 class PickStyle(Enum):
@@ -41,13 +48,14 @@ class SignaturePicklist:
     * 'md5short' - same as md5prefix8
     * 'ident' - exact match to signature's identifier
     * 'identprefix' - match to signature's identifier, before '.'
+    * 'manifest' - match to (ident, md5) tuple
 
     Identifiers are constructed by using the first space delimited word in
     the signature name.
 
-    You can also use 'gather', 'prefetch', 'search' and 'manifest' as
+    You can also use 'gather', 'prefetch', and 'search' as
     column types; these take the CSV output of 'gather', 'prefetch',
-    'search', and 'sig manifest' as picklists. 'column' must be left
+    and 'search' as picklists. 'column' must be left
     blank in this case: e.g. use 'pickfile.csv::gather'.
     """
     meta_coltypes = ('manifest', 'gather', 'prefetch', 'search')
@@ -79,7 +87,9 @@ class SignaturePicklist:
                 # for now, override => md5short in column match_md5
                 coltype = 'md5prefix8'
                 column_name = 'match_md5'
-            elif coltype == 'manifest' or coltype == 'search':
+            elif coltype == 'manifest':
+                column_name = 'manifest'
+            elif coltype == 'search':
                 # for now, override => md5
                 coltype = 'md5'
                 column_name = 'md5'
@@ -128,6 +138,8 @@ class SignaturePicklist:
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
+        elif coltype == 'manifest':
+            q = (ss.name, ss.md5sum())
         else:
             assert 0
 
@@ -162,12 +174,15 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
-            if column_name not in r.fieldnames:
+            if not (column_name in r.fieldnames or column_name == 'manifest'):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
                 # pick out values from column
-                col = row[column_name]
+                if column_name == 'manifest':
+                    col = (row['name'], row['md5'])
+                else:
+                    col = row[column_name]
                 if not col:
                     n_empty_val += 1
                     continue
@@ -210,16 +225,20 @@ class SignaturePicklist:
 
     def matches_manifest_row(self, row):
         "does the given manifest row match this picklist?"
-        if self.coltype == 'md5':
-            colkey = 'md5'
-        elif self.coltype in ('md5prefix8', 'md5short'):
-            colkey = 'md5short'
-        elif self.coltype in ('name', 'ident', 'identprefix'):
-            colkey = 'name'
+        if self.coltype == 'manifest':
+            q = (row['name'], row['md5'])
         else:
-            assert 0
+            if self.coltype == 'md5':
+                colkey = 'md5'
+            elif self.coltype in ('md5prefix8', 'md5short'):
+                colkey = 'md5short'
+            elif self.coltype in ('name', 'ident', 'identprefix'):
+                colkey = 'name'
+            else:
+                assert 0
 
-        q = row[colkey]
+            q = row[colkey]
+
         q = self.preprocess_fn(q)
         self.n_queries += 1
 
@@ -238,7 +257,10 @@ class SignaturePicklist:
 
         This is used for examining matches/nomatches to original picklist file.
         """
-        q = row[self.column_name]
+        if self.column_name == 'manifest':
+            q = (row['name'], row['md5'])
+        else:
+            q = row[self.column_name]
         q = self.preprocess_fn(q)
         self.n_queries += 1
 
