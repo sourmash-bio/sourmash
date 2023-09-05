@@ -20,4 +20,3 @@ python:
       path: .
       extra_requirements:
         - doc
-  system_packages: true
