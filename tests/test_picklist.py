@@ -4,8 +4,12 @@ Tests for the picklist API.
 import pytest
 import sourmash
 
+import copy
+
 import sourmash_tst_utils as utils
+from sourmash import picklist
 from sourmash.picklist import SignaturePicklist
+from sourmash.index import LinearIndex, MultiIndex
 
 
 def test_load_empty_picklist_fail():
@@ -21,3 +25,40 @@ def test_load_empty_picklist_allow():
 
     pl = SignaturePicklist('manifest')
     pl.load(empty, 'foo', allow_empty=True)
+
+
+def test_dup_md5_picked(runtmp):
+    # load a sig, duplicate
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_signatures(sig47)
+    sig = list(ss)[0]
+
+    # save a manifest with one entry
+    xl = LinearIndex([sig])
+    ml = MultiIndex.load([xl], [None], None)
+
+    print(ml.manifest.rows)
+    assert len(ml.manifest) == 1
+
+    mf_csv = runtmp.output('select.csv')
+    ml.manifest.write_to_filename(mf_csv)
+
+    # now make an index to select against, with an identical signature
+    # (but diff name)
+    new_sig = sig.to_mutable()
+    new_sig.name = 'foo'
+    xl = LinearIndex([sig, new_sig])
+    ml2 = MultiIndex.load([xl], [None], None)
+
+    assert len(ml2) == 2
+
+    # create a picklist...
+    pl = SignaturePicklist('manifest', pickfile=mf_csv)
+    print(pl.load(mf_csv, pl.column_name))
+    print('loaded:', len(pl.pickset))
+
+    # use in select
+    ml3 = ml2.select(picklist=pl)
+    print(len(ml3))
+
+    assert 0
