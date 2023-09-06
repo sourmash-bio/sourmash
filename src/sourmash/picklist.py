@@ -48,14 +48,13 @@ class SignaturePicklist:
     * 'md5short' - same as md5prefix8
     * 'ident' - exact match to signature's identifier
     * 'identprefix' - match to signature's identifier, before '.'
-    * 'manifest' - match to (ident, md5) tuple
 
     Identifiers are constructed by using the first space delimited word in
     the signature name.
 
-    You can also use 'gather', 'prefetch', and 'search' as
+    You can also use 'gather', 'prefetch', 'search', and 'manifest' as
     column types; these take the CSV output of 'gather', 'prefetch',
-    and 'search' as picklists. 'column' must be left
+    'search', and 'manifest' as picklists. 'column' must be left
     blank in this case: e.g. use 'pickfile.csv::gather'.
     """
     meta_coltypes = ('manifest', 'gather', 'prefetch', 'search')
@@ -177,7 +176,6 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
-            # note: 'manifest' here becomes unusable as actual column name CTB
             if not (column_name in r.fieldnames or column_name == '(ident, md5)'):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
