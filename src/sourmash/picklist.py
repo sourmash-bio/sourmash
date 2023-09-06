@@ -88,13 +88,13 @@ class SignaturePicklist:
                 coltype = 'md5prefix8'
                 column_name = 'match_md5'
             elif coltype == 'manifest':
-                column_name = 'manifest'
+                column_name = '(ident, md5)'
             elif coltype == 'search':
                 # for now, override => md5
                 coltype = 'md5'
                 column_name = 'md5'
             else:               # should never be reached!
-                assert 0
+                assert 0, coltype
 
         self.coltype = coltype
         self.pickfile = pickfile
@@ -138,7 +138,7 @@ class SignaturePicklist:
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
-        elif coltype == 'manifest':
+        elif coltype == '(ident, md5)':
             q = (ss.name, ss.md5sum())
         else:
             assert 0
@@ -178,12 +178,12 @@ class SignaturePicklist:
                     return 0, 0
 
             # note: 'manifest' here becomes unusable as actual column name CTB
-            if not (column_name in r.fieldnames or column_name == 'manifest'):
+            if not (column_name in r.fieldnames or column_name == '(ident, md5)'):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
                 # pick out values from column
-                if column_name == 'manifest':
+                if column_name == '(ident, md5)':
                     col = (row['name'], row['md5'])
                 else:
                     col = row[column_name]
@@ -239,7 +239,7 @@ class SignaturePicklist:
             elif self.coltype in ('name', 'ident', 'identprefix'):
                 colkey = 'name'
             else:
-                assert 0
+                assert 0, colkey
 
             q = row[colkey]
 
@@ -261,7 +261,7 @@ class SignaturePicklist:
 
         This is used for examining matches/nomatches to original picklist file.
         """
-        if self.column_name == 'manifest':
+        if self.column_name == '(ident, md5)':
             q = (row['name'], row['md5'])
         else:
             q = row[self.column_name]
