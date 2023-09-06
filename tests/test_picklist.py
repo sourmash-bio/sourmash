@@ -15,16 +15,16 @@ from sourmash.index import LinearIndex, MultiIndex
 def test_load_empty_picklist_fail():
     empty = utils.get_test_data('picklist/empty.csv')
 
-    pl = SignaturePicklist('manifest')
+    pl = SignaturePicklist('manifest', pickfile=empty)
     with pytest.raises(ValueError):
-        pl.load(empty, 'foo', allow_empty=False)
+        pl.load(allow_empty=False)
 
 
 def test_load_empty_picklist_allow():
     empty = utils.get_test_data('picklist/empty.csv')
 
-    pl = SignaturePicklist('manifest')
-    pl.load(empty, 'foo', allow_empty=True)
+    pl = SignaturePicklist('manifest', pickfile=empty)
+    pl.load(allow_empty=True)
 
 
 def test_dup_md5_picked(runtmp):
@@ -54,7 +54,7 @@ def test_dup_md5_picked(runtmp):
 
     # create a picklist...
     pl = SignaturePicklist('manifest', pickfile=mf_csv)
-    print(pl.load(mf_csv, pl.column_name))
+    print(pl.load())
     print('loaded:', len(pl.pickset))
 
     # use in select

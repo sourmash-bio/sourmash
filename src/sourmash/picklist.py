@@ -152,11 +152,14 @@ class SignaturePicklist:
         self.pickset = set(values)
         return self.pickset
 
-    def load(self, pickfile, column_name, *, allow_empty=False):
+    def load(self, *, allow_empty=False):
         "load pickset, return num empty vals, and set of duplicate vals."
         from . import sourmash_args
 
         pickset = self.init()
+
+        pickfile = self.pickfile
+        column_name = self.column_name
 
         if not os.path.exists(pickfile) or not os.path.isfile(pickfile):
             raise ValueError(f"pickfile '{pickfile}' must exist and be a regular file")
@@ -174,6 +177,7 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
+            # note: 'manifest' here becomes unusable as actual column name CTB
             if not (column_name in r.fieldnames or column_name == 'manifest'):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
