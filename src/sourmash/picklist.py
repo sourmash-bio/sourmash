@@ -137,10 +137,10 @@ class SignaturePicklist:
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
-        elif coltype == '(ident, md5)':
+        elif coltype == 'manifest':
             q = (ss.name, ss.md5sum())
         else:
-            assert 0
+            assert 0, coltype
 
         return q
 
