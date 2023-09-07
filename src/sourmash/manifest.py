@@ -8,7 +8,7 @@ import os.path
 from abc import abstractmethod
 import itertools
 
-from sourmash.picklist import SignaturePicklist
+from sourmash import picklist
 
 
 class BaseCollectionManifest:
@@ -339,7 +339,14 @@ class CollectionManifest(BaseCollectionManifest):
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        picklist = SignaturePicklist('md5')
-        picklist.pickset = set(self._md5_set)
+        pl = picklist.SignaturePicklist('manifest')
+        fn = pl.preprocess_fn
 
-        return picklist
+        vals = ( (row['name'], row['md5']) for row in self.rows)
+
+        x = set()
+        for tup in vals:
+            x.add(fn(tup))
+        pl.pickset = x
+
+        return pl
