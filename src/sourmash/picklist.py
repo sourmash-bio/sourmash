@@ -86,8 +86,6 @@ class SignaturePicklist:
                 coltype = 'md5prefix8'
                 column_name = 'md5'
             elif coltype == 'prefetch':
-                # for now, override => md5short in column match_md5
-                coltype = 'prefetch'
                 column_name = '(match_ident, match_md5)'
             elif coltype == 'manifest':
                 column_name = '(ident, md5short)'
@@ -96,7 +94,7 @@ class SignaturePicklist:
                 coltype = 'md5'
                 column_name = 'md5'
             else:               # should never be reached!
-                assert 0, coltype
+                raise ValueError(f"picklist __init__ for {coltype} has unhandled branch")
 
         self.coltype = coltype
         self.pickfile = pickfile
@@ -122,7 +120,7 @@ class SignaturePicklist:
             elif pickstyle_str == 'exclude':
                 pickstyle = PickStyle.EXCLUDE
             else:
-                raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle_str}': must be 'include' or 'exclude'")
+                raise ValueError(f"invalid picklist 'pickstyle' argument 4: '{pickstyle_str}' must be 'include' or 'exclude'")
 
         if len(picklist) != 3:
             raise ValueError(f"invalid picklist argument '{argstr}'")
@@ -143,16 +141,14 @@ class SignaturePicklist:
         elif coltype in ('manifest', 'prefetch'):
             q = (ss.name, ss.md5sum())
         else:
-            assert 0, coltype
+            raise ValueError(f"picklist get_sig_attribute {coltype} has unhandled branch")
 
         return q
 
-    def _get_value_for_row(self, row):
+    def _get_value_for_manifest_row(self, row):
         "return the picklist value from a manifest row"
-        if self.coltype == 'manifest':
+        if self.coltype in ('manifest', 'prefetch'):
             q = (row['name'], row['md5'])
-        elif self.coltype == 'prefetch':
-            q = (row['match_name'], row['match_md5'])
         else:
             if self.coltype == 'md5':
                 colkey = 'md5'
@@ -161,9 +157,23 @@ class SignaturePicklist:
             elif self.coltype in ('name', 'ident', 'identprefix'):
                 colkey = 'name'
             else:
-                assert 0, colkey
+                raise ValueError(f"picklist get_value_for_row {colkey} has unhandled branch")
 
             q = row.get(colkey)
+
+        assert q
+        q = self.preprocess_fn(q)
+
+        return q
+    
+    def _get_value_for_csv_row(self, row):
+        "return the picklist value from a CSV pickfile row"
+        if self.coltype == 'manifest':
+            q = (row['name'], row['md5'])
+        elif self.coltype == 'prefetch':
+            q = (row['match_name'], row['match_md5'])
+        else:
+            q = row[self.column_name]
 
         if q:
             q = self.preprocess_fn(q)
@@ -193,8 +203,8 @@ class SignaturePicklist:
         n_empty_val = 0
         dup_vals = set()
 
-        # CTB: not clear to me what a good "default" name would be for a
-        # picklist CSV inside a zip (default_csv_name). Maybe manifest?
+        # CTB note: for zipfiles, not clear to me what a good "default" name would be for a
+        # picklist CSV inside a zip (default_csv_name for FileInputCSV).
         with sourmash_args.FileInputCSV(pickfile) as r:
             self.pickfile = pickfile
             if not r.fieldnames:
@@ -207,7 +217,7 @@ class SignaturePicklist:
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
-                col = self._get_value_for_row(row)
+                col = self._get_value_for_csv_row(row)
                 if not col:
                     n_empty_val += 1
                     continue
@@ -248,7 +258,7 @@ class SignaturePicklist:
 
     def matches_manifest_row(self, row):
         "does the given manifest row match this picklist?"
-        q = self._get_value_for_row(row)
+        q = self._get_value_for_manifest_row(row)
         self.n_queries += 1
 
         if self.pickstyle == PickStyle.INCLUDE:

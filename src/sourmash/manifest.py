@@ -341,6 +341,6 @@ class CollectionManifest(BaseCollectionManifest):
         "Convert this manifest to a picklist."
         pl = picklist.SignaturePicklist('manifest')
 
-        pl.pickset = { pl._get_value_for_row(row) for row in self.rows }
+        pl.pickset = { pl._get_value_for_manifest_row(row) for row in self.rows }
 
         return pl

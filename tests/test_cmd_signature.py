@@ -2689,7 +2689,7 @@ def test_sig_extract_12_picklist_bad_pickstyle(runtmp):
 
     err = runtmp.last_result.err
     print(err)
-    assert "invalid picklist 'pickstyle' argument, 'XXX': must be 'include' or 'exclude'" in err
+    assert "invalid picklist 'pickstyle' argument 4: 'XXX' must be 'include' or 'exclude'" in err
 
 
 def test_sig_extract_12_picklist_bad_colname(runtmp):
