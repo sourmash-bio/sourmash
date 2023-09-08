@@ -342,11 +342,7 @@ class CollectionManifest(BaseCollectionManifest):
         pl = picklist.SignaturePicklist('manifest')
         fn = pl.preprocess_fn
 
-        vals = ( (row['name'], row['md5']) for row in self.rows)
-
-        x = set()
-        for tup in vals:
-            x.add(fn(tup))
-        pl.pickset = x
+        vals = { fn((row['name'], row['md5'])) for row in self.rows }
+        pl.pickset = vals
 
         return pl
