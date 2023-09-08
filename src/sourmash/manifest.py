@@ -340,9 +340,7 @@ class CollectionManifest(BaseCollectionManifest):
     def to_picklist(self):
         "Convert this manifest to a picklist."
         pl = picklist.SignaturePicklist('manifest')
-        fn = pl.preprocess_fn
 
-        vals = { fn((row['name'], row['md5'])) for row in self.rows }
-        pl.pickset = vals
+        pl.pickset = { pl._get_value_for_row(row) for row in self.rows }
 
         return pl

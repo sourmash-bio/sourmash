@@ -144,6 +144,25 @@ class SignaturePicklist:
 
         return q
 
+    def _get_value_for_row(self, row):
+        "return the picklist value from a manifest row"
+        if self.coltype == 'manifest':
+            q = (row['name'], row['md5'])
+        else:
+            if self.coltype == 'md5':
+                colkey = 'md5'
+            elif self.coltype in ('md5prefix8', 'md5short'):
+                colkey = 'md5short'
+            elif self.coltype in ('name', 'ident', 'identprefix'):
+                colkey = 'name'
+            else:
+                assert 0, colkey
+
+            q = row[colkey]
+
+        q = self.preprocess_fn(q)
+        return q
+
     def init(self, values=[]):
         "initialize a Picklist object with given values."
         if self.pickset is not None:
@@ -158,6 +177,7 @@ class SignaturePicklist:
         pickset = self.init()
 
         pickfile = self.pickfile
+        coltype = self.coltype
         column_name = self.column_name
 
         if not os.path.exists(pickfile) or not os.path.isfile(pickfile):
@@ -176,12 +196,12 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
-            if not (column_name in r.fieldnames or column_name == '(ident, md5)'):
+            if not (column_name in r.fieldnames or coltype == 'manifest'):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
                 # pick out values from column
-                if column_name == '(ident, md5)':
+                if coltype == 'manifest':
                     col = (row['name'], row['md5'])
                 else:
                     col = row[column_name]
@@ -227,21 +247,7 @@ class SignaturePicklist:
 
     def matches_manifest_row(self, row):
         "does the given manifest row match this picklist?"
-        if self.coltype == 'manifest':
-            q = (row['name'], row['md5'])
-        else:
-            if self.coltype == 'md5':
-                colkey = 'md5'
-            elif self.coltype in ('md5prefix8', 'md5short'):
-                colkey = 'md5short'
-            elif self.coltype in ('name', 'ident', 'identprefix'):
-                colkey = 'name'
-            else:
-                assert 0, colkey
-
-            q = row[colkey]
-
-        q = self.preprocess_fn(q)
+        q = self._get_value_for_row(row)
         self.n_queries += 1
 
         if self.pickstyle == PickStyle.INCLUDE:
@@ -259,7 +265,7 @@ class SignaturePicklist:
 
         This is used for examining matches/nomatches to original picklist file.
         """
-        if self.column_name == '(ident, md5)':
+        if self.coltype == 'manifest':
             q = (row['name'], row['md5'])
         else:
             q = row[self.column_name]
