@@ -19,6 +19,7 @@ preprocess['ident'] = lambda x: x.split(' ')[0]
 preprocess['md5prefix8'] = lambda x: x[:8]
 preprocess['md5short'] = lambda x: x[:8]
 
+# all meta-coltypes use the same preprocessing of tuple => (ident, md5short)
 def combine_ident_md5(x):
     "preprocess (name, md5) tup into (ident, md5short) tup"
     name, md5 = x
@@ -29,7 +30,6 @@ preprocess['manifest'] = combine_ident_md5
 preprocess['prefetch'] = combine_ident_md5
 preprocess['gather'] = combine_ident_md5
 preprocess['search'] = combine_ident_md5
-
 
 
 class PickStyle(Enum):
@@ -87,14 +87,8 @@ class SignaturePicklist:
 
             if coltype == 'prefetch':
                 column_name = '(match_name, match_md5)'
-            elif coltype == 'manifest':
+            else:
                 column_name = '(name, md5)'
-            elif coltype == 'search':
-                column_name = '(name, md5)'
-            elif coltype == 'gather':
-                column_name = '(name, md5)'
-            else:               # should never be reached!
-                raise ValueError(f"picklist __init__ for {coltype} has unhandled branch")
 
         self.coltype = coltype
         self.pickfile = pickfile
@@ -132,9 +126,9 @@ class SignaturePicklist:
                    pickstyle=pickstyle)
 
     def _get_sig_attribute(self, ss):
-        "for a given SourmashSignature, return attribute for this picklist."
+        "for a given SourmashSignature, return relevant picklist value."
         coltype = self.coltype
-        if coltype in self.meta_coltypes:
+        if coltype in self.meta_coltypes: # gather, prefetch, search, manifest
             q = (ss.name, ss.md5sum())
         elif coltype in ('md5', 'md5prefix8', 'md5short'):
             q = ss.md5sum()
@@ -147,7 +141,7 @@ class SignaturePicklist:
 
     def _get_value_for_manifest_row(self, row):
         "return the picklist value from a manifest row"
-        if self.coltype in self.meta_coltypes:
+        if self.coltype in self.meta_coltypes: # gather, prefetch, search, manifest
             q = (row['name'], row['md5'])
         else:
             if self.coltype == 'md5':
@@ -167,7 +161,9 @@ class SignaturePicklist:
         return q
 
     def _get_value_for_csv_row(self, row):
-        "return the picklist value from a CSV pickfile row"
+        "return the picklist value from a CSV pickfile row - supplied by user, typically"
+
+        # customize for each type of meta_coltypes
         if self.coltype == 'manifest':
             q = (row['name'], row['md5'])
         elif self.coltype == 'prefetch':
