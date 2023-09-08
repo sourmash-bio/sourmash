@@ -19,11 +19,14 @@ preprocess['ident'] = lambda x: x.split(' ')[0]
 preprocess['md5prefix8'] = lambda x: x[:8]
 preprocess['md5short'] = lambda x: x[:8]
 
-def manifest_combine_ident_md5(x):
+def combine_ident_md5(x):
+    "preprocess (name, md5) tup into (ident, md5short) tup"
     name, md5 = x
     ident = name.split(' ')[0]
+    md5 = md5[:8]
     return (ident, md5)
-preprocess['manifest'] = manifest_combine_ident_md5
+preprocess['manifest'] = combine_ident_md5
+preprocess['prefetch'] = combine_ident_md5
 
 
 class PickStyle(Enum):
@@ -84,10 +87,10 @@ class SignaturePicklist:
                 column_name = 'md5'
             elif coltype == 'prefetch':
                 # for now, override => md5short in column match_md5
-                coltype = 'md5prefix8'
-                column_name = 'match_md5'
+                coltype = 'prefetch'
+                column_name = '(match_ident, match_md5)'
             elif coltype == 'manifest':
-                column_name = '(ident, md5)'
+                column_name = '(ident, md5short)'
             elif coltype == 'search':
                 # for now, override => md5
                 coltype = 'md5'
@@ -137,7 +140,7 @@ class SignaturePicklist:
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
-        elif coltype == 'manifest':
+        elif coltype in ('manifest', 'prefetch'):
             q = (ss.name, ss.md5sum())
         else:
             assert 0, coltype
@@ -148,6 +151,8 @@ class SignaturePicklist:
         "return the picklist value from a manifest row"
         if self.coltype == 'manifest':
             q = (row['name'], row['md5'])
+        elif self.coltype == 'prefetch':
+            q = (row['match_name'], row['match_md5'])
         else:
             if self.coltype == 'md5':
                 colkey = 'md5'
@@ -158,9 +163,11 @@ class SignaturePicklist:
             else:
                 assert 0, colkey
 
-            q = row[colkey]
+            q = row.get(colkey)
 
-        q = self.preprocess_fn(q)
+        if q:
+            q = self.preprocess_fn(q)
+
         return q
 
     def init(self, values=[]):
@@ -196,20 +203,14 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
-            if not (column_name in r.fieldnames or coltype == 'manifest'):
+            if not (column_name in r.fieldnames or coltype in ('manifest', 'prefetch')):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
-                # pick out values from column
-                if coltype == 'manifest':
-                    col = (row['name'], row['md5'])
-                else:
-                    col = row[column_name]
+                col = self._get_value_for_row(row)
                 if not col:
                     n_empty_val += 1
                     continue
-
-                col = self.preprocess_fn(col)
 
                 # look for duplicate values or empty values
                 if col in pickset:
@@ -267,6 +268,8 @@ class SignaturePicklist:
         """
         if self.coltype == 'manifest':
             q = (row['name'], row['md5'])
+        elif self.coltype == 'prefetch':
+            q = (row['match_name'], row['match_md5'])
         else:
             q = row[self.column_name]
         q = self.preprocess_fn(q)
