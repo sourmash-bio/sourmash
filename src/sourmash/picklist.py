@@ -27,6 +27,9 @@ def combine_ident_md5(x):
     return (ident, md5)
 preprocess['manifest'] = combine_ident_md5
 preprocess['prefetch'] = combine_ident_md5
+preprocess['gather'] = combine_ident_md5
+preprocess['search'] = combine_ident_md5
+
 
 
 class PickStyle(Enum):
@@ -81,18 +84,15 @@ class SignaturePicklist:
         if coltype in self.meta_coltypes:
             if column_name:
                 raise ValueError(f"no column name allowed for coltype '{coltype}'")
-            if coltype == 'gather':
-                # for now, override => md5short in column md5
-                coltype = 'md5prefix8'
-                column_name = 'md5'
-            elif coltype == 'prefetch':
-                column_name = '(match_ident, match_md5)'
+
+            if coltype == 'prefetch':
+                column_name = '(match_name, match_md5)'
             elif coltype == 'manifest':
-                column_name = '(ident, md5short)'
+                column_name = '(name, md5)'
             elif coltype == 'search':
-                # for now, override => md5
-                coltype = 'md5'
-                column_name = 'md5'
+                column_name = '(name, md5)'
+            elif coltype == 'gather':
+                column_name = '(name, md5)'
             else:               # should never be reached!
                 raise ValueError(f"picklist __init__ for {coltype} has unhandled branch")
 
@@ -134,12 +134,12 @@ class SignaturePicklist:
     def _get_sig_attribute(self, ss):
         "for a given SourmashSignature, return attribute for this picklist."
         coltype = self.coltype
-        if coltype in ('md5', 'md5prefix8', 'md5short'):
+        if coltype in self.meta_coltypes:
+            q = (ss.name, ss.md5sum())
+        elif coltype in ('md5', 'md5prefix8', 'md5short'):
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
-        elif coltype in ('manifest', 'prefetch'):
-            q = (ss.name, ss.md5sum())
         else:
             raise ValueError(f"picklist get_sig_attribute {coltype} has unhandled branch")
 
@@ -147,7 +147,7 @@ class SignaturePicklist:
 
     def _get_value_for_manifest_row(self, row):
         "return the picklist value from a manifest row"
-        if self.coltype in ('manifest', 'prefetch'):
+        if self.coltype in self.meta_coltypes:
             q = (row['name'], row['md5'])
         else:
             if self.coltype == 'md5':
@@ -165,13 +165,15 @@ class SignaturePicklist:
         q = self.preprocess_fn(q)
 
         return q
-    
+
     def _get_value_for_csv_row(self, row):
         "return the picklist value from a CSV pickfile row"
         if self.coltype == 'manifest':
             q = (row['name'], row['md5'])
         elif self.coltype == 'prefetch':
             q = (row['match_name'], row['match_md5'])
+        elif self.coltype in ('gather', 'search'):
+            q = (row['name'], row['md5'])
         else:
             q = row[self.column_name]
 
@@ -213,7 +215,7 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
-            if not (column_name in r.fieldnames or coltype in ('manifest', 'prefetch')):
+            if not (column_name in r.fieldnames or coltype in self.meta_coltypes):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
@@ -276,13 +278,7 @@ class SignaturePicklist:
 
         This is used for examining matches/nomatches to original picklist file.
         """
-        if self.coltype == 'manifest':
-            q = (row['name'], row['md5'])
-        elif self.coltype == 'prefetch':
-            q = (row['match_name'], row['match_md5'])
-        else:
-            q = row[self.column_name]
-        q = self.preprocess_fn(q)
+        q = self._get_value_for_csv_row(row)
         self.n_queries += 1
 
         if q in self.found:
