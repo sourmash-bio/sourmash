@@ -889,7 +889,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         for row in self.rows:
             pickset.add(row['md5'])
 
-        picklist = SignaturePicklist('md5')
+        picklist = SignaturePicklist('md5') # @CTB
         picklist.pickset = pickset
         return picklist
 

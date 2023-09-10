@@ -1,4 +1,14 @@
-"Picklist code for extracting subsets of signatures."
+"""Picklist code for extracting subsets of signatures.
+
+Picklists serve as a central inclusion/exclusion mechanism for sketches.
+Each picklist object operates on a particular type of value, and uses
+values specified by the user (if using an external picklist) or works with
+the output of sourmash (manifests or search/prefetch/gather output).
+
+Two key features of picklists is that they can be passed into Index.select
+and operate efficiently on manifests, so when used with e.g. zipfiles,
+only the selected sketches are loaded.
+"""
 import csv
 import os
 from enum import Enum
@@ -61,7 +71,8 @@ class SignaturePicklist:
     You can also use 'gather', 'prefetch', 'search', and 'manifest' as
     column types; these take the CSV output of 'gather', 'prefetch',
     'search', and 'manifest' as picklists. 'column' must be left
-    blank in this case: e.g. use 'pickfile.csv::gather'.
+    blank in this case: e.g. use 'pickfile.csv::gather'. These "meta-coltypes"
+    use composite selection on (ident, md5short) tuples.
     """
     meta_coltypes = ('manifest', 'gather', 'prefetch', 'search')
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
@@ -79,7 +90,7 @@ class SignaturePicklist:
         self.orig_coltype = coltype
         self.orig_colname = column_name
 
-        # if we're using gather or prefetch or manifest, set column_name
+        # if we're using gather, prefetch, manifest, or search, set column_name
         # automatically (after checks).
         if coltype in self.meta_coltypes:
             if column_name:
