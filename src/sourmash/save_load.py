@@ -348,7 +348,7 @@ class SaveSignatures_Directory(Base_SaveSignaturesToLocation):
                     break
                 i += 1
 
-        with gzip.open(outname, "wb") as fp:
+        with open(outname, "wb") as fp:
             sigmod.save_signatures([ss], fp, compression=1)
 
 
