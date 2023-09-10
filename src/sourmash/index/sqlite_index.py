@@ -885,13 +885,9 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        pickset = set()
-        for row in self.rows:
-            pickset.add(row['md5'])
-
-        picklist = SignaturePicklist('md5') # @CTB
-        picklist.pickset = pickset
-        return picklist
+        pl = SignaturePicklist('manifest')
+        pl.pickset = { pl._get_value_for_manifest_row(row) for row in self.rows }
+        return pl
 
     @classmethod
     def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:",
