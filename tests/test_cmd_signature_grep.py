@@ -388,6 +388,7 @@ def test_sig_grep_8_count(runtmp):
 """.splitlines():
         assert line.strip() in out
 
+
 def test_sig_grep_identical_md5s(runtmp):
     # test that we properly handle different signatures with identical md5s
     sig47 = utils.get_test_data('47.fa.sig')
