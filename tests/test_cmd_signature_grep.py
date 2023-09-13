@@ -387,3 +387,27 @@ def test_sig_grep_8_count(runtmp):
 2 matches: prot/protein.zip
 """.splitlines():
         assert line.strip() in out
+
+
+def test_sig_grep_identical_md5s(runtmp):
+    # test that we properly handle different signatures with identical md5s
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss = load_signatures(sig47)
+    sig = list(ss)[0]
+    new_sig = sig.to_mutable()
+    new_sig.name = 'foo'
+    sig47foo = runtmp.output('foo.sig')
+    # this was only a problem when the signatures are stored in the same file
+    with open(sig47foo, 'wt') as fp:
+        sourmash.save_signatures([new_sig, sig], fp)
+
+    runtmp.run_sourmash('sig', 'grep', '-i', 'foo', sig47foo)
+
+    out = runtmp.last_result.out
+    ss = load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella' not in ss.name
+    assert 'foo' in ss.name
+    assert ss.md5sum() == '09a08691ce52952152f0e866a59f6261'

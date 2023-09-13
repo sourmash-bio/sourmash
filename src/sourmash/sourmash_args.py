@@ -125,7 +125,7 @@ def load_picklist(args):
 
             notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
 
-            n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
+            n_empty_val, dup_vals = picklist.load()
         except ValueError as exc:
             error("ERROR: could not load picklist.")
             error(str(exc))
