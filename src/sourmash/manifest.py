@@ -240,6 +240,8 @@ class CollectionManifest(BaseCollectionManifest):
             md5set.add(row['md5'])
 
     def __iadd__(self, other):
+        if self is other:
+            raise Exception("cannot directly add manifest to itself")
         self._add_rows(other.rows)
         return self
 
