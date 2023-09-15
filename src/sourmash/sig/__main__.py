@@ -14,7 +14,7 @@ import sourmash
 from sourmash.sourmash_args import FileOutput
 
 from sourmash.logging import (set_quiet, error, notify, print_results, debug,
-                              debug_literal)
+                              debug_literal, _debug)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -1359,7 +1359,9 @@ def check(args):
             row['internal_location'] = filename
             total_manifest_rows.add_row(row)
 
-        debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
+        # the len(sub_manifest) here should only be run when needed :)
+        if _debug:
+            debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 
