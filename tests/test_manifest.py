@@ -4,7 +4,7 @@ Tests for manifest code in databases, etc.
 from io import StringIO
 
 import sourmash
-from sourmash import index
+from sourmash import index, sourmash_args
 
 import sourmash_tst_utils as utils
 
@@ -162,3 +162,34 @@ def test_save_load_manifest():
 
     short_mf = index.CollectionManifest(rows)
     assert short_mf != manifest
+
+
+def test_manifest_to_picklist_bug(runtmp):
+    # this tests a fun combination of things that led to a bug.
+    # tl;dr we only want to iterate once across a generator...
+    c = runtmp
+    all_zip = utils.get_test_data('prot/all.zip')
+
+    idx = sourmash_args.load_file_as_index(all_zip)
+    assert len(idx) == 8
+
+    manifest = sourmash_args.get_manifest(idx)
+    assert len(manifest) == 8
+
+    def filter_fn(row):
+        # match?
+        keep = False
+        if "09a0869" in row['md5']:
+            keep = True
+
+        return keep
+
+    sub_manifest = manifest.filter_rows(filter_fn)
+    sub_picklist = sub_manifest.to_picklist()
+    idx = idx.select(picklist=sub_picklist)
+
+    assert len(idx) == 1
+    print(idx)
+
+    x = list(idx.signatures())
+    assert len(x)
