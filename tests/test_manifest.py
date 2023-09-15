@@ -214,3 +214,32 @@ def test_manifest_to_picklist_bug(runtmp):
 
     x = list(idx.signatures())
     assert len(x)
+
+
+def test_generate_manifest_iterate_once():
+    # we should only iterate across manifest rows once
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    loader = sourmash.load_file_as_index(protzip)
+
+    siglist = []
+    for (sig, loc) in loader._signatures_with_internal():
+        siglist.append(sig)
+
+    # build generator function => will not allow iteration twice
+    def genfn():
+        for (sig, loc) in loader._signatures_with_internal():
+            row = index.CollectionManifest.make_manifest_row(sig, loc)
+            yield row
+
+    manifest = index.CollectionManifest(genfn())
+
+    assert len(manifest) == 2
+    assert len(manifest._md5_set) == 2
+
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+    for sig in siglist:
+        assert sig in manifest
