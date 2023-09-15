@@ -62,7 +62,8 @@ def test_manifest_operations():
 
 
 def test_manifest_operations_fail():
-    # test basic manifest operations - +=
+    # should not be able to add a manifest to itself - not only makes
+    # no sense, but it means you're modifying a generator in place, sometimes.
     protzip = utils.get_test_data('prot/protein.zip')
 
     loader = sourmash.load_file_as_index(protzip)
