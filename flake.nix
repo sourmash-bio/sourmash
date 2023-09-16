@@ -48,7 +48,7 @@
 
           sourmash = python.buildPythonPackage rec {
             pname = "sourmash";
-            version = "4.8.4";
+            version = "4.8.5-dev";
             format = "pyproject";
 
             src = ./.;
