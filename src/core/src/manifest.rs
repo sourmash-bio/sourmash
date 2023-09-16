@@ -8,7 +8,7 @@ use serde::de;
 use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
-use crate::index::Selection;
+use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::Sketch;
 use crate::Result;
@@ -163,8 +163,10 @@ impl Manifest {
     pub fn iter(&self) -> impl Iterator<Item = &Record> {
         self.records.iter()
     }
+}
 
-    pub fn select_to_manifest(&self, selection: &Selection) -> Result<Self> {
+impl Select for Manifest {
+    fn select(self, selection: &Selection) -> Result<Self> {
         let rows = self.records.iter().filter(|row| {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {

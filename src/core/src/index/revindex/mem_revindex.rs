@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use camino::Utf8Path as Path;
@@ -13,7 +13,9 @@ use rayon::prelude::*;
 use crate::collection::Collection;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::{GatherResult, Index, Selection, SigCounter};
+use crate::index::revindex::HashToColor;
+use crate::index::{GatherResult, Index, SigCounter};
+use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
@@ -21,88 +23,10 @@ use crate::storage::Storage;
 use crate::HashIntoType;
 use crate::Result;
 
-// Use rkyv for serialization?
-// https://davidkoloski.me/rkyv/
-//#[derive(Serialize, Deserialize)]
 pub struct RevIndex {
     linear: LinearIndex,
     hash_to_color: HashToColor,
     colors: Colors,
-}
-
-#[derive(Serialize, Deserialize)]
-struct HashToColor(HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>);
-
-impl HashToColor {
-    fn new() -> Self {
-        HashToColor(HashMap::<
-            HashIntoType,
-            Color,
-            BuildNoHashHasher<HashIntoType>,
-        >::with_hasher(BuildNoHashHasher::default()))
-    }
-
-    fn get(&self, hash: &HashIntoType) -> Option<&Color> {
-        self.0.get(hash)
-    }
-
-    fn retain(&mut self, hashes: &HashSet<HashIntoType>) {
-        self.0.retain(|hash, _| hashes.contains(hash))
-    }
-
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    fn add_to(&mut self, colors: &mut Colors, dataset_id: usize, matched_hashes: Vec<u64>) {
-        let mut color = None;
-
-        matched_hashes.into_iter().for_each(|hash| {
-            color = Some(colors.update(color, &[dataset_id as Idx]).unwrap());
-            self.0.insert(hash, color.unwrap());
-        });
-    }
-
-    fn reduce_hashes_colors(
-        a: (HashToColor, Colors),
-        b: (HashToColor, Colors),
-    ) -> (HashToColor, Colors) {
-        let ((small_hashes, small_colors), (mut large_hashes, mut large_colors)) =
-            if a.0.len() > b.0.len() {
-                (b, a)
-            } else {
-                (a, b)
-            };
-
-        small_hashes.0.into_iter().for_each(|(hash, color)| {
-            large_hashes
-                .0
-                .entry(hash)
-                .and_modify(|entry| {
-                    // Hash is already present.
-                    // Update the current color by adding the indices from
-                    // small_colors.
-                    let ids = small_colors.indices(&color);
-                    let new_color = large_colors.update(Some(*entry), ids).unwrap();
-                    *entry = new_color;
-                })
-                .or_insert_with(|| {
-                    // In this case, the hash was not present yet.
-                    // we need to create the same color from small_colors
-                    // into large_colors.
-                    let ids = small_colors.indices(&color);
-                    let new_color = large_colors.update(None, ids).unwrap();
-                    assert_eq!(new_color, color);
-                    new_color
-                });
-        });
-
-        (large_hashes, large_colors)
-    }
 }
 
 impl LinearIndex {
@@ -171,50 +95,6 @@ impl LinearIndex {
 }
 
 impl RevIndex {
-    pub fn load<P: AsRef<Path>>(
-        _index_path: P,
-        _queries: Option<&[KmerMinHash]>,
-    ) -> Result<RevIndex> {
-        unimplemented!()
-        /*
-        let (rdr, _) = niffler::from_path(index_path)?;
-        let revindex = if let Some(qs) = queries {
-            // TODO: avoid loading full revindex if query != None
-            /*
-            struct PartialRevIndex<T> {
-                hashes_to_keep: Option<HashSet<HashIntoType>>,
-                marker: PhantomData<fn() -> T>,
-            }
-
-            impl<T> PartialRevIndex<T> {
-                pub fn new(hashes_to_keep: HashSet<u64>) -> Self {
-                    PartialRevIndex {
-                        hashes_to_keep: Some(hashes_to_keep),
-                        marker: PhantomData,
-                    }
-                }
-            }
-            */
-
-            let mut hashes: HashSet<u64> = HashSet::new();
-            for q in qs {
-                hashes.extend(q.iter_mins());
-            }
-
-            //let mut revindex: RevIndex = PartialRevIndex::new(hashes).deserialize(&rdr).unwrap();
-
-            let mut revindex: RevIndex = serde_json::from_reader(rdr)?;
-            revindex.hash_to_color.retain(&hashes);
-            revindex
-        } else {
-            // Load the full revindex
-            serde_json::from_reader(rdr)?
-        };
-
-        Ok(revindex)
-        */
-    }
-
     pub fn new(
         search_sigs: &[PathBuf],
         template: &Sketch,
@@ -380,32 +260,6 @@ impl RevIndex {
         containment: bool,
         _ignore_scaled: bool,
     ) -> Result<Vec<(f64, Signature, String)>> {
-        /*
-        let template_mh = None;
-        if let Sketch::MinHash(mh) = self.template {
-            template_mh = Some(mh);
-        };
-        // TODO: throw error
-        let template_mh = template_mh.unwrap();
-
-        let tmp_mh;
-        let mh = if template_mh.scaled() > mh.scaled() {
-            // TODO: proper error here
-            tmp_mh = mh.downsample_scaled(self.scaled)?;
-            &tmp_mh
-        } else {
-            mh
-        };
-
-                if self.scaled < mh.scaled() && !ignore_scaled {
-                        return Err(LcaDBError::ScaledMismatchError {
-                                db: self.scaled,
-                                query: mh.scaled(),
-                        }
-                        .into());
-                }
-        */
-
         // TODO: proper threshold calculation
         let threshold: usize = (threshold * (mh.size() as f64)) as _;
 
@@ -489,43 +343,6 @@ impl<'a> Index<'a> for RevIndex {
         unimplemented!()
     }
 }
-
-/*
-impl RevIndexOps for RevIndex {
-    /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool);
-    */
-
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
-
-    fn prepare_gather_counters(
-        &self,
-        query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor);
-
-    fn index(&self, index_sigs: Vec<PathBuf>, template: &Sketch, threshold: f64, save_paths: bool);
-
-    fn update(&self, index_sigs: Vec<PathBuf>, template: &Sketch, threshold: f64, save_paths: bool);
-
-    fn compact(&self);
-
-    fn flush(&self) -> Result<()>;
-
-    fn convert(&self, output_db: RevIndex) -> Result<()>;
-
-    fn check(&self, quick: bool);
-
-    fn gather(
-        &self,
-        counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
-        threshold: usize,
-        query: &KmerMinHash,
-        template: &Sketch,
-    ) -> Result<Vec<GatherResult>>;
-}
-*/
 
 #[cfg(test)]
 mod test {

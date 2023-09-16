@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
-use crate::index::Selection;
 use crate::prelude::*;
+use crate::selection::{Select, Selection};
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
@@ -534,32 +534,6 @@ impl Signature {
         None
     }
 
-    pub fn select(mut self, selection: &Selection) -> Result<Self, Error> {
-        self.signatures.retain(|s| {
-            let mut valid = true;
-            valid = if let Some(ksize) = selection.ksize() {
-                let k = s.ksize() as u32;
-                k == ksize || k == ksize * 3
-            } else {
-                valid
-            };
-            /*
-            valid = if let Some(abund) = selection.abund() {
-                valid && *s.with_abundance() == abund
-            } else {
-                valid
-            };
-            valid = if let Some(moltype) = selection.moltype() {
-                valid && s.moltype() == moltype
-            } else {
-                valid
-            };
-            */
-            valid
-        });
-        Ok(self)
-    }
-
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Signature::from_reader(&mut reader)
@@ -784,6 +758,34 @@ impl ToWriter for Signature {
     {
         serde_json::to_writer(writer, &vec![&self])?;
         Ok(())
+    }
+}
+
+impl Select for Signature {
+    fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+        self.signatures.retain(|s| {
+            let mut valid = true;
+            valid = if let Some(ksize) = selection.ksize() {
+                let k = s.ksize() as u32;
+                k == ksize || k == ksize * 3
+            } else {
+                valid
+            };
+            /*
+            valid = if let Some(abund) = selection.abund() {
+                valid && *s.with_abundance() == abund
+            } else {
+                valid
+            };
+            valid = if let Some(moltype) = selection.moltype() {
+                valid && s.moltype() == moltype
+            } else {
+                valid
+            };
+            */
+            valid
+        });
+        Ok(self)
     }
 }
 

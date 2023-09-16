@@ -26,11 +26,6 @@ use crate::Result;
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
     let mut hasher = s.build_hasher();
-    /*
-    // TODO: remove this...
-    let mut sorted: Vec<_> = idxs.iter().collect();
-    sorted.sort();
-    */
     idxs.hash(&mut hasher);
     hasher.finish()
 }
@@ -198,7 +193,6 @@ impl RevIndex {
                 .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
                 .expect("error merging");
         }
-        // TODO: save collection to DB?
     }
 }
 

@@ -8,11 +8,12 @@ use std::sync::Arc;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
-
+use nohash_hasher::BuildNoHashHasher;
 use roaring::RoaringBitmap;
+use serde::{Deserialize, Serialize};
 
 use crate::collection::CollectionSet;
-use crate::encodings::{Color, Idx};
+use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
@@ -20,11 +21,12 @@ use crate::sketch::Sketch;
 use crate::HashIntoType;
 use crate::Result;
 
-//type DB = rocksdb::DBWithThreadMode<rocksdb::SingleThreaded>;
 type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
 
 type QueryColors = HashMap<Color, Datasets>;
-type HashToColor = HashMap<HashIntoType, Color>;
+type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
+#[derive(Serialize, Deserialize)]
+pub struct HashToColor(HashToColorT);
 
 const HASHES: &str = "hashes";
 const COLORS: &str = "colors";
@@ -73,6 +75,83 @@ pub trait RevIndexOps {
         query: &KmerMinHash,
         template: &Sketch,
     ) -> Result<Vec<GatherResult>>;
+}
+
+impl HashToColor {
+    fn new() -> Self {
+        HashToColor(HashMap::<
+            HashIntoType,
+            Color,
+            BuildNoHashHasher<HashIntoType>,
+        >::with_hasher(BuildNoHashHasher::default()))
+    }
+
+    fn get(&self, hash: &HashIntoType) -> Option<&Color> {
+        self.0.get(hash)
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    fn add_to(&mut self, colors: &mut Colors, dataset_id: usize, matched_hashes: Vec<u64>) {
+        let mut color = None;
+
+        matched_hashes.into_iter().for_each(|hash| {
+            color = Some(colors.update(color, &[dataset_id as Idx]).unwrap());
+            self.0.insert(hash, color.unwrap());
+        });
+    }
+
+    fn reduce_hashes_colors(
+        a: (HashToColor, Colors),
+        b: (HashToColor, Colors),
+    ) -> (HashToColor, Colors) {
+        let ((small_hashes, small_colors), (mut large_hashes, mut large_colors)) =
+            if a.0.len() > b.0.len() {
+                (b, a)
+            } else {
+                (a, b)
+            };
+
+        small_hashes.0.into_iter().for_each(|(hash, color)| {
+            large_hashes
+                .0
+                .entry(hash)
+                .and_modify(|entry| {
+                    // Hash is already present.
+                    // Update the current color by adding the indices from
+                    // small_colors.
+                    let ids = small_colors.indices(&color);
+                    let new_color = large_colors.update(Some(*entry), ids).unwrap();
+                    *entry = new_color;
+                })
+                .or_insert_with(|| {
+                    // In this case, the hash was not present yet.
+                    // we need to create the same color from small_colors
+                    // into large_colors.
+                    let ids = small_colors.indices(&color);
+                    let new_color = large_colors.update(None, ids).unwrap();
+                    assert_eq!(new_color, color);
+                    new_color
+                });
+        });
+
+        (large_hashes, large_colors)
+    }
+}
+
+impl FromIterator<(HashIntoType, Color)> for HashToColor {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (HashIntoType, Color)>,
+    {
+        HashToColor(HashToColorT::from_iter(iter))
+    }
 }
 
 impl RevIndex {
@@ -387,27 +466,30 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
     }
 }
 
-fn build_template(ksize: u8, scaled: usize) -> Sketch {
-    let max_hash = max_hash_for_scaled(scaled as u64);
-    let template_mh = KmerMinHash::builder()
-        .num(0u32)
-        .ksize(ksize as u32)
-        .max_hash(max_hash)
-        .build();
-    Sketch::MinHash(template_mh)
-}
-
 #[cfg(test)]
 mod test {
 
     use camino::Utf8PathBuf as PathBuf;
     use tempfile::TempDir;
 
+    use crate::collection::Collection;
     use crate::prelude::*;
+    use crate::selection::Selection;
+    use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
+    use crate::sketch::Sketch;
     use crate::Result;
-    use crate::{collection::Collection, index::Selection};
 
-    use super::{build_template, prepare_query, RevIndex, RevIndexOps};
+    use super::{prepare_query, RevIndex, RevIndexOps};
+
+    fn build_template(ksize: u8, scaled: usize) -> Sketch {
+        let max_hash = max_hash_for_scaled(scaled as u64);
+        let template_mh = KmerMinHash::builder()
+            .num(0u32)
+            .ksize(ksize as u32)
+            .max_hash(max_hash)
+            .build();
+        Sketch::MinHash(template_mh)
+    }
 
     #[test]
     fn revindex_index() -> Result<()> {

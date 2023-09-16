@@ -30,7 +30,7 @@ pub mod cmd;
 pub mod collection;
 pub mod index;
 pub mod manifest;
-pub mod picklist;
+pub mod selection;
 pub mod signature;
 pub mod sketch;
 pub mod storage;

@@ -11,13 +11,13 @@ use crate::collection::CollectionSet;
 use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::manifest::Manifest;
+use crate::selection::Select;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, SigStore, Storage};
 use crate::Result;
 
-//#[derive(Serialize, Deserialize)]
 pub struct LinearIndex {
     collection: CollectionSet,
     template: Sketch,
@@ -56,46 +56,6 @@ impl LinearIndex {
 
     pub fn storage(&self) -> Option<InnerStorage> {
         Some(self.collection.storage.clone())
-    }
-
-    pub fn select(mut self, selection: &Selection) -> Result<Self> {
-        let manifest = self.collection.manifest.select_to_manifest(selection)?;
-        self.collection.manifest = manifest;
-
-        Ok(self)
-        /*
-        # if we have a manifest, run 'select' on the manifest.
-        manifest = self.manifest
-        traverse_yield_all = self.traverse_yield_all
-
-        if manifest is not None:
-            manifest = manifest.select_to_manifest(**kwargs)
-            return ZipFileLinearIndex(self.storage,
-                                      selection_dict=None,
-                                      traverse_yield_all=traverse_yield_all,
-                                      manifest=manifest,
-                                      use_manifest=True)
-        else:
-            # no manifest? just pass along all the selection kwargs to
-            # the new ZipFileLinearIndex.
-
-            assert manifest is None
-            if self.selection_dict:
-                # combine selects...
-                d = dict(self.selection_dict)
-                for k, v in kwargs.items():
-                    if k in d:
-                        if d[k] is not None and d[k] != v:
-                            raise ValueError(f"incompatible select on '{k}'")
-                    d[k] = v
-                kwargs = d
-
-            return ZipFileLinearIndex(self.storage,
-                                      selection_dict=kwargs,
-                                      traverse_yield_all=traverse_yield_all,
-                                      manifest=None,
-                                      use_manifest=False)
-        */
     }
 
     pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
@@ -344,6 +304,21 @@ impl LinearIndex {
             self.collection
                 .sig_for_dataset(dataset_id as Idx)
                 .expect("error loading sig")
+        })
+    }
+}
+
+impl Select for LinearIndex {
+    fn select(self, selection: &Selection) -> Result<Self> {
+        let Self {
+            collection,
+            template,
+        } = self;
+        let collection = collection.into_inner().select(selection)?.try_into()?;
+
+        Ok(Self {
+            collection,
+            template,
         })
     }
 }

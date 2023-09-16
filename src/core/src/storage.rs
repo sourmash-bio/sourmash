@@ -13,7 +13,6 @@ use thiserror::Error;
 use typed_builder::TypedBuilder;
 
 use crate::errors::ReadDataError;
-use crate::index::Selection;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
@@ -431,8 +430,10 @@ impl SigStore {
     pub fn name(&self) -> String {
         self.name.clone()
     }
+}
 
-    pub fn select(mut self, selection: &Selection) -> Result<Self> {
+impl Select for SigStore {
+    fn select(mut self, selection: &Selection) -> Result<Self> {
         // TODO: find better error
         let sig = self.data.take().ok_or(Error::MismatchKSizes)?;
         self.data = OnceCell::with_value(sig.select(selection)?);

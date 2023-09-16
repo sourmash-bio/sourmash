@@ -3,8 +3,8 @@ use std::ops::{Deref, DerefMut};
 use camino::Utf8Path as Path;
 
 use crate::encodings::Idx;
-use crate::index::Selection;
 use crate::manifest::{Manifest, Record};
+use crate::prelude::*;
 use crate::signature::Signature;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, Storage, ZipStorage};
 use crate::Result;
@@ -50,6 +50,12 @@ impl TryFrom<Collection> for CollectionSet {
             .try_for_each(|c| first.check_compatible(c))?;
 
         Ok(Self { collection })
+    }
+}
+
+impl CollectionSet {
+    pub fn into_inner(self) -> Collection {
+        self.collection
     }
 }
 
@@ -127,9 +133,11 @@ impl Collection {
         assert_eq!(sig.signatures.len(), 1);
         Ok(sig)
     }
+}
 
-    pub fn select(mut self, selection: &Selection) -> Result<Self> {
-        self.manifest = self.manifest.select_to_manifest(selection)?;
+impl Select for Collection {
+    fn select(mut self, selection: &Selection) -> Result<Self> {
+        self.manifest = self.manifest.select(selection)?;
         Ok(self)
     }
 }
