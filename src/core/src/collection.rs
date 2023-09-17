@@ -60,6 +60,10 @@ impl CollectionSet {
     pub fn into_inner(self) -> Collection {
         self.collection
     }
+
+    pub fn selection(&self) -> Selection {
+        todo!("Extract selection from first sig")
+    }
 }
 
 impl Collection {

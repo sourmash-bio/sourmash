@@ -771,6 +771,8 @@ impl Select for Signature {
             } else {
                 valid
             };
+            // TODO: execute downsample if needed
+
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund

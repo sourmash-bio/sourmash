@@ -84,7 +84,7 @@ impl LinearIndex {
 impl RevIndex {
     pub fn new(
         search_sigs: &[PathBuf],
-        template: &Sketch,
+        selection: &Selection,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
         _keep_sigs: bool,
@@ -92,8 +92,7 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let collection =
-            Collection::from_paths(search_sigs)?.select(&Selection::from_template(template))?;
+        let collection = Collection::from_paths(search_sigs)?.select(&selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
         Ok(linear.index(threshold, merged_query, queries))
@@ -101,7 +100,7 @@ impl RevIndex {
 
     pub fn from_zipfile<P: AsRef<Path>>(
         zipfile: P,
-        template: &Sketch,
+        selection: &Selection,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
         _keep_sigs: bool,
@@ -109,8 +108,7 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let collection =
-            Collection::from_zipfile(zipfile)?.select(&Selection::from_template(template))?;
+        let collection = Collection::from_zipfile(zipfile)?.select(&selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
         Ok(linear.index(threshold, merged_query, queries))
@@ -130,15 +128,14 @@ impl RevIndex {
 
     pub fn new_with_sigs(
         search_sigs: Vec<Signature>,
-        template: &Sketch,
+        selection: &Selection,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
     ) -> Result<RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let collection =
-            Collection::from_sigs(search_sigs)?.select(&Selection::from_template(template))?;
+        let collection = Collection::from_sigs(search_sigs)?.select(selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
         let idx = linear.index(threshold, merged_query, queries);
@@ -338,24 +335,18 @@ impl<'a> Index<'a> for RevIndex {
 mod test {
     use super::*;
 
+    use crate::index::revindex::prepare_query;
     use crate::sketch::minhash::max_hash_for_scaled;
     use crate::Result;
 
     #[test]
     fn revindex_new() -> Result<()> {
-        let max_hash = max_hash_for_scaled(10000);
-        let template = Sketch::MinHash(
-            KmerMinHash::builder()
-                .num(0u32)
-                .ksize(31)
-                .max_hash(max_hash)
-                .build(),
-        );
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
         let search_sigs = [
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig".into(),
             "../../tests/test-data/gather/GCF_000007545.1_ASM754v1_genomic.fna.gz.sig".into(),
         ];
-        let index = RevIndex::new(&search_sigs, &template, 0, None, false)?;
+        let index = RevIndex::new(&search_sigs, &selection, 0, None, false)?;
         assert_eq!(index.colors.len(), 3);
 
         Ok(())
@@ -363,21 +354,14 @@ mod test {
 
     #[test]
     fn revindex_many() -> Result<()> {
-        let max_hash = max_hash_for_scaled(10000);
-        let template = Sketch::MinHash(
-            KmerMinHash::builder()
-                .num(0u32)
-                .ksize(31)
-                .max_hash(max_hash)
-                .build(),
-        );
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
         let search_sigs = [
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig".into(),
             "../../tests/test-data/gather/GCF_000007545.1_ASM754v1_genomic.fna.gz.sig".into(),
             "../../tests/test-data/gather/GCF_000008105.1_ASM810v1_genomic.fna.gz.sig".into(),
         ];
 
-        let index = RevIndex::new(&search_sigs, &template, 0, None, false)?;
+        let index = RevIndex::new(&search_sigs, &selection, 0, None, false)?;
         //dbg!(&index.linear.collection().manifest);
         /*
         dbg!(&index.colors.colors);
@@ -399,14 +383,7 @@ mod test {
 
     #[test]
     fn revindex_from_sigs() -> Result<()> {
-        let max_hash = max_hash_for_scaled(10000);
-        let template = Sketch::MinHash(
-            KmerMinHash::builder()
-                .num(0u32)
-                .ksize(31)
-                .max_hash(max_hash)
-                .build(),
-        );
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
         let search_sigs: Vec<Signature> = [
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
             "../../tests/test-data/gather/GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
@@ -416,7 +393,7 @@ mod test {
         .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
         .collect();
 
-        let index = RevIndex::new_with_sigs(search_sigs, &template, 0, None)?;
+        let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
         /*
          dbg!(&index.colors.colors);
          0: 86
@@ -436,18 +413,14 @@ mod test {
 
     #[test]
     fn revindex_from_zipstorage() -> Result<()> {
-        let max_hash = max_hash_for_scaled(100);
-        let template = Sketch::MinHash(
-            KmerMinHash::builder()
-                .num(0u32)
-                .ksize(19)
-                .hash_function(crate::encodings::HashFunctions::murmur64_protein)
-                .max_hash(max_hash)
-                .build(),
-        );
+        let selection = Selection::builder()
+            .ksize(19)
+            .scaled(100)
+            .moltype(crate::encodings::HashFunctions::murmur64_protein)
+            .build();
         let index = RevIndex::from_zipfile(
             "../../tests/test-data/prot/protein.zip",
-            &template,
+            &selection,
             0,
             None,
             false,
@@ -460,34 +433,27 @@ mod test {
             "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
         )
         .expect("Error processing query")
-        .swap_remove(0);
+        .swap_remove(0)
+        .select(&selection)?;
 
-        let template = Sketch::MinHash(
-            KmerMinHash::builder()
-                .num(0u32)
-                .ksize(57)
-                .hash_function(crate::encodings::HashFunctions::murmur64_protein)
-                .max_hash(max_hash)
-                .build(),
-        );
         let mut query_mh = None;
-        if let Some(Sketch::MinHash(mh)) = query_sig.select_sketch(&template) {
-            query_mh = Some(mh);
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query_mh = Some(q);
         }
         let query_mh = query_mh.expect("Couldn't find a compatible MinHash");
 
-        let counter_rev = index.counter_for_query(query_mh);
-        let counter_lin = index.linear.counter_for_query(query_mh);
+        let counter_rev = index.counter_for_query(&query_mh);
+        let counter_lin = index.linear.counter_for_query(&query_mh);
 
         let results_rev = index.search(counter_rev, false, 0).unwrap();
         let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
         assert_eq!(results_rev, results_linear);
 
-        let counter_rev = index.counter_for_query(query_mh);
-        let counter_lin = index.linear.counter_for_query(query_mh);
+        let counter_rev = index.counter_for_query(&query_mh);
+        let counter_lin = index.linear.counter_for_query(&query_mh);
 
-        let results_rev = index.gather(counter_rev, 0, query_mh).unwrap();
-        let results_linear = index.linear.gather(counter_lin, 0, query_mh).unwrap();
+        let results_rev = index.gather(counter_rev, 0, &query_mh).unwrap();
+        let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
         assert_eq!(results_rev.len(), 1);
         assert_eq!(results_rev, results_linear);
 

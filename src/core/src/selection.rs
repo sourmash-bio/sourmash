@@ -3,9 +3,31 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::HashFunctions;
 use crate::manifest::Record;
-use crate::signature::SigsTrait;
-use crate::sketch::Sketch;
 use crate::Result;
+
+#[derive(Default, Debug, TypedBuilder)]
+pub struct Selection {
+    #[builder(default, setter(strip_option))]
+    ksize: Option<u32>,
+
+    #[builder(default, setter(strip_option))]
+    abund: Option<bool>,
+
+    #[builder(default, setter(strip_option))]
+    num: Option<u32>,
+
+    #[builder(default, setter(strip_option))]
+    scaled: Option<u32>,
+
+    #[builder(default, setter(strip_option))]
+    containment: Option<bool>,
+
+    #[builder(default, setter(strip_option))]
+    moltype: Option<HashFunctions>,
+
+    #[builder(default, setter(strip_option))]
+    picklist: Option<Picklist>,
+}
 
 #[derive(Default, TypedBuilder, CopyGetters, Getters, Setters, Clone, Debug)]
 pub struct Picklist {
@@ -32,17 +54,6 @@ pub enum PickStyle {
     #[default]
     Include = 1,
     Exclude = 2,
-}
-
-#[derive(Default, Debug)]
-pub struct Selection {
-    ksize: Option<u32>,
-    abund: Option<bool>,
-    num: Option<u32>,
-    scaled: Option<u32>,
-    containment: Option<bool>,
-    moltype: Option<HashFunctions>,
-    picklist: Option<Picklist>,
 }
 
 pub trait Select {
@@ -106,25 +117,6 @@ impl Selection {
 
     pub fn set_picklist(&mut self, value: Picklist) {
         self.picklist = Some(value);
-    }
-
-    pub fn from_template(template: &Sketch) -> Self {
-        let (num, scaled) = match template {
-            Sketch::MinHash(mh) => (Some(mh.num()), Some(mh.scaled() as u32)),
-            Sketch::LargeMinHash(mh) => (Some(mh.num()), Some(mh.scaled() as u32)),
-            _ => (None, None),
-        };
-
-        Selection {
-            ksize: Some(template.ksize() as u32),
-            abund: None,
-            containment: None,
-            //moltype: Some(template.hash_function()),
-            moltype: None,
-            num,
-            picklist: None,
-            scaled,
-        }
     }
 
     pub fn from_record(row: &Record) -> Result<Self> {

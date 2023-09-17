@@ -17,6 +17,7 @@ use crate::index::revindex::{
 };
 use crate::index::{GatherResult, SigCounter};
 use crate::manifest::Manifest;
+use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
@@ -283,11 +284,12 @@ impl RevIndexOps for RevIndex {
         hash_to_color: HashToColor,
         threshold: usize,
         orig_query: &KmerMinHash,
-        template: &Sketch,
+        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
         //let mut query: KmerMinHashBTree = orig_query.clone().into();
+        let selection = selection.unwrap_or_else(|| self.collection.selection());
 
         while match_size > threshold && !counter.is_empty() {
             trace!("counter len: {}", counter.len());
@@ -298,22 +300,20 @@ impl RevIndexOps for RevIndex {
 
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
-            let match_mh =
-                prepare_query(&match_sig, template).expect("Couldn't find a compatible MinHash");
-
             // Calculate stats
             let f_orig_query = match_size as f64 / orig_query.size() as f64;
-            let f_match = match_size as f64 / match_mh.size() as f64;
             let name = match_sig.name();
-            let unique_intersect_bp = match_mh.scaled() as usize * match_size;
             let gather_result_rank = matches.len();
-
-            let (intersect_orig, _) = match_mh.intersection_size(orig_query)?;
-            let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
-
-            let f_unique_to_query = intersect_orig as f64 / orig_query.size() as f64;
             let match_ = match_sig.clone();
             let md5 = match_sig.md5sum();
+
+            let match_mh = prepare_query(match_sig.into(), &selection)
+                .expect("Couldn't find a compatible MinHash");
+            let f_match = match_size as f64 / match_mh.size() as f64;
+            let unique_intersect_bp = match_mh.scaled() as usize * match_size;
+            let (intersect_orig, _) = match_mh.intersection_size(orig_query)?;
+            let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
+            let f_unique_to_query = intersect_orig as f64 / orig_query.size() as f64;
 
             // TODO: all of these
             let filename = "".into();

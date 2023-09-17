@@ -829,6 +829,8 @@ impl SigsTrait for KmerMinHash {
             // TODO: fix this error
             return Err(Error::MismatchDNAProt);
         }
+        // TODO: if supporting downsampled to be compatible
+        //if self.max_hash < other.max_hash {
         if self.max_hash != other.max_hash {
             return Err(Error::MismatchScaled);
         }

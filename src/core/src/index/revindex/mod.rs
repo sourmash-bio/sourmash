@@ -15,8 +15,9 @@ use serde::{Deserialize, Serialize};
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
-use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
+use crate::prelude::*;
+use crate::signature::Signature;
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::HashIntoType;
 use crate::Result;
@@ -75,7 +76,7 @@ pub trait RevIndexOps {
         hash_to_color: HashToColor,
         threshold: usize,
         query: &KmerMinHash,
-        template: &Sketch,
+        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>>;
 }
 
@@ -215,53 +216,16 @@ impl RevIndex {
     }
 }
 
-fn check_compatible_downsample(me: &KmerMinHash, other: &KmerMinHash) -> Result<()> {
-    /*
-    if self.num != other.num {
-        return Err(Error::MismatchNum {
-            n1: self.num,
-            n2: other.num,
-        }
-        .into());
-    }
-    */
-    use crate::Error;
+pub fn prepare_query(search_sig: Signature, selection: &Selection) -> Option<KmerMinHash> {
+    let sig = search_sig.select(selection).ok();
 
-    if me.ksize() != other.ksize() {
-        return Err(Error::MismatchKSizes);
-    }
-    if me.hash_function() != other.hash_function() {
-        // TODO: fix this error
-        return Err(Error::MismatchDNAProt);
-    }
-    if me.max_hash() < other.max_hash() {
-        return Err(Error::MismatchScaled);
-    }
-    if me.seed() != other.seed() {
-        return Err(Error::MismatchSeed);
-    }
-    Ok(())
-}
-
-pub fn prepare_query(search_sig: &Signature, template: &Sketch) -> Option<KmerMinHash> {
-    let mut search_mh = None;
-    if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(template) {
-        search_mh = Some(mh.clone());
-    } else {
-        // try to find one that can be downsampled
-        if let Sketch::MinHash(template_mh) = template {
-            for sketch in search_sig.sketches() {
-                if let Sketch::MinHash(ref_mh) = sketch {
-                    if check_compatible_downsample(&ref_mh, template_mh).is_ok() {
-                        let max_hash = max_hash_for_scaled(template_mh.scaled());
-                        let mh = ref_mh.downsample_max_hash(max_hash).unwrap();
-                        search_mh = Some(mh);
-                    }
-                }
-            }
+    sig.and_then(|sig| {
+        if let Sketch::MinHash(mh) = sig.sketches().swap_remove(0) {
+            Some(mh)
+        } else {
+            None
         }
-    }
-    search_mh
+    })
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
@@ -481,21 +445,11 @@ mod test {
     use crate::collection::Collection;
     use crate::prelude::*;
     use crate::selection::Selection;
-    use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
+    use crate::sketch::minhash::KmerMinHash;
     use crate::sketch::Sketch;
     use crate::Result;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
-
-    fn build_template(ksize: u8, scaled: usize) -> Sketch {
-        let max_hash = max_hash_for_scaled(scaled as u64);
-        let template_mh = KmerMinHash::builder()
-            .num(0u32)
-            .ksize(ksize as u32)
-            .max_hash(max_hash)
-            .build();
-        Sketch::MinHash(template_mh)
-    }
 
     #[test]
     fn revindex_index() -> Result<()> {
@@ -510,20 +464,19 @@ mod test {
             })
             .collect();
 
-        let template = build_template(31, 10000);
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
         let output = TempDir::new()?;
 
-        let query_sig = Signature::from_path(&siglist[0])?;
         let mut query = None;
-        for sig in &query_sig {
-            if let Some(q) = prepare_query(sig, &template) {
-                query = Some(q);
-            }
+        let query_sig = Signature::from_path(&siglist[0])?
+            .swap_remove(0)
+            .select(&selection)?;
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
         }
         let query = query.unwrap();
 
-        let collection =
-            Collection::from_paths(&siglist)?.select(&Selection::from_template(&template))?;
+        let collection = Collection::from_paths(&siglist)?.select(&selection)?;
         let index = RevIndex::create(output.path(), collection.try_into()?, false)?;
 
         let counter = index.counter_for_query(&query);
@@ -547,13 +500,12 @@ mod test {
             })
             .collect();
 
-        let template = build_template(31, 10000);
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
         let output = TempDir::new()?;
 
         let mut new_siglist = siglist.clone();
         {
-            let collection =
-                Collection::from_paths(&siglist)?.select(&Selection::from_template(&template))?;
+            let collection = Collection::from_paths(&siglist)?.select(&selection)?;
             RevIndex::create(output.path(), collection.try_into()?, false)?;
         }
 
@@ -561,17 +513,16 @@ mod test {
         filename.push("genome-s12.fa.gz.sig");
         new_siglist.push(filename);
 
-        let query_sig = Signature::from_path(&new_siglist[2])?;
         let mut query = None;
-        for sig in &query_sig {
-            if let Some(q) = prepare_query(sig, &template) {
-                query = Some(q);
-            }
+        let query_sig = Signature::from_path(&new_siglist[2])?
+            .swap_remove(0)
+            .select(&selection)?;
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
         }
         let query = query.unwrap();
 
-        let new_collection =
-            Collection::from_paths(&new_siglist)?.select(&Selection::from_template(&template))?;
+        let new_collection = Collection::from_paths(&new_siglist)?.select(&selection)?;
         let index = RevIndex::open(output.path(), false)?.update(new_collection.try_into()?)?;
 
         let counter = index.counter_for_query(&query);
@@ -596,30 +547,39 @@ mod test {
             })
             .collect();
 
-        let template = build_template(31, 10000);
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
         let output = TempDir::new()?;
 
-        let query_sig = Signature::from_path(&siglist[0])?;
         let mut query = None;
-        for sig in &query_sig {
-            if let Some(q) = prepare_query(sig, &template) {
-                query = Some(q);
-            }
+        let query_sig = Signature::from_path(&siglist[0])?
+            .swap_remove(0)
+            .select(&selection)?;
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
         }
         let query = query.unwrap();
 
         {
-            let collection =
-                Collection::from_paths(&siglist)?.select(&Selection::from_template(&template))?;
+            let collection = Collection::from_paths(&siglist)?.select(&selection)?;
             let _index = RevIndex::create(output.path(), collection.try_into()?, false);
         }
 
         let index = RevIndex::open(output.path(), true)?;
 
-        let counter = index.counter_for_query(&query);
-        let matches = index.matches_from_counter(counter, 0);
+        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
 
-        assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
+        let matches = index.gather(
+            counter,
+            query_colors,
+            hash_to_color,
+            0,
+            &query,
+            Some(selection),
+        )?;
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].name(), "../genome-s10.fa.gz");
+        assert_eq!(matches[0].f_match(), 1.0);
 
         Ok(())
     }
