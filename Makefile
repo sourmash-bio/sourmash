@@ -25,6 +25,7 @@ doc: .PHONY
 	tox -e docs
 
 include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/mod.rs \
                     src/core/src/ffi/hyperloglog.rs \
                     src/core/src/ffi/minhash.rs \
                     src/core/src/ffi/signature.rs \

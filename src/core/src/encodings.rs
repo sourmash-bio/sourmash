@@ -22,35 +22,33 @@ pub type Idx = u32;
 type IdxTracker = (vec_collections::VecSet<[Idx; 8]>, u64);
 type ColorToIdx = HashMap<Color, IdxTracker, BuildNoHashHasher<Color>>;
 
-#[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
-#[repr(u32)]
 pub enum HashFunctions {
-    murmur64_DNA = 1,
-    murmur64_protein = 2,
-    murmur64_dayhoff = 3,
-    murmur64_hp = 4,
+    Murmur64Dna,
+    Murmur64Protein,
+    Murmur64Dayhoff,
+    Murmur64Hp,
 }
 
 impl HashFunctions {
     pub fn dna(&self) -> bool {
-        *self == HashFunctions::murmur64_DNA
+        *self == HashFunctions::Murmur64Dna
     }
 
     pub fn protein(&self) -> bool {
-        *self == HashFunctions::murmur64_protein
+        *self == HashFunctions::Murmur64Protein
     }
 
     pub fn dayhoff(&self) -> bool {
-        *self == HashFunctions::murmur64_dayhoff
+        *self == HashFunctions::Murmur64Dayhoff
     }
 
     pub fn hp(&self) -> bool {
-        *self == HashFunctions::murmur64_hp
+        *self == HashFunctions::Murmur64Hp
     }
 }
 
@@ -60,10 +58,10 @@ impl std::fmt::Display for HashFunctions {
             f,
             "{}",
             match self {
-                HashFunctions::murmur64_DNA => "dna",
-                HashFunctions::murmur64_protein => "protein",
-                HashFunctions::murmur64_dayhoff => "dayhoff",
-                HashFunctions::murmur64_hp => "hp",
+                HashFunctions::Murmur64Dna => "dna",
+                HashFunctions::Murmur64Protein => "protein",
+                HashFunctions::Murmur64Dayhoff => "dayhoff",
+                HashFunctions::Murmur64Hp => "hp",
             }
         )
     }
@@ -74,10 +72,10 @@ impl TryFrom<&str> for HashFunctions {
 
     fn try_from(moltype: &str) -> Result<Self, Self::Error> {
         match moltype.to_lowercase().as_ref() {
-            "dna" => Ok(HashFunctions::murmur64_DNA),
-            "dayhoff" => Ok(HashFunctions::murmur64_dayhoff),
-            "hp" => Ok(HashFunctions::murmur64_hp),
-            "protein" => Ok(HashFunctions::murmur64_protein),
+            "dna" => Ok(HashFunctions::Murmur64Dna),
+            "dayhoff" => Ok(HashFunctions::Murmur64Dayhoff),
+            "hp" => Ok(HashFunctions::Murmur64Hp),
+            "protein" => Ok(HashFunctions::Murmur64Protein),
             v => unimplemented!("{v}"),
         }
     }

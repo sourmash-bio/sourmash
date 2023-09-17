@@ -445,8 +445,6 @@ mod test {
     use crate::collection::Collection;
     use crate::prelude::*;
     use crate::selection::Selection;
-    use crate::sketch::minhash::KmerMinHash;
-    use crate::sketch::Sketch;
     use crate::Result;
 
     use super::{prepare_query, RevIndex, RevIndexOps};

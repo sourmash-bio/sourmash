@@ -336,7 +336,6 @@ mod test {
     use super::*;
 
     use crate::index::revindex::prepare_query;
-    use crate::sketch::minhash::max_hash_for_scaled;
     use crate::Result;
 
     #[test]
@@ -416,7 +415,7 @@ mod test {
         let selection = Selection::builder()
             .ksize(19)
             .scaled(100)
-            .moltype(crate::encodings::HashFunctions::murmur64_protein)
+            .moltype(crate::encodings::HashFunctions::Murmur64Protein)
             .build();
         let index = RevIndex::from_zipfile(
             "../../tests/test-data/prot/protein.zip",

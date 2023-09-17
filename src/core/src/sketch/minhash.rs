@@ -41,7 +41,7 @@ pub struct KmerMinHash {
     num: u32,
     ksize: u32,
 
-    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
+    #[builder(setter(into), default = HashFunctions::Murmur64Dna)]
     hash_function: HashFunctions,
 
     #[builder(default = 42u64)]
@@ -89,7 +89,7 @@ impl Default for KmerMinHash {
         KmerMinHash {
             num: 1000,
             ksize: 21,
-            hash_function: HashFunctions::murmur64_DNA,
+            hash_function: HashFunctions::Murmur64Dna,
             seed: 42,
             max_hash: 0,
             mins: Vec::with_capacity(1000),
@@ -148,10 +148,10 @@ impl<'de> Deserialize<'de> for KmerMinHash {
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
         let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
-            "protein" => HashFunctions::murmur64_protein,
-            "dayhoff" => HashFunctions::murmur64_dayhoff,
-            "hp" => HashFunctions::murmur64_hp,
-            "dna" => HashFunctions::murmur64_DNA,
+            "protein" => HashFunctions::Murmur64Protein,
+            "dayhoff" => HashFunctions::Murmur64Dayhoff,
+            "hp" => HashFunctions::Murmur64Hp,
+            "dna" => HashFunctions::Murmur64Dna,
             _ => unimplemented!(), // TODO: throw error here
         };
 
@@ -222,7 +222,7 @@ impl KmerMinHash {
     }
 
     pub fn is_protein(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_protein
+        self.hash_function == HashFunctions::Murmur64Protein
     }
 
     pub fn max_hash(&self) -> u64 {
@@ -715,11 +715,11 @@ impl KmerMinHash {
     }
 
     pub fn dayhoff(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_dayhoff
+        self.hash_function == HashFunctions::Murmur64Dayhoff
     }
 
     pub fn hp(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_hp
+        self.hash_function == HashFunctions::Murmur64Hp
     }
 
     pub fn mins(&self) -> Vec<u64> {
@@ -943,7 +943,7 @@ pub struct KmerMinHashBTree {
     num: u32,
     ksize: u32,
 
-    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
+    #[builder(setter(into), default = HashFunctions::Murmur64Dna)]
     hash_function: HashFunctions,
 
     #[builder(default = 42u64)]
@@ -995,7 +995,7 @@ impl Default for KmerMinHashBTree {
         KmerMinHashBTree {
             num: 1000,
             ksize: 21,
-            hash_function: HashFunctions::murmur64_DNA,
+            hash_function: HashFunctions::Murmur64Dna,
             seed: 42,
             max_hash: 0,
             mins: Default::default(),
@@ -1056,10 +1056,10 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
         let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
-            "protein" => HashFunctions::murmur64_protein,
-            "dayhoff" => HashFunctions::murmur64_dayhoff,
-            "hp" => HashFunctions::murmur64_hp,
-            "dna" => HashFunctions::murmur64_DNA,
+            "protein" => HashFunctions::Murmur64Protein,
+            "dayhoff" => HashFunctions::Murmur64Dayhoff,
+            "hp" => HashFunctions::Murmur64Hp,
+            "dna" => HashFunctions::Murmur64Dna,
             _ => unimplemented!(), // TODO: throw error here
         };
 
@@ -1129,7 +1129,7 @@ impl KmerMinHashBTree {
     }
 
     pub fn is_protein(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_protein
+        self.hash_function == HashFunctions::Murmur64Protein
     }
 
     pub fn max_hash(&self) -> u64 {
@@ -1492,11 +1492,11 @@ impl KmerMinHashBTree {
     }
 
     pub fn dayhoff(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_dayhoff
+        self.hash_function == HashFunctions::Murmur64Dayhoff
     }
 
     pub fn hp(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_hp
+        self.hash_function == HashFunctions::Murmur64Hp
     }
 
     pub fn hash_function(&self) -> HashFunctions {

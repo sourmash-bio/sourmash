@@ -184,7 +184,7 @@ impl SigsTrait for HyperLogLog {
 
     fn hash_function(&self) -> HashFunctions {
         //TODO support other hash functions
-        HashFunctions::murmur64_DNA
+        HashFunctions::Murmur64Dna
     }
 
     fn add_hash(&mut self, hash: HashIntoType) {

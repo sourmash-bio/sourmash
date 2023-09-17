@@ -372,10 +372,10 @@ impl Iterator for SeqToHashes {
                 } else {
                     if !self.prot_configured {
                         self.aa_seq = match self.hash_function {
-                            HashFunctions::murmur64_dayhoff => {
+                            HashFunctions::Murmur64Dayhoff => {
                                 self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
                             }
-                            HashFunctions::murmur64_hp => {
+                            HashFunctions::Murmur64Hp => {
                                 self.sequence.iter().cloned().map(aa_to_hp).collect()
                             }
                             invalid => {
