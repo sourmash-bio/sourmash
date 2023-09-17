@@ -22,16 +22,18 @@ pub type Idx = u32;
 type IdxTracker = (vec_collections::VecSet<[Idx; 8]>, u64);
 type ColorToIdx = HashMap<Color, IdxTracker, BuildNoHashHasher<Color>>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[non_exhaustive]
 pub enum HashFunctions {
     Murmur64Dna,
     Murmur64Protein,
     Murmur64Dayhoff,
     Murmur64Hp,
+    Custom(String),
 }
 
 impl HashFunctions {
@@ -62,6 +64,7 @@ impl std::fmt::Display for HashFunctions {
                 HashFunctions::Murmur64Protein => "protein",
                 HashFunctions::Murmur64Dayhoff => "dayhoff",
                 HashFunctions::Murmur64Hp => "hp",
+                HashFunctions::Custom(v) => v,
             }
         )
     }

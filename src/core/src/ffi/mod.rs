@@ -1,6 +1,6 @@
 //! # Foreign Function Interface for calling sourmash from a C API
 //!
-//! Primary client for now is the Python version, using CFFI and milksnake.
+//! Primary client for now is the Python version, using CFFI and maturin.
 #![allow(clippy::missing_safety_doc)]
 
 #[macro_use]
@@ -62,6 +62,7 @@ impl From<crate::encodings::HashFunctions> for HashFunctions {
             Murmur64Protein => HashFunctions::Murmur64Protein,
             Murmur64Dayhoff => HashFunctions::Murmur64Dayhoff,
             Murmur64Hp => HashFunctions::Murmur64Hp,
+            _ => todo!("Not supported, probably custom"),
         }
     }
 }

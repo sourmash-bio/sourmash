@@ -104,7 +104,7 @@ impl Selection {
     }
 
     pub fn moltype(&self) -> Option<HashFunctions> {
-        self.moltype
+        self.moltype.clone()
     }
 
     pub fn set_moltype(&mut self, value: HashFunctions) {

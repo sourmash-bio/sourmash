@@ -371,7 +371,7 @@ impl Iterator for SeqToHashes {
                     Some(Ok(hash))
                 } else {
                     if !self.prot_configured {
-                        self.aa_seq = match self.hash_function {
+                        self.aa_seq = match &self.hash_function {
                             HashFunctions::Murmur64Dayhoff => {
                                 self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
                             }
@@ -584,9 +584,9 @@ impl Signature {
                                 }
                             };
 
-                            match moltype {
+                            match &moltype {
                                 Some(x) => {
-                                    if mh.hash_function() == x {
+                                    if mh.hash_function() == *x {
                                         return true;
                                     }
                                 }
@@ -600,9 +600,9 @@ impl Signature {
                                 }
                             };
 
-                            match moltype {
+                            match &moltype {
                                 Some(x) => {
-                                    if mh.hash_function() == x {
+                                    if mh.hash_function() == *x {
                                         return true;
                                     }
                                 }

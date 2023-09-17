@@ -17,7 +17,7 @@ impl From<MashSketcher> for KmerMinHash {
         let mut new_mh = KmerMinHash::new(
             0,
             values.get(0).unwrap().kmer.len() as u32,
-            HashFunctions::murmur64_DNA,
+            HashFunctions::Murmur64Dna,
             42,
             true,
             values.len() as u32,
@@ -51,7 +51,7 @@ mod test {
 
     #[test]
     fn finch_behavior() {
-        let mut a = KmerMinHash::new(0, 10, HashFunctions::murmur64_DNA, 42, true, 20);
+        let mut a = KmerMinHash::new(0, 10, HashFunctions::Murmur64Dna, 42, true, 20);
         let mut b = MashSketcher::new(20, 10, 42);
 
         let seq = b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA";
@@ -87,7 +87,7 @@ mod test {
 
     #[test]
     fn from_finch() {
-        let mut a = KmerMinHash::new(0, 10, HashFunctions::murmur64_DNA, 42, true, 20);
+        let mut a = KmerMinHash::new(0, 10, HashFunctions::Murmur64Dna, 42, true, 20);
         let mut b = MashSketcher::new(20, 10, 42);
 
         let seq = b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA";

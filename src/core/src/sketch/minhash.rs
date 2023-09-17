@@ -74,7 +74,7 @@ impl Clone for KmerMinHash {
         KmerMinHash {
             num: self.num,
             ksize: self.ksize,
-            hash_function: self.hash_function,
+            hash_function: self.hash_function.clone(),
             seed: self.seed,
             max_hash: self.max_hash,
             mins: self.mins.clone(),
@@ -579,7 +579,7 @@ impl KmerMinHash {
             let mut combined_mh = KmerMinHash::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -612,7 +612,7 @@ impl KmerMinHash {
             let mut combined_mh = KmerMinHash::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -741,7 +741,7 @@ impl KmerMinHash {
         let mut new_mh = KmerMinHash::new(
             scaled,
             self.ksize,
-            self.hash_function,
+            self.hash_function.clone(),
             self.seed,
             self.abunds.is_some(),
             self.num,
@@ -805,7 +805,7 @@ impl SigsTrait for KmerMinHash {
     }
 
     fn hash_function(&self) -> HashFunctions {
-        self.hash_function
+        self.hash_function.clone()
     }
 
     fn add_hash(&mut self, hash: u64) {
@@ -979,7 +979,7 @@ impl Clone for KmerMinHashBTree {
         KmerMinHashBTree {
             num: self.num,
             ksize: self.ksize,
-            hash_function: self.hash_function,
+            hash_function: self.hash_function.clone(),
             seed: self.seed,
             max_hash: self.max_hash,
             mins: self.mins.clone(),
@@ -1372,7 +1372,7 @@ impl KmerMinHashBTree {
             let mut combined_mh = KmerMinHashBTree::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -1404,7 +1404,7 @@ impl KmerMinHashBTree {
             let mut combined_mh = KmerMinHashBTree::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -1500,7 +1500,7 @@ impl KmerMinHashBTree {
     }
 
     pub fn hash_function(&self) -> HashFunctions {
-        self.hash_function
+        self.hash_function.clone()
     }
 
     pub fn mins(&self) -> Vec<u64> {
@@ -1524,7 +1524,7 @@ impl KmerMinHashBTree {
         let mut new_mh = KmerMinHashBTree::new(
             scaled,
             self.ksize,
-            self.hash_function,
+            self.hash_function.clone(),
             self.seed,
             self.abunds.is_some(),
             self.num,
@@ -1574,7 +1574,7 @@ impl SigsTrait for KmerMinHashBTree {
     }
 
     fn hash_function(&self) -> HashFunctions {
-        self.hash_function
+        self.hash_function.clone()
     }
 
     fn add_hash(&mut self, hash: u64) {
