@@ -10,12 +10,11 @@ use rayon::prelude::*;
 use crate::collection::CollectionSet;
 use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
-use crate::manifest::Manifest;
 use crate::selection::Select;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-use crate::storage::{InnerStorage, SigStore, Storage};
+use crate::storage::SigStore;
 use crate::Result;
 
 pub struct LinearIndex {
@@ -46,53 +45,32 @@ impl LinearIndex {
     }
 
     pub fn location(&self) -> Option<String> {
-        if let Some(_storage) = &self.storage() {
-            // storage.path()
-            unimplemented!()
-        } else {
-            None
-        }
-    }
-
-    pub fn storage(&self) -> Option<InnerStorage> {
-        Some(self.collection.storage.clone())
+        unimplemented!()
     }
 
     pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
         let processed_sigs = AtomicUsize::new(0);
 
-        let search_sigs: Vec<_> = self
-            .collection
-            .manifest
-            .internal_locations()
-            .map(PathBuf::from)
-            .collect();
-
         let template = self.template();
 
         #[cfg(feature = "parallel")]
-        let sig_iter = search_sigs.par_iter();
+        let sig_iter = self.collection.par_iter();
 
         #[cfg(not(feature = "parallel"))]
-        let sig_iter = search_sigs.iter();
+        let sig_iter = self.collection.iter();
 
-        let counters = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+        let counters = sig_iter.filter_map(|(dataset_id, record)| {
+            let filename = record.internal_location();
+
             let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
             if i % 1000 == 0 {
                 info!("Processed {} reference sigs", i);
             }
 
-            let search_sig = if let Some(storage) = &self.storage() {
-                let sig_data = storage
-                    .load(filename.as_str())
-                    .unwrap_or_else(|_| panic!("error loading {:?}", filename));
-
-                Signature::from_reader(sig_data.as_slice())
-            } else {
-                Signature::from_path(filename)
-            }
-            .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
-            .swap_remove(0);
+            let search_sig = self
+                .collection
+                .sig_for_dataset(dataset_id)
+                .unwrap_or_else(|_| panic!("error loading {:?}", filename));
 
             let mut search_mh = None;
             if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(template) {
@@ -147,7 +125,8 @@ impl LinearIndex {
         for (dataset_id, size) in counter.most_common() {
             if size >= threshold {
                 matches.push(
-                    self.collection.manifest[dataset_id as usize]
+                    self.collection
+                        .record_for_dataset(dataset_id)?
                         .internal_location()
                         .to_string(),
                 );
@@ -165,14 +144,11 @@ impl LinearIndex {
         query: &KmerMinHash,
         round: usize,
     ) -> Result<GatherResult> {
-        let match_path = if self.collection.manifest.is_empty() {
-            ""
-        } else {
-            self.collection.manifest[dataset_id as usize]
-                .internal_location()
-                .as_str()
-        }
-        .into();
+        let match_path = self
+            .collection
+            .record_for_dataset(dataset_id)?
+            .internal_location()
+            .into();
         let match_sig = self.collection.sig_for_dataset(dataset_id)?;
         let result = self.stats_for_match(&match_sig, query, match_size, match_path, round)?;
         Ok(result)
@@ -289,18 +265,8 @@ impl LinearIndex {
         Ok(matches)
     }
 
-    pub fn manifest(&self) -> Manifest {
-        self.collection.manifest.clone()
-    }
-
-    pub fn set_manifest(&mut self, new_manifest: Manifest) -> Result<()> {
-        self.collection.manifest = new_manifest;
-        Ok(())
-    }
-
     pub fn signatures_iter(&self) -> impl Iterator<Item = SigStore> + '_ {
-        // FIXME temp solution, must find better one!
-        (0..self.collection.manifest.len()).map(move |dataset_id| {
+        (0..self.collection.len()).map(move |dataset_id| {
             self.collection
                 .sig_for_dataset(dataset_id as Idx)
                 .expect("error loading sig")
@@ -339,19 +305,16 @@ impl<'a> Index<'a> for LinearIndex {
     }
 
     fn len(&self) -> usize {
-        self.collection.manifest.len()
+        self.collection.len()
     }
 
     fn signatures(&self) -> Vec<Self::Item> {
         self.collection()
-            .manifest
-            .internal_locations()
-            .map(PathBuf::from)
-            .map(|p| {
+            .iter()
+            .map(|(i, p)| {
                 self.collection()
-                    .storage
-                    .load_sig(p.as_str())
-                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
+                    .sig_for_dataset(i as Idx)
+                    .unwrap_or_else(|_| panic!("Error processing {}", p.internal_location()))
             })
             .collect()
     }

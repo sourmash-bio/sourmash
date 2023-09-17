@@ -98,11 +98,11 @@ impl HashToColor {
         self.0.is_empty()
     }
 
-    fn add_to(&mut self, colors: &mut Colors, dataset_id: usize, matched_hashes: Vec<u64>) {
+    fn add_to(&mut self, colors: &mut Colors, dataset_id: Idx, matched_hashes: Vec<u64>) {
         let mut color = None;
 
         matched_hashes.into_iter().for_each(|hash| {
-            color = Some(colors.update(color, &[dataset_id as Idx]).unwrap());
+            color = Some(colors.update(color, &[dataset_id]).unwrap());
             self.0.insert(hash, color.unwrap());
         });
     }

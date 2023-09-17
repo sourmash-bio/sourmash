@@ -80,19 +80,14 @@ impl RevIndex {
             collection: Arc::new(collection),
         };
 
-        index
-            .collection
-            .manifest
-            .par_iter()
-            .enumerate()
-            .for_each(|(dataset_id, _)| {
-                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                if i % 1000 == 0 {
-                    info!("Processed {} reference sigs", i);
-                }
+        index.collection.par_iter().for_each(|(dataset_id, _)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
 
-                index.map_hashes_colors(dataset_id as Idx);
-            });
+            index.map_hashes_colors(dataset_id as Idx);
+        });
 
         index.save_collection().expect("Error saving collection");
 
@@ -143,7 +138,7 @@ impl RevIndex {
             InnerStorage::from_spec(spec)?
         };
 
-        Collection { manifest, storage }.try_into()
+        Collection::new(manifest, storage).try_into()
     }
 
     fn save_collection(&self) -> Result<()> {
@@ -152,12 +147,12 @@ impl RevIndex {
         // write manifest
         let mut wtr = vec![];
         {
-            self.collection.manifest.to_writer(&mut wtr)?;
+            self.collection.manifest().to_writer(&mut wtr)?;
         }
         self.db.put_cf(&cf_metadata, MANIFEST, &wtr[..])?;
 
         // write storage spec
-        let spec = self.collection.storage.spec();
+        let spec = self.collection.storage().spec();
 
         // TODO: check if spec if memstorage, would probably have to
         // save into rocksdb in that case!
@@ -269,7 +264,10 @@ impl RevIndexOps for RevIndex {
             .into_iter()
             .filter_map(|(dataset_id, size)| {
                 if size >= threshold {
-                    let row = &self.collection.manifest[dataset_id as usize];
+                    let row = &self
+                        .collection
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
                     Some((row.name().into(), size))
                 } else {
                     None

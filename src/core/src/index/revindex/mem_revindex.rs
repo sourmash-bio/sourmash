@@ -1,17 +1,14 @@
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 use log::{debug, info};
-use nohash_hasher::BuildNoHashHasher;
-use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use crate::collection::Collection;
-use crate::encodings::{Color, Colors, Idx};
+use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
 use crate::index::revindex::HashToColor;
 use crate::index::{GatherResult, Index, SigCounter};
@@ -19,8 +16,6 @@ use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-use crate::storage::Storage;
-use crate::HashIntoType;
 use crate::Result;
 
 pub struct RevIndex {
@@ -38,20 +33,13 @@ impl LinearIndex {
     ) -> RevIndex {
         let processed_sigs = AtomicUsize::new(0);
 
-        let search_sigs: Vec<_> = self
-            .collection()
-            .manifest
-            .internal_locations()
-            .map(PathBuf::from)
-            .collect();
-
         #[cfg(feature = "parallel")]
-        let sig_iter = search_sigs.par_iter();
+        let sig_iter = self.collection().par_iter();
 
         #[cfg(not(feature = "parallel"))]
-        let sig_iter = search_sigs.iter();
+        let sig_iter = self.collection().iter();
 
-        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, _)| {
             let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
             if i % 1000 == 0 {
                 info!("Processed {} reference sigs", i);
@@ -59,13 +47,12 @@ impl LinearIndex {
 
             let search_sig = self
                 .collection()
-                .storage
-                .load_sig(filename.as_str())
-                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
+                .sig_for_dataset(dataset_id as Idx)
+                .expect("Error loading sig")
                 .into();
 
             RevIndex::map_hashes_colors(
-                dataset_id,
+                dataset_id as Idx,
                 &search_sig,
                 queries,
                 &merged_query,
@@ -160,7 +147,7 @@ impl RevIndex {
     }
 
     fn map_hashes_colors(
-        dataset_id: usize,
+        dataset_id: Idx,
         search_sig: &Signature,
         queries: Option<&[KmerMinHash]>,
         merged_query: &Option<KmerMinHash>,
@@ -275,8 +262,11 @@ impl RevIndex {
             let match_size = if size >= threshold { size } else { break };
 
             let match_sig = self.linear.sig_for_dataset(dataset_id)?;
-            let match_path =
-                self.linear.collection().manifest[dataset_id as usize].internal_location();
+            let match_path = self
+                .linear
+                .collection()
+                .record_for_dataset(dataset_id)?
+                .internal_location();
 
             let mut match_mh = None;
             if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {

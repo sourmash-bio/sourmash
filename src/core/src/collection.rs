@@ -9,9 +9,12 @@ use crate::signature::Signature;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, Storage, ZipStorage};
 use crate::Result;
 
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
+
 pub struct Collection {
-    pub(crate) manifest: Manifest,
-    pub(crate) storage: InnerStorage,
+    manifest: Manifest,
+    storage: InnerStorage,
 }
 
 pub struct CollectionSet {
@@ -60,6 +63,38 @@ impl CollectionSet {
 }
 
 impl Collection {
+    pub fn new(manifest: Manifest, storage: InnerStorage) -> Self {
+        Self { manifest, storage }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Idx, &Record)> {
+        self.manifest.iter().enumerate().map(|(i, r)| (i as Idx, r))
+    }
+
+    #[cfg(feature = "parallel")]
+    pub fn par_iter(&self) -> impl IndexedParallelIterator<Item = (Idx, &Record)> {
+        self.manifest
+            .par_iter()
+            .enumerate()
+            .map(|(i, r)| (i as Idx, r))
+    }
+
+    pub fn len(&self) -> usize {
+        self.manifest.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.manifest.len() == 0
+    }
+
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
+    }
+
+    pub fn storage(&self) -> &InnerStorage {
+        &self.storage
+    }
+
     pub fn from_zipfile<P: AsRef<Path>>(zipfile: P) -> Result<Self> {
         let storage = ZipStorage::from_file(zipfile)?;
         // Load manifest from standard location in zipstorage
@@ -117,6 +152,10 @@ impl Collection {
                     .build(),
             ),
         })
+    }
+
+    pub fn record_for_dataset(&self, dataset_id: Idx) -> Result<&Record> {
+        Ok(&self.manifest[dataset_id as usize])
     }
 
     pub fn sig_for_dataset(&self, dataset_id: Idx) -> Result<SigStore> {
