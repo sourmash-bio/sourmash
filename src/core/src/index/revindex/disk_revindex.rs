@@ -1,5 +1,5 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -62,7 +62,7 @@ pub fn repair(path: &Path) {
 */
 
 impl RevIndex {
-    pub fn create(path: &Path, collection: CollectionSet) -> module::RevIndex {
+    pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
         let mut opts = module::RevIndex::db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
@@ -95,7 +95,7 @@ impl RevIndex {
         index.compact();
         info!("Processed {} reference sigs", processed_sigs.into_inner());
 
-        module::RevIndex::Plain(index)
+        Ok(module::RevIndex::Plain(index))
     }
 
     pub fn open<P: AsRef<Path>>(path: P, read_only: bool) -> Result<module::RevIndex> {
@@ -374,60 +374,20 @@ impl RevIndexOps for RevIndex {
         Ok(matches)
     }
 
-    fn update(
-        &self,
-        _index_sigs: Vec<PathBuf>,
-        _template: &Sketch,
-        _threshold: f64,
-        _save_paths: bool,
-    ) {
-        todo!()
-        /*
-        use byteorder::ReadBytesExt;
-
-        if !save_paths {
-            todo!("only supports with save_paths=True for now");
-        }
-
-        let cf_sigs = self.db.cf_handle(SIGS).unwrap();
-        let iter = self.db.iterator_cf(&cf_sigs, rocksdb::IteratorMode::Start);
-
-        info!("Verifying existing sigs");
-        // verify data match up to this point
-        let mut max_dataset_id = 0;
-        let to_skip = iter
-            .map(|result| {
-                let (key, value) = result.unwrap();
-                let current_dataset_id = (&key[..]).read_u64::<LittleEndian>().unwrap();
-
-                let filename = &index_sigs[current_dataset_id as usize];
-                let sig_data = SignatureData::from_slice(&value).unwrap();
-                match sig_data {
-                    SignatureData::External(sig) => {
-                        assert_eq!(sig, filename.as_os_str().to_str().unwrap().to_string())
-                    }
-                    SignatureData::Empty => (),
-                    SignatureData::Internal(_) => {
-                        todo!("only supports with save_paths=True for now")
-                    }
-                };
-                max_dataset_id = max_dataset_id.max(current_dataset_id);
-            })
-            .count();
-
-        max_dataset_id += 1;
-        assert_eq!(max_dataset_id as usize, to_skip);
+    fn update(mut self, collection: CollectionSet) -> Result<module::RevIndex> {
+        // TODO: verify new collection manifest is a superset of current one,
+        //       and the initial chunk is the same
+        let to_skip = self.collection.check_superset(&collection)?;
 
         // process the remainder
         let processed_sigs = AtomicUsize::new(0);
 
-        index_sigs
+        self.collection = Arc::new(collection);
+
+        self.collection
             .par_iter()
             .skip(to_skip)
-            .enumerate()
-            .for_each(|(i, filename)| {
-                let dataset_id = i + to_skip;
-
+            .for_each(|(dataset_id, _)| {
                 let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
                 if i % 1000 == 0 {
                     info!("Processed {} reference sigs", i);
@@ -436,11 +396,15 @@ impl RevIndexOps for RevIndex {
                 self.map_hashes_colors(dataset_id as Idx);
             });
 
+        info!("Compact SSTs");
+        self.compact();
+
         info!(
             "Processed additional {} reference sigs",
             processed_sigs.into_inner()
         );
-        */
+
+        Ok(module::RevIndex::Plain(self))
     }
 
     fn check(&self, quick: bool) {

@@ -13,7 +13,7 @@ use crate::signature::{Signature, SigsTrait};
 use crate::sketch::Sketch;
 use crate::Result;
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,

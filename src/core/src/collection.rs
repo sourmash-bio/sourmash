@@ -7,7 +7,7 @@ use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, Storage, ZipStorage};
-use crate::Result;
+use crate::{Error, Result};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -93,6 +93,15 @@ impl Collection {
 
     pub fn storage(&self) -> &InnerStorage {
         &self.storage
+    }
+
+    pub fn check_superset(&self, other: &Collection) -> Result<usize> {
+        self.iter()
+            .zip(other.iter())
+            .all(|((id1, rec1), (id2, rec2))| id1 == id2 && rec1 == rec2)
+            .then(|| self.len())
+            // TODO: right error here
+            .ok_or(Error::MismatchKSizes)
     }
 
     pub fn from_zipfile<P: AsRef<Path>>(zipfile: P) -> Result<Self> {

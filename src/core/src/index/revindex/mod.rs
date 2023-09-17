@@ -3,7 +3,7 @@ pub mod mem_revindex;
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -56,7 +56,9 @@ pub trait RevIndexOps {
         query: &KmerMinHash,
     ) -> (SigCounter, QueryColors, HashToColor);
 
-    fn update(&self, index_sigs: Vec<PathBuf>, template: &Sketch, threshold: f64, save_paths: bool);
+    fn update(self, collection: CollectionSet) -> Result<RevIndex>
+    where
+        Self: Sized;
 
     fn compact(&self);
 
@@ -165,7 +167,11 @@ impl RevIndex {
         }
     */
 
-    pub fn create<P: AsRef<Path>>(index: P, collection: CollectionSet, colors: bool) -> Self {
+    pub fn create<P: AsRef<Path>>(
+        index: P,
+        collection: CollectionSet,
+        colors: bool,
+    ) -> Result<Self> {
         if colors {
             todo!() //color_revindex::ColorRevIndex::create(index)
         } else {
@@ -518,7 +524,7 @@ mod test {
 
         let collection =
             Collection::from_paths(&siglist)?.select(&Selection::from_template(&template))?;
-        let index = RevIndex::create(output.path(), collection.try_into()?, false);
+        let index = RevIndex::create(output.path(), collection.try_into()?, false)?;
 
         let counter = index.counter_for_query(&query);
         let matches = index.matches_from_counter(counter, 0);
@@ -528,7 +534,6 @@ mod test {
         Ok(())
     }
 
-    /*
     #[test]
     fn revindex_update() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -547,8 +552,9 @@ mod test {
 
         let mut new_siglist = siglist.clone();
         {
-            let index = RevIndex::create(output.path(), false);
-            index.index(siglist, &template, 0., true);
+            let collection =
+                Collection::from_paths(&siglist)?.select(&Selection::from_template(&template))?;
+            RevIndex::create(output.path(), collection.try_into()?, false)?;
         }
 
         let mut filename = basedir.clone();
@@ -564,18 +570,18 @@ mod test {
         }
         let query = query.unwrap();
 
-        let index = RevIndex::open(output.path(), false);
-        index.update(new_siglist, &template, 0., true);
+        let new_collection =
+            Collection::from_paths(&new_siglist)?.select(&Selection::from_template(&template))?;
+        let index = RevIndex::open(output.path(), false)?.update(new_collection.try_into()?)?;
 
         let counter = index.counter_for_query(&query);
         let matches = index.matches_from_counter(counter, 0);
 
-        assert!(matches[0].0.ends_with("/genome-s12.fa.gz.sig"));
+        assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
         assert_eq!(matches[0].1, 45);
 
         Ok(())
     }
-    */
 
     #[test]
     fn revindex_load_and_gather() -> Result<()> {
