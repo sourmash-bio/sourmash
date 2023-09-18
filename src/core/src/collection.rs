@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use camino::Utf8Path as Path;
+use camino::Utf8PathBuf as PathBuf;
 
 use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
@@ -121,16 +122,24 @@ impl Collection {
     pub fn from_sigs(sigs: Vec<Signature>) -> Result<Self> {
         let storage = MemStorage::new();
 
-        let mut records = vec![];
-        for (i, sig) in sigs.into_iter().enumerate() {
-            let path = format!("{}", i);
-            let mut record = Record::from_sig(&sig, &path);
-            let path = storage.save_sig(&path, sig)?;
-            record.iter_mut().for_each(|rec| {
-                rec.set_internal_location(path.clone().into());
-            });
-            records.extend(record);
-        }
+        #[cfg(feature = "parallel")]
+        let iter = sigs.into_par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let iter = sigs.into_iter();
+
+        let records: Vec<_> = iter
+            .enumerate()
+            .flat_map(|(i, sig)| {
+                let path = format!("{}", i);
+                let mut record = Record::from_sig(&sig, &path);
+                let path = storage.save_sig(&path, sig).expect("Error saving sig");
+                record.iter_mut().for_each(|rec| {
+                    rec.set_internal_location(path.clone().into());
+                });
+                record
+            })
+            .collect();
 
         Ok(Self {
             manifest: records.into(),
@@ -138,22 +147,25 @@ impl Collection {
         })
     }
 
-    pub fn from_paths<P: AsRef<Path>>(paths: &[P]) -> Result<Self> {
+    pub fn from_paths(paths: &[PathBuf]) -> Result<Self> {
         // TODO:
-        // - Build manifest from paths
-        //   - Might need to load the data?
-        // - Use FSStorage (figure out if there is a common path between sigs?)
-        let records: Vec<Record> = paths
-            .iter()
+        // - figure out if there is a common path between sigs for FSStorage?
+
+        #[cfg(feature = "parallel")]
+        let iter = paths.par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let iter = paths.iter();
+
+        let records: Vec<Record> = iter
             .flat_map(|p| {
-                let recs: Vec<Record> = Signature::from_path(p.as_ref())
-                    .unwrap_or_else(|_| panic!("Error processing {:?}", p.as_ref()))
+                let recs: Vec<Record> = Signature::from_path(p)
+                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
                     .into_iter()
-                    .flat_map(|v| Record::from_sig(&v, p.as_ref().as_str()))
+                    .flat_map(|v| Record::from_sig(&v, p.as_str()))
                     .collect();
                 recs
             })
-            //.map(|p| self.collection().storage.load_sig(p.as_str())?.into())
             .collect();
 
         Ok(Self {
