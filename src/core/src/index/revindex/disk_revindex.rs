@@ -396,6 +396,8 @@ impl RevIndexOps for RevIndex {
                 self.map_hashes_colors(dataset_id as Idx);
             });
 
+        self.save_collection().expect("Error saving collection");
+
         info!("Compact SSTs");
         self.compact();
 
