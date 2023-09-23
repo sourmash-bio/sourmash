@@ -34,7 +34,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
+        '-o', '--output', metavar='FILE', default='-',
         help='output signature to this file (default stdout)'
     )
     subparser.add_argument(
@@ -49,7 +49,7 @@ def subparser(subparsers):
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
 

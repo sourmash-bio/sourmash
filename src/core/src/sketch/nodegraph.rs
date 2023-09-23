@@ -139,7 +139,7 @@ impl Nodegraph {
         let occupancy = self.occupied_bins;
 
         let fp_one = occupancy as f64 / min_size as f64;
-        f64::powf(fp_one as f64, n_ht as f64)
+        f64::powf(fp_one, n_ht as f64)
     }
 
     pub fn tablesize(&self) -> usize {
@@ -197,9 +197,7 @@ impl Nodegraph {
             //wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
             let slice = &count.as_slice()[..div];
             let buf = unsafe {
-                use std::mem::size_of;
-
-                let len = size_of::<u32>() * slice.len();
+                let len = std::mem::size_of_val(slice);
                 slice::from_raw_parts(slice.as_ptr() as *const u8, len)
             };
             wtr.write_all(buf)?;

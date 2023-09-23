@@ -424,6 +424,7 @@ def fromfile(args):
     skipped_sigs = 0
     n_missing_name = 0
     n_duplicate_name = 0
+    duplicate_names = set()
 
     for csvfile in args.csvs:
         with sourmash_args.FileInputCSV(csvfile) as r:
@@ -439,11 +440,14 @@ def fromfile(args):
 
                 if name in all_names:
                     n_duplicate_name += 1
+                    duplicate_names.add(name)
                 else:
                     all_names[name] = (genome, proteome)
 
     fail_exit = False
     if n_duplicate_name:
+        if args.report_duplicated:
+            notify("duplicated:\n" + '\n'.join(sorted(duplicate_names)))
         error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting!")
         fail_exit = True
 

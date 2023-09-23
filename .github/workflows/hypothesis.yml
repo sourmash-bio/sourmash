@@ -11,7 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -27,3 +27,10 @@ jobs:
 
       - name: Run Hypothesis tests
         run: tox -e hypothesis,coverage
+
+      - name: Upload Python coverage to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          flags: hypothesis-py
+          fail_ci_if_error: true
+          files: .tox/coverage.xml

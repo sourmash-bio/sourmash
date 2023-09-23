@@ -38,6 +38,7 @@ from . import sig as signature
 from . import sketch
 from . import storage
 from . import tax
+from . import scripts
 
 
 class SourmashParser(ArgumentParser):
@@ -98,20 +99,25 @@ def get_parser():
         'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
         'storage': 'Operations on storage',
+        'scripts': "Plug-ins",
     }
     alias = {
-        "sig": "signature"
+        "sig": "signature",
+        "ext": "scripts",
     }
     expert = set(['categorize', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)
-    user_ops = [op for op in basic_ops if op not in expert]
+
+    # provide a list of the basic operations - not expert, not submodules.
+    user_ops = [op for op in basic_ops if op not in expert and op not in module_descs]
     usage = '    Basic operations\n'
     for op in user_ops:
         docstring = getattr(sys.modules[__name__], op).__doc__
         helpstring = 'sourmash {op:s} --help'.format(op=op)
         usage += '        {hs:25s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
+    # next, all the subcommand ones - dive into subdirectories.
     cmd_group_dirs = next(os.walk(clidir))[1]
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
     cmd_group_dirs = sorted(cmd_group_dirs)
@@ -135,3 +141,20 @@ def get_parser():
         getattr(sys.modules[__name__], op).subparser(sub)
     parser._action_groups.reverse()
     return parser
+
+
+def parse_args(arglist=None):
+    """
+    Return an argparse 'args' object from parsing arglist.
+
+    By default pulls arguments from sys.argv.
+
+    Example usage:
+
+    ```
+    args = parse_args(['sig', 'filter', '-m', '10'])
+
+    sourmash.sig.filter.__main__.filter(args)
+    ```
+    """
+    return get_parser().parse_args(arglist)

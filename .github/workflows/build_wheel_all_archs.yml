@@ -1,6 +1,7 @@
-name: cibuildwheel
+name: cibuildwheel_ubuntu
 
 on:
+  #pull_request:        # use for testing modifications to this action
   push:
     branches: [latest]
     tags: v*
@@ -34,7 +35,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -60,16 +61,17 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.9.0
+        uses: pypa/cibuildwheel@v2.16.0
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: true
 
       - uses: actions/upload-artifact@v3
         with:

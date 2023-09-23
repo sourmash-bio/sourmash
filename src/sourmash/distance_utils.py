@@ -6,6 +6,7 @@ Reference: https://doi.org/10.1101/2022.01.11.475870
 from dataclasses import dataclass, field
 from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
+from scipy.stats import binom
 import numpy as np
 from math import log, exp
 
@@ -168,13 +169,36 @@ def set_size_chernoff(set_size, scaled, *, relative_error=0.05):
     Computes the probability that the estimate: sketch_size * scaled deviates from the true
     set_size by more than relative_error. This relies on the fact that the sketch_size
     is binomially distributed with parameters sketch_size and 1/scale. The two-sided Chernoff
-    bounds are used.
+    bounds are used. This is depreciated in favor of set_size_exact_prob due to the later
+    being accurate even for very small set sizes
     @param set_size: The number of distinct k-mers in the given set
     @param relative_error: the desired relative error (defaults to 5%)
     @return: float (the upper bound probability)
     """
     upper_bound = 1 - 2 * np.exp(- relative_error**2*set_size/(scaled * 3))
     return upper_bound
+
+
+def set_size_exact_prob(set_size, scaled, *, relative_error=0.05):
+    """
+    Computes the exact probability that the estimate: sketch_size * scaled deviates from the true
+    set_size by more than relative_error. This relies on the fact that the sketch_size
+    is binomially distributed with parameters sketch_size and 1/scale. The CDF of the binomial distribution
+    is used.
+    @param set_size: The number of distinct k-mers in the given set
+    @param relative_error: the desired relative error (defaults to 5%)
+    @return: float (the upper bound probability)
+    """
+    # Need to check if the edge case is an integer or not. If not, don't include it in the equation
+    pmf_arg = -set_size/scaled * (relative_error - 1)
+    if pmf_arg == int(pmf_arg):
+        prob = binom.cdf(set_size/scaled * (relative_error + 1), set_size, 1/scaled) - \
+               binom.cdf(-set_size/scaled * (relative_error - 1), set_size, 1/scaled) + \
+               binom.pmf(-set_size/scaled * (relative_error - 1), set_size, 1/scaled)
+    else:
+        prob = binom.cdf(set_size / scaled * (relative_error + 1), set_size, 1 / scaled) - \
+               binom.cdf(-set_size / scaled * (relative_error - 1), set_size, 1 / scaled)
+    return prob
 
 
 def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fraction):

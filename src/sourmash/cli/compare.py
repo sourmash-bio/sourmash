@@ -9,9 +9,10 @@ created with `-p abund`) the angular similarity [2]).
 The default output is a text display of a similarity matrix where each
 entry `[i, j]` contains the estimated Jaccard index between input
 signature `i` and input signature `j`.  The output matrix can be saved
-to a file with `--output` and used with the `sourmash plot` subcommand
-(or loaded with `numpy.load(...)`.  Using `--csv` will output a CSV
-file that can be loaded into other languages than Python, such as R.
+to a file with `--output <outfile.mat>` and used with the `sourmash
+plot` subcommand (or loaded with `numpy.load(...)`.  Using `--csv
+<outfile.csv>` will output a CSV file that can be loaded into other
+languages than Python, such as R.
 
 Command line usage:
 ```
@@ -27,7 +28,8 @@ sourmash compare file1.sig [ file2.sig ... ]
 """
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_pattern_args)
+                                add_picklist_args, add_pattern_args,
+                                add_scaled_arg)
 
 
 def subparser(subparsers):
@@ -87,13 +89,14 @@ def subparser(subparsers):
     subparser.add_argument(
         '--similarity-matrix', action='store_false',
         dest='distance_matrix',
-        help='output a similiarty matrix; this is the default',
+        help='output a similarity matrix; this is the default',
     )
 
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
     add_pattern_args(subparser)
+    add_scaled_arg(subparser)
 
 
 def main(args):

@@ -32,6 +32,10 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='provide debugging output'
+    )
+    subparser.add_argument(
         '-o', '--output', metavar='FILE', default='-',
         help='output signature to this file (default stdout)'
     )
@@ -43,7 +47,7 @@ def subparser(subparsers):
         '-f', '--force', action='store_true',
         help='try to load all files as signatures'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_pattern_args(subparser)
     add_picklist_args(subparser)

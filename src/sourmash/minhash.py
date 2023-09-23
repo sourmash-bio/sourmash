@@ -6,7 +6,7 @@ class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
-from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_chernoff
+from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_exact_prob
 from .logging import notify
 
 import numpy as np
@@ -275,9 +275,13 @@ class MinHash(RustObject):
 
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
+
+        # note: we multiple ksize by 3 here so that
+        # pickle protocols that bypass __setstate__ <coff numpy coff>
+        # get a ksize that makes sense to the Rust layer. See #2262.
         return (
             self.num,
-            self.ksize,
+            self.ksize if self.is_dna else self.ksize*3,
             self.is_protein,
             self.dayhoff,
             self.hp,
@@ -746,30 +750,17 @@ class MinHash(RustObject):
         """
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate containment for scaled MinHashes")
-        if not len(self):
-            return 0.0
-        return self.count_common(other, downsample) / len(self)
-        # with bias factor
-        #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
-
-
-    def contained_by_debiased(self, other, downsample=False):
-        """
-        Calculate how much of self is contained by other.
-        """
-        if not (self.scaled and other.scaled):
-            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         denom = len(self)
         if not denom:
             return 0.0
         total_denom = float(denom * self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
         containment = self.count_common(other, downsample) / (denom * bias_factor)
-        # debiasing containment can lead to vals outside of 0-1 range!?
+        # debiasing containment can lead to vals outside of 0-1 range. constrain.
         if containment >= 1:
-            return 1
+            return 1.0
         elif containment <= 0:
-            return 0
+            return 0.0
         else:
             return containment
 
@@ -785,8 +776,8 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        containment = self_mh.contained_by_debiased(other_mh) # recalc debiased containment
-        #containment = self_mh.contained_by(other_mh) # recalc debiased containment
+        if containment is None:
+            containment = self_mh.contained_by(other_mh)
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
@@ -797,21 +788,7 @@ class MinHash(RustObject):
             c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
-
     def max_containment(self, other, downsample=False):
-        """
-        Calculate maximum containment.
-        """
-        if not (self.scaled and other.scaled):
-            raise TypeError("Error: can only calculate containment for scaled MinHashes")
-        min_denom = min((len(self), len(other)))
-        if not min_denom:
-            return 0.0
-
-        return self.count_common(other, downsample) / min_denom
-
-
-    def max_containment_debiased(self, other, downsample=False):
         """
         Calculate maximum containment.
         """
@@ -823,11 +800,11 @@ class MinHash(RustObject):
         total_denom =  float(min_denom * self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
         max_containment = self.count_common(other, downsample) / (min_denom * bias_factor)
-        # debiasing containment can lead to vals outside of 0-1 range!?
+        # debiasing containment can lead to vals outside of 0-1 range. constrain.
         if max_containment >= 1:
-            return 1
+            return 1.0
         elif max_containment <= 0:
-            return 0
+            return 0.0
         else:
             return max_containment
 
@@ -842,7 +819,8 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        max_containment = self_mh.max_containment_debiased(other_mh) #recalc debiased max containment
+        if max_containment is None:
+            max_containment = self_mh.max_containment(other_mh)
         min_n_kmers = min(len(self_mh), len(other_mh))
         n_kmers = min_n_kmers * scaled  # would be better if hll estimate - see #1798
 
@@ -864,19 +842,6 @@ class MinHash(RustObject):
 
         c1 = self.contained_by(other, downsample)
         c2 = other.contained_by(self, downsample)
-
-        return (c1 + c2)/2
-
-    def avg_containment_debiased(self, other, downsample=False):
-        """
-        Calculate average containment, debiased.
-        Note: this is average of the containments, *not* count_common/ avg_denom
-        """
-        if not (self.scaled and other.scaled):
-            raise TypeError("Error: can only calculate containment for scaled MinHashes")
-
-        c1 = self.contained_by_debiased(other, downsample)
-        c2 = other.contained_by_debiased(self, downsample)
 
         return (c1 + c2)/2
 
@@ -1047,7 +1012,7 @@ class MinHash(RustObject):
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         # to do: replace unique_dataset_hashes with HLL estimation when it gets implemented 
-        probability = set_size_chernoff(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
+        probability = set_size_exact_prob(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
         return probability >= confidence
 
 
@@ -1107,11 +1072,6 @@ class FrozenMinHash(MinHash):
         mut = MinHash.__new__(MinHash)
         state_tup = self.__getstate__()
 
-        # is protein/hp/dayhoff?
-        if state_tup[2] or state_tup[3] or state_tup[4]:
-            state_tup = list(state_tup)
-            # adjust ksize.
-            state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut
 

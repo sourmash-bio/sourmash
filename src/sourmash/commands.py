@@ -102,7 +102,7 @@ def compare(args):
 
     # complain if it's not all one or the other
     if is_scaled != is_scaled_2:
-        error('cannot mix scaled signatures with bounded signatures')
+        error('ERROR: cannot mix scaled signatures with num signatures')
         sys.exit(-1)
 
     is_containment = False
@@ -134,17 +134,25 @@ def compare(args):
         if track_abundances:
             notify('NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.')
 
-    # if using --scaled, downsample appropriately
+    # if using scaled sketches or --scaled, downsample to common max scaled.
     printed_scaled_msg = False
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
+        if args.scaled:
+            args.scaled = int(args.scaled)
+
+            max_scaled = max(max_scaled, args.scaled)
+            if max_scaled > args.scaled:
+                notify(f"WARNING: --scaled specified {args.scaled}, but max scaled of sketches is {max_scaled}")
+                notify(f"WARNING: continuing with scaled value of {max_scaled}.")
+
         new_siglist = []
         for s in siglist:
             if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
                 size_may_be_inaccurate = True
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
-                    notify(f'downsampling to scaled value of {format(max_scaled)}')
+                    notify(f'NOTE: downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 with s.update() as s:
                     s.minhash = s.minhash.downsample(scaled=max_scaled)
@@ -152,6 +160,9 @@ def compare(args):
             else:
                 new_siglist.append(s)
         siglist = new_siglist
+    elif args.scaled is not None:
+        error("ERROR: cannot specify --scaled with non-scaled signatures.")
+        sys.exit(-1)
 
     if len(siglist) == 0:
         error('no signatures!')
@@ -363,8 +374,8 @@ def import_csv(args):
             notify(f'loaded signature: {name} {s.md5sum()[:8]}')
 
         notify(f'saving {len(siglist)} signatures to JSON')
-        with FileOutput(args.output, 'wt') as outfp:
-            sig.save_signatures(siglist, outfp)
+        with SaveSignaturesToLocation(args.output) as save_sig:
+            save_sig.add_many(siglist)
 
 
 def sbt_combine(args):
@@ -786,7 +797,8 @@ def gather(args):
             if prefetch_csvout_fp:
                 prefetch_csvout_fp.flush()
 
-        notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
+        display_bp = format_bp(args.threshold_bp)
+        notify(f"Prefetch found {len(save_prefetch)} signatures with overlap >= {display_bp}.")
         save_prefetch.close()
         if prefetch_csvout_fp:
             prefetch_csvout_fp.close()
@@ -797,6 +809,7 @@ def gather(args):
         ident_mh = None
 
     ## ok! now do gather -
+    notify("Doing gather to generate minimum metagenome cover.")
 
     found = []
     weighted_missed = 1
@@ -812,7 +825,11 @@ def gather(args):
                                   estimate_ani_ci=args.estimate_ani_ci)
 
     screen_width = _get_screen_width()
-    for result, weighted_missed in gather_iter:
+    sum_f_uniq_found = 0.
+    result = None
+    for result in gather_iter:
+        sum_f_uniq_found += result.f_unique_to_query
+
         if not len(found):                # first result? print header.
             if is_abundance:
                 print_results("")
@@ -850,23 +867,30 @@ def gather(args):
         notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
     # basic reporting:
-    print_results(f'\nfound {len(found)} matches total;')
-    if args.num_results and len(found) == args.num_results:
-        print_results(f'(truncated gather because --num-results={args.num_results})')
-
-    p_covered = (1 - weighted_missed) * 100
-    if is_abundance:
-        print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query')
+    if found:
+        print_results(f'\nfound {len(found)} matches total;')
+        if len(found) == args.num_results:
+            print_results(f'(truncated gather because --num-results={args.num_results})')
     else:
-        print_results(f'the recovered matches hit {p_covered:.1f}% of the query (unweighted)')
+        display_bp = format_bp(args.threshold_bp)
+        notify(f"\nNo matches found for --threshold-bp at {display_bp}.")
+
+    if found:
+        if is_abundance and result:
+            p_covered = result.sum_weighted_found / result.total_weighted_hashes
+            p_covered *= 100
+            print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
+
+        print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
+
     print_results('')
     if gather_iter.scaled != query.minhash.scaled:
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
-    w = None
-    if found and args.output:
+    if (found and args.output) or args.create_empty_results:
         with FileOutputCSV(args.output) as fp:
+            w = None
             for result in found:
                 if w is None:
                     w = result.init_dictwriter(fp)
@@ -896,8 +920,8 @@ def gather(args):
                 abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
                 remaining_query.minhash = abund_query_mh
 
-            with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ remaining_query ], fp)
+            with SaveSignaturesToLocation(args.output_unassigned) as save_sig:
+                save_sig.add(remaining_query)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -931,6 +955,8 @@ def multigather(args):
 
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
+
+    notify(f'loaded first query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
                                                 fail_on_empty_database=args.fail_on_empty_database)
@@ -994,7 +1020,10 @@ def multigather(args):
                                           ident_mh=ident_mh)
 
             screen_width = _get_screen_width()
-            for result, weighted_missed in gather_iter:
+            sum_f_uniq_found = 0.
+            result = None
+            for result in gather_iter:
+                sum_f_uniq_found += result.f_unique_to_query
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
@@ -1035,8 +1064,12 @@ def multigather(args):
             # basic reporting
             print_results('\nfound {} matches total;', len(found))
 
-            print_results('the recovered matches hit {:.1f}% of the query',
-                   (1 - weighted_missed) * 100)
+            if is_abundance and result:
+                p_covered = result.sum_weighted_found / result.total_weighted_hashes
+                p_covered *= 100
+                print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
+
+            print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
             print_results('')
 
             if not found:
@@ -1049,20 +1082,22 @@ def multigather(args):
                 query_filename = query.md5sum()
 
             output_base = os.path.basename(query_filename)
+            if args.output_dir:
+                output_base = os.path.join(args.output_dir, output_base)
             output_csv = output_base + '.csv'
 
+            notify(f'saving all CSV matches to "{output_csv}"')
             w = None
             with FileOutputCSV(output_csv) as fp:
                 for result in found:
                     if w is None:
                         w = result.init_dictwriter(fp)
-                        result.write(w)
+                    result.write(w)
 
             output_matches = output_base + '.matches.sig'
-            with open(output_matches, 'wt') as fp:
-                outname = output_matches
-                notify(f'saving all matches to "{outname}"')
-                sig.save_signatures([ r.match for r in found ], fp)
+            with SaveSignaturesToLocation(output_matches) as save_sig:
+                notify(f"saving all matching signatures to '{output_matches}'")
+                save_sig.add_many([ r.match for r in found ])
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
@@ -1083,8 +1118,9 @@ def multigather(args):
                 else:
                     notify(f'saving unassigned hashes to "{output_unassigned}"')
 
+                with SaveSignaturesToLocation(output_unassigned) as save_sig:
                     # CTB: note, multigather does not save abundances
-                    sig.save_signatures([ remaining_query ], fp)
+                    save_sig.add(remaining_query)
             n += 1
 
         # fini, next query!
@@ -1181,11 +1217,10 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify(f'saving signature to {args.output}')
-        with FileOutput(args.output, 'wt') as fp:
-            streamsig = sig.SourmashSignature(E, filename='stdin',
-                                              name=args.name)
-        sig.save_signatures([streamsig], fp)
+        notify(f"saving signature to '{args.output}'")
+        streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
+        with SaveSignaturesToLocation(args.output) as save_sig:
+            save_sig.add(streamsig)
 
 
 def migrate(args):
@@ -1374,8 +1409,8 @@ def prefetch(args):
             ident_mh = ident_mh.inflate(orig_query_mh)
 
         ss = sig.SourmashSignature(ident_mh, name=sig_name)
-        with open(filename, "wt") as fp:
-            sig.save_signatures([ss], fp)
+        with SaveSignaturesToLocation(filename) as save_sig:
+            save_sig.add(ss)
 
     if args.save_unmatched_hashes:
         filename = args.save_unmatched_hashes
@@ -1391,8 +1426,8 @@ def prefetch(args):
             noident_mh = noident_mh.inflate(orig_query_mh)
 
         ss = sig.SourmashSignature(noident_mh, name=sig_name)
-        with open(filename, "wt") as fp:
-            sig.save_signatures([ss], fp)
+        with SaveSignaturesToLocation(filename) as save_sig:
+            save_sig.add(ss)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)

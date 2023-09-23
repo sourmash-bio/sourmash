@@ -6,7 +6,7 @@ import numpy as np
 from sourmash.distance_utils import (containment_to_distance, get_exp_probability_nothing_common,
                                     handle_seqlen_nkmers, jaccard_to_distance,
                                     ANIResult, ciANIResult, jaccardANIResult, var_n_mutated,
-                                    set_size_chernoff)
+                                    set_size_chernoff, set_size_exact_prob)
 
 def test_aniresult():
     res = ANIResult(0.4, 0.1)
@@ -416,4 +416,37 @@ def test_set_size_chernoff():
     set_size = 10
     s = 1/.01
     value_from_mathematica = -1
-    assert np.abs(set_size_chernoff(set_size, s,relative_error=rel_error) - value_from_mathematica) < eps
+    assert np.abs(set_size_chernoff(set_size, s, relative_error=rel_error) - value_from_mathematica) < eps
+
+
+def test_set_size_exact_prob():
+    # values obtained from Mathematica
+    # specifically: Probability[Abs[X*s - n]/n <= delta,
+    #   X \[Distributed] BinomialDistribution[n, 1/s]] // N
+    set_size = 100
+    scaled = 2
+    relative_error = 0.05
+    prob = set_size_exact_prob(set_size, scaled, relative_error=relative_error)
+    true_prob = 0.382701
+    np.testing.assert_array_almost_equal(true_prob, prob, decimal=3)
+
+    set_size = 200
+    scaled = 5
+    relative_error = 0.15
+    prob = set_size_exact_prob(set_size, scaled, relative_error=relative_error)
+    true_prob = 0.749858
+    np.testing.assert_array_almost_equal(true_prob, prob, decimal=3)
+
+    set_size = 10
+    scaled = 10
+    relative_error = 0.10
+    prob = set_size_exact_prob(set_size, scaled, relative_error=relative_error)
+    true_prob = 0.38742
+    np.testing.assert_array_almost_equal(true_prob, prob, decimal=3)
+
+    set_size = 1000
+    scaled = 10
+    relative_error = 0.10
+    prob = set_size_exact_prob(set_size, scaled, relative_error=relative_error)
+    true_prob = 0.73182
+    np.testing.assert_array_almost_equal(true_prob, prob, decimal=3)

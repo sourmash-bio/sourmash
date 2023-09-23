@@ -1,20 +1,19 @@
 [build-system]
 requires = [
-    "setuptools >= 61",
-    "setuptools_scm[toml] >= 4, <6",
-    "setuptools_scm_git_archive",
-    "milksnake",
-    "wheel >= 0.29.0",
+    "maturin>=1,<2",
+    "cffi",
 ]
-build-backend = 'setuptools.build_meta'
+build-backend = 'maturin'
 
 [project]
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
+version = "4.8.5-dev"
 
 authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
+  { name="N. Tessa Pierce-Ward", orcid="0000-0002-2942-5331" },
   { name="Mohamed Abuelanin", orcid="0000-0002-3419-4785" },
   { name="Harriet Alexander", orcid="0000-0003-1308-8008" },
   { name="Abhishek Anant", orcid="0000-0002-5751-2010" },
@@ -35,7 +34,6 @@ authors = [
   { name="Marisa Lim", orcid="0000-0003-2097-8818" },
   { name="Ricky Lim", orcid="0000-0003-1313-7076" },
   { name="Ivan Ogasawara", orcid="0000-0001-5049-4289" },
-  { name="N. Tessa Pierce", orcid="0000-0002-2942-5331" },
   { name="Taylor Reiter", orcid="0000-0002-7388-421X" },
   { name="Camille Scott", orcid="0000-0001-8822-8779" },
   { name="Andreas Sjödin", orcid="0000-0001-5350-4219" },
@@ -72,18 +70,18 @@ classifiers = [
 ]
 
 dependencies = [
-  "screed>=1.0.5",
+  "screed>=1.1.2,<2",
   "cffi>=1.14.0",
   "numpy",
   "matplotlib",
   "scipy",
   "deprecation>=2.0.6",
   "cachetools>=4,<6",
-  "bitstring>=3.1.9,<4",
+  "bitstring>=3.1.9,<5",
+  "importlib_metadata>=3.6;python_version<'3.10'"
 ]
 
 requires-python = ">=3.8"
-dynamic = ["version"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -100,12 +98,13 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<7.2.0",
-  "pytest-cov>=2.12,<4.0",
+  "pytest>=6.2.4,<7.5.0",
+  "pytest-cov>=2.12,<5.0",
   "pytest-xdist",
   "pyyaml>=6,<7",
   "recommonmark",
   "hypothesis",
+  "build",
 ]
 demo = [
   "jupyter",
@@ -113,14 +112,14 @@ demo = [
   "ipython",
 ]
 doc = [
-  "sphinx>=4.4.0,<6",
-  "myst-parser==0.18.0",
+  "sphinx>=4.4.0,<8",
+  "myst-parser==2.0.0",
   "Jinja2==3.1.2",
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
   "ipython",
-  "docutils>=0.17.1,<0.18",
+  "docutils>=0.17.1,<0.21",
 ]
 storage = [
   "ipfshttpclient>=0.4.13",
@@ -130,22 +129,33 @@ storage = [
 # https://github.com/pypa/pip/issues/10393#issuecomment-941885429
 all = ["sourmash[test,demo,doc,storage]"]
 
-[tool.setuptools]
-zip-safe = false
-platforms = ["any"]
+[tool.maturin]
+python-source = "src"
+manifest-path = "src/core/Cargo.toml"
+bindings = "cffi"
+include = [
+  { path = "include/sourmash.h", format = ["sdist","wheel"] },
+  { path = "requirements.txt", format = ["sdist"] },
+  { path = "Cargo.*", format = ["sdist"] },
+  { path = "tests/**/*", format = ["sdist"] },
+  { path = "CITATION.cff", format = ["sdist", "wheel"] },
+  { path = "LICENSE", format = ["sdist"] },
+]
+exclude = [
+  { path = "**/__pycache__/*", format = ["sdist", "wheel"] },
+]
+features = ["maturin"]
+locked = true
+module-name = "sourmash._lowlevel"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.dynamic]
-version = {attr = "sourmash.version.version"}
-
-[tool.setuptools_scm]
-write_to = "src/sourmash/version.py"
-git_describe_command = "git describe --dirty --tags --long --match v* --first-parent"
+# macOS deployment target SDK version
+[tool.maturin.target.x86_64-apple-darwin]
+macos-deployment-target = "11.0"
+[tool.maturin.target.aarch64-apple-darwin]
+macos-deployment-target = "11.0"
 
 [tool.isort]
-known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
+known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
 multi_line_output = 3 
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -155,9 +165,25 @@ known_first_party = ["sourmash"]
 [tool.cibuildwheel]
 build = "cp39-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
-before-build = "source .ci/install_cargo.sh"
-environment = { PATH="$HOME/.cargo/bin:$PATH" }
+before-all = [
+  "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
+  "cargo update --dry-run",
+]
+macos.before-build = [
+  "rustup target add aarch64-apple-darwin",
+]
 build-verbosity = 3
+
+[tool.cibuildwheel.environment]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
+PATH="$HOME/.cargo/bin:$PATH"
+
+[tool.cibuildwheel.linux.environment]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
+PATH="$HOME/.cargo/bin:$PATH"
+LIBCLANG_PATH="/opt/rh/llvm-toolset-7.0/root/usr/lib64"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/rh/llvm-toolset-7.0/root/usr/lib64"
+C_INCLUDE_PATH="/opt/rh/devtoolset-10/root/usr/lib/gcc/aarch64-redhat-linux/10/include:/opt/rh/devtoolset-10/root/usr/lib/gcc/x86_64-redhat-linux/10/include"
 
 [tool.pytest.ini_options]
 addopts = "--doctest-glob='doc/*.md' -n4"

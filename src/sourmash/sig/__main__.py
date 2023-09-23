@@ -14,7 +14,7 @@ import sourmash
 from sourmash.sourmash_args import FileOutput
 
 from sourmash.logging import (set_quiet, error, notify, print_results, debug,
-                              debug_literal)
+                              debug_literal, _debug)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -83,7 +83,7 @@ def cat(args):
     """
     concatenate all signatures into one file.
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
@@ -139,8 +139,8 @@ def split(args):
     _extend_signatures_with_from_file(args)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}' + args.extension
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}' + args.extension
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
@@ -195,8 +195,8 @@ def split(args):
             notify(f"** overwriting existing file {format(output_name)}")
 
         # save!
-        with open(output_name, 'wt') as outfp:
-            sourmash.save_signatures([sig], outfp)
+        with sourmash_args.SaveSignaturesToLocation(output_name) as save_sigs:
+            save_sigs.add(sig)
             notify(f'writing sig to {output_name}')
 
     notify(f'loaded and split {len(progress)} signatures total.')
@@ -442,8 +442,8 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh, name=args.name)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([merged_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(merged_sigobj)
 
     notify(f'loaded and merged {len(progress)} signatures')
 
@@ -488,6 +488,10 @@ def intersect(args):
 
         mins.intersection_update(sigobj.minhash.hashes)
 
+    if first_sig is None:
+        notify("no signatures provided to intersect!?")
+        sys.exit(-1)
+
     # forcibly turn off track_abundance, unless --abundances-from set.
     intersect_mh = first_sig.minhash.copy_and_clear().flatten()
     intersect_mh.add_many(mins)
@@ -505,8 +509,8 @@ def intersect(args):
         intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([intersect_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(intersect_sigobj)
 
     notify(f'loaded and intersected {len(progress)} signatures')
     if picklist:
@@ -623,8 +627,8 @@ def subtract(args):
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([subtract_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(subtract_sigobj)
 
     notify(f'loaded and subtracted {len(progress)} signatures')
 
@@ -963,8 +967,8 @@ def sig_import(args):
             siglist.append(s)
 
     notify(f'saving {len(siglist)} signatures to JSON')
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures(siglist, fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add_many(siglist)
 
 
 def export(args):
@@ -1355,7 +1359,9 @@ def check(args):
             row['internal_location'] = filename
             total_manifest_rows.add_row(row)
 
-        debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
+        # the len(sub_manifest) here should only be run when needed :)
+        if _debug:
+            debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 

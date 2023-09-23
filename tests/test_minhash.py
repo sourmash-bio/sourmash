@@ -1,4 +1,4 @@
-# This file is part of sourmash, https://github.com/dib-lab/sourmash/, and is
+# This file is part of sourmash, https://github.com/sourmash-bio/sourmash/, and is
 # Copyright (C) 2016, The Regents of the University of California.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 import itertools
 import pickle
 import math
+import numpy as np
 
 import pytest
 
@@ -1481,6 +1482,69 @@ def test_scaled_property(track_abundance):
     assert a.scaled == scaled
 
 
+def test_pickle_protein(track_abundance):
+    # check that protein/etc ksize is handled properly during serialization.
+    a = MinHash(0, 10, track_abundance=track_abundance, is_protein=True,
+                scaled=_get_scaled_for_max_hash(20))
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = pickle.loads(pickle.dumps(a))
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
+    assert b.is_protein
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.hashes) == len(a.hashes)
+    assert len(b.hashes) == 11
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
+
+
+def test_pickle_dayhoff(track_abundance):
+    # check that dayhoff ksize is handled properly during serialization.
+    a = MinHash(0, 10, track_abundance=track_abundance, dayhoff=True,
+                scaled=_get_scaled_for_max_hash(20))
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = pickle.loads(pickle.dumps(a))
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
+    assert b.dayhoff
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.hashes) == len(a.hashes)
+    assert len(b.hashes) == 11
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
+
+
+def test_pickle_hp(track_abundance):
+    # check that hp ksize is handled properly during serialization.
+    a = MinHash(0, 10, track_abundance=track_abundance, hp=True,
+                scaled=_get_scaled_for_max_hash(20))
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = pickle.loads(pickle.dumps(a))
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
+    assert b.hp
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.hashes) == len(a.hashes)
+    assert len(b.hashes) == 11
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
+
+
 def test_pickle_max_hash(track_abundance):
     a = MinHash(0, 10, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(20))
@@ -2288,18 +2352,6 @@ def test_max_containment():
     assert mh1.max_containment(mh2) == 1/2
     assert mh2.max_containment(mh1) == 1/2
 
-def test_max_containment_debiased():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 5))
-
-    assert mh1.contained_by_debiased(mh2) == 1/4
-    assert mh2.contained_by_debiased(mh1) == 1/2
-    assert mh1.max_containment_debiased(mh2) == 1/2
-    assert mh2.max_containment_debiased(mh1) == 1/2
-
 
 def test_max_containment_empty():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
@@ -2311,18 +2363,6 @@ def test_max_containment_empty():
     assert mh2.contained_by(mh1) == 0
     assert mh1.max_containment(mh2) == 0
     assert mh2.max_containment(mh1) == 0
-
-
-def test_max_containment_debiased_empty():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 0
-    assert mh2.contained_by_debiased(mh1) == 0
-    assert mh1.max_containment_debiased(mh2) == 0
-    assert mh2.max_containment_debiased(mh1) == 0
 
 
 def test_max_containment_equal():
@@ -2338,19 +2378,6 @@ def test_max_containment_equal():
     assert mh2.max_containment(mh1) == 1
 
 
-def test_max_containment_debiased_equal():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 1
-    assert mh2.contained_by_debiased(mh1) == 1
-    assert mh1.max_containment_debiased(mh2) == 1
-    assert mh2.max_containment_debiased(mh1) == 1
-
-
 def test_avg_containment():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
     mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
@@ -2362,19 +2389,6 @@ def test_avg_containment():
     assert mh2.contained_by(mh1) == 1/2
     assert mh1.avg_containment(mh2) == 0.375
     assert mh2.avg_containment(mh1) == 0.375
-
-
-def test_avg_containment_debiased():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 5))
-
-    assert mh1.contained_by_debiased(mh2) == 1/4
-    assert mh2.contained_by_debiased(mh1) == 1/2
-    assert mh1.avg_containment_debiased(mh2) == 0.375
-    assert mh2.avg_containment_debiased(mh1) == 0.375
 
 
 def test_avg_containment_empty():
@@ -2389,18 +2403,6 @@ def test_avg_containment_empty():
     assert mh2.avg_containment(mh1) == 0
 
 
-def test_avg_containment_debiased_empty():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 0
-    assert mh2.contained_by_debiased(mh1) == 0
-    assert mh1.avg_containment_debiased(mh2) == 0
-    assert mh2.avg_containment_debiased(mh1) == 0
-
-
 def test_avg_containment_equal():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
     mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
@@ -2412,19 +2414,6 @@ def test_avg_containment_equal():
     assert mh2.contained_by(mh1) == 1
     assert mh1.avg_containment(mh2) == 1
     assert mh2.avg_containment(mh1) == 1
-
-
-def test_avg_containment_debiased_equal():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 1
-    assert mh2.contained_by_debiased(mh1) == 1
-    assert mh1.avg_containment_debiased(mh2) == 1
-    assert mh2.avg_containment_debiased(mh1) == 1
 
 
 def test_frozen_and_mutable_1(track_abundance):
@@ -2804,21 +2793,6 @@ def test_containment(track_abundance):
     assert mh2.contained_by(mh1) == 1/2
 
 
-def test_containment_debiased(track_abundance):
-    "basic containment test. note: containment w/abundance ignores abundance."
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh1.add_many((1, 2))
-    mh2.add_many((1, 5))
-    mh2.add_many((1, 5))
-    mh2.add_many((1, 5))
-
-    assert mh1.contained_by_debiased(mh2) == 1/4
-    assert mh2.contained_by_debiased(mh1) == 1/2
-
-
 def test_sum_abundances(track_abundance):
     "test sum_abundances"
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -3081,9 +3055,9 @@ def test_containment_ani_ci_tiny_testdata():
 
     m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
     print(m2_cani_m1)
-    assert m2_cani_m1.ani == None
+    # from the formula ANI = c^(1/k) for c=3/4 and k=21
+    np.testing.assert_almost_equal(m2_cani_m1.ani, 0.986394259982259, decimal=3)
     m2_cani_m1.size_is_inaccurate = False
-    assert m2_cani_m1.ani == 0.986394259982259
     assert m2_cani_m1.ani_low == None
     assert m2_cani_m1.ani_high == None
 
@@ -3099,19 +3073,10 @@ def test_containment_num_fail():
     print(str(exc))
     assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
     with pytest.raises(TypeError) as exc:
-        mh2.contained_by_debiased(mh1)
-    assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
-    with pytest.raises(TypeError) as exc:
         mh1.max_containment(mh2)
     assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
     with pytest.raises(TypeError) as exc:
-        mh1.max_containment_debiased(mh2)
-    assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
-    with pytest.raises(TypeError) as exc:
         mh1.avg_containment(mh2)
-    assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
-    with pytest.raises(TypeError) as exc:
-        mh1.avg_containment_debiased(mh2)
     assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
 
 
@@ -3144,7 +3109,7 @@ def test_minhash_set_size_estimate_is_accurate():
     f2 = utils.get_test_data('2+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
-    mh1_ds = mh1.downsample(scaled=10000)
+    mh1_ds = mh1.downsample(scaled=100000)
     # check accuracy using default thresholds (rel_err= 0.2, confidence=0.95)
     assert mh1.size_is_accurate() == True
     assert mh1_ds.size_is_accurate() == False
@@ -3156,7 +3121,7 @@ def test_minhash_set_size_estimate_is_accurate():
 
     # change prob
     assert mh1.size_is_accurate(confidence=0.5) == True
-    assert mh1.size_is_accurate(confidence=1) == False
+    assert mh1.size_is_accurate(relative_error=0.001, confidence=1) == False
 
     # check that relative error and confidence must be between 0 and 1
     with pytest.raises(ValueError) as exc:
@@ -3173,15 +3138,16 @@ def test_minhash_set_size_estimate_is_accurate():
 
 
 def test_minhash_ani_inaccurate_size_est():
+    # TODO: It's actually really tricky to get the set size to be inaccurate. Eg. For a scale factor of 10000,
+    # you would need
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
     # downsample
-    mh1_ds = mh1.downsample(scaled=10000)
-    mh2_ds = mh2.downsample(scaled=10000)
-
-    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == False
+    mh1_ds = mh1.downsample(scaled=100000)
+    mh2_ds = mh2.downsample(scaled=100000)
+    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == True
     assert mh1.size_is_accurate() == True
     assert mh1_ds.size_is_accurate() == False
     assert mh2.size_is_accurate() == True

@@ -170,7 +170,7 @@ impl SigsTrait for HyperLogLog {
     }
 
     fn ksize(&self) -> usize {
-        self.ksize as usize
+        self.ksize
     }
 
     fn seed(&self) -> u64 {

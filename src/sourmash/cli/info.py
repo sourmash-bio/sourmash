@@ -4,6 +4,7 @@ import os
 import screed
 import sourmash
 from sourmash.logging import notify
+from sourmash.plugins import list_all_plugins
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('info')
@@ -25,6 +26,8 @@ def info(verbose=False):
 
         notify(f'screed version {screed.__version__}')
         notify(f'- loaded from path: {os.path.dirname(screed.__file__)}')
+
+        list_all_plugins()
 
 
 def main(args):

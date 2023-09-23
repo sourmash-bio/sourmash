@@ -1,4 +1,4 @@
-# note: to invalidate caches, adjust the pip-v? and tox-v? numbers below.
+# note: to invalidate caches, adjust the pip-v? number below.
 name: Python tests
 
 on:
@@ -14,11 +14,11 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, macos-latest]
-        py: ["3.10", "3.9", "3.8"]
+        py: ["3.11", "3.10", "3.9", "3.8"]
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -36,9 +36,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-v3-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-v4-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-pip-v3-
+            ${{ runner.os }}-pip-v4-
 
       - name: Install dependencies
         run: |
@@ -57,7 +57,7 @@ jobs:
 
       - name: Start Redis
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
-        uses: supercharge/redis-github-action@4b67a313c69bc7a90f162e8d810392fffe10d3b5
+        uses: supercharge/redis-github-action@1.7.0
         with:
           redis-version: 6
 
@@ -65,11 +65,18 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .tox/
-          key: ${{ runner.os }}-tox-v3-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-tox-v3-
+            ${{ runner.os }}-tox-v4-
 
       - name: Test with tox
         run: tox
         env:
           PYTHONDEVMODE: 1
+
+      - name: Upload Python coverage to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          flags: python
+          fail_ci_if_error: true
+          files: .tox/coverage.xml

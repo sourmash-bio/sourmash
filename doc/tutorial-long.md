@@ -82,7 +82,7 @@ About two years ago, [Ondov et al. (2016)](https://genomebiology.biomedcentral.c
 
 The basic idea behind MinHash is that you pick a small subset of k-mers to look at, and you use those as a proxy for *all* the k-mers.  The trick is that you pick the k-mers randomly but consistently: so if a chosen k-mer is present in two data sets of interest, it will be picked in both. This is done using a clever trick that we can try to explain to you in class - but either way, trust us, it works!
 
-We have implemented a MinHash approach in our [sourmash software](https://github.com/dib-lab/sourmash/), which can do some nice things with samples.  We'll show you some of these things next!
+We have implemented a MinHash approach in our [sourmash software](https://github.com/sourmash-bio/sourmash/), which can do some nice things with samples.  We'll show you some of these things next!
 
 ## Installing sourmash
 
@@ -357,7 +357,7 @@ Let's grab a sample collection of 50 E. coli genomes and unpack it --
 mkdir ecoli_many_sigs
 cd ecoli_many_sigs
 
-curl -O -L https://github.com/dib-lab/sourmash/raw/master/data/eschericia-sigs.tar.gz
+curl -O -L https://github.com/sourmash-bio/sourmash/raw/master/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
 rm eschericia-sigs.tar.gz
@@ -472,7 +472,7 @@ from the
 [Shakya et al. 2013 mock metagenome paper](https://www.ncbi.nlm.nih.gov/pubmed/23387867).
 
 ```
-wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
+wget https://github.com/sourmash-bio/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
 sourmash lca gather shakya-unaligned-contigs.sig genbank-k31.lca.json
 ```
 

@@ -75,7 +75,7 @@ a focus on bioinformatics software. After
 you can install sourmash by running:
 
 ```bash
-$ conda create -n sourmash_env -c conda-forge -c bioconda sourmash python=3.7
+$ conda create -n sourmash_env -c conda-forge -c bioconda sourmash
 $ source activate sourmash_env
 $ sourmash --help
 ```
