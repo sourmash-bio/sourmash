@@ -9,11 +9,10 @@ larger, including bacterial and viral genomes.
 
 You might try sourmash if you want to -
 
-* identify which reference genomes are present in a metagenome
-* search all Genbank microbial genomes with a genome query
-* build an annotation-free clustering of many genomes using k-mers or average nucleotide identity (ANI)
+* identify which reference genomes to map your metagenomic reads to
+* search all Genbank microbial genomes with a sequence query
+* cluster many genomes by similarity
 * taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
-* search all available reference genomes
 * search thousands of metagenomes with a query genome or sequence
 
 Underneath, sourmash uses [FracMinHash sketches](@@) for fast and
@@ -22,8 +21,8 @@ lightweight sequence comparison; FracMinHash builds on
 _and_ containment analyses with k-mers.  This significantly expands
 the range of operations that can be done quickly and in low
 memory. sourmash also implements a number of new and powerful analysis
-techniques, including minimum metagenome covers and alignment-free ANI
-estimation.
+techniques, including [minimum metagenome covers](@@) and [alignment-free ANI
+estimation](@@).
 
 sourmash is inspired by [mash](https://mash.readthedocs.io), and
 supports most mash analyses. sourmash also implements an expanded set
