@@ -494,10 +494,8 @@ signatures, rather than all the signatures in the database.
 
 The `sourmash tax` subcommands support taxonomic analysis of genomes
 and taxonomic profiling of metagenomes.  
-In particular, `sourmash tax metagenome` was benchmarked in
-[Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets, Portik et al., 2022](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
-and is both very accurate and very sensitive.  See
-[Taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
 for more information.
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
@@ -1154,6 +1152,21 @@ number of additional k-mers in the input signature were classified as
 taxonomic assignment below genus *Shewanella* and it would report
 a status of `disagree` with the genus-level assignment of *Shewanella*;
 species level assignments would not be reported.
+Here, the assigned rank is the rank immediately *above* where there is
+a taxonomic disagreement, and the taxid & lineage refer to the name at
+that rank (the least-common-ancestor at which an assignment can be
+made).
+
+For example, if you saw this line in the CSV file: 
+
+```
+TARA_ASW_MAG_00029,1224,disagree,phylum,Bacteria;Proteobacteria
+```
+
+you would know that TARA_ASW_MAG_00029 has k-mers that are shared
+between different orders: 'Pseudomonadales' and
+'Rhodobacterales'. Therefore, the classifier status is `disagree`, and
+the classified taxid is at rank `phylum` - just above `order`.
 
 (This is the approach that Kraken and other lowest common ancestor
 implementations use, we believe.)
