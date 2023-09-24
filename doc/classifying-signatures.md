@@ -65,7 +65,9 @@ Some benchmarking on CAMI suggests that `gather` is a very accurate
 method for doing strain-level resolution of genomes. More on
 that as we move forward!
 
-## To do taxonomy, or not to do taxonomy?
+## Taxonomic profiling with sourmash
+
+@@
 
 By default, there is no structured taxonomic information available in
 sourmash signatures or SBT databases of signatures.  Generally what

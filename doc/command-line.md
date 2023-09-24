@@ -97,13 +97,21 @@ information; these are grouped under the `sourmash tax` and
 
 `sourmash lca` commands:
 
+```{attention}
+
+We do not recommend using the `lca` subcommands for taxonomic analysis
+any more; please use `sourmash tax` instead. See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
+
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
 
-> See [the LCA tutorial](tutorials-lca.md) for a
+See [the LCA tutorial](tutorials-lca.md) for a
 walkthrough of some of these commands.
 
 Finally, there are a number of utility and information commands:
@@ -484,8 +492,16 @@ signatures, rather than all the signatures in the database.
 
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
+The `sourmash tax` subcommands support taxonomic analysis of genomes
+and taxonomic profiling of metagenomes.  
+In particular, `sourmash tax metagenome` was benchmarked in
+[Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets, Portik et al., 2022](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
+and is both very accurate and very sensitive.  See
+[Taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
- information into the results of `sourmash gather`. All `tax` commands
+ information with the results of `sourmash gather`. All `tax` commands
  require one or more properly formatted `taxonomy` files where the
  identifiers correspond to those in the database(s) used for
  `gather`. Note that if using multiple databases, the `gather` needs
@@ -1075,8 +1091,14 @@ and 120,757 within the `p__Proteobacteria`.
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
 These commands use LCA databases (created with `lca index`, below, or
-prepared databases such as
-[genbank-k31.lca.json.gz](databases.md)).
+prepared databases such as [genbank-k31.lca.json.gz](databases.md)).
+
+```{attention}
+We no longer recommend using `sourmash lca` for taxonomic analyis;
+please use `sourmash tax` instead.  See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
 
 ### `sourmash lca classify` - classify a genome using an LCA database
 
