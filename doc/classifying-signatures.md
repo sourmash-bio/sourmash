@@ -1,5 +1,9 @@
 # Classifying signatures: `search`, `gather`, and `lca` methods.
 
+```{contents} Contents
+:depth: 3
+```
+
 sourmash provides several different techniques for doing
 classification and breakdown of signatures.
 
@@ -40,6 +44,8 @@ see if a query genome is present in one or more metagenomes, a common
 question to ask is the reverse: **what genomes are in my metagenome?**
 
 We have implemented two approaches in sourmash to do this.
+
+<!-- CTB refactor this soon :) -->
 
 One approach uses taxonomic information from e.g. GenBank to classify
 individual k-mers, and then infers taxonomic distributions of
@@ -94,7 +100,8 @@ or a taxon. (Note that we're not sure
 this can be done robustly in practice - neither short nor long reads typically
 contain enough information to uniquely identify a single genome.) If you
 want to do this, we suggest running `sourmash gather` first, and then
-mapping the reads to the matching genomes; this is the approach taken by
+mapping the reads to the matching genomes; then you can use the mapping
+to determine which read maps to which genome. This is the approach taken by
 [the genome-grist pipeline](https://dib-lab.github.io/genome-grist/).
 
 <!-- link to tutorials and examples -->
@@ -110,7 +117,7 @@ that the query would map to.  Then, both `tax genome` and `tax
 metagenome` take the CSV output of `sourmash gather` and produce
 taxonomic profiles.  (You can read more about minimum set covers
 in
-[Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2).)
+[Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers, Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2).)
 
 The `tax metagenome` approach was benchmarked in
 [Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets, Portik et al., 2022](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
@@ -147,7 +154,8 @@ than they need to be, either because of contamination in the reference
 database or because the taxonomy is not based directly on genome
 similarity.  Instead of using single k-mers, `sourmash gather` estimates
 the best matching genome based on combinations of k-mers, which is much
-more specific than the LCA approach; only then is a taxonomy assigned.
+more specific than the LCA approach; only then is a taxonomy assigned
+using `sourmash tax`.
 
 The bottom line is that in our experience, `sourmash tax` is as
 sensitive as `lca`, and a lot more specific. Please let us know if you
