@@ -231,9 +231,9 @@ an abundance-weighted query, and automatically apply `--ignore-abundance`.
 As of v4.4, `sourmash` can estimate Average Nucleotide Identity (ANI)
 between two FracMinHash ("scaled") sketches. `sourmash compare` can now
 produce a matrix of ANI values estimated from Jaccard, Containment,
-or Max Containment by specifiing `--ani` (optionally along with search type,
+or Max Containment by specifying `--ani` (optionally along with search type,
 e.g. `--containment`). `sourmash search`, `sourmash prefetch`, and
-`sourmash gather` will now output ANI estimates to output csvs.
+`sourmash gather` will now output ANI estimates to output CSVs.
 
 Note that while ANI can be estimated from either the Jaccard Index or
 the Containment Index, ANI from Containment is preferable (more accurate).

@@ -1092,7 +1092,7 @@ These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as [genbank-k31.lca.json.gz](databases.md)).
 
 ```{attention}
-We no longer recommend using `sourmash lca` for taxonomic analyis;
+We no longer recommend using `sourmash lca` for taxonomic analysis;
 please use `sourmash tax` instead.  See
 [taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
 for more information.
