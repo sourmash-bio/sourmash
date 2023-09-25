@@ -35,41 +35,38 @@ analysis only.
 See [the main sourmash tutorial](tutorial-basic.md#make-and-search-a-database-quickly)
 for information on using `search` with and without `--containment`.
 
-## Breaking down metagenomic samples with `gather` and `lca`
+## Analyzing metagenomic samples with `gather`
 
 Neither search option (similarity or containment) is effective when
-comparing or searching with metagenomes, which typically have a
+comparing or searching with metagenomes, which typically contain a
 mixture of many different genomes.  While you might use containment to
 see if a query genome is present in one or more metagenomes, a common
 question to ask is the reverse: **what genomes are in my metagenome?**
+An alternative phrasing is this: **what reference genomes should I map
+my metagenomic reads to?**
 
-We have implemented two approaches in sourmash to do this.
+The main approach we provide in sourmash is `sourmash gather`. This
+constructs the shortest possible list of reference genomes that cover
+all of the known k-mers in a metagenome. We call this a *minimum
+metagenome cover*.
 
-<!-- CTB refactor this soon :) -->
-
-One approach uses taxonomic information from e.g. GenBank to classify
-individual k-mers, and then infers taxonomic distributions of
-metagenome contents from the presence of these individual
-k-mers. (This is the approach pioneered by
-[Kraken](https://ccb.jhu.edu/software/kraken/) and used by many other tools.)
-`sourmash lca` can be used to classify individual genome bins with
-`classify`, or summarize metagenome taxonomy with `summarize`.  The
-[sourmash lca tutorial](tutorials-lca.md)
-shows how to use the `lca classify` and `lca summarize` commands, and also
-provides guidance on building your own database.
-
-The other approach, `gather`, breaks a metagenome down into individual
-genomes based on greedy partitioning. Essentially, it takes a query
-metagenome and searches the database for the most highly contained
-genome; it then subtracts that match from the metagenome, and repeats.
-At the end it reports how much of the metagenome remains unknown.  The
+From an algorithmic perspective, `gather` generates a minimum set
+cover for a query metagenome, using the reference database you give
+it.  The minimum set cover is calculated using a greedy approximation
+algorithm.  Essentially, `gather` takes a query metagenome and
+searches the database for the most highly contained genome; it then
+subtracts that match from the metagenome, and repeats.  At the end it
+reports how much of the metagenome remains unknown.  The
 [basic sourmash tutorial](tutorial-basic.md#whats-in-my-metagenome)
-has some sample output from using gather with GenBank.  See Appendix A at
-the bottom of this page for more technical details.
+has some sample output from using gather with GenBank.  See Appendix A
+at the bottom of this page for more technical details.
 
-Some benchmarking on CAMI suggests that `gather` is a very accurate
-method for doing strain-level resolution of genomes. More on
-that as we move forward!
+The `gather` method is described in
+[Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers, Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2).
+Our benchmarking in that paper and also in
+[Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets, Portik et al., 2022](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
+suggests that it is a very sensitive and specific method for
+analyzing metagenomes.
 
 ## Taxonomic profiling with sourmash
 
@@ -95,13 +92,14 @@ create your own custom taxonomic ranks and even use them with private
 databases of genomes to classify your own metagenomes.
 
 The main disadvantage of sourmash's approach to taxonomy is that
-sourmash doesn't classify individual metagenomic reads to either a genome
-or a taxon. (Note that we're not sure
-this can be done robustly in practice - neither short nor long reads typically
-contain enough information to uniquely identify a single genome.) If you
-want to do this, we suggest running `sourmash gather` first, and then
-mapping the reads to the matching genomes; then you can use the mapping
-to determine which read maps to which genome. This is the approach taken by
+sourmash doesn't classify individual metagenomic reads to either a
+genome or a taxon. (Note that we're not sure this can be done robustly
+in practice - neither short nor long reads typically contain enough
+information to uniquely identify a single genome, especially if there
+are many genomes from the same species present in the database.)  If
+you want to do this, we suggest running `sourmash gather` first, and
+then mapping the reads to the matching genomes; then you can determine
+which read maps to which genome. This is the approach taken by
 [the genome-grist pipeline](https://dib-lab.github.io/genome-grist/).
 
 <!-- link to tutorials and examples -->
@@ -125,8 +123,8 @@ and appears to be both very accurate and very sensitive, unless you're
 using Nanopore data or other data types that have a high sequencing
 error rate.
 
-It's important to note that taxonomy based on k-mers is very, very
-specific and if you get a match, it's pretty reliable. On the
+It's important to note that taxonomy based on multiple k-mers is very,
+very specific and if you get a match, it's pretty reliable. On the
 converse, however, k-mer identification is very brittle with respect
 to evolutionary divergence, so if you don't get a match it may only
 mean that the specific species or genus you're searching for isn't in
