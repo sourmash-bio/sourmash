@@ -142,7 +142,12 @@ you can use `lca classify` to classify single-genome sketches or
 `lca summarize` to classify metagenomes.
 
 The `lca` approach is not published anywhere, but we're happy to discuss
-it in more detail; just [post to the issue tracker](@@).
+it in more detail; just [post to the issue tracker](https://github.com/sourmash-bio/sourmash/issues).
+
+While we do not recommend the `lca` approach for general taxonomic
+classification purposes (see below!), it remains useful for certain
+kinds of diagnostic evaluation of sequences, so we are leaving the
+functionality in sourmash.
 
 ### `sourmash tax` vs `sourmash lca`
 
