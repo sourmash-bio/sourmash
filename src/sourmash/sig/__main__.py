@@ -1,6 +1,27 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+__all__ = ["cat",
+           "split",
+           "describe",
+           "manifest",
+           "overlap",
+           "merge",
+           "intersect",
+           "inflate",
+           "subtract",
+           "rename",
+           "extract",
+           "filter",
+           "flatten",
+           "downsample",
+           "sig_import",
+           "export",
+           "kmers",
+           "fileinfo",
+           "check",
+           "collect"]
+
 import sys
 import csv
 import json
