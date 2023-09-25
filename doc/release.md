@@ -29,6 +29,11 @@ After release to PyPI and conda-forge/bioconda packages built:
 - [ ] `pip install sourmash` installs the correct version
 - [ ] [conda-forge sourmash-minimal-feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock) has updated `sourmash-minimal` to the correct version 
 - [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+
+Optional but recommended:
+
+- [ ] PR submitted to update pyodide version
+- [ ] PR submitted to update spack version
 ```
 
 ## Creating the build environment with conda
