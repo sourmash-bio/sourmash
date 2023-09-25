@@ -1,5 +1,9 @@
 # Classifying signatures: `search`, `gather`, and `lca` methods.
 
+```{contents} Contents
+:depth: 3
+```
+
 sourmash provides several different techniques for doing
 classification and breakdown of signatures.
 
@@ -41,6 +45,8 @@ question to ask is the reverse: **what genomes are in my metagenome?**
 
 We have implemented two approaches in sourmash to do this.
 
+<!-- CTB refactor this soon :) -->
+
 One approach uses taxonomic information from e.g. GenBank to classify
 individual k-mers, and then infers taxonomic distributions of
 metagenome contents from the presence of these individual
@@ -65,21 +71,59 @@ Some benchmarking on CAMI suggests that `gather` is a very accurate
 method for doing strain-level resolution of genomes. More on
 that as we move forward!
 
-## To do taxonomy, or not to do taxonomy?
+## Taxonomic profiling with sourmash
 
-By default, there is no structured taxonomic information available in
-sourmash signatures or SBT databases of signatures.  Generally what
+sourmash supports two basic kinds of taxonomic profiling, under the
+`lca` and `tax` modules. **As of 2023, we strongly recommend the
+`tax`-based profiling approach.**
+
+But first, let's back up! By default, there is no structured taxonomic
+information available in sourmash signatures or collections.  What
 this means is that you will have to provide your own mapping from a
-match to some taxonomic hierarchy.  This is generally the case when
-you are working with lots of genomes that have no taxonomic
-information.
+match to some taxonomic hierarchy.  Both the `lca` and `tax` modules
+support identifier-based taxonomic mappings, in which identifiers
+from the signature names can be linked to the standard seven NCBI/GTDB
+taxonomy ranks - superkingdom, phylum, class, order, family, genus, and
+species. These are typically provided in a spreadsheet _separately_ from
+the signature collection. The `tax` module also supports `lins` taxonomies,
+for which we have a tutorial.
 
-The `lca` subcommands, however, work with LCA databases, which contain
-taxonomic information by construction.  This is one of the main
-differences between the `sourmash lca` subcommands and the basic
-`sourmash search` functionality.  So the `lca` subcommands will generally
-output structured taxonomic information, and these are what you should look
-to if you are interested in doing classification.
+There are several advantages that this approach affords sourmash. One
+is that sourmash is not tied closely to a specific taxonomy - you can
+use either GTDB or NCBI as you wish. Another advantage is that you can
+create your own custom taxonomic ranks and even use them with private
+databases of genomes to classify your own metagenomes.
+
+The main disadvantage of sourmash's approach to taxonomy is that
+sourmash doesn't classify individual metagenomic reads to either a genome
+or a taxon. (Note that we're not sure
+this can be done robustly in practice - neither short nor long reads typically
+contain enough information to uniquely identify a single genome.) If you
+want to do this, we suggest running `sourmash gather` first, and then
+mapping the reads to the matching genomes; then you can use the mapping
+to determine which read maps to which genome. This is the approach taken by
+[the genome-grist pipeline](https://dib-lab.github.io/genome-grist/).
+
+<!-- link to tutorials and examples -->
+
+### Using `sourmash tax` to do taxonomic analysis
+
+We recommend using the `tax` module to do taxonomic classification of
+genomes (with `tax genome`) and metagenomes (with `tax metagenome`).
+The `tax` module commands operate downstream of `sourmash gather`,
+which builds a minimum set cover of the query against the database -
+intuitively speaking, this is the shortest possible list of genomes
+that the query would map to.  Then, both `tax genome` and `tax
+metagenome` take the CSV output of `sourmash gather` and produce
+taxonomic profiles.  (You can read more about minimum set covers
+in
+[Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers, Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2).)
+
+The `tax metagenome` approach was benchmarked in
+[Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets, Portik et al., 2022](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
+and appears to be both very accurate and very sensitive, unless you're
+using Nanopore data or other data types that have a high sequencing
+error rate.
 
 It's important to note that taxonomy based on k-mers is very, very
 specific and if you get a match, it's pretty reliable. On the
@@ -87,6 +131,40 @@ converse, however, k-mer identification is very brittle with respect
 to evolutionary divergence, so if you don't get a match it may only
 mean that the specific species or genus you're searching for isn't in
 the database.
+
+### Using `sourmash lca` to do taxonomic analysis
+
+The `sourmash lca` module supports taxonomic classification using
+single hashes, corresponding to single k-mers, in an approach inspired
+by Kraken. Briefly, you first build an LCA database using `lca index`,
+which takes a taxonomy spreadsheet and a collection of sketches.  Then,
+you can use `lca classify` to classify single-genome sketches or 
+`lca summarize` to classify metagenomes.
+
+The `lca` approach is not published anywhere, but we're happy to discuss
+it in more detail; just [post to the issue tracker](https://github.com/sourmash-bio/sourmash/issues).
+
+While we do not recommend the `lca` approach for general taxonomic
+classification purposes (see below!), it remains useful for certain
+kinds of diagnostic evaluation of sequences, so we are leaving the
+functionality in sourmash.
+
+### `sourmash tax` vs `sourmash lca`
+
+Why do we recommend using the `tax` module over `lca`? `sourmash lca`
+was the first implementation in sourmash, and over the years we've
+found that it is prone to false positives: that is, individual k-mers
+are very sensitive but are often misassigned to higher taxonomic ranks
+than they need to be, either because of contamination in the reference
+database or because the taxonomy is not based directly on genome
+similarity.  Instead of using single k-mers, `sourmash gather` estimates
+the best matching genome based on combinations of k-mers, which is much
+more specific than the LCA approach; only then is a taxonomy assigned
+using `sourmash tax`.
+
+The bottom line is that in our experience, `sourmash tax` is as
+sensitive as `lca`, and a lot more specific. Please let us know if you
+discover differently!
 
 ## Abundance weighting
 
@@ -166,9 +244,9 @@ an abundance-weighted query, and automatically apply `--ignore-abundance`.
 As of v4.4, `sourmash` can estimate Average Nucleotide Identity (ANI)
 between two FracMinHash ("scaled") sketches. `sourmash compare` can now
 produce a matrix of ANI values estimated from Jaccard, Containment,
-or Max Containment by specifiing `--ani` (optionally along with search type,
+or Max Containment by specifying `--ani` (optionally along with search type,
 e.g. `--containment`). `sourmash search`, `sourmash prefetch`, and
-`sourmash gather` will now output ANI estimates to output csvs.
+`sourmash gather` will now output ANI estimates to output CSVs.
 
 Note that while ANI can be estimated from either the Jaccard Index or
 the Containment Index, ANI from Containment is preferable (more accurate).
