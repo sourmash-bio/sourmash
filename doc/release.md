@@ -95,7 +95,7 @@ rc=rc1
 
 Next create a new branch to work on release candidates and the version bump:
 ```
-git checkout -b release/v${new_version}
+git switch -c release/v${new_version}
 ```
 and update the version number in `pyproject.toml` and `flake.nix`:
 ```
@@ -132,7 +132,6 @@ cd ..
 python -m venv testenv1
 python -m venv testenv2
 python -m venv testenv3
-python -m venv testenv4
 
 # First we test the tag
 
@@ -286,6 +285,14 @@ and tests are going to fail in Bioconda before that.
 
 An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
 
+## Pyodide
+
+You will need to open a PR on pyodide manually, e.g. [pyodide#4075 for 4.8.3](https://github.com/pyodide/pyodide/pull/4075).
+
+## Spack
+
+You will need to open a PR on spack manually, e.g. [spack#40062 for 4.8.4](https://github.com/spack/spack/pull/40062).
+
 ## Announce it!
 
 If a bioinformatics software is released and no one tweets, is it really released?
@@ -294,16 +301,8 @@ Examples:
 
 - [3.4.1](https://twitter.com/ctitusbrown/status/1286652952828993537)
 - [3.4.0](https://twitter.com/luizirber/status/1283157954598858752)
-- [3.3.0](https://twitter.com/ctitusbrown/status/1257418140729868291)
-- [3.2.0](https://twitter.com/luizirber/status/1221923762523623425)
-- [3.1.0](https://twitter.com/luizirber/status/1217639572202409984)
 - [3.0.0](https://twitter.com/luizirber/status/1213588144458649600)
-- [2.3.0](https://twitter.com/luizirber/status/1198027116396171264)
-- [2.2.0](https://twitter.com/luizirber/status/1179126660911661057)
-- [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
-- [2.0.1](https://twitter.com/luizirber/status/1136786447518711808)
-- [2.0.0](https://twitter.com/luizirber/status/1108846466502520832)
 
 ## After release
 
-Update version to next minor version + `-dev`, e.g. [this PR](https://github.com/sourmash-bio/sourmash/pull/2584).
+Update version to next minor version + `-dev`, e.g. [4.8.3-dev as in this PR](https://github.com/sourmash-bio/sourmash/pull/2584), per [sourmash#2517](https://github.com/sourmash-bio/sourmash/issues/2517).
