@@ -128,7 +128,32 @@ In practice, the numbers will differ, but the intuition remains!
 
 ### How do read mapping rates for metagenomes compare with k-mer statistics?
 
-@@
+Shotgun metagenome sequencing adds several complicating factors when
+comparing metagenome reads to a reference database. First, each genome
+will generally be present at a different abundance in the metagenome.
+Second, metagenomes rarely contain the exact strain genome present in
+a reference database; often the genomes in the metagenome differ both
+in terms of SNPs _and_ accessory elements from what's in the reference
+database. And third, metagenomes often contain complicated mixtures of
+strains - even if one strain is dominant.
+
+The `sourmash gather` method is built for analyzing metagenomes against
+reference databases, and it does so by finding the shortest list of
+reference genomes that "cover" all of the k-mers in the metagenome.
+This list is arranged by how many k-mers from the metagenome are covered
+by that entry in the output: the first match is the biggest, and the
+second match is the second biggest, and so on. We call this a "minimum
+metagenome cover" and it is described in the Irber et al., 2022, paper below.
+
+When we construct the minimum metagenome cover, it correlates well with
+mapping (per Irber et al., 2022), with one caveat: you need to assign
+reads to the reference genomes in the rank order output by gather.
+This is needed to properly assign reads that map to multiple genomes
+to the "best" match - the one that will capture the most reads.
+
+`sourmash gather` is still a research method but it seems to work
+pretty well - in particular, it is both highly sensitive _and_ highly
+specific in taxonomic benchmarking. Please ask questions as you have them!
 
 ### Further reading and links on k-mers and mapping:
 
