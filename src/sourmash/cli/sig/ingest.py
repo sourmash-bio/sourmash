@@ -4,10 +4,11 @@ usage="""
 
    sourmash sig ingest --csv <input filename> [ <more inputs> ] -o <output>
 
-Ingest num sketches from a mash CSV format. The CSV file should contain one
+Ingest num sketches from a simple CSV format, or alternatively a JSON
+formatproduced by 'mash info -d'.  The CSV file should contain one
 line per sketch, with the first column containing 'murmur64', the
-second being '42', the third and fourth being the k-mer size and
-the name, and the remaining columns being the hashes.
+second being '42', the third and fourth being the k-mer size and the
+name, and the remaining columns being the hashes.
 
 """
 
