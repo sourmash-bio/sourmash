@@ -373,10 +373,9 @@ collection itself.
 
 Note:
 
-Use `sourmash gather` to classify a metagenome against a collection of
-genomes with no (or incomplete) taxonomic information.  Use `sourmash
-lca summarize` to classify a metagenome using a collection of genomes
-with taxonomic information.
+Use `sourmash gather` to analyze a metagenome against a collection of
+genomes.  Then use `sourmash tax metagenome` to integrate that collection
+of genomes with taxonomic information.
 
 #### Alternative search mode for low-memory (but slow) search: `--linear`
 
