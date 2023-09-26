@@ -90,10 +90,10 @@ higher than k-mer matching rates.
 Let's start by looking at a simple example: suppose you have Illumina
 shotgun sequencing of a new isolate, and you want to compare it to a
 reference genome for a member of the same species.  You calculate
-k-mer containment (using e.g. `sourmash search --containment
-ref.sig.gz isolate.sig.gz` @@verify) of the reference genome in the isolate shotgun
-sequence to be 65%. You then map the reads from the isolate data to the
-reference genome. What should you expect to see?
+k-mer containment of the reference genome in the isolate shotgun
+sequence to be 65%, using e.g. `sourmash search --containment
+ref.sig.gz isolate.sig.gz`. You then map the reads from the isolate
+data to the reference genome. What should you expect to see?
 
 What you should see is that 65% or more of the reference genome is
 covered by at least one read. This is known as the mapping-based

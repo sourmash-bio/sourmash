@@ -358,7 +358,20 @@ overlap     p_query p_match
 0.9 Mbp       7.4%   11.8%      BA000019.2 Nostoc sp. PCC 7120 DNA, c...
 0.7 Mbp       5.9%   23.0%      FOVK01000036.1 Proteiniclasticum rumi...
 0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris sub...
+...
+found less than 50.0 kbp in common. => exiting
+
+found 64 matches total;
+the recovered matches hit 94.0% of the abundance-weighted query.
+the recovered matches hit 45.6% of the query k-mers (unweighted).
 ```
+
+For each match,
+* 'overlap', the first column, is the estimated number of k-mers shared between the match and the query.
+* 'p_query' is the _percentage_ of the query that overlaps with the match; it is the amount of the metagenome "explained" by this match.
+* 'p_match' is the percentage of the _match_ that overlaps with the query; it is the "detection" of the match in the metagenome.
+
+@CTB bottom recovered matches
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
