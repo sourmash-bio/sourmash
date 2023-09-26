@@ -50,8 +50,9 @@ parameter of 1000 will contain a million hashes.
 The other drawback is that FracMinHash sketches _don't work well_ for
 very small sequences. Our default parameter choice for DNA
 (scaled=1000) works well for finding 10 kb or larger matches between
-sequences - some simple Poisson matching math suggests that about 99.98%
-of 10kb overlaps will be found with scaled=1000.
+sequences - some simple Poisson matching math suggests that about
+99.98% of 10kb overlaps will be found with scaled=1000. @CTB verify I
+think this is 5kb.
 
 ## What k-mer size(s) should I use with sourmash?
 
@@ -90,7 +91,7 @@ Let's start by looking at a simple example: suppose you have Illumina
 shotgun sequencing of a new isolate, and you want to compare it to a
 reference genome for a member of the same species.  You calculate
 k-mer containment (using e.g. `sourmash search --containment
-ref.sig.gz isolate.sig.gz`) of the reference genome in the isolate shotgun
+ref.sig.gz isolate.sig.gz` @@verify) of the reference genome in the isolate shotgun
 sequence to be 65%. You then map the reads from the isolate data to the
 reference genome. What should you expect to see?
 
@@ -103,7 +104,8 @@ detection typically *underestimates* mapping-based detection.
 a different number that is output by `sourmash gather` - although, for
 single genomes with only a few repeats, the percentage of reads that
 map should match the k-mer detection number you calculate with
-containment.)
+containment. Read the section below on metagenome analysis for more
+information on read mapping rates!)
 
 ### Why do k-mers underestimate read mapping?
 
