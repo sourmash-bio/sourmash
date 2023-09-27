@@ -15,7 +15,7 @@ __all__ = ["cat",
            "filter",
            "flatten",
            "downsample",
-           "sig_import",
+           "ingest",
            "export",
            "kmers",
            "fileinfo",
@@ -935,7 +935,7 @@ def downsample(args):
         sourmash_args.report_picklist(args, picklist)
 
 
-def sig_import(args):
+def ingest(args):
     """
     import a signature into sourmash format.
     """
