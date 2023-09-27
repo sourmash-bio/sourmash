@@ -373,7 +373,7 @@ For each match,
 
 Quite a bit more information per match row is available in the CSV
 output saved with `-o`; for details, see
-[Classifying signatures: how sourmash gather works](classifying-signatures.html#appendix-a-how-sourmash-gather-works).
+[Classifying signatures: how sourmash gather works](classifying-signatures.md#appendix-a-how-sourmash-gather-works).
 
 The "recovered matches" lines detail how much of the query is
 explained by the entire collection of matches. You will get two numbers if

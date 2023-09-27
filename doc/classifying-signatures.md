@@ -293,7 +293,8 @@ match that is _unique_ with respect to the original query. It will
 always decrease as you get more matches. The sum of
 `f_unique_to_query` across all rows is what is reported in by gather
 as the fraction of query k-mers hit by the recovered matches
-(unweighted) and should never be greater than 1!
+(unweighted) and should never be greater than 1! This column should
+be used in any analysis that needs to avoid double-counting matches.
 
 The second column, `f_match_orig`, is how much of the match is in the
 _original_ query.  For this fictional metagenome, each match is
