@@ -1,6 +1,27 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+__all__ = ["cat",
+           "split",
+           "describe",
+           "manifest",
+           "overlap",
+           "merge",
+           "intersect",
+           "inflate",
+           "subtract",
+           "rename",
+           "extract",
+           "filter",
+           "flatten",
+           "downsample",
+           "ingest",
+           "export",
+           "kmers",
+           "fileinfo",
+           "check",
+           "collect"]
+
 import sys
 import csv
 import json
@@ -14,7 +35,7 @@ import sourmash
 from sourmash.sourmash_args import FileOutput
 
 from sourmash.logging import (set_quiet, error, notify, print_results, debug,
-                              debug_literal)
+                              debug_literal, _debug)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -139,8 +160,8 @@ def split(args):
     _extend_signatures_with_from_file(args)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}' + args.extension
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}' + args.extension
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
@@ -914,7 +935,7 @@ def downsample(args):
         sourmash_args.report_picklist(args, picklist)
 
 
-def sig_import(args):
+def ingest(args):
     """
     import a signature into sourmash format.
     """
@@ -1359,7 +1380,9 @@ def check(args):
             row['internal_location'] = filename
             total_manifest_rows.add_row(row)
 
-        debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
+        # the len(sub_manifest) here should only be run when needed :)
+        if _debug:
+            debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 

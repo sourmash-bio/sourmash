@@ -45,6 +45,15 @@ def test_run_sourmash_sig_cmd():
     assert status != 0                    # no args provided, ok ;)
 
 
+def test_run_cat_via_parse_args():
+    # run a command ('sourmash.sig.cat') with args constructed via parse_args
+    import sourmash.sig, sourmash.cli
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    args = sourmash.cli.parse_args(['sig', 'cat', sig47])
+    sourmash.sig.cat(args)
+
+
 def test_sig_merge_1_use_full_signature_in_cmd(runtmp):
     c = runtmp
 
@@ -1456,6 +1465,42 @@ def test_sig_split_3_multisig(c):
         assert os.path.exists(c.output(filename))
 
 
+def test_sig_split_3_multisig_sig_gz(runtmp):
+    # split 47 and 47+63-multisig.sig with a .sig.gz extension
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'split', sig47, multisig, '-E', '.sig.gz')
+
+    outlist = ['57e2b22f.k=31.scaled=1000.DNA.dup=0.none.sig.gz',
+               'bde81a41.k=31.scaled=1000.DNA.dup=0.none.sig.gz',
+               'f033bbd8.k=31.scaled=1000.DNA.dup=0.none.sig.gz',
+               '87a9aec4.k=31.scaled=1000.DNA.dup=0.none.sig.gz',
+               '837bf2a7.k=31.scaled=1000.DNA.dup=0.none.sig.gz',
+               '485c3377.k=31.scaled=1000.DNA.dup=0.none.sig.gz']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+def test_sig_split_3_multisig_zip(runtmp):
+    # split 47 and 47+63-multisig.sig with a .zip extension
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'split', sig47, multisig, '-E', '.zip')
+
+    outlist = ['57e2b22f.k=31.scaled=1000.DNA.dup=0.none.zip',
+               'bde81a41.k=31.scaled=1000.DNA.dup=0.none.zip',
+               'f033bbd8.k=31.scaled=1000.DNA.dup=0.none.zip',
+               '87a9aec4.k=31.scaled=1000.DNA.dup=0.none.zip',
+               '837bf2a7.k=31.scaled=1000.DNA.dup=0.none.zip',
+               '485c3377.k=31.scaled=1000.DNA.dup=0.none.zip']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
 @utils.in_tempdir
 def test_sig_split_4_sbt_prot(c):
     # split sbt
@@ -2644,7 +2689,7 @@ def test_sig_extract_12_picklist_bad_pickstyle(runtmp):
 
     err = runtmp.last_result.err
     print(err)
-    assert "invalid picklist 'pickstyle' argument, 'XXX': must be 'include' or 'exclude'" in err
+    assert "invalid picklist 'pickstyle' argument 4: 'XXX' must be 'include' or 'exclude'" in err
 
 
 def test_sig_extract_12_picklist_bad_colname(runtmp):
@@ -2717,6 +2762,31 @@ def test_sig_extract_11_pattern_exclude(runtmp):
     names = [ ss.name for ss in idx.signatures() ]
     for n in names:
         assert 'shewanella' not in n.lower(), n
+
+
+def test_sig_extract_identical_md5s(runtmp):
+    # test that we properly handle different signatures with identical md5s
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss = load_signatures(sig47)
+    sig = list(ss)[0]
+    new_sig = sig.to_mutable()
+    new_sig.name = 'foo'
+    sig47foo = runtmp.output('foo.sig')
+    # this was only a problem when the signatures are stored in the same file
+    with open(sig47foo, 'wt') as fp:
+        sourmash.save_signatures([new_sig, sig], fp)
+
+    runtmp.run_sourmash('sig', 'extract', '--name', 'foo', sig47foo)
+
+    out = runtmp.last_result.out
+    print(out)
+    ss = load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella' not in ss.name
+    assert 'foo' in ss.name
+    assert ss.md5sum() == '09a08691ce52952152f0e866a59f6261'
 
 
 def test_sig_flatten_1(runtmp):

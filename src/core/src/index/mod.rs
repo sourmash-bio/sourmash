@@ -3,10 +3,8 @@
 //! An index organizes signatures to allow for fast similarity search.
 //! Some indices also support containment searches.
 
-pub mod bigsi;
 pub mod linear;
 pub mod revindex;
-pub mod sbt;
 
 pub mod search;
 
@@ -18,26 +16,12 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::errors::ReadDataError;
-use crate::index::sbt::{Node, SBT};
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
 use crate::signature::SigsTrait;
-use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Error;
-
-pub type MHBT = SBT<Node<Nodegraph>, Signature>;
-
-/* FIXME: bring back after MQF works on macOS and Windows
-use cfg_if::cfg_if;
-cfg_if! {
-    if #[cfg(not(target_arch = "wasm32"))] {
-      use mqf::MQF;
-      pub type MHMT = SBT<Node<MQF>, Signature>;
-    }
-}
-*/
 
 pub trait Index<'a> {
     type Item: Comparable<Self::Item>;
@@ -184,6 +168,26 @@ impl ReadData<Signature> for SigStore<Signature> {
             Ok(sig)
         } else {
             Err(ReadDataError::LoadError.into())
+        }
+    }
+}
+
+impl<T> SigStore<T>
+where
+    T: ToWriter,
+{
+    pub fn save(&self, path: &str) -> Result<String, Error> {
+        if let Some(storage) = &self.storage {
+            if let Some(data) = self.data.get() {
+                let mut buffer = Vec::new();
+                data.to_writer(&mut buffer)?;
+
+                Ok(storage.save(path, &buffer)?)
+            } else {
+                unimplemented!()
+            }
+        } else {
+            unimplemented!()
         }
     }
 }

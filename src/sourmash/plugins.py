@@ -16,6 +16,7 @@ DEFAULT_LOAD_FROM_PRIORITY = 99
 DEFAULT_SAVE_TO_PRIORITY = 99
 
 import itertools
+import argparse
 
 from .logging import (debug_literal, error, notify, set_quiet)
 
@@ -137,8 +138,12 @@ def get_cli_scripts_descriptions():
         script_cls = plugin.load()
 
         command = getattr(script_cls, 'command')
-        description = getattr(script_cls, 'description',
-                              f"(no description provided by plugin '{name}')")
+        description = getattr(script_cls, 'description', "")
+        if description:
+            description = description.splitlines()[0]
+        if not description:
+            description = f"(no description provided by plugin '{name}')"
+
         yield f"sourmash scripts {command:16s} - {description}"
 
 
@@ -150,7 +155,17 @@ def add_cli_scripts(parser):
         name = plugin.name
         script_cls = plugin.load()
 
-        subparser = parser.add_parser(script_cls.command)
+        usage = getattr(script_cls, 'usage', None)
+        description = getattr(script_cls, 'description', None)
+        epilog = getattr(script_cls, 'epilog', None)
+        formatter_class = getattr(script_cls, 'formatter_class',
+                                  argparse.HelpFormatter)
+
+        subparser = parser.add_parser(script_cls.command,
+                                      usage=usage,
+                                      description=description,
+                                      epilog=epilog,
+                                      formatter_class=formatter_class)
         debug_literal(f"cls_script plugin '{name}' adding command '{script_cls.command}'")
         obj = script_cls(subparser)
         d[script_cls.command] = obj

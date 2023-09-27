@@ -2971,7 +2971,7 @@ def test_lca_index_select_with_picklist(runtmp, lca_db_format):
 
     idx = sourmash.load_file_as_index(outdb)
     picklist_obj = SignaturePicklist.from_picklist_args(f"{picklist}:md5:md5")
-    picklist_obj.load(picklist_obj.pickfile, picklist_obj.column_name)
+    picklist_obj.load()
 
     idx = idx.select(picklist=picklist_obj)
 
@@ -3002,7 +3002,7 @@ def test_lca_index_select_with_picklist_exclude(runtmp, lca_db_format):
 
     idx = sourmash.load_file_as_index(outdb)
     picklist_obj = SignaturePicklist.from_picklist_args(f"{picklist}:md5:md5:exclude")
-    picklist_obj.load(picklist_obj.pickfile, picklist_obj.column_name)
+    picklist_obj.load()
     idx = idx.select(picklist=picklist_obj)
 
     siglist = list(idx.signatures())

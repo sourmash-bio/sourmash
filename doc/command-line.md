@@ -97,13 +97,21 @@ information; these are grouped under the `sourmash tax` and
 
 `sourmash lca` commands:
 
+```{attention}
+
+We do not recommend using the `lca` subcommands for taxonomic analysis
+any more; please use `sourmash tax` instead. See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
+
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
 
-> See [the LCA tutorial](tutorials-lca.md) for a
+See [the LCA tutorial](tutorials-lca.md) for a
 walkthrough of some of these commands.
 
 Finally, there are a number of utility and information commands:
@@ -365,10 +373,9 @@ collection itself.
 
 Note:
 
-Use `sourmash gather` to classify a metagenome against a collection of
-genomes with no (or incomplete) taxonomic information.  Use `sourmash
-lca summarize` to classify a metagenome using a collection of genomes
-with taxonomic information.
+Use `sourmash gather` to analyze a metagenome against a collection of
+genomes.  Then use `sourmash tax metagenome` to integrate that collection
+of genomes with taxonomic information.
 
 #### Alternative search mode for low-memory (but slow) search: `--linear`
 
@@ -474,7 +481,7 @@ searched in combination with `search`, `gather`, `compare`, etc.
 
 A motivating use case for `sourmash prefetch` is to run it on multiple
 large databases with a metagenome query using `--threshold-bp=0`,
-`--save-matching-hashes matching_hashes.sig`, and `--save-matches
+`--save-matching-hashes matching-hashes.sig`, and `--save-matches
 db-matches.sig`, and then run `sourmash gather matching-hashes.sig
 db-matches.sig`. 
 
@@ -484,8 +491,14 @@ signatures, rather than all the signatures in the database.
 
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
+The `sourmash tax` subcommands support taxonomic analysis of genomes
+and taxonomic profiling of metagenomes.
+See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
- information into the results of `sourmash gather`. All `tax` commands
+ information with the results of `sourmash gather`. All `tax` commands
  require one or more properly formatted `taxonomy` files where the
  identifiers correspond to those in the database(s) used for
  `gather`. Note that if using multiple databases, the `gather` needs
@@ -612,7 +625,7 @@ sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv \
-    --output-format krona --rank species
+    --output-format lineage_summary --rank species
 ```
 
 example `lineage_summary`:
@@ -1075,14 +1088,20 @@ and 120,757 within the `p__Proteobacteria`.
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
 These commands use LCA databases (created with `lca index`, below, or
-prepared databases such as
-[genbank-k31.lca.json.gz](databases.md)).
+prepared databases such as [genbank-k31.lca.json.gz](databases.md)).
 
 ### `sourmash lca classify` - classify a genome using an LCA database
 
 `sourmash lca classify` classifies one or more signatures using the given
 list of LCA DBs. It is meant for classifying metagenome-assembled genome
 bins (MAGs) and single-cell genomes (SAGs).
+
+```{attention}
+We no longer recommend using `sourmash lca` for taxonomic analysis;
+please use `sourmash tax` instead.  See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
 
 Usage:
 
@@ -1132,6 +1151,21 @@ number of additional k-mers in the input signature were classified as
 taxonomic assignment below genus *Shewanella* and it would report
 a status of `disagree` with the genus-level assignment of *Shewanella*;
 species level assignments would not be reported.
+Here, the assigned rank is the rank immediately *above* where there is
+a taxonomic disagreement, and the taxid & lineage refer to the name at
+that rank (the least-common-ancestor at which an assignment can be
+made).
+
+For another example, if you saw this line in the CSV file: 
+
+```
+TARA_ASW_MAG_00029,1224,disagree,phylum,Bacteria;Proteobacteria
+```
+
+you would know that TARA_ASW_MAG_00029 has k-mers that are shared
+between different orders: 'Pseudomonadales' and
+'Rhodobacterales'. Therefore, the classifier status is `disagree`, and
+the classified taxid is at rank `phylum` - just above `order`.
 
 (This is the approach that Kraken and other lowest common ancestor
 implementations use, we believe.)
@@ -1150,6 +1184,13 @@ exploring metagenomes and metagenome-assembled genome bins.
 `sourmash lca summarize` also weights output with hash abundances, so
 that output percentages are weighted by the number of times a k-mer is
 seen; this can be turned off with `--ignore-abundance`.
+
+```{attention}
+We no longer recommend using `sourmash lca` for taxonomic analysis;
+please use `sourmash tax` instead.  See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
 
 Usage:
 
@@ -1479,6 +1520,11 @@ then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
 
+`sig merge` can only merge compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
@@ -1510,6 +1556,11 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
+`sig subtract` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
@@ -1530,6 +1581,11 @@ in any signatures will be ignored and the output signature will have
 borrow abundances from the specified signature (which will also be added
 to the intersection).
 
+`sig intersect` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 ### `sourmash signature inflate` - transfer abundances from one signature to others
 
 Use abundances from one signature to provide abundances on other signatures.
@@ -1543,6 +1599,11 @@ will take the abundances from hashes `file1.sig` and use them to set
 the abundances on matching hashes in `file2.sig` and `file3.sig`.
 Any hashes that are not present in `file1.sig` will be removed from
 `file2.sig` and `file3.sig` as they will now have zero abundance.
+
+`sig inflate` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -1643,6 +1704,8 @@ will import the contents of `filename.msh.json` into `imported.sig`.
 
 Note: `import` only creates one output file, with one signature in it.
 
+Note: `ingest` is an alias for `import`.
+
 ### `sourmash signature export` - export signatures to mash.
 
 Export signatures from sourmash format. Currently only supports
@@ -1673,6 +1736,10 @@ sourmash signature overlap file1.sig file2.sig
 ```
 will display the detailed comparison of `file1.sig` and `file2.sig`.
 
+`sig overlap` can only work with compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
 
 ### `sourmash signature kmers` - extract k-mers and/or sequences that match to signatures
 

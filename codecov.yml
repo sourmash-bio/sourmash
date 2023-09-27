@@ -6,3 +6,6 @@ fixes:
 - "sourmash::src/sourmash"
 ignores:
 - "src/core/src/ffi"
+
+codecov: 
+ token: 66273971-681c-44a5-b93a-f60249a2a70c

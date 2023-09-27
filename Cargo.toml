@@ -3,6 +3,7 @@ members = [
   "src/core",
 ]
 default-members = ["src/core"]
+resolver = "2"
 
 [profile.test]
 opt-level = 1

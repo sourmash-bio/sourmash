@@ -11,6 +11,7 @@ import contextlib
 import csv
 import argparse
 import shutil
+import json
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -361,6 +362,29 @@ def test_save_signatures_to_location_1_dirout(runtmp):
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2
+
+
+def test_save_signatures_to_location_1_dirout_bug_2751(runtmp):
+    # check for 2x compressed sig files
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    outloc = runtmp.output('sigout/')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss2)
+        save_sig.add(ss47)
+
+    assert os.path.isdir(outloc)
+    print(os.listdir(outloc))
+
+    outloc2 = runtmp.output('sigout/09a08691ce52952152f0e866a59f6261.sig.gz')
+    with gzip.open(outloc2, "r") as fp:
+        data = fp.read()
+        print(data)
+        _ = json.loads(data)
 
 
 def test_save_signatures_to_location_1_dirout_duplicate(runtmp):

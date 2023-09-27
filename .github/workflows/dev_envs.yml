@@ -7,11 +7,11 @@ jobs:
   nix:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - uses: cachix/install-nix-action@v20
+    - uses: cachix/install-nix-action@v23
       with:
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
@@ -28,7 +28,7 @@ jobs:
   mamba:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -57,7 +57,7 @@ jobs:
 
     - name: install dependencies
       shell: bash -l {0}
-      run: mamba install tox-conda rust git compilers pandoc
+      run: mamba install 'tox>=3.27,<4' tox-conda rust git compilers pandoc
 
     - name: run tests for 3.9
       shell: bash -l {0}
