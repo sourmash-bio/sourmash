@@ -518,10 +518,9 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
                                            newline="")
                     r = _DictReader_with_version(textfp, delimiter=delimiter)
                     yield r
-            except (zipfile.BadZipFile, KeyError):
-                pass # uh oh, we were given a zipfile_obj and it FAILED.
+            except (zipfile.BadZipFile, KeyError) as e:
+                raise KeyError(str(e))
 
-            # no matter what, if given zipfile_obj don't try .gz or regular csv
             return
         else:
             try:

@@ -737,6 +737,19 @@ def test_fileinput_csv_3_load_manifest_zipfile_obj():
             assert r.version_info == ['SOURMASH-MANIFEST-VERSION', '1.0']
 
 
+def test_fileinput_csv_3_load_manifest_zipfile_obj_noexist():
+    # test loading a manifest from an open zipfile obj, using
+    # FileInputCSV.
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with zipfile.ZipFile(testfile, "r") as zf:
+        with pytest.raises(KeyError):
+            with sourmash_args.FileInputCSV(testfile,
+                                         default_csv_name='NADA.csv',
+                                         zipfile_obj=zf) as r:
+                pass
+
+
 def test_fileinput_csv_3_load_manifest_zipfile_obj_no_defualt():
     # test loading a manifest from an open zipfile obj, using
     # FileInputCSV, but with no default csv name => should fail.
