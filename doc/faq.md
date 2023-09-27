@@ -54,6 +54,42 @@ sequences - some simple Poisson matching math suggests that about
 99.98% of 10kb overlaps will be found with scaled=1000. @CTB verify I
 think this is 5kb.
 
+## How can I better understand FracMinHash and sourmash intuitively?
+
+@@ tutorial on k-mers
+
+## What papers should I read to better understand the FracMinHash approach used by sourmash?
+
+I would suggest reading these four papers, in order:
+
+[Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2),
+Irber et al., 2022. This is the fullest technical description of FracMinHash available.
+
+[Mash: fast genome and metagenome distance estimation using MinHash](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x),
+Ondov et al., 2016. This is the original paper that inspired
+sourmash. It discusses sketching with MinHash and does a great job of
+showing how well Jaccard estimation works for comparing genomes! A
+good contrasting point to take into account is that _MinHash cannot do
+overlap or containment estimation_, which nicely motivates the
+previous paper and the next two.
+
+[Mash Screen: high-throughput sequence containment estimation for genome discovery](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1841-x),
+Ondov et al., 2019; and
+[CMash: fast, multi-resolution estimation of k-mer-based Jaccard and containment indices](https://academic.oup.com/bioinformatics/article/38/Supplement_1/i28/6617499). Both
+papers discusses containment and metagenome analysis extensively, and
+use an approach that can be usefully contrasted with sourmash. There
+is a nice blog post on
+[mash screen](https://genomeinformatics.github.io/mash-screen/) that
+is worth reading, too!
+
+If you want a nice chaser, please see this section at the end of the
+blog post above:
+
+>It would be great to see additional methods developed to process
+containment scores, reduce the output redundancy, and report accurate
+compositional estimates for metagenomes. One easy approach is a
+“winner take all” model, like sourmash implements.
+
 ## What k-mer size(s) should I use with sourmash?
 
 The short answer is: for DNA, use k=31.
