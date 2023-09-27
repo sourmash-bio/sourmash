@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
+use getset::{Getters, Setters};
 use nohash_hasher::BuildNoHashHasher;
 use roaring::RoaringBitmap;
 use serde::{Deserialize, Serialize};
@@ -67,7 +68,7 @@ pub trait RevIndexOps {
 
     fn convert(&self, output_db: RevIndex) -> Result<()>;
 
-    fn check(&self, quick: bool);
+    fn check(&self, quick: bool) -> DbStats;
 
     fn gather(
         &self,
@@ -381,11 +382,27 @@ impl Datasets {
     */
 }
 
-fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
+#[derive(Getters, Setters, Debug)]
+pub struct DbStats {
+    #[getset(get = "pub")]
+    total_datasets: usize,
+
+    #[getset(get = "pub")]
+    total_keys: usize,
+
+    #[getset(get = "pub")]
+    kcount: usize,
+
+    #[getset(get = "pub")]
+    vcount: usize,
+
+    #[getset(get = "pub")]
+    vcounts: histogram::Histogram,
+}
+
+fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> DbStats {
     use byteorder::ReadBytesExt;
     use histogram::Histogram;
-    use log::info;
-    use numsep::{separate, Locale};
 
     let cf = db.cf_handle(cf_name).unwrap();
 
@@ -411,28 +428,12 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
         //println!("Saw {} {:?}", k, value);
     }
 
-    info!("*** {} ***", cf_name);
-    use size::Size;
-    let ksize = Size::from_bytes(kcount);
-    let vsize = Size::from_bytes(vcount);
-    if !quick && cf_name == COLORS {
-        info!(
-            "total datasets: {}",
-            separate(datasets.len(), Locale::English)
-        );
-    }
-    info!("total keys: {}", separate(kcount / 8, Locale::English));
-
-    info!("k: {}", ksize.to_string());
-    info!("v: {}", vsize.to_string());
-
-    if !quick && kcount > 0 && deep_check {
-        info!("max v: {}", vcounts.maximum().unwrap());
-        info!("mean v: {}", vcounts.mean().unwrap());
-        info!("stddev: {}", vcounts.stddev().unwrap());
-        info!("median v: {}", vcounts.percentile(50.0).unwrap());
-        info!("p25 v: {}", vcounts.percentile(25.0).unwrap());
-        info!("p75 v: {}", vcounts.percentile(75.0).unwrap());
+    DbStats {
+        total_datasets: datasets.len(),
+        total_keys: kcount / 8,
+        kcount,
+        vcount,
+        vcounts,
     }
 }
 

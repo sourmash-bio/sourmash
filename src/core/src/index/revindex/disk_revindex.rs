@@ -10,10 +10,9 @@ use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
-use crate::index::revindex::prepare_query;
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, HashToColor, QueryColors, RevIndexOps, DB, HASHES,
-    MANIFEST, METADATA, STORAGE_SPEC,
+    self as module, prepare_query, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors,
+    RevIndexOps, DB, HASHES, MANIFEST, METADATA, STORAGE_SPEC,
 };
 use crate::index::{GatherResult, SigCounter};
 use crate::manifest::Manifest;
@@ -409,8 +408,8 @@ impl RevIndexOps for RevIndex {
         Ok(module::RevIndex::Plain(self))
     }
 
-    fn check(&self, quick: bool) {
-        stats_for_cf(self.db.clone(), HASHES, true, quick);
+    fn check(&self, quick: bool) -> DbStats {
+        stats_for_cf(self.db.clone(), HASHES, true, quick)
     }
 
     fn compact(&self) {
