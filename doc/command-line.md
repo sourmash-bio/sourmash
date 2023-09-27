@@ -371,11 +371,27 @@ For each match,
 * 'p_query' is the _percentage_ of the query that overlaps with the match; it is the amount of the metagenome "explained" by this match.
 * 'p_match' is the percentage of the _match_ that overlaps with the query; it is the "detection" of the match in the metagenome.
 
-@CTB bottom recovered matches
+Quite a bit more information per match row is available in the CSV
+output saved with `-o`; for details, see
+[Classifying signatures: how sourmash gather works](classifying-signatures.html#appendix-a-how-sourmash-gather-works).
+
+The "recovered matches" lines detail how much of the query is
+explained by the entire collection of matches. You will get two numbers if
+your metagenome sketch has been calculated with `-p abund`, and only
+one if it does not have abundances. The abundance-weighted
+number should approximate the fraction of metagenome reads that will
+map to at least one reference genome, while the unweighted number
+describes how much of the metagenome itself matches to genomes.
+Here's another way to put it: if the metagenome could be perfectly
+assembled into contigs, the unweighted number would approximate the
+number of bases from the contigs that would match perfectly to at
+least one genome in the reference database.  More practically,
+the abundance-weighted number is less sensitive to sequencing errors.
+See @CTB classifying signatures or FAQ for more information here!
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
-50kb. see the Appendix in
+50kb. See the Appendix in
 [Classifying Signatures](classifying-signatures.md) for details.
 
 As of sourmash 4.2.0, `gather` supports `--picklist`, to
