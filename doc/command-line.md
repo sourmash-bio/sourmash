@@ -1704,6 +1704,8 @@ will import the contents of `filename.msh.json` into `imported.sig`.
 
 Note: `import` only creates one output file, with one signature in it.
 
+Note: `ingest` is an alias for `import`.
+
 ### `sourmash signature export` - export signatures to mash.
 
 Export signatures from sourmash format. Currently only supports
