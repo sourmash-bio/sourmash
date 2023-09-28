@@ -1041,6 +1041,9 @@ superkingdom, phylum, class, order, family, genus, and species.
 to ignore case and `-v` to output only taxonomic lineages that do
 _not_ match the pattern.
 
+Note: `tax grep` only searches taxonomic ranks, not identifier strings.
+Use `sig grep` to search for identifiers in sketch collections.
+
 Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
 convert CSV output from `tax grep` into a sqlite3 taxonomy database.
 
