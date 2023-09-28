@@ -259,15 +259,18 @@ sourmash plot <matrix_file>
 ```
 
 Options:
-```
---pdf -- output PDF files.
---labels -- display the signature names (by default, the filenames) on the plot
---indices -- turn off index display on the plot.
---vmax -- maximum value (default 1.0) for heatmap.
---vmin -- minimum value (default 0.0) for heatmap.
---subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
---subsample-seed=<seed> -- seed for pseudorandom number generator.
-```
+* `--pdf` -- output PDF files. (defaults to PNG)
+* `--labels` -- display the signature names on the plot (default)
+* `--indices` -- turn on index display on the plot.
+* `--vmax` -- maximum value (default 1.0) for heatmap.
+* `--vmin` -- minimum value (default 0.0) for heatmap.
+* `--subsample=<N>` -- plot a maximum of <N> samples, randomly chosen.
+* `--subsample-seed=<seed>` -- seed for pseudorandom number generator.
+
+Example command lines for labels and indices -
+
+* `--indices` will show only numbers;
+* `--no-labels --no-indices` will remove all labels!
 
 Example output:
 
