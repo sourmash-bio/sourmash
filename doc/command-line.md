@@ -267,7 +267,7 @@ Options:
 * `--subsample=<N>` -- plot a maximum of <N> samples, randomly chosen.
 * `--subsample-seed=<seed>` -- seed for pseudorandom number generator.
 
-Example command lines for labels and indices -
+Example command lines for label and index display -
 
 * `--indices` will show only numbers;
 * `--no-labels --no-indices` will remove all labels!
