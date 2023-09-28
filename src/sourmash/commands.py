@@ -252,8 +252,22 @@ def plot(args):
     # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
-    if args.labels or args.labeltext:
+    # see sourmash#2790 for details :)
+    if args.labeltext or args.labels:
+        display_labels = True
+        args.labels = True      # override => labels always true
+    elif args.labels is None and not args.indices:
+        # default to labels
         args.labels = True
+        display_labels = True
+    elif args.indices or (not args.labels and args.indices is None):
+        # turn on indices only, not label names
+        args.indices = True
+        display_labels = True
+    else:
+        display_labels = False
+
+    if args.labels:
         if args.labeltext:
             labelfilename = args.labeltext
         else:
@@ -268,11 +282,8 @@ def plot(args):
     elif args.indices:
         # construct integer labels
         labeltext = [str(i) for i in range(D.shape[0])]
-        args.labels = True
     else:
-        assert not args.labels
-        assert not args.indices
-        assert not args.labeltext
+        assert not display_labels
         labeltext = [""] * D.shape[0]
 
     if args.pdf:
@@ -320,13 +331,13 @@ def plot(args):
     ### do clustering
     Y = sch.linkage(D, method='single')
     sch.dendrogram(Y, orientation='right', labels=labeltext,
-                   no_labels=not args.labels)
+                   no_labels=not display_labels)
     fig.savefig(dendrogram_out)
     notify(f'wrote dendrogram to: {dendrogram_out}')
 
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
-                                             show_labels=args.labels,
+                                             show_labels=display_labels,
                                              vmin=args.vmin,
                                              vmax=args.vmax,
                                              force=args.force)

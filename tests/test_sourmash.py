@@ -970,6 +970,8 @@ def test_plot_reordered_labels_csv(runtmp):
     c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
+    print(open(c.output('neworder.csv'), 'rt').read())
+
     with open(c.output('neworder.csv'), newline="") as fp:
         r = csv.DictReader(fp)
 

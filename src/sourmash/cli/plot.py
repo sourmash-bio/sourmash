@@ -10,7 +10,7 @@ def subparser(subparsers):
         help='output PDF; default is PNG'
     )
     subparser.add_argument(
-        '--labels', action='store_true', default=False,
+        '--labels', action='store_true', default=None,
         help='show sample labels on dendrogram/matrix'
     )
     subparser.add_argument(
@@ -22,7 +22,7 @@ def subparser(subparsers):
         help='filename containing list of labels (overrides signature names); implies --labels'
     )
     subparser.add_argument(
-        '--indices', action='store_true', default=True,
+        '--indices', action='store_true', default=None,
         help='show sample indices but not labels; overridden by --labels'
     )
     subparser.add_argument(
