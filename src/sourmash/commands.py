@@ -246,20 +246,33 @@ def plot(args):
 
     # load files
     D_filename = args.distances
-    labelfilename = D_filename + '.labels.txt'
 
     notify(f'loading comparison matrix from {D_filename}...')
     D = numpy.load(open(D_filename, 'rb'))
     # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
-    if args.labeltext:
-        labelfilename = args.labeltext
-    notify(f'loading labels from {labelfilename}')
-    labeltext = [ x.strip() for x in open(labelfilename) ]
-    if len(labeltext) != D.shape[0]:
-        error('{} labels != matrix size, exiting', len(labeltext))
-        sys.exit(-1)
+    if args.labels or args.labeltext:
+        args.labels = True
+        if args.labeltext:
+            labelfilename = args.labeltext
+        else:
+            labelfilename = D_filename + '.labels.txt'
+
+        notify(f'loading labels from {labelfilename}')
+        labeltext = [ x.strip() for x in open(labelfilename) ]
+        
+        if len(labeltext) != D.shape[0]:
+            error('{} labels != matrix size, exiting', len(labeltext))
+            sys.exit(-1)
+    elif args.indices:
+        # construct integer labels
+        labeltext = [str(i) for i in range(D.shape[0])]
+        args.labels = True
+    else:
+        assert not args.labels
+        assert not args.indices
+        assert not args.labeltext
 
     # build filenames, decide on PDF/PNG output
     dendrogram_out = os.path.basename(D_filename) + '.dendro'
@@ -300,6 +313,8 @@ def plot(args):
     ax1.set_xticks([])
     ax1.set_yticks([])
 
+   
+
     # subsample?
     if args.subsample:
         numpy.random.seed(args.subsample_seed)
@@ -321,7 +336,6 @@ def plot(args):
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
                                              show_labels=args.labels,
-                                             show_indices=args.indices,
                                              vmin=args.vmin,
                                              vmax=args.vmax,
                                              force=args.force)
