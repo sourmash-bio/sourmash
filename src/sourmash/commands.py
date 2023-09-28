@@ -273,25 +273,17 @@ def plot(args):
         assert not args.labels
         assert not args.indices
         assert not args.labeltext
+        labeltext = [""] * D.shape[0]
+
+    if args.pdf:
+        ext = '.pdf'
+    else:
+        ext = '.png'
 
     # build filenames, decide on PDF/PNG output
-    dendrogram_out = os.path.basename(D_filename) + '.dendro'
-    if args.pdf:
-        dendrogram_out += '.pdf'
-    else:
-        dendrogram_out += '.png'
-
-    matrix_out = os.path.basename(D_filename) + '.matrix'
-    if args.pdf:
-        matrix_out += '.pdf'
-    else:
-        matrix_out += '.png'
-
-    hist_out = os.path.basename(D_filename) + '.hist'
-    if args.pdf:
-        hist_out += '.pdf'
-    else:
-        hist_out += '.png'
+    dendrogram_out = os.path.basename(D_filename) + '.dendro' + ext
+    matrix_out = os.path.basename(D_filename) + '.matrix' + ext
+    hist_out = os.path.basename(D_filename) + '.hist' + ext
 
     # output to a different directory?
     if args.output_dir:
@@ -313,8 +305,6 @@ def plot(args):
     ax1.set_xticks([])
     ax1.set_yticks([])
 
-   
-
     # subsample?
     if args.subsample:
         numpy.random.seed(args.subsample_seed)
@@ -329,7 +319,8 @@ def plot(args):
 
     ### do clustering
     Y = sch.linkage(D, method='single')
-    sch.dendrogram(Y, orientation='right', labels=labeltext)
+    sch.dendrogram(Y, orientation='right', labels=labeltext,
+                   no_labels=not args.labels)
     fig.savefig(dendrogram_out)
     notify(f'wrote dendrogram to: {dendrogram_out}')
 
