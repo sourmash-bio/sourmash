@@ -227,7 +227,7 @@ def compare(args):
         notify(f'saving labels to: {labeloutname}')
         with sourmash_args.FileOutputCSV(labeloutname) as fp:
             w = csv.writer(fp)
-            w.writerow(['order', 'md5', 'label', 'name', 'filename',
+            w.writerow(['sort_order', 'md5', 'label', 'name', 'filename',
                         'signature_file'])
 
             for n, (ss, location) in enumerate(siglist):
