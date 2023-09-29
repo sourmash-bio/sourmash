@@ -28,6 +28,11 @@ sourmash is inspired by [mash](https://mash.readthedocs.io), and
 supports most mash analyses. sourmash also implements an expanded set
 of functionality for metagenome and taxonomic analysis.
 
+sourmash development was initiated with a grant from the Moore
+Foundation under the Data Driven Discovery program, and has been
+supported by further funding from the NIH and NSF. Please see
+[funding acknowledgements](funding.md) for details!
+
 ## Using sourmash
 
 ### Tutorials and examples
@@ -69,6 +74,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 * [Python examples using the API](api-example.md)
 * [Publications about sourmash](publications.md)
 * [A guide to the internals of sourmash](sourmash-internals.md)
+* [Funding acknowledgements](funding.md)
 
 ## Developing and extending sourmash
 
