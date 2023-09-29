@@ -59,7 +59,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--labels-from', '--labels-load',
-        help='a CSV file containing label information to use on plot',
+        help='a CSV file containing label information to use on plot; implies --labels',
     )
 
 
