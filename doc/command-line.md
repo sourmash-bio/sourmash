@@ -97,13 +97,21 @@ information; these are grouped under the `sourmash tax` and
 
 `sourmash lca` commands:
 
+```{attention}
+
+We do not recommend using the `lca` subcommands for taxonomic analysis
+any more; please use `sourmash tax` instead. See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
+
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
 
-> See [the LCA tutorial](tutorials-lca.md) for a
+See [the LCA tutorial](tutorials-lca.md) for a
 walkthrough of some of these commands.
 
 Finally, there are a number of utility and information commands:
@@ -365,10 +373,9 @@ collection itself.
 
 Note:
 
-Use `sourmash gather` to classify a metagenome against a collection of
-genomes with no (or incomplete) taxonomic information.  Use `sourmash
-lca summarize` to classify a metagenome using a collection of genomes
-with taxonomic information.
+Use `sourmash gather` to analyze a metagenome against a collection of
+genomes.  Then use `sourmash tax metagenome` to integrate that collection
+of genomes with taxonomic information.
 
 #### Alternative search mode for low-memory (but slow) search: `--linear`
 
@@ -484,8 +491,14 @@ signatures, rather than all the signatures in the database.
 
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
+The `sourmash tax` subcommands support taxonomic analysis of genomes
+and taxonomic profiling of metagenomes.
+See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
- information into the results of `sourmash gather`. All `tax` commands
+ information with the results of `sourmash gather`. All `tax` commands
  require one or more properly formatted `taxonomy` files where the
  identifiers correspond to those in the database(s) used for
  `gather`. Note that if using multiple databases, the `gather` needs
@@ -1028,6 +1041,9 @@ superkingdom, phylum, class, order, family, genus, and species.
 to ignore case and `-v` to output only taxonomic lineages that do
 _not_ match the pattern.
 
+Note: `tax grep` only searches taxonomic ranks, not identifier strings.
+Use `sig grep` to search for identifiers in sketch collections.
+
 Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
 convert CSV output from `tax grep` into a sqlite3 taxonomy database.
 
@@ -1075,14 +1091,20 @@ and 120,757 within the `p__Proteobacteria`.
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
 These commands use LCA databases (created with `lca index`, below, or
-prepared databases such as
-[genbank-k31.lca.json.gz](databases.md)).
+prepared databases such as [genbank-k31.lca.json.gz](databases.md)).
 
 ### `sourmash lca classify` - classify a genome using an LCA database
 
 `sourmash lca classify` classifies one or more signatures using the given
 list of LCA DBs. It is meant for classifying metagenome-assembled genome
 bins (MAGs) and single-cell genomes (SAGs).
+
+```{attention}
+We no longer recommend using `sourmash lca` for taxonomic analysis;
+please use `sourmash tax` instead.  See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
 
 Usage:
 
@@ -1132,6 +1154,21 @@ number of additional k-mers in the input signature were classified as
 taxonomic assignment below genus *Shewanella* and it would report
 a status of `disagree` with the genus-level assignment of *Shewanella*;
 species level assignments would not be reported.
+Here, the assigned rank is the rank immediately *above* where there is
+a taxonomic disagreement, and the taxid & lineage refer to the name at
+that rank (the least-common-ancestor at which an assignment can be
+made).
+
+For another example, if you saw this line in the CSV file: 
+
+```
+TARA_ASW_MAG_00029,1224,disagree,phylum,Bacteria;Proteobacteria
+```
+
+you would know that TARA_ASW_MAG_00029 has k-mers that are shared
+between different orders: 'Pseudomonadales' and
+'Rhodobacterales'. Therefore, the classifier status is `disagree`, and
+the classified taxid is at rank `phylum` - just above `order`.
 
 (This is the approach that Kraken and other lowest common ancestor
 implementations use, we believe.)
@@ -1150,6 +1187,13 @@ exploring metagenomes and metagenome-assembled genome bins.
 `sourmash lca summarize` also weights output with hash abundances, so
 that output percentages are weighted by the number of times a k-mer is
 seen; this can be turned off with `--ignore-abundance`.
+
+```{attention}
+We no longer recommend using `sourmash lca` for taxonomic analysis;
+please use `sourmash tax` instead.  See
+[taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
+for more information.
+```
 
 Usage:
 
@@ -1662,6 +1706,8 @@ sourmash signature import filename.msh.json -o imported.sig
 will import the contents of `filename.msh.json` into `imported.sig`.
 
 Note: `import` only creates one output file, with one signature in it.
+
+Note: `ingest` is an alias for `import`.
 
 ### `sourmash signature export` - export signatures to mash.
 

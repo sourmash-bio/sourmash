@@ -1,6 +1,27 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+__all__ = ["cat",
+           "split",
+           "describe",
+           "manifest",
+           "overlap",
+           "merge",
+           "intersect",
+           "inflate",
+           "subtract",
+           "rename",
+           "extract",
+           "filter",
+           "flatten",
+           "downsample",
+           "ingest",
+           "export",
+           "kmers",
+           "fileinfo",
+           "check",
+           "collect"]
+
 import sys
 import csv
 import json
@@ -914,7 +935,7 @@ def downsample(args):
         sourmash_args.report_picklist(args, picklist)
 
 
-def sig_import(args):
+def ingest(args):
     """
     import a signature into sourmash format.
     """
