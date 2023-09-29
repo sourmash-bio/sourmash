@@ -838,8 +838,10 @@ def test_do_plot_comparison(runtmp):
     assert os.path.exists(c.output("cmp.matrix.png"))
 
 
-@utils.in_tempdir
-def test_do_plot_comparison_2(c):
+def test_do_plot_comparison_2_pdf(runtmp):
+    # test plot --pdf
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
@@ -851,8 +853,10 @@ def test_do_plot_comparison_2(c):
     assert os.path.exists(c.output("cmp.matrix.pdf"))
 
 
-@utils.in_tempdir
-def test_do_plot_comparison_3(c):
+def test_do_plot_comparison_3(runtmp):
+    # test plot --labels
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
@@ -865,8 +869,10 @@ def test_do_plot_comparison_3(c):
     assert os.path.exists(c.output("cmp.matrix.png"))
 
 
-@utils.in_tempdir
-def test_do_plot_comparison_4_output_dir(c):
+def test_do_plot_comparison_4_output_dir(runtmp):
+    # test plot --output-dir
+    c = runtmp
+
     output_dir = c.output('xyz_test')
 
     testdata1 = utils.get_test_data('short.fa')
@@ -881,8 +887,10 @@ def test_do_plot_comparison_4_output_dir(c):
     assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
 
 
-@utils.in_tempdir
-def test_do_plot_comparison_5_force(c):
+def test_do_plot_comparison_5_force(runtmp):
+    # test -f to force display of something that's not a distance matrix
+    c = runtmp
+
     D = numpy.zeros([2, 2])
     D[0, 0] = 5
     with open(c.output('cmp'), 'wb') as fp:
@@ -896,8 +904,10 @@ def test_do_plot_comparison_5_force(c):
     assert c.last_result.status == 0
 
 
-@utils.in_tempdir
-def test_do_plot_comparison_4_fail_not_distance(c):
+def test_do_plot_comparison_4_fail_not_distance(runtmp):
+    # plot should fail when not a distance matrix
+    c = runtmp
+
     D = numpy.zeros([2, 2])
     D[0, 0] = 5
     with open(c.output('cmp'), 'wb') as fp:
@@ -914,31 +924,33 @@ def test_do_plot_comparison_4_fail_not_distance(c):
 
 
 def test_plot_override_labeltext(runtmp):
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+    # test overriding labeltext
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
 
-        with open(runtmp.output('new.labels.txt'), 'wt') as fp:
-            fp.write('a\nb\nc\nd\n')
+    with open(runtmp.output('new.labels.txt'), 'wt') as fp:
+        fp.write('a\nb\nc\nd\n')
 
-        runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
+    runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
 
-        print(runtmp.last_result.out)
+    print(runtmp.last_result.out)
 
-        assert 'loading labels from new.labels.txt' in runtmp.last_result.err
+    assert 'loading labels from new.labels.txt' in runtmp.last_result.err
 
-        expected = """\
+    expected = """\
 0\ta
 1\tb
 2\tc
 3\td"""
-        assert expected in runtmp.last_result.out
+    assert expected in runtmp.last_result.out
 
 
 def test_plot_override_labeltext_fail(runtmp):
+    # test failed override of labeltext
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
@@ -960,7 +972,7 @@ def test_plot_override_labeltext_fail(runtmp):
 
 
 def test_plot_reordered_labels_csv(runtmp):
-    # test 'plot --csv'
+    # test 'plot --csv' & correct ordering of labels
     c = runtmp
 
     ss2 = utils.get_test_data('2.fa.sig')
@@ -969,8 +981,6 @@ def test_plot_reordered_labels_csv(runtmp):
 
     c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
-
-    print(open(c.output('neworder.csv'), 'rt').read())
 
     with open(c.output('neworder.csv'), newline="") as fp:
         r = csv.DictReader(fp)
@@ -1008,6 +1018,7 @@ def test_plot_reordered_labels_csv_gz(runtmp):
 
 
 def test_plot_subsample_1(runtmp):
+    # test plotting with --subsample
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
@@ -1027,6 +1038,7 @@ def test_plot_subsample_1(runtmp):
 
 
 def test_plot_subsample_2(runtmp):
+    # test plotting --subsample with --subsample-seed
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
