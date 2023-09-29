@@ -1204,6 +1204,56 @@ def test_plot_subsample_2(runtmp):
     assert expected in runtmp.last_result.out
 
 
+def test_compare_and_plot_labels_from_to(runtmp):
+    # test doing compare --labels-to and plot --labels-from.
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    labels_csv = runtmp.output('label.csv')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna', '--labels-to', labels_csv)
+
+    runtmp.sourmash('plot', 'cmp', '--labels-from', labels_csv)
+
+    print(runtmp.last_result.out)
+
+    assert "loading labels from CSV file" in runtmp.last_result.err
+
+    expected = """\
+0\tgenome-s10
+1\tgenome-s11
+2\tgenome-s12
+3\tgenome-s10+s11"""
+    assert expected in runtmp.last_result.out
+
+
+def test_compare_and_plot_labels_from_changed(runtmp):
+    # test 'plot --labels-from' with changed labels
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    labels_csv = utils.get_test_data('compare/labels_from-test.csv')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--labels-from', labels_csv)
+
+    print(runtmp.last_result.out)
+
+    assert "loading labels from CSV file" in runtmp.last_result.err
+
+    expected = """\
+0\tgenome-s10-CHANGED
+1\tgenome-s11-CHANGED
+2\tgenome-s12-CHANGED
+3\tgenome-s10+s11-CHANGED"""
+    assert expected in runtmp.last_result.out
+
+
 @utils.in_tempdir
 def test_search_query_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')

@@ -300,7 +300,7 @@ def plot(args):
         labeltext = []
         with sourmash_args.FileInputCSV(labelfilename) as r:
             for row in r:
-                order, label = row['order'], row['label']
+                order, label = row['sort_order'], row['label']
                 labeltext.append((int(order), label))
         labeltext.sort()
         labeltext = [ t[1] for t in labeltext ]
