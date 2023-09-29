@@ -923,6 +923,153 @@ def test_do_plot_comparison_4_fail_not_distance(runtmp):
     assert c.last_result.status != 0
 
 
+def test_plot_6_labels_default(runtmp):
+    # plot --labels is default
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--labels')
+
+    print(runtmp.last_result.out)
+
+    expected = """\
+0\tgenome-s10
+1\tgenome-s11
+2\tgenome-s12
+3\tgenome-s10+s11"""
+    assert expected in runtmp.last_result.out
+
+
+def test_plot_6_labels(runtmp):
+    # specifing --labels gives the right result
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--labels')
+
+    print(runtmp.last_result.out)
+
+    expected = """\
+0\tgenome-s10
+1\tgenome-s11
+2\tgenome-s12
+3\tgenome-s10+s11"""
+    assert expected in runtmp.last_result.out
+
+
+def test_plot_6_indices(runtmp):
+    # test plot --indices
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--indices')
+
+    print(runtmp.last_result.out)
+
+    expected = """\
+0\t0
+1\t1
+2\t2
+3\t3"""
+    assert expected in runtmp.last_result.out
+
+
+def test_plot_6_no_labels(runtmp):
+    # test plot --no-labels
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--no-labels')
+
+    print(runtmp.last_result.out)
+
+    expected = """\
+0\t0
+1\t1
+2\t2
+3\t3"""
+    assert expected in runtmp.last_result.out
+
+
+def test_plot_6_no_indices(runtmp):
+    # test plot --no-labels
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--no-labels')
+
+    print(runtmp.last_result.out)
+
+    expected = """\
+0\t0
+1\t1
+2\t2
+3\t3"""
+    assert expected in runtmp.last_result.out
+
+
+def test_plot_6_no_labels_no_indices(runtmp):
+    # test plot --no-labels --no-indices
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--no-labels', '--no-indices')
+
+    print((runtmp.last_result.out,))
+
+    expected = """\
+0\t
+1\t
+2\t
+3\t"""
+    assert expected in runtmp.last_result.out
+
+
+def test_plot_6_indices_labels(runtmp):
+    # check that --labels --indices => --labels
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    runtmp.sourmash('plot', 'cmp', '--labels', '--indices')
+
+    print(runtmp.last_result.out)
+
+    expected = """\
+0\tgenome-s10
+1\tgenome-s11
+2\tgenome-s12
+3\tgenome-s10+s11"""
+    assert expected in runtmp.last_result.out
+
+
 def test_plot_override_labeltext(runtmp):
     # test overriding labeltext
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
