@@ -217,7 +217,7 @@ matching genome.
 ## Can I use sourmash to determine the best reference genome for mapping my reads?
 
 Yes! (And see the FAQ above,
-[How do k-mer analyses compare with read mapping?](#how-do-k-mer-based-analyses-compare-with-read-mapping)
+[How do k-mer analyses compare with read mapping?](#how-do-k-mer-based-analyses-compare-with-read-mapping).)
 
 If you're interested in picking a single best reference genome (from a
 large database) for read mapping, you can do the following:
@@ -231,3 +231,18 @@ large database) for read mapping, you can do the following:
 If you want to map a metagenome to _multiple_ references, consider
 using `sourmash gather` and/or
 [the genome-grist workflow](https://dib-lab.github.io/genome-grist/).
+
+(This is also known as "read recruitment.")
+
+## How do I get the sequences for a particular reference genome from a metagenome, using sourmash?
+
+If sourmash reports that a particular strain or genome is present in a
+metagenome, how do you retrieve the reads using sourmash?
+
+The short answer is: you have to use a different tool.  You can do
+read mapping between the metagenome and the relevant reference genome
+(which can be automated with
+[the genome-grist workflow](https://dib-lab.github.io/genome-grist/);
+or, if you are interested in retrieving accessory elements, you can
+try out
+[spacegraphcats](https://spacegraphcats.github.io/spacegraphcats/02-spacegraphcats-use-cases/).
