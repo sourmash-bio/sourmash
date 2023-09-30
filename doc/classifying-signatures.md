@@ -396,3 +396,140 @@ overlap     p_query p_match avg_abund
 The cause of the poor approximation for genome s10 is unclear; it
 could be due to low coverage, or small genome size, or something
 else. More investigation needed.
+
+## Appendix C: sourmash gather output examples
+
+Below we show two real gather analyses done with a mock metagenome,
+SRR606249 (from
+[Shakya et al., 2014](https://pubmed.ncbi.nlm.nih.gov/23387867/)) and
+three of the known genomes contained within it - two *Shewanella baltica*
+strains and one *Akkermansia muciniphila* genome
+
+### sourmash gather with a query containing abundance information
+
+```
+% sourmash gather -k 31 SRR606249.trim.sig.zip podar-ref/2.fa.sig podar-ref/47.fa.sig podar-ref/63.fa.sig
+
+== This is sourmash version 4.8.5.dev0. ==
+== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==
+
+selecting specified query k=31
+loaded query: SRR606249... (k=31, DNA)
+--
+loaded 9 total signatures from 3 locations.
+after selecting signatures compatible with search, 3 remain.
+
+Starting prefetch sweep across databases.
+Prefetch found 3 signatures with overlap >= 50.0 kbp.
+Doing gather to generate minimum metagenome cover.
+
+overlap     p_query p_match avg_abund
+---------   ------- ------- ---------
+5.2 Mbp        0.8%   99.0%      11.7    NC_011663.1 Shewanella baltica OS223...
+2.7 Mbp        0.9%  100.0%      24.5    CP001071.1 Akkermansia muciniphila A...
+5.2 Mbp        0.3%   51.0%       8.1    NC_009665.1 Shewanella baltica OS185...
+found less than 50.0 kbp in common. => exiting
+
+found 3 matches total;
+the recovered matches hit 2.0% of the abundance-weighted query.
+the recovered matches hit 2.5% of the query k-mers (unweighted).
+```
+
+### sourmash gather with the same query, *ignoring* abundances
+
+```
+% sourmash gather -k 31 SRR606249.trim.sig.zip podar-ref/2.fa.sig podar-ref/47.fa.sig podar-ref/63.fa.sig --ignore-abundance
+
+== This is sourmash version 4.8.5.dev0. ==
+== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==
+
+selecting specified query k=31
+loaded query: SRR606249... (k=31, DNA)
+--
+loaded 9 total signatures from 3 locations.
+after selecting signatures compatible with search, 3 remain.
+
+Starting prefetch sweep across databases.
+Prefetch found 3 signatures with overlap >= 50.0 kbp.
+Doing gather to generate minimum metagenome cover.
+
+overlap     p_query p_match
+---------   ------- -------
+5.2 Mbp        1.2%   99.0%    NC_011663.1 Shewanella baltica OS223, complete...
+2.7 Mbp        0.6%  100.0%    CP001071.1 Akkermansia muciniphila ATCC BAA-83...
+5.2 Mbp        0.6%   51.0%    NC_009665.1 Shewanella baltica OS185, complete...
+found less than 50.0 kbp in common. => exiting
+
+found 3 matches total;
+the recovered matches hit 2.5% of the query k-mers (unweighted).
+```
+
+### Notes and comparisons
+
+There are a few interesting things to point out about the above output:
+
+* `p_match` is the same whether or not abundance information is used.
+  This is because it is the fraction of the matching genome detected in
+  the metagenome, which is inherently "flat". It is also reported
+  progressively: only the portions of the metagenome that have not
+  matched to any previous matches are used in `p_match`; read on for
+  details :).
+* `p_query` is different when abundance information is used. For
+  queries with abundance information, `p_query` provides a weighted
+  estimate that approximates the number of metagenome reads that would
+  map to this genome _after_ mapping reads to all previously reported
+  matches, i.e. all matches above this match.
+* When abundance information is not available or
+  not used, `p_query` is an estimate of what fraction of the remaining k-mers
+  in the metagenome match to this genome, after all previous matches
+  have been removed.
+* The `avg_abund` column only shows up when abundance information is
+  supplied. This is the k-mer coverage of the detected portion of the
+  match; it is a lower bound on the expected mapping-based coverage
+  for metagenome reads mapped to the detected portion of the match.
+* The percent of recovered matches for the abundance-weighted query
+  is the sum of the `p_query` column and estimates the total fraction
+  of metagenome reads that will map across all of the matching references.
+* The percent of recovered matches when _ignoring_ abundances is likewise
+  the sum of the (unweighted) `p_query` column and is not particularly
+  informative - it will always be low for real metagenomes, because sourmash
+  cannot match erroneous k-mers created by sequencing errors.
+* The `overlap` column is the estimated size of the overlap between the
+  (unweighted) original query metagenome and the match. It does not take
+  into account previous matches.
+
+Last but not least, something interesting is going on here with strains.
+While it is not highlighted in the text output of gather, there is
+substantial overlap between the two *Shewanella baltica* genomes. And,
+in fact, both of them are entirely (well, 99%) present in the metagenome
+if measured individually with `sourmash search --containment`.
+
+Consider a few more details:
+
+* `p_match` for the first *Shewanella* match, `NC_011663.1`, is 99%!
+* `p_match` for the second *Shewanella* match, `NC_009665.1`, is only 50%!
+* and, confusingly, the `overlap` for both matches is 5.2 Mbp!
+
+What's up?!
+
+What's happening here is that `sourmash gather` is subtracting the match
+to the first *Shewanella* genome from the metagenome before moving on to
+the next result, and `p_match` reports only the amount of the match
+detected in the _remaining_ metagenome after that subtraction.
+However, `overlap` is reported as the amount of overlap with the
+_original_ metagenome, which is essentially the entire genome in all
+three cases.
+
+The main things to keep in mind for gather are this:
+
+* `p_query` and `p_match` do not double-count k-mers or matches; in particular, you can sum across `p_query` for a metagenome without
+  counting anything more than once.
+* `overlap` _does_ count matches redundantly.
+* the percent of recovered matches is a useful summary of the whole
+  metagenome!
+
+We know it's confusing but it's the best output we've been able to
+figure out across all of the different use cases for gather.  Perhaps
+in the future we'll find a better way to represent all of these
+numbers in a more clear, concise, and interpretable way; in the
+meantime, we welcome your questions and comments!
