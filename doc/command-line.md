@@ -2059,6 +2059,13 @@ All of these save formats can be loaded by sourmash commands.
 **We strongly suggest using .zip files to store signatures: they are fast,
 small, and fully supported by all the sourmash commands.**
 
+Note that when outputting large collections of signatures, some save
+formats require holding all the sketches in memory until they can be
+written out, and others can save progressively. This can affect memory
+usage! Currently `.sig` and `.sig.gz` formats are held in memory,
+while `.zip`, directory outputs, and `.sqldb` formats write progressively
+to disk.
+
 For more detailed information on database formats and performance
 tradeoffs, please see [the advanced usage information for
 databases!](databases-advanced.md)
