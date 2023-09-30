@@ -217,7 +217,7 @@ matching genome.
 ## Can I use sourmash to determine the best reference genome for mapping my reads?
 
 Yes! (And see the FAQ above,
-[How do k-mer analyses compare with read mapping?](#how-do-k-mer-based-analyses-compare-with-read-mapping).)
+[How do k-mer analyses compare with read mapping?](#how-do-k-mer-based-analyses-compare-with-read-mapping))
 
 If you're interested in picking a single best reference genome (from a
 large database) for read mapping, you can do the following:

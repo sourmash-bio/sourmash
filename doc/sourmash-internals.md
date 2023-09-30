@@ -647,24 +647,24 @@ n+1 problem
 
 Since `sourmash gather` will pick only one "best match" if there
 are several (and will ignore the others), the order of searching
-can matter for multiple collections. How does this work?
+can matter for large collections. How does this work?
 
 In brief, sourmash doesn't guarantee a particular load order for
 sketches in a single collection, but it _does_ guarantee that
 collections are loaded and searched in their entirety in the order
 that you provide them.  So, for example, if you have a large zipfile
-database of sketches that contain some duplicates, you can't pick
-which of the duplicates will be chosen as a match; but you _can_
-provide your own collection of prioritized matches as a separate
-database.  A practical application of this might be to provide the
-GTDB "representatives" database first on the command line, with the
-full GTDB database second, in order to prioritize choosing
-representative genomes as matches over the rest.
+database of sketches that contains duplicates, you can't predict which
+of the duplicates will be chosen as a match; but you _can_ build your
+own collection of prioritized matches as a separate database, and put
+it first on the command line.  A practical application of this might
+be to list the GTDB "representatives" database first on the command
+line, with the full GTDB database second, in order to prioritize
+choosing representative genomes as matches over the rest.
 
-This also plays a role in the order of reporting for `prefetch` -
-`prefetch` will report matching sketches in the order it encounters
-them, which will match the order in which collections are given
-to `sourmash prefetch` on the command line.
+This also plays a role in the order of reporting for `prefetch`
+output - `prefetch` will report matching sketches in the order it
+encounters them, which will match the order in which collections are
+given to `sourmash prefetch` on the command line.
 
 ## Formats natively understood by sourmash
 
