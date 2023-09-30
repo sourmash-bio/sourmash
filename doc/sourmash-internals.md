@@ -67,7 +67,8 @@ hashed.
 
 Note that if hashes are produced some other way (with a different hash
 function) or from some source other than DNA, sourmash can still work
-with them; only `sourmash sketch` does input checking.
+with them; only `sourmash sketch` actually cares about DNA sequences,
+everything else works with hashes.
 
 ### Compatibility checking
 
@@ -89,7 +90,7 @@ compatible ksizes, molecule types, and sketch types.
 
 Per our discussion in [Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2), FracMinHash sketches can always be compared
 by downsampling to the max of the two scaled values.  (This is not always
-true of sketches stored in indexed collections, e.g. SBTs; see [sourmash#1799](https://github.com/sourmash-bio/sourmash/issues/1799).)
+indexed collections of sketches, e.g. SBTs; see [sourmash#1799](https://github.com/sourmash-bio/sourmash/issues/1799).)
 
 In practice, sourmash does all necessary downsampling dynamically, but
 returns the original sketches. This means that (for example) you can
@@ -111,7 +112,7 @@ sig downsample`, however.
 
 ### Conversion between Scaled (FracMinHash) and Num (MinHash) signatures with `downsample`
 
-As discussed in the previous sections, it is possible to adjust the `scaled` and `num` values to compare two FracMinHash signatures or two Num MinHash signatures. However, it is also possible to covert between the `scaled` and `num` signatures with the `sourmash sig downsample` command. For more details, review [command line](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-signature-downsample-decrease-the-size-of-a-signature) document.
+As discussed in the previous sections, it is possible to adjust the `scaled` and `num` values to compare two FracMinHash signatures or two Num MinHash signatures. However, it is also possible to covert between the `scaled` and `num` signatures with the `sourmash sig downsample` command. For more details, review the [command line docs for `sig downsample`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-signature-downsample-decrease-the-size-of-a-signature).
 
 ## K-mer sizes
 
@@ -145,6 +146,11 @@ sketch protein -p dayhoff`, and hydrophobic-polar sketches can be
 built with `hp` in the param string, e.g. `sourmash sketch protein -p hp`.
 
 ## Manifests
+
+Manifests are catalogs of sketches: they include most of the information
+about a sketch, except for the actual hashes. The idea of manifests is
+that you can use them to identify *which* sketches you are interested
+in before actually working with them (loading them, for example).
 
 sourmash makes extensive use of signature manifests to support rapid
 selection and lazy loading of signatures based on signature metadata
@@ -457,9 +463,9 @@ experiment with different threshold parameters for `gather` - first,
 do a very sensitive/low-threshold search with `prefetch` and save the
 results to a CSV file with `-o`,
 
-Repeated gathers and searches.
+Repeated gathers and searches. CTB
 
-Using prefetch explicitly.
+Using prefetch explicitly. CTB
 
 ### Using a higher scaled value
 
@@ -482,6 +488,15 @@ multigather` command supports many queries against many databases.
 
 (We don't particularly suggest using `multigather`; we would prefer
 to make search databases faster. But it's there! :)
+
+### Much faster search and gather with branchwater
+
+We also have a reasonably stable plugin,
+[pyo3_branchwater](https://github.com/sourmash-bio/pyo3_branchwater),
+that implements multithreaded operations using Rust.  It is 100-1000
+times faster than sourmash, and 5-50 times lower memory. In exchange,
+it's not quite as flexible as the full sourmash package. But if you're
+running into speed or memory problems, you should give it a try!
 
 ## Taxonomy and assigning lineages
 
