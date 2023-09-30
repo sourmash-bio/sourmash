@@ -213,3 +213,21 @@ focused on *systematic decomposition of metagenomes against reference
 databases*, so it tackles the question of analyzing an entire
 metagenome against all available references, not just a single
 matching genome.
+
+## Can I use sourmash to determine the best reference genome for mapping my reads?
+
+Yes! (And see the FAQ above,
+[How do k-mer analyses compare with read mapping?](#how-do-k-mer-based-analyses-compare-with-read-mapping)
+
+If you're interested in picking a single best reference genome (from a
+large database) for read mapping, you can do the following:
+
+* sketch all your reference genomes with `sourmash sketch dna`, and/or download one of our [prepared databases](databases.md).  You can use default parameters for `sourmash sketch`.
+* sketch your read collection with `sourmash sketch dna`.
+* run `sourmash prefetch reads.sig <reference genome sketch collection(s)> -o matches.csv`
+* sort `matches.csv` on the `f_match_query` column and pick the highest value - this is the k-mer detection - and pick the match name from the `match_name` column;
+* use that reference genome as your mapping target.
+
+If you want to map a metagenome to _multiple_ references, consider
+using `sourmash gather` and/or
+[the genome-grist workflow](https://dib-lab.github.io/genome-grist/).
