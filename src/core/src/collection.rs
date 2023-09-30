@@ -151,25 +151,8 @@ impl Collection {
         // TODO:
         // - figure out if there is a common path between sigs for FSStorage?
 
-        #[cfg(feature = "parallel")]
-        let iter = paths.par_iter();
-
-        #[cfg(not(feature = "parallel"))]
-        let iter = paths.iter();
-
-        let records: Vec<Record> = iter
-            .flat_map(|p| {
-                let recs: Vec<Record> = Signature::from_path(p)
-                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
-                    .into_iter()
-                    .flat_map(|v| Record::from_sig(&v, p.as_str()))
-                    .collect();
-                recs
-            })
-            .collect();
-
         Ok(Self {
-            manifest: records.into(),
+            manifest: paths.into(),
             storage: InnerStorage::new(
                 FSStorage::builder()
                     .fullpath("".into())

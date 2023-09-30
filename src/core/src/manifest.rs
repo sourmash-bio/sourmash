@@ -4,6 +4,8 @@ use std::ops::Deref;
 
 use camino::Utf8PathBuf as PathBuf;
 use getset::{CopyGetters, Getters, Setters};
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 use serde::de;
 use serde::{Deserialize, Serialize};
 
@@ -19,26 +21,27 @@ pub struct Record {
     internal_location: PathBuf,
 
     #[getset(get = "pub", set = "pub")]
+    md5: String,
+
+    md5short: String,
+
+    #[getset(get = "pub", set = "pub")]
     ksize: u32,
+
+    moltype: String,
+
+    num: u32,
+    scaled: u64,
+    n_hashes: usize,
 
     #[getset(get = "pub", set = "pub")]
     #[serde(deserialize_with = "to_bool")]
     with_abundance: bool,
 
     #[getset(get = "pub", set = "pub")]
-    md5: String,
-
-    #[getset(get = "pub", set = "pub")]
     name: String,
 
-    moltype: String,
-    /*
-    md5short: String,
-    num: String,
-    scaled: String,
-    n_hashes: String,
     filename: String,
-    */
 }
 
 fn to_bool<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
@@ -67,21 +70,29 @@ impl Record {
     pub fn from_sig(sig: &Signature, path: &str) -> Vec<Self> {
         sig.iter()
             .map(|sketch| {
-                let (ksize, md5, with_abundance, moltype) = match sketch {
+                let (ksize, md5, with_abundance, moltype, n_hashes, num, scaled) = match sketch {
                     Sketch::MinHash(mh) => (
                         mh.ksize() as u32,
                         mh.md5sum(),
                         mh.track_abundance(),
                         mh.hash_function(),
+                        mh.size(),
+                        mh.num(),
+                        mh.scaled(),
                     ),
                     Sketch::LargeMinHash(mh) => (
                         mh.ksize() as u32,
                         mh.md5sum(),
                         mh.track_abundance(),
                         mh.hash_function(),
+                        mh.size(),
+                        mh.num(),
+                        mh.scaled(),
                     ),
                     _ => unimplemented!(),
                 };
+
+                let md5short = md5[0..8].into();
 
                 Self {
                     internal_location: path.into(),
@@ -89,7 +100,12 @@ impl Record {
                     name: sig.name(),
                     ksize,
                     md5,
+                    md5short,
                     with_abundance,
+                    filename: sig.filename(),
+                    n_hashes,
+                    num,
+                    scaled,
                 }
             })
             .collect()
@@ -232,20 +248,25 @@ impl From<Vec<Record>> for Manifest {
 }
 
 impl From<&[PathBuf]> for Manifest {
-    fn from(v: &[PathBuf]) -> Self {
-        Manifest {
-            records: v
-                .iter()
-                .map(|p| Record {
-                    internal_location: p.clone(),
-                    ksize: 0,              // FIXME
-                    with_abundance: false, // FIXME
-                    md5: "".into(),        // FIXME
-                    name: "".into(),       // FIXME
-                    moltype: "".into(),    // FIXME
-                })
-                .collect(),
-        }
+    fn from(paths: &[PathBuf]) -> Self {
+        #[cfg(feature = "parallel")]
+        let iter = paths.par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let iter = paths.iter();
+
+        let records: Vec<Record> = iter
+            .flat_map(|p| {
+                let recs: Vec<Record> = Signature::from_path(p)
+                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
+                    .into_iter()
+                    .flat_map(|v| Record::from_sig(&v, p.as_str()))
+                    .collect();
+                recs
+            })
+            .collect();
+
+        Manifest { records }
     }
 }
 
