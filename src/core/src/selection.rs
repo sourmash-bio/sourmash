@@ -5,7 +5,7 @@ use crate::encodings::HashFunctions;
 use crate::manifest::Record;
 use crate::Result;
 
-#[derive(Default, Debug, TypedBuilder)]
+#[derive(Default, Debug, TypedBuilder, Clone)]
 pub struct Selection {
     #[builder(default, setter(strip_option))]
     ksize: Option<u32>,
