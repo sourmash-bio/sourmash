@@ -114,6 +114,29 @@ sig downsample`, however.
 
 As discussed in the previous sections, it is possible to adjust the `scaled` and `num` values to compare two FracMinHash signatures or two Num MinHash signatures. However, it is also possible to covert between the `scaled` and `num` signatures with the `sourmash sig downsample` command. For more details, review the [command line docs for `sig downsample`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-signature-downsample-decrease-the-size-of-a-signature).
 
+### Operations you can do safely with FracMinHash sketches
+
+As described in the @gather paper, FracMinHash sketches support a wide
+range of operations that mirror actions taken on the underlying data
+set _without_ revisiting the underlying data. This allows users to
+build sketches once (requiring the original data) and then do all
+sorts of manipulations on the sketches, and know that the results of
+the sketch manipulations represent what would happen if they did the same
+thing on the original data.
+For example,
+
+* set unions, intersections, and subtractions all perform the same
+  when done on the sketches as when applied to the underling data.
+  So, for example, you can sketch two files separately and merge
+  the sketches (with `sig merge`), and get the same result as if you'd
+  concatenated the files first and then sketched them.
+* if you filter hashes on abundance with `sig filter`, you get the
+  same result as if you filtered the data set on k-mer abundance and
+  then sketched it.
+* downsampling: you can sketch the original data set at a high resolution
+  (e.g. scaled=100) and then downsample it later (to e.g. scaled=1000),
+  and get the same result as if you'd sketched the data set at scaled=1000.
+
 ## K-mer sizes
 
 There is no explicit restriction on k-mer sizes built into sourmash.
@@ -560,14 +583,18 @@ want to mix and match within superkingdoms, though!)
 As of sourmash v4, lineage spreadsheets should contain columns for
 superkingdom, phylum, class, order, family, genus, and species.  Some
 commands may also support a 'strain' column, although this is
-inconsistently handled within sourmash internally.
+inconsistently handled within sourmash internally at the moment.
 
 For spreadsheet organization, `lca index` expects the columns to be
 present in order from superkingdom on down, while the `tax`
 subcommands use CSV column headers instead.  We are planning to
 consolidate around the `tax` subcommand handling in the future (see [sourmash#2198](https://github.com/sourmash-bio/sourmash/issues/2198)).
 
-@@link to example spreadsheets, talk about how to extract.
+An example spreadsheet is
+[here, bacteria_refseq_lineage.csv](https://github.com/sourmash-bio/sourmash/blob/latest/tests/test-data/tax/bacteria_refseq_lineage.csv). (The
+`taxid` column is not used by most sourmash functions and is mostly
+ignored, but it is needed for the `kreport` and `bioboxes` report
+formats.)
 
 ### `LCA_SqliteDatabase` - a special case
 
@@ -629,6 +656,7 @@ the results will be the same.
 Note that lineage CSV spreadsheets, as consumed by `sourmash tax` commands
 and as output by `sourmash tax grep`, can be used as `ident` picklists.
 
+<!-- 
 ## ANI
 
 estimated from k-mers
@@ -639,9 +667,60 @@ ani variability, point at issue
 
 minimum size for ani calculation
 
-## Online and streaming
+-->
 
-n+1 problem
+## Online and streaming; and adding to collections of sketches.
+
+One of the big challenges with Big Data is looking at it all at once -
+loading all your data into memory, for example, will fail with really large
+data sets. The ability to look at subsets of data without looking at _all_
+of it is called "streaming" (much like when you watch a streaming
+movie online - you can start watching the movie without downloading the
+whole video, and you can also usually jump to a particular
+location in the video without downloading the intervening bits.)
+
+Another related challenge is analyzing data against a database that is
+constantly growing, either because you're adding to it or because it's
+being updated by others.  For example, in genomics, often you want to
+repeat the same analysis you did last time but with more reference
+genomes. With many software packages, this requires rebuilding your
+indexed database, which can be challenging for large genomes.  In
+computer science parlance, the ability to add new data at the end
+_without_ performing an expensive reindexing operation is referred
+to as "online".
+
+sourmash tackles these challenges in a few different ways, and does its
+best to support streaming and online behavior.
+
+First, all sourmash commands can take multiple databases and will
+return the same results with multiple databases as they would with a
+single database containing the same sketches, unless otherwise
+noted. This allows you to incrementally expand your sketch collections
+over time without building new databases. _Performance_ may vary
+(i.e. if you're using an SBT to do search, and you add an unindexed
+collection of sketches to the search, the search may take longer than
+if you'd add the new sketches to the SBT) but the _results_ will be
+the same. In this sense, many of the sourmash algorithms are online.
+
+Second, several sourmash algorithms use _streaming_ when searching
+databases - in particular, `prefetch` will load and unload sketches as
+it goes, as long as the underlying collection data structure supports
+it (`.sig.gz` and LCA JSON databases do _not_, but zip files, SBTs,
+and SQLite databases _do_).  This lets you do containment searches
+against really large collections without consuming large amounts of
+memory.  Another example is the `manysearch` command in the
+[pyo3_branchwater](https://github.com/sourmash-bio/pyo3_branchwater)
+plugin, which loads and searches a limited number of metagenomes from
+a large collection, rather than loading the entire collection into
+memory - which would be impossible.
+
+Last but not least, one of the interesting guarantees that FracMinHash
+sketches provide is that no hash is ever _removed_ when sketching.
+This supports various types of input streaming, which we haven't spent
+too much time exploring, but (for example) means that "watching"
+sequencing runs and/or downloads of sequencing data, and reporting
+interim results with certainty, is possible.  If you're interested
+in making use of this, please reach out!
 
 ### Gather on multiple collections, and order of search and reporting
 
