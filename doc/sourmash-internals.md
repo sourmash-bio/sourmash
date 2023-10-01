@@ -116,14 +116,15 @@ As discussed in the previous sections, it is possible to adjust the `scaled` and
 
 ### Operations you can do safely with FracMinHash sketches
 
-As described in the @gather paper, FracMinHash sketches support a wide
-range of operations that mirror actions taken on the underlying data
-set _without_ revisiting the underlying data. This allows users to
-build sketches once (requiring the original data) and then do all
-sorts of manipulations on the sketches, and know that the results of
-the sketch manipulations represent what would happen if they did the same
-thing on the original data.
-For example,
+As described in
+[Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2),
+FracMinHash sketches support a wide range of operations that mirror
+actions taken on the underlying data set _without_ revisiting the
+underlying data. This allows users to build sketches once (requiring
+the original data) and then do all sorts of manipulations on the
+sketches, and know that the results of the sketch manipulations
+represent what would happen if they did the same thing on the original
+data.  For example,
 
 * set unions, intersections, and subtractions all perform the same
   when done on the sketches as when applied to the underling data.
@@ -540,9 +541,8 @@ name to do so - this is the name as set by the `--name` parameter to
 
 sourmash prefers identifiers to be the first space-separated token in
 the signature name.  This token can contain any alphanumeric letters
-other than space (@@ctb check me), and should contain at most one
-period.  The version of the identifier will be the component after
-the period.
+other than space, and should contain at most one period.  The version
+of the identifier will be the component after the period.
 
 So, for example, for a signature name of
 
