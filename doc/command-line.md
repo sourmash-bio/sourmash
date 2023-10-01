@@ -387,7 +387,7 @@ assembled into contigs, the unweighted number would approximate the
 number of bases from the contigs that would match perfectly to at
 least one genome in the reference database.  More practically,
 the abundance-weighted number is less sensitive to sequencing errors.
-See @CTB classifying signatures or FAQ for more information here!
+See [classifying signatures](classifying-signatures.md#abundance-weighting) or [the FAQ](faq.md) for more information!
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to

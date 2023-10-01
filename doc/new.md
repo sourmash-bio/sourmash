@@ -15,14 +15,14 @@ You might try sourmash if you want to -
 * taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
 * search thousands of metagenomes with a query genome or sequence
 
-Underneath, sourmash uses [FracMinHash sketches](@@) for fast and
+Underneath, sourmash uses [FracMinHash sketches](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) for fast and
 lightweight sequence comparison; FracMinHash builds on
-[MinHash sketching](@@wikipedia) to support both Jaccard similarity
+[MinHash sketching](https://en.wikipedia.org/wiki/MinHash) to support both Jaccard similarity
 _and_ containment analyses with k-mers.  This significantly expands
 the range of operations that can be done quickly and in low
 memory. sourmash also implements a number of new and powerful analysis
-techniques, including [minimum metagenome covers](@@) and [alignment-free ANI
-estimation](@@).
+techniques, including minimum metagenome covers and alignment-free ANI
+estimation.
 
 sourmash is inspired by [mash](https://mash.readthedocs.io), and
 supports most mash analyses. sourmash also implements an expanded set

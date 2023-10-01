@@ -51,12 +51,11 @@ The other drawback is that FracMinHash sketches _don't work well_ for
 very small sequences. Our default parameter choice for DNA
 (scaled=1000) works well for finding 10 kb or larger matches between
 sequences - some simple Poisson matching math suggests that about
-99.98% of 10kb overlaps will be found with scaled=1000. @CTB verify I
-think this is 5kb.
+99.98% of 5kb overlaps will be found with scaled=1000.
 
 ## How can I better understand FracMinHash and sourmash intuitively?
 
-@@ tutorial on k-mers
+Please see [the k-mers and minhash tutorial](kmers-and-minhash.ipynb).
 
 ## What papers should I read to better understand the FracMinHash approach used by sourmash?
 
