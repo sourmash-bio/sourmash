@@ -46,7 +46,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [Analyzing the genomic and taxonomic composition of an environmental genome using GTDB and sample-specific MAGs with sourmash](tutorial-lemonade.md)
 
-* [Some sourmash command line examples!](sourmash-examples.md)
+* [Some sourmash command line examples!](sourmash-examples.ipynb)
 
 ### How-To Guides
 
@@ -54,17 +54,17 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [Classifying genome sketches](classifying-signatures.md)
 
-* [Working with private collections of genome sketches.](sourmash-collections.md)
+* [Working with private collections of genome sketches.](sourmash-collections.ipynb)
 
 * [Using the `LCA_Database` API.](using-LCA-database-API.ipynb)
 
-* [Building plots from `sourmash compare` output](plotting-compare.md).
+* [Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
 * [A short guide to using sourmash output with R](other-languages.md).
 
 ### How sourmash works under the hood
 
-* [An introduction to k-mers for genome comparison and analysis](kmers-and-minhash.md)
+* [An introduction to k-mers for genome comparison and analysis](kmers-and-minhash.ipynb)
 * [Support, versioning, and migration between versions](support.md)
 
 ### Reference material
