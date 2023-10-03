@@ -25,7 +25,7 @@ maturin = []
 
 [dependencies]
 az = "1.0.0"
-bytecount = "0.6.0"
+bytecount = "0.6.4"
 byteorder = "1.4.3"
 cfg-if = "1.0"
 counter = "0.5.7"
