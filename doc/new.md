@@ -1,5 +1,9 @@
 # Welcome to sourmash!
 
+```{contents} Contents
+:depth: 3
+```
+
 sourmash is a command-line tool and Python/Rust library for
 **metagenome analysis** and **genome comparison** with k-mers.  It
 supports the compositional analysis of metagenomes, rapid search of
@@ -14,6 +18,12 @@ You might try sourmash if you want to -
 * cluster many genomes by similarity
 * taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
 * search thousands of metagenomes with a query genome or sequence
+
+Our **vision**: sourmash strives to support biologists in analyzing
+modern sequencing data at high resolution and with full context,
+including all public reference genomes and metagenomes.
+
+## How does sourmash work?
 
 Underneath, sourmash uses [FracMinHash sketches](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) for fast and
 lightweight sequence comparison; FracMinHash builds on
@@ -32,6 +42,28 @@ sourmash development was initiated with a grant from the Moore
 Foundation under the Data Driven Discovery program, and has been
 supported by further funding from the NIH and NSF. Please see
 [funding acknowledgements](funding.md) for details!
+
+## Mission statement
+
+The project mission is to provide practical tools and approaches for
+analyzing extremely large sequencing data sets, with an emphasis on
+high resolution results. We design around the following principles:
+
+* genomic and metagenomic analyses should be able to make use of all
+  available reference genomes.
+* metagenomic analyses should support assembly independent approaches,
+  to avoid biases stemming from low coverage or high strain
+  variability.
+* private and public databases should be equally well supported.
+* a variety of data structures and algorithms are necessary to support
+  a wide set of use cases, including efficient command-line analysis,
+  real-time queries, and massive-scale batch analyses.
+* our tools should be well behaved members of the bioinformatics
+  analysis tool ecosystem, and use common installation approaches,
+  standard formats, and semantic versioning.
+* our tools should be robustly tested, well documented, and supported.
+* we discuss scientific and computational tradeoffs and make specific
+  recommendations where possible, admitting uncertainty as needed.
 
 ## Using sourmash
 
@@ -79,3 +111,4 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 ## Developing and extending sourmash
 
 * [Releasing a new version of sourmash](release.md)
+
