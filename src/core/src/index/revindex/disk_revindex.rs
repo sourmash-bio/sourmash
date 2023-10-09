@@ -12,7 +12,7 @@ use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
     self as module, prepare_query, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors,
-    RevIndexOps, DB, HASHES, MANIFEST, METADATA, STORAGE_SPEC,
+    RevIndexOps, DB, HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
 };
 use crate::index::{GatherResult, SigCounter};
 use crate::manifest::Manifest;
@@ -22,6 +22,8 @@ use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Result;
+
+const DB_VERSION: u8 = 1;
 
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
@@ -126,6 +128,9 @@ impl RevIndex {
     fn load_collection_from_rocksdb(db: Arc<DB>) -> Result<CollectionSet> {
         let cf_metadata = db.cf_handle(METADATA).unwrap();
 
+        let rdr = db.get_cf(&cf_metadata, VERSION)?.unwrap();
+        assert_eq!(rdr[0], DB_VERSION);
+
         let rdr = db.get_cf(&cf_metadata, MANIFEST)?.unwrap();
         let manifest = Manifest::from_reader(&rdr[..])?;
 
@@ -143,6 +148,11 @@ impl RevIndex {
 
     fn save_collection(&self) -> Result<()> {
         let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+
+        // save DB version
+        // TODO: probably should go together with a more general
+        //       saving procedure used in create/update
+        self.db.put_cf(&cf_metadata, VERSION, &[DB_VERSION])?;
 
         // write manifest
         let mut wtr = vec![];

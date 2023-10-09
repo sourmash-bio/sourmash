@@ -30,11 +30,15 @@ type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>
 #[derive(Serialize, Deserialize)]
 pub struct HashToColor(HashToColorT);
 
+// Column families
 const HASHES: &str = "hashes";
 const COLORS: &str = "colors";
 const METADATA: &str = "metadata";
+
+// DB metadata saved in the METADATA column family
 const MANIFEST: &str = "manifest";
 const STORAGE_SPEC: &str = "storage_spec";
+const VERSION: &str = "version";
 
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
@@ -205,11 +209,12 @@ impl RevIndex {
         block_opts.set_block_size(16 * 1024);
         block_opts.set_cache_index_and_filter_blocks(true);
         block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
-        block_opts.set_format_version(5);
+        block_opts.set_format_version(6);
         opts.set_block_based_table_factory(&block_opts);
         // End of updated defaults
 
-        opts.increase_parallelism(8);
+        opts.increase_parallelism(rayon::current_num_threads() as i32);
+        //opts.max_background_jobs = 6;
         // opts.optimize_level_style_compaction();
         // opts.optimize_universal_style_compaction();
 
