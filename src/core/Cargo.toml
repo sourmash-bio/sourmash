@@ -27,8 +27,8 @@ default = []
 
 [dependencies]
 az = "1.0.0"
-bytecount = "0.6.0"
-byteorder = "1.4.3"
+bytecount = "0.6.4"
+byteorder = "1.5.0"
 camino = { version = "1.1.6", features = ["serde1"] }
 cfg-if = "1.0"
 counter = "0.5.7"
@@ -41,7 +41,7 @@ getset = "0.1.1"
 histogram = "0.6.9"
 log = "0.4.20"
 md5 = "0.7.0"
-memmap2 = "0.8.0"
+memmap2 = "0.9.0"
 murmurhash3 = "0.0.5"
 niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
@@ -63,7 +63,7 @@ vec-collections = "0.4.3"
 [dev-dependencies]
 criterion = "0.5.1"
 needletail = { version = "0.5.1", default-features = false }
-proptest = { version = "1.2.0", default-features = false, features = ["std"]}
+proptest = { version = "1.3.1", default-features = false, features = ["std"]}
 rand = "0.8.2"
 tempfile = "3.7.1"
 
