@@ -94,8 +94,8 @@ compositional estimates for metagenomes. One easy approach is a
 The short answer is: for DNA, use k=31.
 
 Slightly longer answer: when we look at the k-mer distribution
-across all of the bacterial genomes in GTDB, we find that 99% or
-more of 31-mers are _genome_, _species_ or _genus_ specific.
+across all of the bacterial genomes in GTDB, we find that 99% (or
+more) of 31-mers are _genome_, _species_, or _genus_ specific.
 
 If you go lower (say, k=21), then you get a few percent of k-mers
 that match above the genus level - family or above.

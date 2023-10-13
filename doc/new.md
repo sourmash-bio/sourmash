@@ -5,10 +5,10 @@
 ```
 
 sourmash is a command-line tool and Python/Rust library for
-**metagenome analysis** and **genome comparison** with k-mers.  It
+**metagenome analysis** and **genome comparison** using k-mers.  It
 supports the compositional analysis of metagenomes, rapid search of
-large sequence databases, and flexible taxonomic analysis with both
-NCBI and GTDB taxonomies. sourmash works well with sequences 30kb or
+large sequence databases, and flexible taxonomic profiling with both
+NCBI and GTDB taxonomies ([See our prepared databases for more information](databases.md)). sourmash works well with sequences 30kb or
 larger, including bacterial and viral genomes.
 
 You might try sourmash if you want to -
@@ -16,7 +16,7 @@ You might try sourmash if you want to -
 * identify which reference genomes to map your metagenomic reads to
 * search all Genbank microbial genomes with a sequence query
 * cluster many genomes by similarity
-* taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
+* taxonomically classify genomes or metagenomes against NCBI and/or GTDB
 * search thousands of metagenomes with a query genome or sequence
 
 Our **vision**: sourmash strives to support biologists in analyzing
@@ -30,8 +30,8 @@ lightweight sequence comparison; FracMinHash builds on
 [MinHash sketching](https://en.wikipedia.org/wiki/MinHash) to support both Jaccard similarity
 _and_ containment analyses with k-mers.  This significantly expands
 the range of operations that can be done quickly and in low
-memory. sourmash also implements a number of new and powerful analysis
-techniques, including minimum metagenome covers and alignment-free ANI
+memory. sourmash also implements a number of new and powerful techniques
+for analysis, including minimum metagenome covers and alignment-free ANI
 estimation.
 
 sourmash is inspired by [mash](https://mash.readthedocs.io), and
@@ -45,9 +45,9 @@ supported by further funding from the NIH and NSF. Please see
 
 ## Mission statement
 
-The project mission is to provide practical tools and approaches for
+This project's mission is to provide practical tools and approaches for
 analyzing extremely large sequencing data sets, with an emphasis on
-high resolution results. We design around the following principles:
+high resolution results. Our designs follow these guiding principles:
 
 * genomic and metagenomic analyses should be able to make use of all
   available reference genomes.
@@ -86,9 +86,9 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [Classifying genome sketches](classifying-signatures.md)
 
-* [Working with private collections of genome sketches.](sourmash-collections.ipynb)
+* [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
-* [Using the `LCA_Database` API.](using-LCA-database-API.ipynb)
+* [Using the `LCA_Database` API](using-LCA-database-API.ipynb)
 
 * [Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
