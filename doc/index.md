@@ -122,10 +122,13 @@ doesn't show up redundantly at the bottom of the index page.
 
 ```{toctree}
 ---
-maxdepth: 3
+maxdepth: 1
 ---
 
 sidebar
+command-line
+api-example
+databases
 ```
 
 # Indices and tables
