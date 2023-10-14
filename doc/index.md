@@ -65,6 +65,8 @@ supported by further funding from the NIH and NSF. Please see
 
 ## Using sourmash
 
+<!-- Please remember to add things to sidebar.md ;) -->
+
 ### Tutorials and examples
 
 These tutorials are command line tutorials that should work on Mac OS
@@ -123,7 +125,7 @@ doesn't show up redundantly at the bottom of the index page.
 maxdepth: 3
 ---
 
-index.md
+sidebar
 ```
 
 # Indices and tables
