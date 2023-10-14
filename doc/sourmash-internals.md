@@ -1,4 +1,4 @@
-# A guide to the internals of sourmash
+# A guide to the internal design and structure of sourmash
 
 ```{contents} Contents
 :depth: 3
