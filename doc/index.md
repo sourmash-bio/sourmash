@@ -123,6 +123,7 @@ doesn't show up redundantly at the bottom of the index page.
 ```{toctree}
 ---
 maxdepth: 1
+hidden: true
 ---
 
 sidebar
@@ -130,9 +131,3 @@ command-line
 api-example
 databases
 ```
-
-# Indices and tables
-
-* {ref}`genindex`
-* {ref}`modindex`
-* {ref}`search`
