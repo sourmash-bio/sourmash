@@ -1,9 +1,5 @@
 # Welcome to sourmash!
 
-```{contents} Contents
-:depth: 3
-```
-
 sourmash is a command-line tool and Python/Rust library for
 **metagenome analysis** and **genome comparison** using k-mers.  It
 supports the compositional analysis of metagenomes, rapid search of
