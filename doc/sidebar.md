@@ -32,7 +32,6 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## Reference material
 
-* [Full table of contents for all docs](toc.md)
 * [UNIX command-line documentation](command-line.md)
 * [Genbank and GTDB databases and taxonomy files](databases.md)
 * [Python examples using the API](api-example.md)
@@ -44,3 +43,4 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [Releasing a new version of sourmash](release.md)
 
+## [Full table of contents for all docs](toc.md)
