@@ -8,8 +8,10 @@ sourmash is a command-line tool and Python/Rust library for
 **metagenome analysis** and **genome comparison** using k-mers.  It
 supports the compositional analysis of metagenomes, rapid search of
 large sequence databases, and flexible taxonomic profiling with both
-NCBI and GTDB taxonomies ([See our prepared databases for more information](databases.md)). sourmash works well with sequences 30kb or
-larger, including bacterial and viral genomes.
+NCBI and GTDB taxonomies
+([see our prepared databases for more information](databases.md)). sourmash
+works well with sequences 30kb or larger, including bacterial and
+viral genomes.
 
 You might try sourmash if you want to -
 
@@ -22,26 +24,6 @@ You might try sourmash if you want to -
 Our **vision**: sourmash strives to support biologists in analyzing
 modern sequencing data at high resolution and with full context,
 including all public reference genomes and metagenomes.
-
-## How does sourmash work?
-
-Underneath, sourmash uses [FracMinHash sketches](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) for fast and
-lightweight sequence comparison; FracMinHash builds on
-[MinHash sketching](https://en.wikipedia.org/wiki/MinHash) to support both Jaccard similarity
-_and_ containment analyses with k-mers.  This significantly expands
-the range of operations that can be done quickly and in low
-memory. sourmash also implements a number of new and powerful techniques
-for analysis, including minimum metagenome covers and alignment-free ANI
-estimation.
-
-sourmash is inspired by [mash](https://mash.readthedocs.io), and
-supports most mash analyses. sourmash also implements an expanded set
-of functionality for metagenome and taxonomic analysis.
-
-sourmash development was initiated with a grant from the Moore
-Foundation under the Data Driven Discovery program, and has been
-supported by further funding from the NIH and NSF. Please see
-[funding acknowledgements](funding.md) for details!
 
 ## Mission statement
 
@@ -64,6 +46,26 @@ high resolution results. Our designs follow these guiding principles:
 * our tools should be robustly tested, well documented, and supported.
 * we discuss scientific and computational tradeoffs and make specific
   recommendations where possible, admitting uncertainty as needed.
+
+## How does sourmash work?
+
+Underneath, sourmash uses [FracMinHash sketches](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) for fast and
+lightweight sequence comparison; FracMinHash builds on
+[MinHash sketching](https://en.wikipedia.org/wiki/MinHash) to support both Jaccard similarity
+_and_ containment analyses with k-mers.  This significantly expands
+the range of operations that can be done quickly and in low
+memory. sourmash also implements a number of new and powerful techniques
+for analysis, including minimum metagenome covers and alignment-free ANI
+estimation.
+
+sourmash is inspired by [mash](https://mash.readthedocs.io), and
+supports most mash analyses. sourmash also implements an expanded set
+of functionality for metagenome and taxonomic analysis.
+
+sourmash development was initiated with a grant from the Moore
+Foundation under the Data Driven Discovery program, and has been
+supported by further funding from the NIH and NSF. Please see
+[funding acknowledgements](funding.md) for details!
 
 ## Using sourmash
 
@@ -101,6 +103,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ### Reference material
 
+* [Full table of contents for all docs](toc.md)
 * [UNIX command-line documentation](command-line.md)
 * [Genbank and GTDB databases and taxonomy files](databases.md)
 * [Python examples using the API](api-example.md)
@@ -112,3 +115,24 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [Releasing a new version of sourmash](release.md)
 
+<!--
+
+This toctree sets the sidebar menu, but is otherwise hidden so that it
+doesn't show up redundantly at the bottom of the index page.
+
+-->
+
+```{toctree}
+---
+maxdepth: 3
+hidden: true
+---
+
+index.md
+```
+
+# Indices and tables
+
+* {ref}`genindex`
+* {ref}`modindex`
+* {ref}`search`

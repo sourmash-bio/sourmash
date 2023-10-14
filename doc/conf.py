@@ -114,6 +114,9 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# CTB: suppress warnings about circularity in ToC.
+# see https://github.com/sphinx-doc/sphinx/issues/7410.
+suppress_warnings = ['toc.circular']
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -127,7 +130,8 @@ html_theme = 'alabaster'
 html_theme_options = {
     'logo': 'logo.png',
     'logo_name': True,
-    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets'
+    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets',
+    'sidebar_collapse': False,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

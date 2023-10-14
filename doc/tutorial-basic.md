@@ -308,4 +308,4 @@ and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
 [2]:https://pubmed.ncbi.nlm.nih.gov/23387867/
 [3]:index.md
 [4]:tutorials-lca.md
-[5]:sourmash-collections.md
+[5]:sourmash-collections.ipynb
