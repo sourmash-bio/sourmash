@@ -121,7 +121,6 @@ doesn't show up redundantly at the bottom of the index page.
 ```{toctree}
 ---
 maxdepth: 3
-hidden: true
 ---
 
 index.md
