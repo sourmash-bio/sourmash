@@ -13,6 +13,7 @@ databases-advanced.md
 databases.md
 dev_plugins.md
 developer.md
+developer-quickstart.md
 faq.md
 funding.md
 index.md

@@ -4,6 +4,16 @@ The instructions below are for people interested in developing sourmash.
 They should get you up and running with a sourmash development environment
 in about 15 minutes.
 
+## Install conda (or mamba)
+
+(You don't need to do this if you already have conda and mamba installed!)
+
+Follow the
+[installation instructions](https://github.com/conda-forge/miniforge#install)
+for installing `mambaforge` (a conda distribution that uses
+[`mamba`](https://github.com/TheSnakePit/mamba) and the
+[`conda-forge`](https://conda-forge.org/) channel by default).
+
 ## Create a conda environment with basic requirements:
 
 First, install all of the necessary base packages:
