@@ -281,7 +281,7 @@ def plot(args):
             sys.exit(-1)
     elif args.indices:
         # construct integer labels
-        labeltext = [str(i) for i in range(D.shape[0])]
+        labeltext = [str(i + 1) for i in range(D.shape[0])]
     else:
         assert not display_labels
         labeltext = [""] * D.shape[0]

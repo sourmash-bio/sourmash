@@ -979,10 +979,10 @@ def test_plot_6_indices(runtmp):
     print(runtmp.last_result.out)
 
     expected = """\
-0\t0
-1\t1
-2\t2
-3\t3"""
+0\t1
+1\t2
+2\t3
+3\t4"""
     assert expected in runtmp.last_result.out
 
 
@@ -1000,10 +1000,10 @@ def test_plot_6_no_labels(runtmp):
     print(runtmp.last_result.out)
 
     expected = """\
-0\t0
-1\t1
-2\t2
-3\t3"""
+0\t1
+1\t2
+2\t3
+3\t4"""
     assert expected in runtmp.last_result.out
 
 
@@ -1021,10 +1021,10 @@ def test_plot_6_no_indices(runtmp):
     print(runtmp.last_result.out)
 
     expected = """\
-0\t0
-1\t1
-2\t2
-3\t3"""
+0\t1
+1\t2
+2\t3
+3\t4"""
     assert expected in runtmp.last_result.out
 
 
