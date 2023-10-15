@@ -111,6 +111,8 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## Developing and extending sourmash
 
+* [Developer quickstart with conda](developer-quickstart.md)
+* [Developer information](developer.md)
 * [Releasing a new version of sourmash](release.md)
 
 <!--
@@ -130,4 +132,5 @@ sidebar
 command-line
 api-example
 databases
+developer-quickstart
 ```
