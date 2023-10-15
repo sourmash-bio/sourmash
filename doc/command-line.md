@@ -361,11 +361,40 @@ overlap     p_query p_match
 0.9 Mbp       7.4%   11.8%      BA000019.2 Nostoc sp. PCC 7120 DNA, c...
 0.7 Mbp       5.9%   23.0%      FOVK01000036.1 Proteiniclasticum rumi...
 0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris sub...
+...
+found less than 50.0 kbp in common. => exiting
+
+found 64 matches total;
+the recovered matches hit 94.0% of the abundance-weighted query.
+the recovered matches hit 45.6% of the query k-mers (unweighted).
 ```
+
+For each match,
+* 'overlap', the first column, is the estimated number of k-mers shared between the match and the query.
+* 'p_query' is the _percentage_ of the query that overlaps with the match; it is the amount of the metagenome "explained" by this match.
+* 'p_match' is the percentage of the _match_ that overlaps with the query; it is the "detection" of the match in the metagenome.
+
+Quite a bit more information per match row is available in the CSV
+output saved with `-o`; for details, see
+[Classifying signatures: how sourmash gather works](classifying-signatures.md#appendix-a-how-sourmash-gather-works).
+
+The "recovered matches" lines detail how much of the query is
+explained by the entire collection of matches. You will get two numbers if
+your metagenome sketch has been calculated with `-p abund`, and only
+one if it does not have abundances. The abundance-weighted
+number should approximate the fraction of metagenome reads that will
+map to at least one reference genome, while the unweighted number
+describes how much of the metagenome itself matches to genomes.
+Here's another way to put it: if the metagenome could be perfectly
+assembled into contigs, the unweighted number would approximate the
+number of bases from the contigs that would match perfectly to at
+least one genome in the reference database.  More practically,
+the abundance-weighted number is less sensitive to sequencing errors.
+See [classifying signatures](classifying-signatures.md#abundance-weighting) or [the FAQ](faq.md) for more information!
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
-50kb. see the Appendix in
+50kb. See the Appendix in
 [Classifying Signatures](classifying-signatures.md) for details.
 
 As of sourmash 4.2.0, `gather` supports `--picklist`, to
@@ -2032,6 +2061,13 @@ All of these save formats can be loaded by sourmash commands.
 
 **We strongly suggest using .zip files to store signatures: they are fast,
 small, and fully supported by all the sourmash commands.**
+
+Note that when outputting large collections of signatures, some save
+formats require holding all the sketches in memory until they can be
+written out, and others can save progressively. This can affect memory
+usage! Currently `.sig` and `.sig.gz` formats are held in memory,
+while `.zip`, directory outputs, and `.sqldb` formats write progressively
+to disk.
 
 For more detailed information on database formats and performance
 tradeoffs, please see [the advanced usage information for

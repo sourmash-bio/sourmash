@@ -1,191 +1,133 @@
 # Welcome to sourmash!
 
-sourmash is a command-line tool and Python library for computing
-[hash sketches](https://en.wikipedia.org/wiki/MinHash) from DNA
-sequences, comparing them to each other, and plotting the results.
-This allows you to estimate sequence similarity between even very
-large data sets quickly and accurately.
+sourmash is a command-line tool and Python/Rust library for
+**metagenome analysis** and **genome comparison** using k-mers.  It
+supports the compositional analysis of metagenomes, rapid search of
+large sequence databases, and flexible taxonomic profiling with both
+NCBI and GTDB taxonomies
+([see our prepared databases for more information](databases.md)). sourmash
+works well with sequences 30kb or larger, including bacterial and
+viral genomes.
 
-sourmash can be used to quickly search large databases of genomes
-for matches to query genomes and metagenomes; see [our list of
-available databases](databases.md).
+You might try sourmash if you want to -
 
-sourmash also includes k-mer based taxonomic exploration and
-classification routines for genome and metagenome analysis. These
-routines can use the NCBI and GTDB taxonomies but do not depend on them
-specifically.
+* identify which reference genomes to map your metagenomic reads to
+* search all Genbank microbial genomes with a sequence query
+* cluster many genomes by similarity
+* taxonomically classify genomes or metagenomes against NCBI and/or GTDB
+* search thousands of metagenomes with a query genome or sequence
 
-We have [several tutorials](tutorials.md) available! Start with
-[Making signatures, comparing, and searching](tutorial-basic.md).
+Our **vision**: sourmash strives to support biologists in analyzing
+modern sequencing data at high resolution and with full context,
+including all public reference genomes and metagenomes.
 
-The paper [Large-scale sequence comparisons with sourmash (Pierce et al., 2019)](https://f1000research.com/articles/8-1006)
-gives an overview of how sourmash works and what its major use cases are.
-Please also see the `mash` [software](http://mash.readthedocs.io/en/latest/) and
-[paper (Ondov et al., 2016)](http://dx.doi.org/10.1186/s13059-016-0997-x) for
-background information on how and why MinHash works.
+## Mission statement
 
-**Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/)!
+This project's mission is to provide practical tools and approaches for
+analyzing extremely large sequencing data sets, with an emphasis on
+high resolution results. Our designs follow these guiding principles:
 
-**Want to migrate to sourmash v4?** sourmash v4 is now available, and
-has a number of incompatibilites with v2 and v3. Please see 
-[our migration guide](support.md#migrating-from-sourmash-v3x-to-sourmash-v4x)!
+* genomic and metagenomic analyses should be able to make use of all
+  available reference genomes.
+* metagenomic analyses should support assembly independent approaches,
+  to avoid biases stemming from low coverage or high strain
+  variability.
+* private and public databases should be equally well supported.
+* a variety of data structures and algorithms are necessary to support
+  a wide set of use cases, including efficient command-line analysis,
+  real-time queries, and massive-scale batch analyses.
+* our tools should be well behaved members of the bioinformatics
+  analysis tool ecosystem, and use common installation approaches,
+  standard formats, and semantic versioning.
+* our tools should be robustly tested, well documented, and supported.
+* we discuss scientific and computational tradeoffs and make specific
+  recommendations where possible, admitting uncertainty as needed.
 
-----
+## How does sourmash work?
 
-To use sourmash, you must be comfortable with the UNIX command line;
-programmers may find the [Python library and API](api.md) useful as well.
+Underneath, sourmash uses [FracMinHash sketches](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) for fast and
+lightweight sequence comparison; FracMinHash builds on
+[MinHash sketching](https://en.wikipedia.org/wiki/MinHash) to support both Jaccard similarity
+_and_ containment analyses with k-mers.  This significantly expands
+the range of operations that can be done quickly and in low
+memory. sourmash also implements a number of new and powerful techniques
+for analysis, including minimum metagenome covers and alignment-free ANI
+estimation.
 
-If you use sourmash, please cite us!
+sourmash is inspired by [mash](https://mash.readthedocs.io), and
+supports most mash analyses. sourmash also implements an expanded set
+of functionality for metagenome and taxonomic analysis.
 
-> Brown and Irber (2016),
-> **sourmash: a library for MinHash sketching of DNA**.
-> Journal of Open Source Software, 1(5), 27, [doi:10.21105/joss.00027](https://joss.theoj.org/papers/3d793c6e7db683bee7c03377a4a7f3c9)
+sourmash development was initiated with a grant from the Moore
+Foundation under the Data Driven Discovery program, and has been
+supported by further funding from the NIH and NSF. Please see
+[funding acknowledgements](funding.md) for details!
 
-## sourmash in brief
+## Using sourmash
 
-sourmash uses MinHash-style sketching to create "signatures", compressed
-representations of DNA/RNA sequence.  These signatures can then
-be stored, searched, explored, and taxonomically annotated.
+<!-- Please remember to add things to sidebar.md ;) -->
 
-* `sourmash` provides command line utilities for creating, comparing,
-  and searching signatures, as well as plotting and clustering
-  signatures by similarity (see [the command-line docs](command-line.md)).
+### Tutorials and examples
 
-* `sourmash` can **search very large collections of signatures** to find matches
-  to a query.
+These tutorials are command line tutorials that should work on Mac OS
+X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
-* `sourmash` can also **identify parts of metagenomes that match known genomes**,
-  and can **taxonomically classify genomes and metagenomes** against databases
-  of known species.
+* [The first sourmash tutorial - making signatures, comparing, and searching](tutorial-basic.md)
 
-* `sourmash` can be used to **search databases of public sequences**
-  (e.g. all of GenBank) and can also be used to create and search databases
-  of **private sequencing data**.
+* [Using sourmash LCA to do taxonomic classification](tutorials-lca.md)
 
-* `sourmash` supports saving, loading, and communication of signatures
-  via [JSON](http://www.json.org/), a ~human-readable and editable format.
+* [Analyzing the genomic and taxonomic composition of an environmental genome using GTDB and sample-specific MAGs with sourmash](tutorial-lemonade.md)
 
-* `sourmash` also has a simple Python API for interacting with signatures,
-  including support for online updating and querying of signatures
-  (see [the API docs](api.md)).
+* [Some sourmash command line examples!](sourmash-examples.ipynb)
 
-* `sourmash` relies on an underlying Rust core for performance.
+### How-To Guides
 
-* `sourmash` is developed [on GitHub](https://github.com/sourmash-bio/sourmash)
-  and is **freely and openly available** under the BSD 3-clause license.
-  Please see [the README](https://github.com/sourmash-bio/sourmash/blob/latest/README.md)
-  for more information on development, support, and contributing.
+* Installing sourmash
 
-You can take a look at sourmash analyses on real data
-[in a saved Jupyter notebook](https://github.com/sourmash-bio/sourmash/blob/latest/doc/sourmash-examples.ipynb),
-and experiment with it yourself
-[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/sourmash-bio/sourmash/latest?labpath=doc%2Fsourmash-examples.ipynb)
-at [mybinder.org](http://mybinder.org).
+* [Classifying genome sketches](classifying-signatures.md)
 
-## Installing sourmash
+* [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
-You can use pip:
-```bash
-$ pip install sourmash
-```
+* [Using the `LCA_Database` API](using-LCA-database-API.ipynb)
 
-or conda:
-```bash
-$ conda install -c conda-forge -c bioconda sourmash
-```
+* [Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
-Please see [the README file in github.com/sourmash-bio/sourmash](https://github.com/sourmash-bio/sourmash/blob/latest/README.md)
-for more information.
+* [A short guide to using sourmash output with R](other-languages.md).
 
-## Memory and speed
+### How sourmash works under the hood
 
-sourmash has relatively small disk and memory requirements compared to
-many other software programs used for genome search and taxonomic
-classification.
+* [An introduction to k-mers for genome comparison and analysis](kmers-and-minhash.ipynb)
+* [Support, versioning, and migration between versions](support.md)
 
-`sourmash search` and `sourmash gather` can be used to search 100k
-genbank microbial genomes ([using our prepared databases](databases.md))
-with about 20 GB of disk and in under 1 GB of RAM.
-Typically a search for a single genome takes about 30 seconds on a laptop.
+### Reference material
 
-`sourmash lca` can be used to search/classify against all genbank
-microbial genomes with about 200 MB of disk space and about 10 GB of
-RAM. Typically a metagenome classification takes about 1 minute on a
-laptop.
+* [Full table of contents for all docs](toc.md)
+* [UNIX command-line documentation](command-line.md)
+* [Genbank and GTDB databases and taxonomy files](databases.md)
+* [Python examples using the API](api-example.md)
+* [Publications about sourmash](publications.md)
+* [A guide to the internal design and structure of sourmash](sourmash-internals.md)
+* [Funding acknowledgements](funding.md)
 
-## sourmash versioning
+## Developing and extending sourmash
 
-We support the use of sourmash in pipelines and applications
-by communicating clearly about bug fixes, feature additions, and feature
-changes. We use version numbers as follows:
+* [Releasing a new version of sourmash](release.md)
 
-* Major releases, like v4.0.0, may break backwards compatibility at
-  the command line as well as top-level Python/Rust APIs.
-* Minor releases, like v4.1.0, will remain backwards compatible but
-  may introduce significant new features.
-* Patch releases, like v4.1.1, are for minor bug fixes; full backwards
-  compatibility is retained.
+<!--
 
-If you are relying on sourmash in a pipeline or application, we
-suggest specifying your version requirements at the major release,
-e.g. in conda you would specify `sourmash>=3,<4`.
+This toctree sets the sidebar menu, but is otherwise hidden so that it
+doesn't show up redundantly at the bottom of the index page.
 
-See [the Versioning docs](support.md) for more information on what our
-versioning policy means in detail, and how to migrate between major
-versions!
-
-## Limitations
-
-**sourmash cannot find matches across large evolutionary distances.**
-
-sourmash seems to work well to search and compare data sets for
-nucleotide matches at the species and genus level, but does not have much
-sensitivity beyond that.  (It seems to be particularly good at
-strain-level analysis.)  You should use protein-based analyses
-to do searches across larger evolutionary distances.
-
-**sourmash signatures can be very large.**
-
-We use a modification of the MinHash sketch approach that allows us
-to search the contents of metagenomes and large genomes with no loss
-of sensitivity, but there is a tradeoff: there is no guaranteed limit
-to signature size when using 'scaled' signatures.
-
-## Logo
-
-The sourmash logo was designed by Stéfanie Fares Sabbag,
-with feedback from Clara Barcelos,
-Taylor Reiter and Luiz Irber.
-
-<a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img
-alt="Creative Commons License" style="border-width:0"
-src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />
-
-The logo
-is licensed under a <a rel="license"
-href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons
-Attribution-ShareAlike 4.0 International License</a>.
-
-## Contents:
+-->
 
 ```{toctree}
 ---
-maxdepth: 2
+maxdepth: 1
+hidden: true
 ---
 
+sidebar
 command-line
-tutorials
-using-sourmash-a-guide
-classifying-signatures
+api-example
 databases
-api
-more-info
-support
-developer
 ```
-
-# Indices and tables
-
-* {ref}`genindex`
-* {ref}`modindex`
-* {ref}`search`
