@@ -13,7 +13,7 @@ Pierce et al., 2019. This is the original sourmash use case paper.
 
 [Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0),
 Portik et al., 2022. This paper shows that sourmash is extremely
-sensitive and very specific for taxonomic classification.
+sensitive and very specific for taxonomic profiling.
 
 ## Petabase-scale search
 
