@@ -11,11 +11,11 @@ viral genomes.
 
 You might try sourmash if you want to -
 
-* identify which reference genomes to map your metagenomic reads to
-* search all Genbank microbial genomes with a sequence query
-* cluster many genomes by similarity
-* taxonomically classify genomes or metagenomes against NCBI and/or GTDB
-* search thousands of metagenomes with a query genome or sequence
+* identify which reference genomes to use for metagenomic read mapping;
+* search all Genbank microbial genomes with a sequence query;
+* cluster hundreds or thousands of genomes by similarity;
+* taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
+* search thousands of metagenomes with a query genome or sequence;
 
 Our **vision**: sourmash strives to support biologists in analyzing
 modern sequencing data at high resolution and with full context,
