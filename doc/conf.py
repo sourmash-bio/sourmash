@@ -59,8 +59,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sourmash'
-copyright = '2016-2020, C. Titus Brown and Luiz Irber'
-author = 'C. Titus Brown and Luiz Irber'
+copyright = '2016-2023, C. Titus Brown, Luiz Irber, and N. Tessa Pierce-Ward'
+author = 'C. Titus Brown, Luiz Irber, and N. Tessa Pierce-Ward'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -114,6 +114,9 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# CTB: suppress warnings about circularity in ToC.
+# see https://github.com/sphinx-doc/sphinx/issues/7410.
+suppress_warnings = ['toc.circular']
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -127,7 +130,8 @@ html_theme = 'alabaster'
 html_theme_options = {
     'logo': 'logo.png',
     'logo_name': True,
-    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets'
+    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets',
+    'sidebar_collapse': False,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
