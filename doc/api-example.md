@@ -476,7 +476,7 @@ building the minhashes.
 
 If you're interested in building comparison matrices and dendrograms,
 please see the notebook
-[Building plots from `sourmash compare` output](plotting-compare.md).
+[Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
 ## Saving and loading signature files
 

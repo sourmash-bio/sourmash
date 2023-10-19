@@ -2689,7 +2689,7 @@ def test_sig_extract_12_picklist_bad_pickstyle(runtmp):
 
     err = runtmp.last_result.err
     print(err)
-    assert "invalid picklist 'pickstyle' argument, 'XXX': must be 'include' or 'exclude'" in err
+    assert "invalid picklist 'pickstyle' argument 4: 'XXX' must be 'include' or 'exclude'" in err
 
 
 def test_sig_extract_12_picklist_bad_colname(runtmp):
@@ -2762,6 +2762,31 @@ def test_sig_extract_11_pattern_exclude(runtmp):
     names = [ ss.name for ss in idx.signatures() ]
     for n in names:
         assert 'shewanella' not in n.lower(), n
+
+
+def test_sig_extract_identical_md5s(runtmp):
+    # test that we properly handle different signatures with identical md5s
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss = load_signatures(sig47)
+    sig = list(ss)[0]
+    new_sig = sig.to_mutable()
+    new_sig.name = 'foo'
+    sig47foo = runtmp.output('foo.sig')
+    # this was only a problem when the signatures are stored in the same file
+    with open(sig47foo, 'wt') as fp:
+        sourmash.save_signatures([new_sig, sig], fp)
+
+    runtmp.run_sourmash('sig', 'extract', '--name', 'foo', sig47foo)
+
+    out = runtmp.last_result.out
+    print(out)
+    ss = load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella' not in ss.name
+    assert 'foo' in ss.name
+    assert ss.md5sum() == '09a08691ce52952152f0e866a59f6261'
 
 
 def test_sig_flatten_1(runtmp):

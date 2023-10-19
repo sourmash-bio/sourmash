@@ -1,4 +1,4 @@
-"""search taxonomies and output picklists.."""
+"""search taxonomies and output picklists."""
 
 usage="""
 
@@ -8,6 +8,9 @@ usage="""
 optionally restricting the string search to a specific taxonomic rank.
 It creates new files containing matching taxonomic entries; these new
 files can serve as taxonomies and can also be used as picklists.
+
+`tax grep` only searches taxonomic ranks, not identifier strings.
+Use `sig grep` to search for identifiers in sketch collections.
 
 Please see the 'tax grep' documentation for more details:
   https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-grep-subset-taxonomies-and-create-picklists-based-on-taxonomy-string-matches

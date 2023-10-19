@@ -25,8 +25,8 @@ maturin = []
 
 [dependencies]
 az = "1.0.0"
-bytecount = "0.6.0"
-byteorder = "1.4.3"
+bytecount = "0.6.4"
+byteorder = "1.5.0"
 cfg-if = "1.0"
 counter = "0.5.7"
 finch = { version = "0.6.0", optional = true }
@@ -40,29 +40,25 @@ niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
 num-iter = "0.1.43"
 once_cell = "1.18.0"
-rayon = { version = "1.7.0", optional = true }
+rayon = { version = "1.8.0", optional = true }
 serde = { version = "1.0.168", features = ["derive"] }
-serde_json = "1.0.104"
+serde_json = "1.0.107"
 primal-check = "0.3.1"
 thiserror = "1.0"
 typed-builder = "0.14.0"
 twox-hash = "1.6.0"
 vec-collections = "0.3.4"
 piz = "0.5.0"
-memmap2 = "0.7.1"
-ouroboros = "0.17.2"
+memmap2 = "0.9.0"
+ouroboros = "0.18.0"
 
 [dev-dependencies]
 assert_matches = "1.3.0"
 criterion = "0.5.1"
 needletail = { version = "0.5.1", default-features = false }
-proptest = { version = "1.2.0", default-features = false, features = ["std"]}
+proptest = { version = "1.3.1", default-features = false, features = ["std"]}
 rand = "0.8.2"
 tempfile = "3.7.1"
-
-[[bench]]
-name = "index"
-harness = false
 
 [[bench]]
 name = "compute"
@@ -87,7 +83,7 @@ version = "0.3.64"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
-version = "0.4.26"
+version = "0.4.31"
 features = ["wasmbind"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]

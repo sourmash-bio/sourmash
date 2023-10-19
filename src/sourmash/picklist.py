@@ -1,4 +1,14 @@
-"Picklist code for extracting subsets of signatures."
+"""Picklist code for extracting subsets of signatures.
+
+Picklists serve as a central inclusion/exclusion mechanism for sketches.
+Each picklist object operates on a particular type of value, and uses
+values specified by the user (if using an external picklist) or works with
+the output of sourmash (manifests or search/prefetch/gather output).
+
+Two key features of picklists is that they can be passed into Index.select
+and operate efficiently on manifests, so when used with e.g. zipfiles,
+only the selected sketches are loaded.
+"""
 import csv
 import os
 from enum import Enum
@@ -10,6 +20,7 @@ preprocess = {}
 preprocess['name'] = lambda x: x
 preprocess['md5'] = lambda x: x
 
+
 # identifier matches/prefix foo - space delimited identifiers
 preprocess['identprefix'] = lambda x: x.split(' ')[0].split('.')[0]
 preprocess['ident'] = lambda x: x.split(' ')[0]
@@ -17,6 +28,18 @@ preprocess['ident'] = lambda x: x.split(' ')[0]
 # match 8 characters
 preprocess['md5prefix8'] = lambda x: x[:8]
 preprocess['md5short'] = lambda x: x[:8]
+
+# all meta-coltypes use the same preprocessing of tuple => (ident, md5short)
+def combine_ident_md5(x):
+    "preprocess (name, md5) tup into (ident, md5short) tup"
+    name, md5 = x
+    ident = name.split(' ')[0]
+    md5 = md5[:8]
+    return (ident, md5)
+preprocess['manifest'] = combine_ident_md5
+preprocess['prefetch'] = combine_ident_md5
+preprocess['gather'] = combine_ident_md5
+preprocess['search'] = combine_ident_md5
 
 
 class PickStyle(Enum):
@@ -45,10 +68,11 @@ class SignaturePicklist:
     Identifiers are constructed by using the first space delimited word in
     the signature name.
 
-    You can also use 'gather', 'prefetch', 'search' and 'manifest' as
+    You can also use 'gather', 'prefetch', 'search', and 'manifest' as
     column types; these take the CSV output of 'gather', 'prefetch',
-    'search', and 'sig manifest' as picklists. 'column' must be left
-    blank in this case: e.g. use 'pickfile.csv::gather'.
+    'search', and 'manifest' as picklists. 'column' must be left
+    blank in this case: e.g. use 'pickfile.csv::gather'. These "meta-coltypes"
+    use composite selection on (ident, md5short) tuples.
     """
     meta_coltypes = ('manifest', 'gather', 'prefetch', 'search')
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
@@ -66,25 +90,16 @@ class SignaturePicklist:
         self.orig_coltype = coltype
         self.orig_colname = column_name
 
-        # if we're using gather or prefetch or manifest, set column_name
+        # if we're using gather, prefetch, manifest, or search, set column_name
         # automatically (after checks).
         if coltype in self.meta_coltypes:
             if column_name:
                 raise ValueError(f"no column name allowed for coltype '{coltype}'")
-            if coltype == 'gather':
-                # for now, override => md5short in column md5
-                coltype = 'md5prefix8'
-                column_name = 'md5'
-            elif coltype == 'prefetch':
-                # for now, override => md5short in column match_md5
-                coltype = 'md5prefix8'
-                column_name = 'match_md5'
-            elif coltype == 'manifest' or coltype == 'search':
-                # for now, override => md5
-                coltype = 'md5'
-                column_name = 'md5'
-            else:               # should never be reached!
-                assert 0
+
+            if coltype == 'prefetch':
+                column_name = '(match_name, match_md5)'
+            else:
+                column_name = '(name, md5)'
 
         self.coltype = coltype
         self.pickfile = pickfile
@@ -110,7 +125,7 @@ class SignaturePicklist:
             elif pickstyle_str == 'exclude':
                 pickstyle = PickStyle.EXCLUDE
             else:
-                raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle_str}': must be 'include' or 'exclude'")
+                raise ValueError(f"invalid picklist 'pickstyle' argument 4: '{pickstyle_str}' must be 'include' or 'exclude'")
 
         if len(picklist) != 3:
             raise ValueError(f"invalid picklist argument '{argstr}'")
@@ -122,14 +137,55 @@ class SignaturePicklist:
                    pickstyle=pickstyle)
 
     def _get_sig_attribute(self, ss):
-        "for a given SourmashSignature, return attribute for this picklist."
+        "for a given SourmashSignature, return relevant picklist value."
         coltype = self.coltype
-        if coltype in ('md5', 'md5prefix8', 'md5short'):
+        if coltype in self.meta_coltypes: # gather, prefetch, search, manifest
+            q = (ss.name, ss.md5sum())
+        elif coltype in ('md5', 'md5prefix8', 'md5short'):
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
         else:
-            assert 0
+            raise ValueError(f"picklist get_sig_attribute {coltype} has unhandled branch")
+
+        return q
+
+    def _get_value_for_manifest_row(self, row):
+        "return the picklist value from a manifest row"
+        if self.coltype in self.meta_coltypes: # gather, prefetch, search, manifest
+            q = (row['name'], row['md5'])
+        else:
+            if self.coltype == 'md5':
+                colkey = 'md5'
+            elif self.coltype in ('md5prefix8', 'md5short'):
+                colkey = 'md5short'
+            elif self.coltype in ('name', 'ident', 'identprefix'):
+                colkey = 'name'
+            else:
+                raise ValueError(f"picklist get_value_for_row {colkey} has unhandled branch")
+
+            q = row.get(colkey)
+
+        assert q
+        q = self.preprocess_fn(q)
+
+        return q
+
+    def _get_value_for_csv_row(self, row):
+        "return the picklist value from a CSV pickfile row - supplied by user, typically"
+
+        # customize for each type of meta_coltypes
+        if self.coltype == 'manifest':
+            q = (row['name'], row['md5'])
+        elif self.coltype == 'prefetch':
+            q = (row['match_name'], row['match_md5'])
+        elif self.coltype in ('gather', 'search'):
+            q = (row['name'], row['md5'])
+        else:
+            q = row[self.column_name]
+
+        if q:
+            q = self.preprocess_fn(q)
 
         return q
 
@@ -140,11 +196,15 @@ class SignaturePicklist:
         self.pickset = set(values)
         return self.pickset
 
-    def load(self, pickfile, column_name, *, allow_empty=False):
+    def load(self, *, allow_empty=False):
         "load pickset, return num empty vals, and set of duplicate vals."
         from . import sourmash_args
 
         pickset = self.init()
+
+        pickfile = self.pickfile
+        coltype = self.coltype
+        column_name = self.column_name
 
         if not os.path.exists(pickfile) or not os.path.isfile(pickfile):
             raise ValueError(f"pickfile '{pickfile}' must exist and be a regular file")
@@ -152,8 +212,8 @@ class SignaturePicklist:
         n_empty_val = 0
         dup_vals = set()
 
-        # CTB: not clear to me what a good "default" name would be for a
-        # picklist CSV inside a zip (default_csv_name). Maybe manifest?
+        # CTB note: for zipfiles, not clear to me what a good "default" name would be for a
+        # picklist CSV inside a zip (default_csv_name for FileInputCSV).
         with sourmash_args.FileInputCSV(pickfile) as r:
             self.pickfile = pickfile
             if not r.fieldnames:
@@ -162,17 +222,14 @@ class SignaturePicklist:
                 else:
                     return 0, 0
 
-            if column_name not in r.fieldnames:
+            if not (column_name in r.fieldnames or coltype in self.meta_coltypes):
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
-                # pick out values from column
-                col = row[column_name]
+                col = self._get_value_for_csv_row(row)
                 if not col:
                     n_empty_val += 1
                     continue
-
-                col = self.preprocess_fn(col)
 
                 # look for duplicate values or empty values
                 if col in pickset:
@@ -210,17 +267,7 @@ class SignaturePicklist:
 
     def matches_manifest_row(self, row):
         "does the given manifest row match this picklist?"
-        if self.coltype == 'md5':
-            colkey = 'md5'
-        elif self.coltype in ('md5prefix8', 'md5short'):
-            colkey = 'md5short'
-        elif self.coltype in ('name', 'ident', 'identprefix'):
-            colkey = 'name'
-        else:
-            assert 0
-
-        q = row[colkey]
-        q = self.preprocess_fn(q)
+        q = self._get_value_for_manifest_row(row)
         self.n_queries += 1
 
         if self.pickstyle == PickStyle.INCLUDE:
@@ -238,8 +285,7 @@ class SignaturePicklist:
 
         This is used for examining matches/nomatches to original picklist file.
         """
-        q = row[self.column_name]
-        q = self.preprocess_fn(q)
+        q = self._get_value_for_csv_row(row)
         self.n_queries += 1
 
         if q in self.found:
