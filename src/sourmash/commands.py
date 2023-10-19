@@ -1113,7 +1113,7 @@ def multigather(args):
                 if args.force_allow_overwrite_output:
                     error(f"continuing because --force-allow-overwrite was specified")
                 else:
-                    error("Consider using '-U/----output-add-query-md5sum' to build unique outputs")
+                    error("Consider using '-U/--output-add-query-md5sum' to build unique outputs")
                     error("and/or '--force-allow-overwrite-output'")
                     sys.exit(-1)
 
