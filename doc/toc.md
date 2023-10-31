@@ -30,6 +30,7 @@ sourmash-internals.md
 sourmash-sketch.md
 storage.md
 support.md
+tutorial-install.md
 tutorial-basic.md
 tutorial-lemonade.md
 tutorial-lin-taxonomy.md
