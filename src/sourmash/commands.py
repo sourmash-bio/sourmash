@@ -801,7 +801,7 @@ def gather(args):
             if prefetch_csvout_fp:
                 for found_sig in counter.signatures():
                     # calculate intersection stats and info
-                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
+                    prefetch_result = PrefetchResult(prefetch_query, found_sig,
                                                      threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
                     if prefetch_csvout_w is None:
                         prefetch_csvout_w = prefetch_result.init_dictwriter(prefetch_csvout_fp)
