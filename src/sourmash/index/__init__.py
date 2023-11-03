@@ -813,12 +813,12 @@ class CounterGather:
         # pull match and location.
         match = siglist[dataset_id]
 
-        # calculate containment
+        # confirm containment and bail if due to downsampling,
+        # containment is no longer significant.
         # CTB: this check is probably redundant with intersect_mh calc, below.
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
         if cont == 0:
             return []
-
         assert cont >= threshold
 
         # calculate intersection of this "best match" with query.
