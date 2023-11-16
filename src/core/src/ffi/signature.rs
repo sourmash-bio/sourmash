@@ -167,7 +167,7 @@ ffi_fn! {
 unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut SourmashKmerMinHash> {
     let sig = SourmashSignature::as_rust(ptr);
 
-    match sig.signatures.get(0) {
+    match sig.signatures.first() {
         Some(Sketch::MinHash(mh)) => {
             Ok(SourmashKmerMinHash::from_rust(mh.clone()))
         },
