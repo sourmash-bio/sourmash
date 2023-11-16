@@ -89,7 +89,7 @@
           buildInputs = [
             rustVersion
             openssl
-            pkgconfig
+            pkg-config
 
             git
             stdenv.cc.cc.lib
