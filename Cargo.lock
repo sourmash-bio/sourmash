@@ -1462,7 +1462,6 @@ name = "sourmash"
 version = "0.12.0"
 dependencies = [
  "az",
- "bytecount",
  "byteorder",
  "camino",
  "cfg-if",
