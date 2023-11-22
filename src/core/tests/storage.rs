@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use sourmash::storage::{Storage, ZipStorage};
+use tempfile::TempDir;
+
+use sourmash::signature::Signature;
+use sourmash::storage::{FSStorage, InnerStorage, Storage, ZipStorage};
 
 #[test]
 fn zipstorage_load_file() -> Result<(), Box<dyn std::error::Error>> {
@@ -47,7 +50,7 @@ fn zipstorage_list_sbts() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
     use rayon::prelude::*;
-    use sourmash::signature::{Signature, SigsTrait};
+    use sourmash::signature::SigsTrait;
 
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     filename.push("../../tests/test-data/v6.sbt.zip");
@@ -74,6 +77,29 @@ fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
     .sum();
 
     assert_eq!(total_hashes, 3500);
+
+    Ok(())
+}
+
+#[test]
+fn innerstorage_save_sig() -> Result<(), Box<dyn std::error::Error>> {
+    let output = TempDir::new()?;
+
+    let fst = FSStorage::new(output.path().as_os_str().to_str().unwrap(), "".into());
+
+    let instorage = InnerStorage::new(fst);
+
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/genome-s10.fa.gz.sig");
+
+    let sig = Signature::from_path(filename)?.swap_remove(0);
+    let new_path = instorage.save_sig("test", sig.clone())?;
+    dbg!(new_path);
+
+    let loaded_sig = instorage.load_sig("test")?;
+
+    assert_eq!(sig.name(), loaded_sig.name());
+    assert_eq!(sig.md5sum(), loaded_sig.md5sum());
 
     Ok(())
 }
