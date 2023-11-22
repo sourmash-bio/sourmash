@@ -28,7 +28,7 @@ default = []
 [dependencies]
 az = "1.0.0"
 bytecount = "0.6.7"
-byteorder = "1.5.0"
+byteorder = "1.4.3"
 camino = { version = "1.1.6", features = ["serde1"] }
 cfg-if = "1.0"
 counter = "0.5.7"
