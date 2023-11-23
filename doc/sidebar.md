@@ -41,6 +41,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## Developing and extending sourmash
 
+* [Getting started with sourmash development](developer.md)
 * [Releasing a new version of sourmash](release.md)
 
 ## [Full table of contents for all docs](toc.md)
