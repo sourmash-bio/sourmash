@@ -248,7 +248,8 @@ def plot(args):
     D_filename = args.distances
 
     notify(f'loading comparison matrix from {D_filename}...')
-    D = numpy.load(open(D_filename, 'rb'))
+    with open(D_filename, 'rb') as f:
+        D = numpy.load(f)
     # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
@@ -274,7 +275,8 @@ def plot(args):
             labelfilename = D_filename + '.labels.txt'
 
         notify(f'loading labels from {labelfilename}')
-        labeltext = [ x.strip() for x in open(labelfilename) ]
+        with open(labelfilename) as f:
+            labeltext = [ x.strip() for x in f ]
         
         if len(labeltext) != D.shape[0]:
             error('{} labels != matrix size, exiting', len(labeltext))
