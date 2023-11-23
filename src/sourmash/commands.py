@@ -1204,24 +1204,24 @@ def watch(args):
         return results
 
     notify('reading sequences from stdin')
-    screed_iter = screed.open(args.inp_file)
     watermark = WATERMARK_SIZE
 
     # iterate over input records
     n = 0
-    for n, record in enumerate(screed_iter):
-        # at each watermark, print status & check cardinality
-        if n >= watermark:
-            notify(f'\r... read {n} sequences', end='')
-            watermark += WATERMARK_SIZE
+    with screed.open(args.inp_file) as screed_iter:
+        for n, record in enumerate(screed_iter):
+            # at each watermark, print status & check cardinality
+            if n >= watermark:
+                notify(f'\r... read {n} sequences', end='')
+                watermark += WATERMARK_SIZE
 
-            if do_search():
-                break
+                if do_search():
+                    break
 
-        if args.input_is_protein:
-            E.add_protein(record.sequence)
-        else:
-            E.add_sequence(record.sequence, False)
+            if args.input_is_protein:
+                E.add_protein(record.sequence)
+            else:
+                E.add_sequence(record.sequence, False)
 
     results = do_search()
     if not results:
