@@ -93,9 +93,9 @@
 
             git
             stdenv.cc.cc.lib
+            (python312.withPackages (ps: with ps; [ virtualenv ]))
             (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
             (python310.withPackages (ps: with ps; [ virtualenv ]))
-            (python39.withPackages (ps: with ps; [ virtualenv ]))
 
             rust-cbindgen
             maturin
