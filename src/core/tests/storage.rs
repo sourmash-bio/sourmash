@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 
 use sourmash::signature::Signature;
-use sourmash::storage::{FSStorage, InnerStorage, Storage, ZipStorage};
+use sourmash::storage::{FSStorage, InnerStorage, Storage, StorageArgs, ZipStorage};
 
 #[test]
 fn zipstorage_load_file() -> Result<(), Box<dyn std::error::Error>> {
@@ -85,7 +85,7 @@ fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
 fn innerstorage_save_sig() -> Result<(), Box<dyn std::error::Error>> {
     let output = TempDir::new()?;
 
-    let fst = FSStorage::new(output.path().as_os_str().to_str().unwrap(), "".into());
+    let fst = FSStorage::new("".into(), output.path().as_os_str().to_str().unwrap());
 
     let instorage = InnerStorage::new(fst);
 
@@ -100,6 +100,70 @@ fn innerstorage_save_sig() -> Result<(), Box<dyn std::error::Error>> {
 
     assert_eq!(sig.name(), loaded_sig.name());
     assert_eq!(sig.md5sum(), loaded_sig.md5sum());
+
+    Ok(())
+}
+
+#[test]
+fn innerstorage_load() -> Result<(), Box<dyn std::error::Error>> {
+    let output = TempDir::new()?;
+
+    let fst = FSStorage::new("".into(), output.path().as_os_str().to_str().unwrap());
+
+    let instorage = InnerStorage::new(fst);
+
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/genome-s10.fa.gz.sig");
+
+    let sig = Signature::from_path(filename)?.swap_remove(0);
+    let new_path = instorage.save_sig("test", sig.clone())?;
+    dbg!(new_path);
+
+    let raw_data = instorage.load("test")?;
+    let loaded_sig = Signature::from_reader(raw_data.as_slice())?.swap_remove(0);
+
+    assert_eq!(sig.name(), loaded_sig.name());
+    assert_eq!(sig.md5sum(), loaded_sig.md5sum());
+
+    Ok(())
+}
+
+#[test]
+fn innerstorage_args() -> Result<(), Box<dyn std::error::Error>> {
+    let output = TempDir::new()?;
+    let path = output.path().as_os_str().to_str().unwrap();
+
+    let fst = FSStorage::new("".into(), path);
+
+    let instorage = InnerStorage::new(fst);
+
+    let args = instorage.args();
+
+    assert!(matches!(args, StorageArgs::FSStorage { .. }));
+    let StorageArgs::FSStorage { path: p } = args;
+    assert_eq!(p, path);
+
+    Ok(())
+}
+
+#[test]
+fn innerstorage_from_args() -> Result<(), Box<dyn std::error::Error>> {
+    let output = TempDir::new()?;
+    let path = output.path().as_os_str().to_str().unwrap();
+
+    let fst = FSStorage::new("".into(), path);
+    let args = fst.args();
+
+    let instorage = InnerStorage::new(FSStorage::from(&args));
+    let inargs = instorage.args();
+
+    assert!(matches!(inargs, StorageArgs::FSStorage { .. }));
+    let StorageArgs::FSStorage { path: p1 } = inargs;
+    assert_eq!(p1, path);
+
+    assert!(matches!(args, StorageArgs::FSStorage { .. }));
+    let StorageArgs::FSStorage { path: p2 } = args;
+    assert_eq!(p2, path);
 
     Ok(())
 }
