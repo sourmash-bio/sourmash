@@ -4,6 +4,14 @@
 
 # Developer information
 
+## Developer quickstart with conda
+
+You can quickly get started with a development environment using
+conda; see the
+[developer quickstart with conda](developer-quickstart.md)!
+
+Read on for more details about sourmash development!
+
 ## Development environment
 
 You can get the latest development branch with:
@@ -12,31 +20,15 @@ git clone https://github.com/sourmash-bio/sourmash.git
 ```
 sourmash runs under Python 3.8 and later.
 
-We recommend using `conda` or `Nix` for setting up an environment for developing
-new features, running tests and code quality checks.
-Here are some suggestions on how to set them up (note: you only need one =])
+We recommend using `conda` or `Nix` for setting up an environment for
+developing new features, running tests and code quality checks.  Here
+are some suggestions on how to set them up (note: you only need one
+=])
 
-### Using mamba (conda alternative)
+See the [developer quickstart with conda](developer-quickstart.md) for
+conda instructions!
 
-Follow the [installation instructions](https://github.com/conda-forge/miniforge#install) for
-installing `mambaforge` (a conda distribution that uses
-[`mamba`](https://github.com/TheSnakePit/mamba)
-and the [`conda-forge`](https://conda-forge.org/) channel by default).
-
-Once `mamba` is installed, run
-```
-mamba create -n sourmash_dev 'tox>=3.27,<4' tox-conda rust git compilers pandoc
-```
-to create an environment called `sourmash_dev` containing the programs needed
-for development.
-
-To activate the new environment, run
-```
-conda activate sourmash_dev
-```
-and proceed to the ["Running tests and checks"](#running-tests-and-checks) section.
-
-### Using Nix
+### Conda/mamba alternative: Using Nix
 
 Follow the [installation instructions](https://nixos.org/manual/nix/stable/#chap-installation)
 for setting up Nix in your system (Linux or macOS).
@@ -296,6 +288,7 @@ make clean
 ```{toctree}
 :maxdepth: 2
 
+developer-quickstart
 release
 requirements
 storage
