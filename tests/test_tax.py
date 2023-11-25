@@ -6,6 +6,7 @@ import csv
 import pytest
 import gzip
 from collections import Counter
+from pathlib import Path
 
 import sourmash
 import sourmash_tst_utils as utils
@@ -118,7 +119,7 @@ def test_metagenome_summary_csv_out(runtmp):
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
 
-    sum_gather_results = [x.rstrip() for x in open(csvout)]
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in sum_gather_results[0]
     assert 'test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000' in  sum_gather_results[1]
@@ -160,7 +161,7 @@ def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
     print("g_csv: ", gather_empty)
 
     runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '-g', gather_empty, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '-f')
-    sum_gather_results = [x.rstrip() for x in open(csvout)]
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in sum_gather_results[0]
     assert 'test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000' in  sum_gather_results[1]
@@ -184,7 +185,7 @@ def test_metagenome_kreport_out(runtmp):
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
 
-    kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
+    kreport_results = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
     assert ['13.08', '1605999', '0', 'D', '', 'd__Bacteria'] == kreport_results[0]
@@ -223,7 +224,7 @@ def test_metagenome_kreport_ncbi_taxid_out(runtmp):
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
 
-    kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
+    kreport_results = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
     assert ['13.08', '1605999', '0', 'D', '2', 'Bacteria'] == kreport_results[0]
@@ -263,7 +264,7 @@ def test_metagenome_kreport_out_lemonade(runtmp):
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
 
-    kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
+    kreport_results = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
     assert ['5.35', '116000', '0', 'D', '', 'd__Bacteria'] == kreport_results[0]
@@ -348,7 +349,7 @@ def test_metagenome_bioboxes_outfile(runtmp):
 
     assert runtmp.last_result.status == 0
 
-    bb_results = [x.rstrip().split('\t') for x in open(csvout)]
+    bb_results = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'bioboxes' output to '{csvout}'" in runtmp.last_result.err
     print(bb_results)
     assert ['# Taxonomic Profiling Output'] == bb_results[0]
@@ -377,7 +378,7 @@ def test_metagenome_krona_tsv_out(runtmp):
     assert os.path.exists(csvout)
     assert f"saving 'krona' output to '{csvout}'" in runtmp.last_result.err
 
-    gn_krona_results = [x.rstrip().split('\t') for x in open(csvout)]
+    gn_krona_results = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     print("species krona results: \n", gn_krona_results)
     assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus'] == gn_krona_results[0]
     assert ['0.0885520542481053', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella']  == gn_krona_results[1]
@@ -407,7 +408,7 @@ def test_metagenome_lineage_summary_out(runtmp):
     assert os.path.exists(csvout)
     assert f"saving 'lineage_summary' output to '{csvout}'" in runtmp.last_result.err
 
-    gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
+    gn_lineage_summary = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     print("species lineage summary results: \n", gn_lineage_summary)
     assert ['lineage', 'test1'] == gn_lineage_summary[0]
     assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola', '0.027522935779816515'] == gn_lineage_summary[1]
@@ -530,7 +531,7 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
@@ -549,7 +550,7 @@ def test_metagenome_duplicated_taxonomy_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax.append(tax[1]) # add first tax_assign again
         dup.write("\n".join(tax))
 
@@ -577,7 +578,7 @@ def test_metagenome_missing_taxonomy(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         subset.write("\n".join(tax[:4]))
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -605,7 +606,7 @@ def test_metagenome_missing_fail_taxonomy(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         subset.write("\n".join(tax[:4]))
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -754,10 +755,9 @@ def test_metagenome_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("query_bp", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("query_bp", "nope") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(bad_g_csv, 'w') as fp:
-        for line in bad_g:
-            fp.write(line)
+        fp.writelines(bad_g)
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -884,8 +884,7 @@ def test_metagenome_gather_duplicate_query(runtmp):
     # different filename, contents identical to test1
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            fp.write(line)
+        fp.write(Path(g_res).read_text())
 
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
@@ -905,8 +904,7 @@ def test_metagenome_gather_duplicate_query_force(runtmp):
     # different filename, contents identical to test1
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            fp.write(line)
+        fp.write(Path(g_res).read_text())
 
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
@@ -931,8 +929,8 @@ def test_metagenome_two_queries_human_output(runtmp):
     # make a second query with same output
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            line = line.replace('test1', 'test2')
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace('test1', 'test2') + "\n"
             fp.write(line)
 
     c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
@@ -960,8 +958,8 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
     # make a second query with same output
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            line = line.replace('test1', 'test2')
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace('test1', 'test2') + "\n"
             fp.write(line)
 
     csv_summary_out = runtmp.output("tst.summarized.csv")
@@ -990,8 +988,8 @@ def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
     # make a second query with same output
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            line = line.replace('test1', 'test2')
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace('test1', 'test2') + "\n"
             fp.write(line)
 
     csv_summary_out = runtmp.output("tst.summarized.csv")
@@ -1019,8 +1017,8 @@ def test_metagenome_two_queries_krona(runtmp):
     # make a second query with same output
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            line = line.replace('test1', 'test2')
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace('test1', 'test2') + "\n"
             fp.write(line)
 
     c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
@@ -1121,10 +1119,9 @@ def test_genome_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("f_unique_to_query", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("f_unique_to_query", "nope") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(bad_g_csv, 'w') as fp:
-        for line in bad_g:
-            fp.write(line)
+        fp.writelines(bad_g)
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -1225,7 +1222,7 @@ def test_genome_rank_csv_0(runtmp):
 
     assert f"saving 'classification' output to '{csvout}'" in runtmp.last_result.err
     assert c.last_result.status == 0
-    cl_results = [x.rstrip() for x in open(csvout)]
+    cl_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in cl_results[0]
     assert 'test1,match,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.05701254275940707,444000' in cl_results[1]
 
@@ -1252,7 +1249,7 @@ def test_genome_rank_krona(runtmp):
 
     assert f"saving 'krona' output to '{csvout}'" in runtmp.last_result.err
     assert c.last_result.status == 0
-    kr_results = [x.rstrip().split('\t') for x in open(csvout)]
+    kr_results = [x.rstrip().split('\t') for x in Path(csvout).read_text().splitlines()]
     print(kr_results)
     assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']  == kr_results[0]
     assert ['0.0885520542481053', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella', 's__Prevotella copri'] == kr_results[1]
@@ -1350,10 +1347,9 @@ def test_genome_gather_two_files(runtmp):
 
     # make test2 results (identical to test1 except query_name and filename)
     g_res2 = runtmp.output("test2.gather.csv")
-    test2_results = [x.replace("test1", "test2") for x in open(g_res, 'r')]
+    test2_results = [x.replace("test1", "test2") + "\n" for x in Path(g_res).read_text().splitlines()]
     with open(g_res2, 'w') as fp:
-        for line in test2_results:
-            fp.write(line)
+        fp.writelines(test2_results)
 
     c.run_sourmash('tax', 'genome', '-g', g_res, g_res2, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
@@ -1381,10 +1377,9 @@ def test_genome_gather_two_files_empty_force(runtmp):
     print("g_csv: ", g_empty_csv)
 
     g_res2 = runtmp.output("test2.gather.csv")
-    test2_results = [x.replace("test1", "test2") for x in open(g_res, 'r')]
+    test2_results = [x.replace("test1", "test2") + "\n" for x in Path(g_res).read_text().splitlines()]
     with open(g_res2, 'w') as fp:
-        for line in test2_results:
-            fp.write(line)
+        fp.writelines(test2_results)
 
     c.run_sourmash('tax', 'genome', '-g', g_res, g_res2, '-g', g_empty_csv,
                    '--taxonomy-csv', taxonomy_csv,
@@ -1449,8 +1444,7 @@ def test_genome_gather_from_file_duplicate_query(runtmp):
     # different filename, contents identical to test1
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            fp.write(line)
+        fp.write(Path(g_res).read_text())
 
     g_from_file = runtmp.output("tmp-from-file.txt")
     with open(g_from_file, 'w') as f_csv:
@@ -1473,8 +1467,7 @@ def test_genome_gather_from_file_duplicate_query_force(runtmp):
     # different filename, contents identical to test1
     g_res2 = runtmp.output("test2.gather.csv")
     with open(g_res2, 'w') as fp:
-        for line in open(g_res, 'r'):
-            fp.write(line)
+        fp.write(Path(g_res).read_text())
 
     g_from_file = runtmp.output("tmp-from-file.txt")
     with open(g_from_file, 'w') as f_csv:
@@ -1503,10 +1496,9 @@ def test_genome_gather_cli_and_from_file(runtmp):
 
     # make test2 results (identical to test1 except query_name)
     g_res2 = runtmp.output("test2.gather.csv")
-    test2_results = [x.replace("test1", "test2") for x in open(g_res, 'r')]
+    test2_results = [x.replace("test1", "test2") + "\n" for x in Path(g_res).read_text().splitlines()]
     with open(g_res2, 'w') as fp:
-        for line in test2_results:
-            fp.write(line)
+        fp.writelines(test2_results)
 
     # write test2 csv to a text file for input
     g_from_file = runtmp.output("tmp-from-file.txt")
@@ -1584,7 +1576,7 @@ def test_genome_gather_two_queries(runtmp):
 
     # split 47+63 into two fake queries: q47, q63
     g_res2 = runtmp.output("two-queries.gather.csv")
-    q2_results = [x for x in open(g_res, 'r')]
+    q2_results = [x + "\n" for x in Path(g_res).read_text().splitlines()]
     # rename queries
     q2_results[1] = q2_results[1].replace('47+63', 'q47')
     q2_results[2] = q2_results[2].replace('47+63', 'q63')
@@ -1611,7 +1603,7 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
@@ -1662,7 +1654,7 @@ def test_genome_rank_duplicated_taxonomy_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax.append(tax[1]) # add first tax_assign again
         dup.write("\n".join(tax))
 
@@ -1686,7 +1678,7 @@ def test_genome_missing_taxonomy_ignore_threshold(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1709,7 +1701,7 @@ def test_genome_missing_taxonomy_recover_with_second_tax_file(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1732,7 +1724,7 @@ def test_genome_missing_taxonomy_ignore_rank(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1755,7 +1747,7 @@ def test_genome_multiple_taxonomy_files(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1790,7 +1782,7 @@ def test_genome_multiple_taxonomy_files_empty_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1818,7 +1810,7 @@ def test_genome_missing_taxonomy_fail_threshold(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1844,7 +1836,7 @@ def test_genome_missing_taxonomy_fail_rank(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     subset_csv = runtmp.output("subset_taxonomy.csv")
     with open(subset_csv, 'w') as subset:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
         subset.write("\n".join(tax))
 
@@ -1888,7 +1880,7 @@ def test_genome_empty_gather_results_with_header_single(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results = [x for x in open(g_csv, 'r')]
+    gather_results = [x for x in Path(g_csv).read_text().splitlines()]
     empty_gather_with_header = runtmp.output('g_header.csv')
     # write temp empty gather results (header only)
     with open(empty_gather_with_header, "w") as fp:
@@ -2185,7 +2177,7 @@ def test_genome_ani_lemonade_classify(runtmp):
     assert c.last_result.status == 0
 
     this_gather_file = c.output('gather.csv')
-    this_gather = open(this_gather_file).readlines()
+    this_gather = Path(this_gather_file).read_text().splitlines()
 
     assert len(this_gather) == 4
 
@@ -2337,7 +2329,7 @@ def test_annotate_0(runtmp):
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
 
-    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    lin_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     print("\n".join(lin_gather_results))
     assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
@@ -2371,7 +2363,7 @@ def test_annotate_gzipped_gather(runtmp):
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
 
-    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    lin_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     print("\n".join(lin_gather_results))
     assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
@@ -2400,7 +2392,7 @@ def test_annotate_0_LIN(runtmp):
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
 
-    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    lin_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     print("\n".join(lin_gather_results))
     assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
@@ -2437,7 +2429,7 @@ def test_annotate_gather_argparse(runtmp):
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
 
-    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    lin_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     print("\n".join(lin_gather_results))
     assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
@@ -2462,7 +2454,7 @@ def test_annotate_0_db(runtmp):
 
     assert c.last_result.status == 0
 
-    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    lin_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     print("\n".join(lin_gather_results))
     assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
@@ -2496,10 +2488,9 @@ def test_annotate_prefetch_or_other_header(runtmp):
     alt_csv = runtmp.output('g.csv')
     for alt_col in ['match_name', 'ident', 'accession']:
         #modify 'name' to other acceptable id_columns result
-        alt_g = [x.replace("name", alt_col) for x in open(g_csv, 'r')]
+        alt_g = [x.replace("name", alt_col) + "\n" for x in Path(g_csv).read_text().splitlines()]
         with open(alt_csv, 'w') as fp:
-            for line in alt_g:
-                fp.write(line)
+            fp.writelines(alt_g)
 
         runtmp.run_sourmash('tax', 'annotate', '-g', alt_csv, '--taxonomy-csv', tax)
 
@@ -2517,10 +2508,9 @@ def test_annotate_bad_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("name", "nope") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(bad_g_csv, 'w') as fp:
-        for line in bad_g:
-            fp.write(line)
+        fp.writelines(bad_g)
     # print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -2539,10 +2529,9 @@ def test_annotate_no_tax_matches(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #mess up tax idents
-    bad_g = [x.replace("GCF_", "GGG_") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("GCF_", "GGG_") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(bad_g_csv, 'w') as fp:
-        for line in bad_g:
-            fp.write(line)
+        fp.writelines(bad_g)
     # print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -2690,7 +2679,7 @@ def test_tax_prepare_1_combine_csv(runtmp):
     assert not out
     assert "...loaded 8 entries" in err
 
-    out = open(taxout).readlines()
+    out = Path(taxout).read_text().splitlines()
     assert len(out) == 9
 
 
@@ -3137,7 +3126,7 @@ def test_tax_grep_search_shew_out(runtmp):
 
     err = runtmp.last_result.err
 
-    out = open(runtmp.output('pick.csv')).read()
+    out = Path(runtmp.output('pick.csv')).read_text()
     lines = [ x.strip() for x in out.splitlines() ]
     lines = [ x.split(',') for x in lines ]
     assert lines[0][0] == 'ident'
@@ -3157,7 +3146,7 @@ def test_tax_grep_search_shew_sqldb_out(runtmp):
 
     err = runtmp.last_result.err
 
-    out = open(runtmp.output('pick.csv')).read()
+    out = Path(runtmp.output('pick.csv')).read_text()
     lines = [ x.strip() for x in out.splitlines() ]
     lines = [ x.split(',') for x in lines ]
     assert lines[0][0] == 'ident'
@@ -3186,7 +3175,7 @@ def test_tax_grep_search_shew_lowercase(runtmp):
     assert "searching 1 taxonomy files for 'shew'" in err
     assert 'found 2 matches; saved identifiers to picklist' in err
 
-    out = open(runtmp.output('pick.csv')).read()
+    out = Path(runtmp.output('pick.csv')).read_text()
     lines = [ x.strip() for x in out.splitlines() ]
     lines = [ x.split(',') for x in lines ]
     assert lines[0][0] == 'ident'
@@ -3315,7 +3304,7 @@ def test_tax_grep_multiple_csv(runtmp):
     assert not out
     assert "found 4 matches" in err
 
-    lines = open(taxout).readlines()
+    lines = Path(taxout).read_text().splitlines()
     assert len(lines) == 5
 
     names = set([ x.split(',')[0] for x in lines ])
@@ -3346,7 +3335,7 @@ def test_tax_grep_multiple_csv_empty_force(runtmp):
     assert not out
     assert "found 4 matches" in err
 
-    lines = open(taxout).readlines()
+    lines = Path(taxout).read_text().splitlines()
     assert len(lines) == 5
 
     names = set([ x.split(',')[0] for x in lines ])
@@ -3372,7 +3361,7 @@ def test_tax_grep_duplicate_csv(runtmp):
     assert not out
     assert "found 3 matches" in err
 
-    lines = open(taxout).readlines()
+    lines = Path(taxout).read_text().splitlines()
     assert len(lines) == 4
 
     names = set([ x.split(',')[0] for x in lines ])

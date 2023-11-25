@@ -9,6 +9,7 @@ import pprint
 import traceback
 from io import open  # pylint: disable=redefined-builtin
 from io import StringIO
+from pathlib import Path
 
 from importlib import resources
 from importlib.metadata import entry_points
@@ -56,7 +57,7 @@ def _runscript(scriptname):
     if os.path.isfile(scriptfile):
         if os.path.isfile(scriptfile):
             exec(  # pylint: disable=exec-used
-                compile(open(scriptfile).read(), scriptfile, 'exec'),
+                compile(Path(scriptfile).read_text(), scriptfile, 'exec'),
                 namespace)
             return 0
 

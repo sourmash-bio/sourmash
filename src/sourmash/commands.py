@@ -248,7 +248,8 @@ def plot(args):
     D_filename = args.distances
 
     notify(f'loading comparison matrix from {D_filename}...')
-    D = numpy.load(open(D_filename, 'rb'))
+    with open(D_filename, 'rb') as f:
+        D = numpy.load(f)
     # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
@@ -274,7 +275,8 @@ def plot(args):
             labelfilename = D_filename + '.labels.txt'
 
         notify(f'loading labels from {labelfilename}')
-        labeltext = [ x.strip() for x in open(labelfilename) ]
+        with open(labelfilename) as f:
+            labeltext = [ x.strip() for x in f ]
         
         if len(labeltext) != D.shape[0]:
             error('{} labels != matrix size, exiting', len(labeltext))
@@ -1204,24 +1206,24 @@ def watch(args):
         return results
 
     notify('reading sequences from stdin')
-    screed_iter = screed.open(args.inp_file)
     watermark = WATERMARK_SIZE
 
     # iterate over input records
     n = 0
-    for n, record in enumerate(screed_iter):
-        # at each watermark, print status & check cardinality
-        if n >= watermark:
-            notify(f'\r... read {n} sequences', end='')
-            watermark += WATERMARK_SIZE
+    with screed.open(args.inp_file) as screed_iter:
+        for n, record in enumerate(screed_iter):
+            # at each watermark, print status & check cardinality
+            if n >= watermark:
+                notify(f'\r... read {n} sequences', end='')
+                watermark += WATERMARK_SIZE
 
-            if do_search():
-                break
+                if do_search():
+                    break
 
-        if args.input_is_protein:
-            E.add_protein(record.sequence)
-        else:
-            E.add_sequence(record.sequence, False)
+            if args.input_is_protein:
+                E.add_protein(record.sequence)
+            else:
+                E.add_sequence(record.sequence, False)
 
     results = do_search()
     if not results:

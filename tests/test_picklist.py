@@ -31,7 +31,7 @@ def test_load_empty_picklist_allow():
 def test_dup_md5_picked(runtmp):
     # load a sig, duplicate, and see if a picklist gets the right one
     sig47 = utils.get_test_data('47.fa.sig')
-    ss = sourmash.load_signatures(sig47)
+    ss = sourmash.load_file_as_signatures(sig47)
     sig = list(ss)[0]
 
     # save a manifest with one entry
@@ -69,7 +69,7 @@ def test_dup_md5_picked_mf_to_picklist(runtmp):
     # load a sig, duplicate, and see if a picklist gets the right one
     # uses an in memory picklist
     sig47 = utils.get_test_data('47.fa.sig')
-    ss = sourmash.load_signatures(sig47)
+    ss = sourmash.load_file_as_signatures(sig47)
     sig = list(ss)[0]
 
     # save a manifest with one entry
@@ -101,7 +101,7 @@ def test_dup_md5_picked_mf_to_picklist_sqlite(runtmp):
     # load a sig, duplicate, and see if a picklist gets the right one
     # use a sqlite db with its own to_picklist behavior.
     sig47 = utils.get_test_data('47.fa.sig')
-    ss = sourmash.load_signatures(sig47)
+    ss = sourmash.load_file_as_signatures(sig47)
     sig = list(ss)[0]
 
     # save a manifest with one entry

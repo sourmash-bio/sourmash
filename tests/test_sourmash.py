@@ -11,6 +11,9 @@ import csv
 import pytest
 import zipfile
 import random
+import warnings
+from pathlib import Path
+
 import numpy
 
 import sourmash_tst_utils as utils
@@ -1658,8 +1661,7 @@ def test_do_sourmash_sbt_search_output(runtmp):
 
     runtmp.sourmash('search', 'short.fa.sig', 'zzz', '-o', 'foo')
 
-    outfile = open(runtmp.output('foo'))
-    output = outfile.read()
+    output = Path(runtmp.output('foo')).read_text()
     print(output)
     assert 'e26a306d26512' in output
     assert '914591cd1130aa915' in output
@@ -1733,8 +1735,7 @@ def test_do_sourmash_sbt_move_and_search_output(runtmp):
                                         'zzz.sbt.json', '-o', 'foo'],
                                         in_directory=newpath)
 
-    outfile = open(os.path.join(newpath, 'foo'))
-    output = outfile.read()
+    output = Path(os.path.join(newpath, 'foo')).read_text()
     print(output)
     assert '914591cd1130aa91' in output
     assert 'e26a306d2651' in output
@@ -2090,11 +2091,11 @@ def test_search_gzip(runtmp):
 
     runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2)
 
-    data = open(runtmp.output('short.fa.sig'), 'rb').read()
+    data = Path(runtmp.output('short.fa.sig')).read_bytes()
     with gzip.open(runtmp.output('zzz.gz'), 'wb') as fp:
         fp.write(data)
 
-    data = open(runtmp.output('short2.fa.sig'), 'rb').read()
+    data = Path(runtmp.output('short2.fa.sig')).read_bytes()
     with gzip.open(runtmp.output('yyy.gz'), 'wb') as fp:
         fp.write(data)
 
@@ -3199,10 +3200,11 @@ def test_compare_with_abundance_1(runtmp):
     s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
     s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-    signature.save_signatures([s1],
-                                open(runtmp.output('e1.sig'), 'w'))
-    signature.save_signatures([s2],
-                                open(runtmp.output('e2.sig'), 'w'))
+    with open(runtmp.output('e1.sig'), 'w') as f:
+        signature.save_signatures([s1], f)
+
+    with open(runtmp.output('e2.sig'), 'w') as f:
+        signature.save_signatures([s2], f)
 
     runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
 
@@ -3224,10 +3226,11 @@ def test_compare_with_abundance_2(runtmp):
     s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
     s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-    signature.save_signatures([s1],
-                                open(runtmp.output('e1.sig'), 'w'))
-    signature.save_signatures([s2],
-                                open(runtmp.output('e2.sig'), 'w'))
+    with open(runtmp.output('e1.sig'), 'w') as f:
+        signature.save_signatures([s1], f)
+
+    with open(runtmp.output('e2.sig'), 'w') as f:
+        signature.save_signatures([s2], f)
 
     runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
 
@@ -3250,10 +3253,11 @@ def test_compare_with_abundance_3(runtmp):
     s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
     s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-    signature.save_signatures([s1],
-                                open(runtmp.output('e1.sig'), 'w'))
-    signature.save_signatures([s2],
-                                open(runtmp.output('e2.sig'), 'w'))
+    with open(runtmp.output('e1.sig'), 'w') as f:
+        signature.save_signatures([s1], f)
+
+    with open(runtmp.output('e2.sig'), 'w') as f:
+        signature.save_signatures([s2], f)
 
     runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
 
@@ -5346,7 +5350,7 @@ def test_sbt_categorize(runtmp):
     # yields 521/1000 ==> ~0.5
     assert 'for genome-s10+s11, found: 0.50 genome-s10' in runtmp.last_result.err
 
-    out_csv = open(runtmp.output('out.csv')).read()
+    out_csv = Path(runtmp.output('out.csv')).read_text()
     print(out_csv)
     assert '4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
@@ -5399,7 +5403,7 @@ def test_sbt_categorize_ignore_abundance_3(runtmp):
 
     assert 'for 1-1, found: 0.88 1-1' in runtmp.last_result.err
 
-    out_csv4 = open(runtmp.output('out4.csv')).read()
+    out_csv4 = Path(runtmp.output('out4.csv')).read_text()
     assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
 
 
@@ -5787,7 +5791,7 @@ def test_do_sourmash_index_zipfile_append(c):
     # should be no overlap
     assert not set(first_half).intersection(set(second_half))
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
                        *first_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
@@ -5800,7 +5804,7 @@ def test_do_sourmash_index_zipfile_append(c):
     assert c.last_result.status == 0
     assert 'Finished saving SBT index, available at' in c.last_result.err
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         c.run_sourmash('index', "--append", '-k', '31', 'zzz.sbt.zip',
                        *second_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
