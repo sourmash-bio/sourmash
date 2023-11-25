@@ -13,14 +13,6 @@ from io import StringIO
 from importlib import resources
 from importlib.metadata import entry_points
 
-# Remove when we drop support for 3.8
-if sys.version_info < (3, 9):
-    import importlib_resources as resources
-
-# Remove when we drop support for 3.9
-if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points
-
 
 SIG_FILES = [os.path.join('demo', f) for f in (
   "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",

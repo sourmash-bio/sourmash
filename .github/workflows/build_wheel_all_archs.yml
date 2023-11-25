@@ -42,7 +42,7 @@ jobs:
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       # Added due to weird error when building inside docker container
       # for other platforms...
