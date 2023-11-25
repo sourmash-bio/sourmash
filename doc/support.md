@@ -101,9 +101,9 @@ and our intent is that it will support as-yet unreleased versions of Python 3.x
 (e.g. 3.10) moving forward.
 
 For future versions of sourmash, we plan to follow the
-[Numpy NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html)
+[Scientific Python SPEC 0](https://scientific-python.org/specs/spec-0000/)
 proposal for Python version support. For example, this
-would mean that we would drop support for Python 3.8 on April 14,
+means that we dropped support for Python 3.9 on October 10,
 2023.
 
 ### Rust API
