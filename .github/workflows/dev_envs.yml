@@ -45,7 +45,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@3b0f2504dd76ef23b6d31f291f4913fb60ab5ff3
       with:
         auto-update-conda: true
-        python-version: 3.9
+        python-version: "3.10"
         channels: conda-forge,bioconda
         miniforge-variant: Mambaforge
         miniforge-version: latest
@@ -59,6 +59,6 @@ jobs:
       shell: bash -l {0}
       run: mamba install 'tox>=3.27,<4' tox-conda rust git compilers pandoc libstdcxx-ng
 
-    - name: run tests for 3.9
+    - name: run tests for 3.10
       shell: bash -l {0}
-      run: tox -e py39
+      run: tox -e py310

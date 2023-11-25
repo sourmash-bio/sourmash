@@ -336,7 +336,8 @@ def test_protein_override_bad_rust_foo():
 
     # try adding something
     testdata1 = utils.get_test_data('ecoli.faa')
-    record = next(iter(screed.open(testdata1)))
+    with screed.open(testdata1) as f:
+        record = next(iter(f))
 
     with pytest.raises(ValueError) as exc:
         sig.add_protein(record.sequence)
@@ -1387,7 +1388,8 @@ def test_protein_with_stop_codons(runtmp):
     # apis
 
     testdata1 = utils.get_test_data('ecoli.faa')
-    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+    with screed.open(testdata1) as f:
+        ecoli_seq = [ record.sequence for record in f ]
 
     # first, via CLI w/o stop codons
     runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1', testdata1)
@@ -1452,7 +1454,8 @@ def test_hp_with_stop_codons(runtmp):
     # apis
 
     testdata1 = utils.get_test_data('ecoli.faa')
-    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+    with screed.open(testdata1) as f:
+        ecoli_seq = [ record.sequence for record in f ]
 
     # first, via CLI w/o stop codons
     runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,hp', testdata1)
@@ -1517,7 +1520,8 @@ def test_dayhoff_with_stop_codons(runtmp):
     # apis
 
     testdata1 = utils.get_test_data('ecoli.faa')
-    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+    with screed.open(testdata1) as f:
+        ecoli_seq = [ record.sequence for record in f]
 
     # first, via CLI w/o stop codons
     runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,dayhoff', testdata1)

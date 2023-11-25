@@ -64,8 +64,8 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
   "Programming Language :: Rust",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -79,10 +79,9 @@ dependencies = [
   "deprecation>=2.0.6",
   "cachetools>=4,<6",
   "bitstring>=3.1.9,<5",
-  "importlib_metadata>=3.6;python_version<'3.10'"
 ]
 
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -164,7 +163,7 @@ line_length = 88
 known_first_party = ["sourmash"]
 
 [tool.cibuildwheel]
-build = "cp39-*"
+build = "cp310-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_*"
 before-all = [
   "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",

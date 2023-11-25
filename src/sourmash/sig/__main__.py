@@ -1134,62 +1134,63 @@ def kmers(args):
         notify(f"opening sequence file '{filename}'")
         n_files_searched += 1
 
-        for record in screed.open(filename):
-            seq_mh = query_mh.copy_and_clear()
+        with screed.open(filename) as f:
+            for record in f:
+                seq_mh = query_mh.copy_and_clear()
 
-            # protein? dna?
-            if is_protein:
-                seq_mh.add_protein(record.sequence)
-            else:
-                try:
-                    seq_mh.add_sequence(record.sequence,
-                                        not args.check_sequence)
-                except ValueError as exc:
-                    seqname = record.name
-                    if len(seqname) > 40:
-                        seqname = seqname[:37] + '...'
-                    notify(f"ERROR in sequence '{seqname}', file '{filename}'")
-                    notify(str(exc))
-                    if args.force:
-                        notify("(continuing)")
-                        continue
-                    else:
-                        sys.exit(-1)
+                # protein? dna?
+                if is_protein:
+                    seq_mh.add_protein(record.sequence)
+                else:
+                    try:
+                        seq_mh.add_sequence(record.sequence,
+                                            not args.check_sequence)
+                    except ValueError as exc:
+                        seqname = record.name
+                        if len(seqname) > 40:
+                            seqname = seqname[:37] + '...'
+                        notify(f"ERROR in sequence '{seqname}', file '{filename}'")
+                        notify(str(exc))
+                        if args.force:
+                            notify("(continuing)")
+                            continue
+                        else:
+                            sys.exit(-1)
 
-            if seq_mh.intersection(query_mh):
-                # match!
+                if seq_mh.intersection(query_mh):
+                    # match!
 
-                # output matching sequences:
-                if save_seqs:
-                    save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
-                    n_sequences_found += 1
-                    n_bp_saved += len(record.sequence)
+                    # output matching sequences:
+                    if save_seqs:
+                        save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
+                        n_sequences_found += 1
+                        n_bp_saved += len(record.sequence)
 
-                # output matching k-mers:
-                if kmer_w:
-                    seq = record.sequence
-                    kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
-                                                      is_protein=is_protein)
-                    for kmer, hashval in kh_iter:
-                        if hashval in query_mh.hashes:
-                            found_mh.add_hash(hashval)
-                            n_kmers_found += 1
-                            d = dict(sequence_file=filename,
-                                     sequence_name=record.name,
-                                     kmer=kmer, hashval=hashval)
-                            kmer_w.writerow(d)
+                    # output matching k-mers:
+                    if kmer_w:
+                        seq = record.sequence
+                        kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
+                                                          is_protein=is_protein)
+                        for kmer, hashval in kh_iter:
+                            if hashval in query_mh.hashes:
+                                found_mh.add_hash(hashval)
+                                n_kmers_found += 1
+                                d = dict(sequence_file=filename,
+                                         sequence_name=record.name,
+                                         kmer=kmer, hashval=hashval)
+                                kmer_w.writerow(d)
 
-                # add seq_mh to found_mh
-                found_mh += seq_mh.intersection(query_mh)
+                    # add seq_mh to found_mh
+                    found_mh += seq_mh.intersection(query_mh)
 
-            # provide progress indicator based on bp...
-            n_sequences_searched += 1
-            n_bp_searched += len(record.sequence)
+                # provide progress indicator based on bp...
+                n_sequences_searched += 1
+                n_bp_searched += len(record.sequence)
 
-            if n_bp_searched >= progress_threshold:
-                notify(f"... searched {n_bp_searched} from {n_files_searched} files so far")
-                while n_bp_searched >= progress_threshold:
-                    progress_threshold += progress_interval
+                if n_bp_searched >= progress_threshold:
+                    notify(f"... searched {n_bp_searched} from {n_files_searched} files so far")
+                    while n_bp_searched >= progress_threshold:
+                        progress_threshold += progress_interval
 
     # END major for loop. Now, clean up!
     if save_kmers:
