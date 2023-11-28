@@ -406,7 +406,7 @@ class MinHash(RustObject):
         if translate:
             # forward AND reverse complement => twice the k-mers
             n_kmers = (len(sequence) - ksize + 1) * 2
-            assert n_kmers == len(hashvals)
+            assert n_kmers == len(hashvals), (n_kmers, len(hashvals))
 
             # generate reverse complement of sequence
             seqrc = screed.rc(sequence)
