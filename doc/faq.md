@@ -245,3 +245,14 @@ read mapping between the metagenome and the relevant reference genome
 or, if you are interested in retrieving accessory elements, you can
 try out
 [spacegraphcats](https://spacegraphcats.github.io/spacegraphcats/02-spacegraphcats-use-cases/).
+
+## How does memory usage for sourmash change with k-mer size?
+
+sourmash hashes k-mers into 64-bit numbers, so the size of what is
+stored is independent of the k-mer size. The only impact of k-mer size
+on sourmash behavior is then more on the biology side - how many
+matches do you gain (or lose) with that k-mer size? And do you have a
+lot of new k-mers that pop up with a longer k-mer size (e.g. because
+of included variation)? These questions must be answered by experimentation
+and may be data-set specific.
+
