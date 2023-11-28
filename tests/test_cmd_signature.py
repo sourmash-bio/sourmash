@@ -4521,6 +4521,76 @@ def test_sig_kmers_2_hp(runtmp):
     assert check_mh2.similarity(mh) == 1.0
 
 
+def test_sig_kmers_3_bad_dna_ignore(runtmp):
+    # test sig kmers on dna w/bad DNA ('N') - should be ignored.
+    seqfile = utils.get_test_data('short.bad.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.bad.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'short.bad.fa.sig',
+                    '--seq', seqfile,
+                    '--save-kmers', 'short.csv',
+                    '--save-sequences', 'matched.fa')
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 795' in err
+    assert 'found 795 distinct matching hashes (100.0%)' in err
+
+    # check FASTA output
+    assert os.path.exists(runtmp.output('matched.fa'))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
+    assert len(records) == 1
+    assert len(records[0].sequence) == 1012, len(records[0].sequence)
+
+    seq_mh = mh.copy_and_clear()
+    for record in records:
+        seq_mh.add_sequence(record.sequence, force=True)
+    assert seq_mh.similarity(mh) == 1.0
+
+    # check CSV output w/k-mers and hashes etc
+    assert os.path.exists(runtmp.output('short.csv'))
+    with open(runtmp.output('short.csv'), newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 795
+
+    check_mh = mh.copy_and_clear()
+    check_mh2 = mh.copy_and_clear()
+    for row in rows:
+        check_mh.add_sequence(row['kmer'], force=True)
+        check_mh2.add_hash(int(row['hashval']))
+    assert check_mh.similarity(mh) == 1.0
+    assert check_mh2.similarity(mh) == 1.0
+
+
+def test_sig_kmers_3_bad_dna_fail(runtmp):
+    # test sig kmers on dna w/bad DNA ('N') and --check-seq - should fail
+    seqfile = utils.get_test_data('short.bad.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.bad.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'kmers', '--sig', 'short.bad.fa.sig',
+                        '--seq', seqfile,
+                        '--save-kmers', 'short.csv',
+                        '--save-sequences', 'matched.fa',
+                        '--check-sequence')
+
+    assert "ERROR in sequence 'shortName'" in runtmp.last_result.err
+    assert "invalid DNA character in input k-mer: TCTGATCTCNGGATAAANAAGCGATCCCAGT" in runtmp.last_result.err
+
+
 def test_sig_check_1(runtmp):
     # basic check functionality
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))

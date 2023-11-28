@@ -264,7 +264,7 @@ def test_seq_to_hashes_bad_kmers_as_zeroes_2():
     seq = "ATGAGAGACGATAGACAGATGACN"
     
     with pytest.raises(ValueError):
-        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
+        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True, force=False)
 
 
 def test_seq_to_hashes_translated_short():
