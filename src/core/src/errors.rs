@@ -63,9 +63,17 @@ pub enum SourmashError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
+    #[error(transparent)]
+    CsvError(#[from] csv::Error),
+
     #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "branchwater")]
+    #[error(transparent)]
+    RocksDBError(#[from] rocksdb::Error),
 }
 
 #[derive(Debug, Error)]
@@ -108,6 +116,8 @@ pub enum SourmashErrorCode {
     ParseInt = 100_003,
     SerdeError = 100_004,
     NifflerError = 100_005,
+    CsvError = 100_006,
+    RocksDBError = 100_007,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
@@ -137,6 +147,11 @@ impl SourmashErrorCode {
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
+            SourmashError::CsvError { .. } => SourmashErrorCode::CsvError,
+
+            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "branchwater")]
+            SourmashError::RocksDBError { .. } => SourmashErrorCode::RocksDBError,
         }
     }
 }

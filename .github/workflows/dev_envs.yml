@@ -57,7 +57,7 @@ jobs:
 
     - name: install dependencies
       shell: bash -l {0}
-      run: mamba install 'tox>=3.27,<4' tox-conda rust git compilers pandoc
+      run: mamba install 'tox>=3.27,<4' tox-conda rust git compilers pandoc libstdcxx-ng
 
     - name: run tests for 3.10
       shell: bash -l {0}
