@@ -234,6 +234,8 @@ jobs:
         with:
           crate-name: sourmash
           version-tag-prefix: r
+          feature-group: default-features
+          features: branchwater
 
       - name: Make sure we can publish the sourmash crate
         uses: actions-rs/cargo@v1
