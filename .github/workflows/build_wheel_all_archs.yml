@@ -16,8 +16,8 @@ jobs:
       matrix:
         build: [
           linux-aarch64,
-          linux-ppc64le,
-          linux-s390x,
+          #linux-ppc64le,
+          #linux-s390x,
         ]
         include:
           - build: linux-aarch64
