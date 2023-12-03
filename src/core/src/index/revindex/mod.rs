@@ -414,7 +414,8 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
     let iter = db.iterator_cf(&cf, rocksdb::IteratorMode::Start);
     let mut kcount = 0;
     let mut vcount = 0;
-    let mut vcounts = Histogram::new();
+    // Using power values from https://docs.rs/histogram/0.8.3/histogram/struct.Config.html#resulting-size
+    let mut vcounts = Histogram::new(12, 64).expect("Error initializing histogram");
     let mut datasets: Datasets = Default::default();
 
     for result in iter {
