@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<2",
+    "maturin>=1,<1.3.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -9,10 +9,11 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.8.3-dev"
+version = "4.8.5-dev"
 
 authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
+  { name="N. Tessa Pierce-Ward", orcid="0000-0002-2942-5331" },
   { name="Mohamed Abuelanin", orcid="0000-0002-3419-4785" },
   { name="Harriet Alexander", orcid="0000-0003-1308-8008" },
   { name="Abhishek Anant", orcid="0000-0002-5751-2010" },
@@ -22,6 +23,7 @@ authors = [
   { name="Phillip Brooks", orcid="0000-0003-3987-244X" },
   { name="Peter Cock", orcid="0000-0001-9513-9993" },
   { name="Daniel Dsouza", orcid="0000-0001-7843-8596" },
+  { name="Jade Gardner", orcid="0009-0005-0787-5752" },
   { name="Laurent Gautier", orcid="0000-0003-0638-3391" },
   { name="Tim Head", orcid="0000-0003-0931-3698" },
   { name="Mahmudur Rahman Hera", orcid="0000-0002-5992-9012" },
@@ -34,7 +36,6 @@ authors = [
   { name="Ricky Lim", orcid="0000-0003-1313-7076" },
   { name="R. Todd Morse", orcid="0009-0007-1711-5938" },
   { name="Ivan Ogasawara", orcid="0000-0001-5049-4289" },
-  { name="N. Tessa Pierce", orcid="0000-0002-2942-5331" },
   { name="Taylor Reiter", orcid="0000-0002-7388-421X" },
   { name="Camille Scott", orcid="0000-0001-8822-8779" },
   { name="Andreas Sjödin", orcid="0000-0001-5350-4219" },
@@ -64,8 +65,8 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
   "Programming Language :: Rust",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -79,10 +80,9 @@ dependencies = [
   "deprecation>=2.0.6",
   "cachetools>=4,<6",
   "bitstring>=3.1.9,<5",
-  "importlib_metadata>=3.6;python_version<'3.10'"
 ]
 
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -145,9 +145,15 @@ include = [
 exclude = [
   { path = "**/__pycache__/*", format = ["sdist", "wheel"] },
 ]
-features = ["maturin"]
+features = ["maturin", "branchwater"]
 locked = true
 module-name = "sourmash._lowlevel"
+
+# macOS deployment target SDK version
+[tool.maturin.target.x86_64-apple-darwin]
+macos-deployment-target = "11.0"
+[tool.maturin.target.aarch64-apple-darwin]
+macos-deployment-target = "11.0"
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
@@ -158,11 +164,39 @@ line_length = 88
 known_first_party = ["sourmash"]
 
 [tool.cibuildwheel]
-build = "cp39-*"
-skip = "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
-before-build = "source .ci/install_cargo.sh"
-environment = { PATH="$HOME/.cargo/bin:$PATH" }
+build = "cp310-*"
+skip = "*-win32 *-manylinux_i686 *-musllinux_* *-ppc64le *-s390x"
+before-all = [
+  "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
+  "cargo update --dry-run",
+]
+macos.before-build = [
+  "rustup target add aarch64-apple-darwin",
+]
 build-verbosity = 3
+
+[tool.cibuildwheel.environment]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
+PATH="$HOME/.cargo/bin:$PATH"
+
+[tool.cibuildwheel.linux]
+before-all = [
+  "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
+  "cargo update --dry-run",
+  "if [ -f /etc/system-release ]; then yum -y install centos-release-scl; fi",
+  "if [ -f /etc/system-release ]; then yum -y install llvm-toolset-7.0; fi",
+]
+before-build = [
+  "if [ -f /etc/system-release ]; then source scl_source enable llvm-toolset-7.0; fi",
+  "if [ -f /etc/system-release ]; then source scl_source enable devtoolset-10; fi",
+]
+
+[tool.cibuildwheel.linux.environment]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
+PATH="$HOME/.cargo/bin:$PATH"
+LIBCLANG_PATH="/opt/rh/llvm-toolset-7.0/root/usr/lib64"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/rh/llvm-toolset-7.0/root/usr/lib64"
+C_INCLUDE_PATH="/opt/rh/devtoolset-10/root/usr/lib/gcc/aarch64-redhat-linux/10/include:/opt/rh/devtoolset-10/root/usr/lib/gcc/x86_64-redhat-linux/10/include"
 
 [tool.pytest.ini_options]
 addopts = "--doctest-glob='doc/*.md' -n4"

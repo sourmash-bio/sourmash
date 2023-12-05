@@ -16,8 +16,8 @@ jobs:
       matrix:
         build: [
           linux-aarch64,
-          linux-ppc64le,
-          linux-s390x,
+          #linux-ppc64le,
+          #linux-s390x,
         ]
         include:
           - build: linux-aarch64
@@ -35,14 +35,14 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       # Added due to weird error when building inside docker container
       # for other platforms...
@@ -61,12 +61,12 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.13.1
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}

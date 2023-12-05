@@ -42,9 +42,9 @@ The GTDB genomic representatives are a low-redundancy subset of Genbank genomes,
 
 | K-mer size | Zipfile collection | SBT | LCA |
 | -------- | -------- | -------- | ---- |
-| 21 | [download (2.2 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k21.zip) | [download (4.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k21.sbt.zip) | [download (189 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207gtdb-rs214-reps.k21.lca.json.gz) |
-| 31 | [download (2.2 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip) | [download (4.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.sbt.zip) | [download (221 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-reps.k31.lca.json.gz) |
-| 51 | [download (2.2 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k51.zip) | [download (4.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k51.sbt.zip) | [download (230 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-reps.k51.lca.json.gz) |
+| 21 | [download (2.2 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k21.zip) | [download (4.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k21.sbt.zip) | [download (189 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k21.lca.json.gz) |
+| 31 | [download (2.2 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip) | [download (4.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.sbt.zip) | [download (221 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.lca.json.gz) |
+| 51 | [download (2.2 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k51.zip) | [download (4.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k51.sbt.zip) | [download (230 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k51.lca.json.gz) |
 
 ### GTDB R08-RS214 all genomes (403k)
 

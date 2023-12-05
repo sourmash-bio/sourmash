@@ -1,185 +1,325 @@
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::path::Path;
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use serde::{Deserialize, Serialize};
-use typed_builder::TypedBuilder;
+use camino::Utf8PathBuf as PathBuf;
+use log::info;
 
-use crate::index::{Comparable, DatasetInfo, Index, SigStore};
-use crate::prelude::*;
-use crate::storage::{FSStorage, InnerStorage, Storage, StorageInfo};
-use crate::Error;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 
-#[derive(TypedBuilder)]
-pub struct LinearIndex<L> {
-    #[builder(default)]
-    storage: Option<InnerStorage>,
+use crate::collection::CollectionSet;
+use crate::encodings::Idx;
+use crate::index::{GatherResult, Index, Selection, SigCounter};
+use crate::selection::Select;
+use crate::signature::{Signature, SigsTrait};
+use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::Sketch;
+use crate::storage::SigStore;
+use crate::Result;
 
-    #[builder(default)]
-    datasets: Vec<SigStore<L>>,
+pub struct LinearIndex {
+    collection: CollectionSet,
+    template: Sketch,
 }
 
-#[derive(Serialize, Deserialize)]
-struct LinearInfo<L> {
-    version: u32,
-    storage: StorageInfo,
-    leaves: Vec<L>,
-}
-
-impl<'a, L> Index<'a> for LinearIndex<L>
-where
-    L: Clone + Comparable<L> + 'a,
-    SigStore<L>: From<L>,
-{
-    type Item = L;
-    //type SignatureIterator = std::slice::Iter<'a, Self::Item>;
-
-    fn insert(&mut self, node: L) -> Result<(), Error> {
-        self.datasets.push(node.into());
-        Ok(())
-    }
-
-    fn save<P: AsRef<Path>>(&self, _path: P) -> Result<(), Error> {
-        /*
-        let file = File::create(path)?;
-        match serde_json::to_writer(file, &self) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(SourmashError::SerdeError.into()),
+impl LinearIndex {
+    pub fn from_collection(collection: CollectionSet) -> Self {
+        let sig = collection.sig_for_dataset(0).unwrap();
+        let template = sig.sketches().swap_remove(0);
+        Self {
+            collection,
+            template,
         }
-        */
+    }
+
+    pub fn sig_for_dataset(&self, dataset_id: Idx) -> Result<SigStore> {
+        self.collection.sig_for_dataset(dataset_id)
+    }
+
+    pub fn collection(&self) -> &CollectionSet {
+        &self.collection
+    }
+
+    pub fn template(&self) -> &Sketch {
+        &self.template
+    }
+
+    pub fn location(&self) -> Option<String> {
         unimplemented!()
     }
 
-    fn load<P: AsRef<Path>>(_path: P) -> Result<(), Error> {
+    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+        let processed_sigs = AtomicUsize::new(0);
+
+        let template = self.template();
+
+        #[cfg(feature = "parallel")]
+        let sig_iter = self.collection.par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let sig_iter = self.collection.iter();
+
+        let counters = sig_iter.filter_map(|(dataset_id, record)| {
+            let filename = record.internal_location();
+
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            let search_sig = self
+                .collection
+                .sig_for_dataset(dataset_id)
+                .unwrap_or_else(|_| panic!("error loading {:?}", filename));
+
+            let mut search_mh = None;
+            if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(template) {
+                search_mh = Some(mh);
+            };
+            let search_mh = search_mh.expect("Couldn't find a compatible MinHash");
+
+            let (large_mh, small_mh) = if query.size() > search_mh.size() {
+                (query, search_mh)
+            } else {
+                (search_mh, query)
+            };
+
+            let (size, _) = small_mh
+                .intersection_size(large_mh)
+                .unwrap_or_else(|_| panic!("error computing intersection for {:?}", filename));
+
+            if size == 0 {
+                None
+            } else {
+                let mut counter: SigCounter = Default::default();
+                counter[&(dataset_id as Idx)] += size as usize;
+                Some(counter)
+            }
+        });
+
+        let reduce_counters = |mut a: SigCounter, b: SigCounter| {
+            a.extend(&b);
+            a
+        };
+
+        #[cfg(feature = "parallel")]
+        let counter = counters.reduce(SigCounter::new, reduce_counters);
+
+        #[cfg(not(feature = "parallel"))]
+        let counter = counters.fold(SigCounter::new(), reduce_counters);
+
+        counter
+    }
+
+    pub fn search(
+        &self,
+        counter: SigCounter,
+        similarity: bool,
+        threshold: usize,
+    ) -> Result<Vec<String>> {
+        let mut matches = vec![];
+        if similarity {
+            unimplemented!("TODO: threshold correction")
+        }
+
+        for (dataset_id, size) in counter.most_common() {
+            if size >= threshold {
+                matches.push(
+                    self.collection
+                        .record_for_dataset(dataset_id)?
+                        .internal_location()
+                        .to_string(),
+                );
+            } else {
+                break;
+            };
+        }
+        Ok(matches)
+    }
+
+    pub fn gather_round(
+        &self,
+        dataset_id: Idx,
+        match_size: usize,
+        query: &KmerMinHash,
+        round: usize,
+    ) -> Result<GatherResult> {
+        let match_path = self
+            .collection
+            .record_for_dataset(dataset_id)?
+            .internal_location()
+            .into();
+        let match_sig = self.collection.sig_for_dataset(dataset_id)?;
+        let result = self.stats_for_match(&match_sig, query, match_size, match_path, round)?;
+        Ok(result)
+    }
+
+    fn stats_for_match(
+        &self,
+        match_sig: &Signature,
+        query: &KmerMinHash,
+        match_size: usize,
+        match_path: PathBuf,
+        gather_result_rank: usize,
+    ) -> Result<GatherResult> {
+        let template = self.template();
+
+        let mut match_mh = None;
+        if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(template) {
+            match_mh = Some(mh);
+        }
+        let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
+
+        // Calculate stats
+        let f_orig_query = match_size as f64 / query.size() as f64;
+        let f_match = match_size as f64 / match_mh.size() as f64;
+        let filename = match_path.into_string();
+        let name = match_sig.name();
+        let unique_intersect_bp = match_mh.scaled() as usize * match_size;
+
+        let (intersect_orig, _) = match_mh.intersection_size(query)?;
+        let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
+
+        let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
+        let match_ = match_sig.clone();
+
+        // TODO: all of these
+        let f_unique_weighted = 0.;
+        let average_abund = 0;
+        let median_abund = 0;
+        let std_abund = 0;
+        let md5 = "".into();
+        let f_match_orig = 0.;
+        let remaining_bp = 0;
+
+        Ok(GatherResult {
+            intersect_bp,
+            f_orig_query,
+            f_match,
+            f_unique_to_query,
+            f_unique_weighted,
+            average_abund,
+            median_abund,
+            std_abund,
+            filename,
+            name,
+            md5,
+            match_,
+            f_match_orig,
+            unique_intersect_bp,
+            gather_result_rank,
+            remaining_bp,
+        })
+    }
+
+    pub fn gather(
+        &self,
+        mut counter: SigCounter,
+        threshold: usize,
+        query: &KmerMinHash,
+    ) -> std::result::Result<Vec<GatherResult>, Box<dyn std::error::Error>> {
+        let mut match_size = usize::max_value();
+        let mut matches = vec![];
+        let template = self.template();
+
+        while match_size > threshold && !counter.is_empty() {
+            let (dataset_id, size) = counter.most_common()[0];
+            if threshold == 0 && size == 0 {
+                break;
+            }
+
+            match_size = if size >= threshold {
+                size
+            } else {
+                break;
+            };
+
+            let result = self.gather_round(dataset_id, match_size, query, matches.len())?;
+
+            // Prepare counter for finding the next match by decrementing
+            // all hashes found in the current match in other datasets
+            // TODO: maybe par_iter?
+            let mut to_remove: HashSet<Idx> = Default::default();
+            to_remove.insert(dataset_id);
+
+            for (dataset, value) in counter.iter_mut() {
+                let dataset_sig = self.collection.sig_for_dataset(*dataset)?;
+                let mut match_mh = None;
+                if let Some(Sketch::MinHash(mh)) = dataset_sig.select_sketch(template) {
+                    match_mh = Some(mh);
+                }
+                let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
+
+                let (intersection, _) = query.intersection_size(match_mh)?;
+                if intersection as usize > *value {
+                    to_remove.insert(*dataset);
+                } else {
+                    *value -= intersection as usize;
+                };
+            }
+            to_remove.iter().for_each(|dataset_id| {
+                counter.remove(dataset_id);
+            });
+            matches.push(result);
+        }
+        Ok(matches)
+    }
+
+    pub fn signatures_iter(&self) -> impl Iterator<Item = SigStore> + '_ {
+        (0..self.collection.len()).map(move |dataset_id| {
+            self.collection
+                .sig_for_dataset(dataset_id as Idx)
+                .expect("error loading sig")
+        })
+    }
+}
+
+impl Select for LinearIndex {
+    fn select(self, selection: &Selection) -> Result<Self> {
+        let Self {
+            collection,
+            template,
+        } = self;
+        let collection = collection.into_inner().select(selection)?.try_into()?;
+
+        Ok(Self {
+            collection,
+            template,
+        })
+    }
+}
+
+impl<'a> Index<'a> for LinearIndex {
+    type Item = SigStore;
+
+    fn insert(&mut self, _node: Self::Item) -> Result<()> {
         unimplemented!()
+    }
+
+    fn save<P: AsRef<std::path::Path>>(&self, _path: P) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn load<P: AsRef<std::path::Path>>(_path: P) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn len(&self) -> usize {
+        self.collection.len()
     }
 
     fn signatures(&self) -> Vec<Self::Item> {
-        self.datasets
+        self.collection()
             .iter()
-            .map(|x| x.data.get().unwrap().clone())
+            .map(|(i, p)| {
+                self.collection()
+                    .sig_for_dataset(i as Idx)
+                    .unwrap_or_else(|_| panic!("Error processing {}", p.internal_location()))
+            })
             .collect()
     }
 
     fn signature_refs(&self) -> Vec<&Self::Item> {
-        self.datasets
-            .iter()
-            .map(|x| x.data.get().unwrap())
-            .collect()
-    }
-
-    /*
-    fn iter_signatures(&'a self) -> Self::SignatureIterator {
-        self.datasets.iter()
-    }
-    */
-}
-
-impl<L> LinearIndex<L>
-where
-    L: ToWriter,
-    SigStore<L>: ReadData<L>,
-{
-    pub fn save_file<P: AsRef<Path>>(
-        &mut self,
-        path: P,
-        storage: Option<InnerStorage>,
-    ) -> Result<(), Error> {
-        let ref_path = path.as_ref();
-        let mut basename = ref_path.file_name().unwrap().to_str().unwrap().to_owned();
-        if basename.ends_with(".sbt.json") {
-            basename = basename.replace(".sbt.json", "");
-        }
-        let location = ref_path.parent().unwrap();
-
-        let storage = match storage {
-            Some(s) => s,
-            None => {
-                let subdir = format!(".linear.{}", basename);
-                InnerStorage::new(FSStorage::new(location.to_str().unwrap(), &subdir))
-            }
-        };
-
-        let args = storage.args();
-        let storage_info = StorageInfo {
-            backend: "FSStorage".into(),
-            args,
-        };
-
-        let info: LinearInfo<DatasetInfo> = LinearInfo {
-            storage: storage_info,
-            version: 5,
-            leaves: self
-                .datasets
-                .iter_mut()
-                .map(|l| {
-                    // Trigger data loading
-                    let _: &L = (*l).data().unwrap();
-
-                    // set storage to new one
-                    l.storage = Some(storage.clone());
-
-                    let filename = (*l).save(&l.filename).unwrap();
-
-                    DatasetInfo {
-                        filename,
-                        name: l.name.clone(),
-                        metadata: l.metadata.clone(),
-                    }
-                })
-                .collect(),
-        };
-
-        let file = File::create(path)?;
-        serde_json::to_writer(file, &info)?;
-
-        Ok(())
-    }
-
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<LinearIndex<L>, Error> {
-        let file = File::open(&path)?;
-        let mut reader = BufReader::new(file);
-
-        // TODO: match with available Storage while we don't
-        // add a function to build a Storage from a StorageInfo
-        let mut basepath = PathBuf::new();
-        basepath.push(path);
-        basepath.canonicalize()?;
-
-        let linear = LinearIndex::<L>::from_reader(&mut reader, basepath.parent().unwrap())?;
-        Ok(linear)
-    }
-
-    pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex<L>, Error>
-    where
-        R: Read,
-        P: AsRef<Path>,
-    {
-        // TODO: check https://serde.rs/enum-representations.html for a
-        // solution for loading v4 and v5
-        let linear: LinearInfo<DatasetInfo> = serde_json::from_reader(rdr)?;
-
-        // TODO: support other storages
-        let mut st: FSStorage = (&linear.storage.args).into();
-        st.set_base(path.as_ref().to_str().unwrap());
-        let storage = InnerStorage::new(st);
-
-        Ok(LinearIndex {
-            storage: Some(storage.clone()),
-            datasets: linear
-                .leaves
-                .into_iter()
-                .map(|l| {
-                    let mut v: SigStore<L> = l.into();
-                    v.storage = Some(storage.clone());
-                    v
-                })
-                .collect(),
-        })
-    }
-
-    pub fn storage(&self) -> Option<InnerStorage> {
-        self.storage.clone()
+        unimplemented!()
     }
 }

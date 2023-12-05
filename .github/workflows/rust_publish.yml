@@ -10,7 +10,7 @@ jobs:
     name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -24,7 +24,7 @@ jobs:
           wasm-pack build src/core -d ../../pkg
 
       - name: Prepare node for NPM publishing
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1

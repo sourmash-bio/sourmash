@@ -27,7 +27,7 @@ jobs:
           - build: macos-x86_64
             os: macos-latest
             arch: x86_64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11 CARGO_BUILD_TARGET=x86_64-apple-darwin'
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_BUILD_TARGET=x86_64-apple-darwin'
           - build: macos-arm64
             os: macos-latest
             arch: arm64
@@ -35,17 +35,17 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.13.1
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
@@ -60,15 +60,15 @@ jobs:
     env:
         PYODIDE_VERSION: "0.23.0"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
            python-version: "3.11.2"
       - run: |
-          pip install pyodide-build==${PYODIDE_VERSION}
+          pip install pyodide-build==${PYODIDE_VERSION} "pydantic<2"
           pyodide config get emscripten_version  # trigger setup
           echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
-      - uses: mymindstorm/setup-emsdk@v12
+      - uses: mymindstorm/setup-emsdk@v13
         with:
            version: ${{ env.EMSCRIPTEN_VERSION }}
       - uses: actions-rs/toolchain@v1

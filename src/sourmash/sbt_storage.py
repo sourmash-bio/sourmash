@@ -130,7 +130,7 @@ class ZipStorage(RustObject, Storage):
             self._methodcall(lib.zipstorage_set_subdir, to_bytes(value), len(value))
 
     def _filenames(self):
-        if self.__inner:
+        if not self._objptr:
             return self.__inner._filenames()
 
         size = ffi.new("uintptr_t *")
@@ -150,7 +150,7 @@ class ZipStorage(RustObject, Storage):
         raise NotImplementedError()
 
     def load(self, path):
-        if self.__inner:
+        if not self._objptr:
             return self.__inner.load(path)
 
         try:

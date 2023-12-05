@@ -2,8 +2,9 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
+use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::ffi::HashFunctions;
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
@@ -23,7 +24,7 @@ pub unsafe extern "C" fn kmerminhash_new(
     track_abundance: bool,
     n: u32,
 ) -> *mut SourmashKmerMinHash {
-    let mh = KmerMinHash::new(scaled, k, hash_function, seed, track_abundance, n);
+    let mh = KmerMinHash::new(scaled, k, hash_function.into(), seed, track_abundance, n);
 
     SourmashKmerMinHash::from_rust(mh)
 }
@@ -39,7 +40,7 @@ pub unsafe extern "C" fn kmerminhash_slice_free(ptr: *mut u64, insize: usize) {
     if ptr.is_null() {
         return;
     }
-    Vec::from_raw_parts(ptr as *mut u64, insize, insize);
+    Vec::from_raw_parts(ptr, insize, insize);
 }
 
 ffi_fn! {
@@ -232,7 +233,7 @@ unsafe fn kmerminhash_add_many(
     // FIXME: make a SourmashSlice_u64 type?
     let hashes = {
         assert!(!hashes_ptr.is_null());
-        slice::from_raw_parts(hashes_ptr as *const u64, insize)
+        slice::from_raw_parts(hashes_ptr, insize)
     };
 
     for hash in hashes {
@@ -277,13 +278,13 @@ unsafe fn kmerminhash_set_abundances(
     // FIXME: make a SourmashSlice_u64 type?
     let hashes = {
         assert!(!hashes_ptr.is_null());
-        slice::from_raw_parts(hashes_ptr as *const u64, insize)
+        slice::from_raw_parts(hashes_ptr, insize)
     };
 
     // FIXME: make a SourmashSlice_u64 type?
     let abunds = {
         assert!(!abunds_ptr.is_null());
-        slice::from_raw_parts(abunds_ptr as *const u64, insize)
+        slice::from_raw_parts(abunds_ptr, insize)
     };
 
     let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
@@ -367,13 +368,13 @@ pub unsafe extern "C" fn kmerminhash_hash_function(
     ptr: *const SourmashKmerMinHash,
 ) -> HashFunctions {
     let mh = SourmashKmerMinHash::as_rust(ptr);
-    mh.hash_function()
+    mh.hash_function().into()
 }
 
 ffi_fn! {
 unsafe fn kmerminhash_hash_function_set(ptr: *mut SourmashKmerMinHash, hash_function: HashFunctions) -> Result<()> {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
-    mh.set_hash_function(hash_function)
+    mh.set_hash_function(hash_function.into())
 }
 }
 

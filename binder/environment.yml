@@ -3,8 +3,8 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python>=3.9
-  - sourmash>=4.8.2
+  - python>=3.10
+  - sourmash>=4.8.4
   - screed
   - matplotlib
   - pandas

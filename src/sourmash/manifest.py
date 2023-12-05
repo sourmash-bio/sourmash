@@ -8,7 +8,7 @@ import os.path
 from abc import abstractmethod
 import itertools
 
-from sourmash.picklist import SignaturePicklist
+from sourmash import picklist
 
 
 class BaseCollectionManifest:
@@ -232,14 +232,16 @@ class CollectionManifest(BaseCollectionManifest):
         self._add_rows([row])
 
     def _add_rows(self, rows):
-        self.rows.extend(rows)
-
-        # maintain a fast check for md5sums for __contains__ check.
         md5set = self._md5_set
-        for row in self.rows:
+
+        # only iterate once, in case it's a generator
+        for row in rows:
+            self.rows.append(row)
             md5set.add(row['md5'])
 
     def __iadd__(self, other):
+        if self is other:
+            raise Exception("cannot directly add manifest to itself")
         self._add_rows(other.rows)
         return self
 
@@ -339,7 +341,8 @@ class CollectionManifest(BaseCollectionManifest):
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        picklist = SignaturePicklist('md5')
-        picklist.pickset = set(self._md5_set)
+        pl = picklist.SignaturePicklist('manifest')
 
-        return picklist
+        pl.pickset = { pl._get_value_for_manifest_row(row) for row in self.rows }
+
+        return pl

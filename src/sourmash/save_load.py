@@ -229,7 +229,7 @@ def _error_on_fastaq(filename, **kwargs):
     success = False
     try:
         with screed.open(filename) as it:
-            _ = next(iter(it))
+            _ = next(it)
 
             success = True
     except:
@@ -288,7 +288,7 @@ def _get_signatures_from_rust(siglist):
     # Rust supports multiple. For now, go through serializing
     # and deserializing the signature! See issue #1167 for more.
     json_str = sourmash.save_signatures(siglist)
-    for ss in sourmash.load_signatures(json_str):
+    for ss in sourmash.signature.load_signatures(json_str):
         yield ss
 
 
@@ -348,7 +348,7 @@ class SaveSignatures_Directory(Base_SaveSignaturesToLocation):
                     break
                 i += 1
 
-        with gzip.open(outname, "wb") as fp:
+        with open(outname, "wb") as fp:
             sigmod.save_signatures([ss], fp, compression=1)
 
 

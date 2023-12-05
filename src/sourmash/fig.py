@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-Make plots using the distance matrix+labels output by ``sourmash compare``.
+Make plots using the distance matrix+labels output by `sourmash compare`.
 """
 from .logging import error, notify
 try:
@@ -20,11 +20,15 @@ def load_matrix_and_labels(basefile):
     return (D, labeltext)
 
 
-def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
+def plot_composite_matrix(D, labeltext, show_labels=True,
                           vmax=1.0, vmin=0.0, force=False):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
-    Returns a matplotlib figure."""
+    Returns a matplotlib figure.
+
+    If show_labels is True, display labels. Otherwise, no labels are
+    shown on the plot.
+    """
     if D.max() > 1.0 or D.min() < 0.0:
         error('This matrix doesn\'t look like a distance matrix - min value {}, max value {}', D.min(), D.max())
         if not force:
@@ -43,12 +47,8 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     # plot dendrogram
     Y = sch.linkage(D, method='single')  # centroid
 
-    dendrolabels = labeltext
-    if not show_labels:
-        dendrolabels = [str(i) for i in range(len(labeltext))]
-
-    Z1 = sch.dendrogram(Y, orientation='left', labels=dendrolabels,
-                        no_labels=not show_indices, get_leaves=True)
+    Z1 = sch.dendrogram(Y, orientation='left', labels=labeltext,
+                        no_labels=not show_labels, get_leaves=True)
     ax1.set_xticks([])
 
     xstart = 0.45

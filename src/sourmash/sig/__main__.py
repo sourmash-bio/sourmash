@@ -1,6 +1,27 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+__all__ = ["cat",
+           "split",
+           "describe",
+           "manifest",
+           "overlap",
+           "merge",
+           "intersect",
+           "inflate",
+           "subtract",
+           "rename",
+           "extract",
+           "filter",
+           "flatten",
+           "downsample",
+           "ingest",
+           "export",
+           "kmers",
+           "fileinfo",
+           "check",
+           "collect"]
+
 import sys
 import csv
 import json
@@ -14,7 +35,7 @@ import sourmash
 from sourmash.sourmash_args import FileOutput
 
 from sourmash.logging import (set_quiet, error, notify, print_results, debug,
-                              debug_literal)
+                              debug_literal, _debug)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -139,8 +160,8 @@ def split(args):
     _extend_signatures_with_from_file(args)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}' + args.extension
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}' + args.extension
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
@@ -914,7 +935,7 @@ def downsample(args):
         sourmash_args.report_picklist(args, picklist)
 
 
-def sig_import(args):
+def ingest(args):
     """
     import a signature into sourmash format.
     """
@@ -1113,62 +1134,63 @@ def kmers(args):
         notify(f"opening sequence file '{filename}'")
         n_files_searched += 1
 
-        for record in screed.open(filename):
-            seq_mh = query_mh.copy_and_clear()
+        with screed.open(filename) as f:
+            for record in f:
+                seq_mh = query_mh.copy_and_clear()
 
-            # protein? dna?
-            if is_protein:
-                seq_mh.add_protein(record.sequence)
-            else:
-                try:
-                    seq_mh.add_sequence(record.sequence,
-                                        not args.check_sequence)
-                except ValueError as exc:
-                    seqname = record.name
-                    if len(seqname) > 40:
-                        seqname = seqname[:37] + '...'
-                    notify(f"ERROR in sequence '{seqname}', file '{filename}'")
-                    notify(str(exc))
-                    if args.force:
-                        notify("(continuing)")
-                        continue
-                    else:
-                        sys.exit(-1)
+                # protein? dna?
+                if is_protein:
+                    seq_mh.add_protein(record.sequence)
+                else:
+                    try:
+                        seq_mh.add_sequence(record.sequence,
+                                            not args.check_sequence)
+                    except ValueError as exc:
+                        seqname = record.name
+                        if len(seqname) > 40:
+                            seqname = seqname[:37] + '...'
+                        notify(f"ERROR in sequence '{seqname}', file '{filename}'")
+                        notify(str(exc))
+                        if args.force:
+                            notify("(continuing)")
+                            continue
+                        else:
+                            sys.exit(-1)
 
-            if seq_mh.intersection(query_mh):
-                # match!
+                if seq_mh.intersection(query_mh):
+                    # match!
 
-                # output matching sequences:
-                if save_seqs:
-                    save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
-                    n_sequences_found += 1
-                    n_bp_saved += len(record.sequence)
+                    # output matching sequences:
+                    if save_seqs:
+                        save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
+                        n_sequences_found += 1
+                        n_bp_saved += len(record.sequence)
 
-                # output matching k-mers:
-                if kmer_w:
-                    seq = record.sequence
-                    kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
-                                                      is_protein=is_protein)
-                    for kmer, hashval in kh_iter:
-                        if hashval in query_mh.hashes:
-                            found_mh.add_hash(hashval)
-                            n_kmers_found += 1
-                            d = dict(sequence_file=filename,
-                                     sequence_name=record.name,
-                                     kmer=kmer, hashval=hashval)
-                            kmer_w.writerow(d)
+                    # output matching k-mers:
+                    if kmer_w:
+                        seq = record.sequence
+                        kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
+                                                          is_protein=is_protein)
+                        for kmer, hashval in kh_iter:
+                            if hashval in query_mh.hashes:
+                                found_mh.add_hash(hashval)
+                                n_kmers_found += 1
+                                d = dict(sequence_file=filename,
+                                         sequence_name=record.name,
+                                         kmer=kmer, hashval=hashval)
+                                kmer_w.writerow(d)
 
-                # add seq_mh to found_mh
-                found_mh += seq_mh.intersection(query_mh)
+                    # add seq_mh to found_mh
+                    found_mh += seq_mh.intersection(query_mh)
 
-            # provide progress indicator based on bp...
-            n_sequences_searched += 1
-            n_bp_searched += len(record.sequence)
+                # provide progress indicator based on bp...
+                n_sequences_searched += 1
+                n_bp_searched += len(record.sequence)
 
-            if n_bp_searched >= progress_threshold:
-                notify(f"... searched {n_bp_searched} from {n_files_searched} files so far")
-                while n_bp_searched >= progress_threshold:
-                    progress_threshold += progress_interval
+                if n_bp_searched >= progress_threshold:
+                    notify(f"... searched {n_bp_searched} from {n_files_searched} files so far")
+                    while n_bp_searched >= progress_threshold:
+                        progress_threshold += progress_interval
 
     # END major for loop. Now, clean up!
     if save_kmers:
@@ -1359,7 +1381,9 @@ def check(args):
             row['internal_location'] = filename
             total_manifest_rows.add_row(row)
 
-        debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
+        # the len(sub_manifest) here should only be run when needed :)
+        if _debug:
+            debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 

@@ -246,39 +246,57 @@ def plot(args):
 
     # load files
     D_filename = args.distances
-    labelfilename = D_filename + '.labels.txt'
 
     notify(f'loading comparison matrix from {D_filename}...')
-    D = numpy.load(open(D_filename, 'rb'))
+    with open(D_filename, 'rb') as f:
+        D = numpy.load(f)
     # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
-    if args.labeltext:
-        labelfilename = args.labeltext
-    notify(f'loading labels from {labelfilename}')
-    labeltext = [ x.strip() for x in open(labelfilename) ]
-    if len(labeltext) != D.shape[0]:
-        error('{} labels != matrix size, exiting', len(labeltext))
-        sys.exit(-1)
+    # see sourmash#2790 for details :)
+    if args.labeltext or args.labels:
+        display_labels = True
+        args.labels = True      # override => labels always true
+    elif args.labels is None and not args.indices:
+        # default to labels
+        args.labels = True
+        display_labels = True
+    elif args.indices or (not args.labels and args.indices is None):
+        # turn on indices only, not label names
+        args.indices = True
+        display_labels = True
+    else:
+        display_labels = False
+
+    if args.labels:
+        if args.labeltext:
+            labelfilename = args.labeltext
+        else:
+            labelfilename = D_filename + '.labels.txt'
+
+        notify(f'loading labels from {labelfilename}')
+        with open(labelfilename) as f:
+            labeltext = [ x.strip() for x in f ]
+        
+        if len(labeltext) != D.shape[0]:
+            error('{} labels != matrix size, exiting', len(labeltext))
+            sys.exit(-1)
+    elif args.indices:
+        # construct integer labels
+        labeltext = [str(i + 1) for i in range(D.shape[0])]
+    else:
+        assert not display_labels
+        labeltext = [""] * D.shape[0]
+
+    if args.pdf:
+        ext = '.pdf'
+    else:
+        ext = '.png'
 
     # build filenames, decide on PDF/PNG output
-    dendrogram_out = os.path.basename(D_filename) + '.dendro'
-    if args.pdf:
-        dendrogram_out += '.pdf'
-    else:
-        dendrogram_out += '.png'
-
-    matrix_out = os.path.basename(D_filename) + '.matrix'
-    if args.pdf:
-        matrix_out += '.pdf'
-    else:
-        matrix_out += '.png'
-
-    hist_out = os.path.basename(D_filename) + '.hist'
-    if args.pdf:
-        hist_out += '.pdf'
-    else:
-        hist_out += '.png'
+    dendrogram_out = os.path.basename(D_filename) + '.dendro' + ext
+    matrix_out = os.path.basename(D_filename) + '.matrix' + ext
+    hist_out = os.path.basename(D_filename) + '.hist' + ext
 
     # output to a different directory?
     if args.output_dir:
@@ -314,14 +332,14 @@ def plot(args):
 
     ### do clustering
     Y = sch.linkage(D, method='single')
-    sch.dendrogram(Y, orientation='right', labels=labeltext)
+    sch.dendrogram(Y, orientation='right', labels=labeltext,
+                   no_labels=not display_labels)
     fig.savefig(dendrogram_out)
     notify(f'wrote dendrogram to: {dendrogram_out}')
 
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
-                                             show_labels=args.labels,
-                                             show_indices=args.indices,
+                                             show_labels=display_labels,
                                              vmin=args.vmin,
                                              vmax=args.vmax,
                                              force=args.force)
@@ -1188,24 +1206,24 @@ def watch(args):
         return results
 
     notify('reading sequences from stdin')
-    screed_iter = screed.open(args.inp_file)
     watermark = WATERMARK_SIZE
 
     # iterate over input records
     n = 0
-    for n, record in enumerate(screed_iter):
-        # at each watermark, print status & check cardinality
-        if n >= watermark:
-            notify(f'\r... read {n} sequences', end='')
-            watermark += WATERMARK_SIZE
+    with screed.open(args.inp_file) as screed_iter:
+        for n, record in enumerate(screed_iter):
+            # at each watermark, print status & check cardinality
+            if n >= watermark:
+                notify(f'\r... read {n} sequences', end='')
+                watermark += WATERMARK_SIZE
 
-            if do_search():
-                break
+                if do_search():
+                    break
 
-        if args.input_is_protein:
-            E.add_protein(record.sequence)
-        else:
-            E.add_sequence(record.sequence, False)
+            if args.input_is_protein:
+                E.add_protein(record.sequence)
+            else:
+                E.add_sequence(record.sequence, False)
 
     results = do_search()
     if not results:

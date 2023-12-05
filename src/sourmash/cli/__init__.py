@@ -141,3 +141,20 @@ def get_parser():
         getattr(sys.modules[__name__], op).subparser(sub)
     parser._action_groups.reverse()
     return parser
+
+
+def parse_args(arglist=None):
+    """
+    Return an argparse 'args' object from parsing arglist.
+
+    By default pulls arguments from sys.argv.
+
+    Example usage:
+
+    ```
+    args = parse_args(['sig', 'filter', '-m', '10'])
+
+    sourmash.sig.filter.__main__.filter(args)
+    ```
+    """
+    return get_parser().parse_args(arglist)

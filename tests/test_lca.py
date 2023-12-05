@@ -6,6 +6,7 @@ import shutil
 import csv
 import pytest
 import glob
+from pathlib import Path
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -1830,7 +1831,7 @@ def test_single_summarize_to_output_check_filename(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    outdata = open(runtmp.output('output.txt'), 'rt').read()
+    outdata = Path(runtmp.output('output.txt')).read_text()
 
     assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
     assert 'count,superkingdom,phylum,class,order,family,genus,species,strain,filename,sig_name,sig_md5,total_counts\n' in outdata
@@ -2971,7 +2972,7 @@ def test_lca_index_select_with_picklist(runtmp, lca_db_format):
 
     idx = sourmash.load_file_as_index(outdb)
     picklist_obj = SignaturePicklist.from_picklist_args(f"{picklist}:md5:md5")
-    picklist_obj.load(picklist_obj.pickfile, picklist_obj.column_name)
+    picklist_obj.load()
 
     idx = idx.select(picklist=picklist_obj)
 
@@ -3002,7 +3003,7 @@ def test_lca_index_select_with_picklist_exclude(runtmp, lca_db_format):
 
     idx = sourmash.load_file_as_index(outdb)
     picklist_obj = SignaturePicklist.from_picklist_args(f"{picklist}:md5:md5:exclude")
-    picklist_obj.load(picklist_obj.pickfile, picklist_obj.column_name)
+    picklist_obj.load()
     idx = idx.select(picklist=picklist_obj)
 
     siglist = list(idx.signatures())
