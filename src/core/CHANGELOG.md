@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Fixed:
 
+- Deps: update typed-builder and histogram, bump MSRV to 1.65 (#2858)
 - CI: Fix wheel building and semver checks post r0.12.0 (#2857)
 
 ## [0.12.0] - 2023-11-26
