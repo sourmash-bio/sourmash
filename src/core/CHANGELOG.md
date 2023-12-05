@@ -7,9 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+Fixed:
+
+- Deps: update typed-builder and histogram, bump MSRV to 1.65 (#2858)
+- CI: Fix wheel building and semver checks post r0.12.0 (#2857)
+
+## [0.12.0] - 2023-11-26
+
+MSRV: 1.64
+
 Added:
 
-- An inverted index, codename Greyhound (#1238)
+- Initial implementation for `Manifest`, `Selection`, and `Picklist` following
+  the Python API. (#2230)
+- `Collection` is a new abstraction for working with a set of signatures. A
+  collection needs a `Storage` for holding the signatures (on-disk, in-memory,
+  or remotely), and a `Manifest` to describe the metadata for each signature. (#2230)
+- Expose CSV parsing and RocksDB errors. (#2230)
+- New module `sourmash::index::revindex::disk_revindex` with the on-disk
+  RevIndex implementation based on RocksDB. (#2230)
+- Add `iter` and `iter_mut` methods for `Signature`. (#2230)
+- Add `load_sig` and `save_sig` methods to `Storage` trait for higher-level data
+  manipulation and caching. (#2230)
+- Add `spec` method to `Storage` to allow constructing a concrete `Storage` from
+  a string description. (#2230)
+- Add `InnerStorage` for synchronizing parallel access to `Storage`
+  implementations. (#2230)
+- Add `MemStorage` for keeping signatures in-memory (mostly for debugging and
+  testing). (#2230)
+- Add new `branchwater` feature (enabled by default), which can be disabled by
+  downstream projects to limit bringing heavy dependencies like rocksdb. (#2230)
+- Add new `rkyv` feature (disabled by default), making `MinHash` serializable
+  with the `rkyv` crate. (#2230)
+- Add semver checks for CI (so we bump versions accordingly, or avoid breaking
+  changes). (#2230)
+- Add cargo deny config. (#2724)
+- Benchmarks for seq_to_hashes in protein mode. (#1944)
+- Oxidize ZipStorage. (#1909)
+- Move greyhound-core into sourmash. (#1238)
+- add `MinHash.kmers_and_hashes(...)` and `sourmash sig kmers`. (#1695)
+- Produce list of hashes from a sequence. (#1653)
+
+Changed:
+
+- Rename `HashFunctions` variants to follow camel-case, so `Murmur64Protein`
+  instead of `murmur64_protein`. (#2230)
+- `LinearIndex` is now implemented as a thin layer on top of `Collection`. (#2230)
+- Move `GatherResult` to `sourmash::index` module. (#2230)
+- Move `sourmash::index::revindex` to `sourmash::index::mem_revindex` (this is
+  the Greyhound version of revindex, in-memory only). It was also refactored
+  internally to build a version of a `LinearIndex` that will be merged in the
+  future with `sourmash::index::LinearIndex`. (#2230)
+- Move `select` method from `Index` trait into a separate `Select` trait,
+  and implement it for `Signature` based on the new `Selection` API. (#2230)
+- Move `SigStore` into `sourmash::storage` module, and remove the generic. Now
+  it always stores `Signature`. Also implement `Select` for it. (#2230)
+- Disable `musllinux` wheels (need to figure out how to build rocksdb for it). (#2230)
+- Reorganize traits for easier wasm and native compilation. (#1836)
+- Adjust dayhoff and hp encodings to tolerate stop codons in the protein sequence. (#1673)
+
+Fixed:
+
+- Reduce features combinations on Rust checks (takes much less time to run). (#2230)
+- Build: MSRV check for 1.64. (#2680)
+- maturin: move deprecated definition from Cargo.toml to pyproject.toml. (#2597)
+- Fix broken crates.io badge. (#2556)
+- Fix unnecessary typecasts in Rust. (#2366)
+- Fix `Signature.minhash` API during `sourmash sketch`. (#2329)
+- Return Err for angular_similarity when abundance tracking is off. (#2327)
+- Update various descriptions to talk about k-mers, not just DNA. (#2137)
+- Fix downsample_scaled in `core`. (#2108)
+- speed up `SeqToHashes` `translate`. (#1946)
+- Speed-up `SeqToHashes()`. (#1938)
+- Fix containment calculation for nodegraphs. (#1862)
+- Fix panic bug in `sourmash sketch` dna with bad input and `--check-sequence`. (#1702)
+- Fix Rust panic in `MinHash.seq_to_hashes`. (#1701)
+- Beta lints. (#2841 #2630 #2596 #2298 #1791 #1786 #1760)
+
+Removed:
+
+- Remove BIGSI and SBT code. (#2732)
 
 ## [0.11.0] - 2021-07-07
 
