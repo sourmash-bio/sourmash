@@ -24,14 +24,6 @@ jobs:
             os: ubuntu-20.04
             arch: aarch64
             macos_target: ''
-          - build: linux-ppc64le
-            os: ubuntu-20.04
-            arch: ppc64le
-            macos_target: ''
-          - build: linux-s390x
-            os: ubuntu-20.04
-            arch: s390x
-            macos_target: ''
       fail-fast: false
 
     steps:
