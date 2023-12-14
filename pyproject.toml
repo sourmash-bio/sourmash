@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<1.3.0",
+    "maturin>=1,<1.5.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -150,7 +150,7 @@ module-name = "sourmash._lowlevel"
 
 # macOS deployment target SDK version
 [tool.maturin.target.x86_64-apple-darwin]
-macos-deployment-target = "11.0"
+macos-deployment-target = "10.14"
 [tool.maturin.target.aarch64-apple-darwin]
 macos-deployment-target = "11.0"
 
