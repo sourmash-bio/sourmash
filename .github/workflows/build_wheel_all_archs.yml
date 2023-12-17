@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [aarch64, s390x, ppc64le]
+        target: [aarch64, ppc64le]
+        #target: [aarch64, s390x, ppc64le]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +33,10 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --find-interpreter --zig
           sccache: 'true'
           manylinux: auto
+          container: 'off'
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3
