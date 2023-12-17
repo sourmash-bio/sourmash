@@ -33,7 +33,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter --zig
+          args: --release --out dist --find-interpreter --zig --strip
           sccache: 'true'
           manylinux: auto
           container: 'off'
