@@ -81,6 +81,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: binary-${{ matrix.build }}-${{ matrix.os }}
           path: './dist/sourmash*.whl'
 
 
