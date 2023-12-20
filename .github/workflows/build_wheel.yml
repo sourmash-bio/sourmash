@@ -53,6 +53,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: wheel-${{ matrix.build }}-${{ matrix.os }}
           path: './wheelhouse/sourmash*.whl'
 
   build_wasm:
@@ -81,6 +82,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: wheel-wasm
           path: './dist/sourmash*.whl'
 
 
