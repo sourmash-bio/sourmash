@@ -40,7 +40,7 @@ getset = "0.1.1"
 histogram = "0.8.3"
 log = "0.4.20"
 md5 = "0.7.0"
-memmap2 = "0.9.2"
+memmap2 = "0.9.3"
 murmurhash3 = "0.0.5"
 niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
