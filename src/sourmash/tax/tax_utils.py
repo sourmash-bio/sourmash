@@ -12,6 +12,7 @@ import gzip
 from sourmash import sqlite_utils, sourmash_args
 from sourmash.exceptions import IndexNotSupported
 from sourmash.distance_utils import containment_to_distance
+from sourmash.utils import require_kwargs_on_init
 
 import sqlite3
 
@@ -27,12 +28,20 @@ from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
 RANKCODE = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
-                        "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
+             "order": "O", "family":"F", "genus": "G", "species": "S",
+             "unclassified": "U"}
 
 class LineagePair(NamedTuple):
     rank: str
     name: str = None
     taxid: int = None
+
+    def __repr__(self):
+        if self.taxid is not None:
+            return NamedTuple.__repr__(self)
+        else:
+            return f"LineagePair(rank='{self.rank}', name='{self.name}')"
+
 
 @dataclass(frozen=True, order=True)
 class BaseLineageInfo:
@@ -74,6 +83,12 @@ class BaseLineageInfo:
         if other == (): # just handy: if comparing to a null tuple, don't try to find its lineage before returning False
             return False
         return all([self.ranks == other.ranks and self.lineage==other.lineage])
+
+    def __str__(self):
+        return self.lineage_str
+
+    def __repr__(self):
+        return f"BaseLineageInfo(lineage_str='{self.lineage_str}')"
 
     @property
     def taxlist(self):
@@ -128,10 +143,12 @@ class BaseLineageInfo:
         'initialize empty genome lineage'
         new_lineage = []
         for rank in self.ranks:
+            rank = str(rank)
             new_lineage.append(LineagePair(rank=rank))
         # set lineage and filled_ranks (because frozen, need to do it this way)
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", ())
+        object.__setattr__(self, "lineage_str", "")
 
     def _init_from_lineage_tuples(self):
         'initialize from tuple/list of LineagePairs, allowing empty ranks and reordering if necessary'
@@ -156,6 +173,7 @@ class BaseLineageInfo:
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+        object.__setattr__(self, "lineage_str", self.display_lineage())
 
     def _init_from_lineage_str(self):
         """
@@ -210,9 +228,9 @@ class BaseLineageInfo:
         return sep.join(self.zip_taxid(truncate_empty=truncate_empty))
 
     def check_rank_availability(self, rank):
-        if rank in self.ranks: # rank is available
-            return True
-        raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
+        "Raise exception if given rank is not available in this taxonomy"
+        if rank not in self.ranks:
+            raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
 
     def rank_is_filled(self, rank, other=None):
         self.check_rank_availability(rank)
@@ -244,28 +262,20 @@ class BaseLineageInfo:
                 return 1
         return 0
 
-    def pop_to_rank(self, rank):
+    def lineage_to_rank(self, rank):
         "Return new LineageInfo with ranks only filled to desired rank"
         # are we already above rank?
         self.check_rank_availability(rank)
         if not self.rank_is_filled(rank):
             return replace(self)
         # if not, make filled_lineage at this rank + use to generate new LineageInfo
-        new_lineage = self.lineage_at_rank(rank)
+
+        rank_idx = self.rank_index(rank)
+        new_lineage = self.filled_lineage[:rank_idx+1]
         new = replace(self, lineage = new_lineage)
         # replace doesn't run the __post_init__ properly. reinitialize.
         new._init_from_lineage_tuples()
         return new
-
-    def lineage_at_rank(self, rank):
-        "Return tuple of LineagePairs at specified rank."
-        # are we already above rank?
-        self.check_rank_availability(rank)
-        if not self.rank_is_filled(rank):
-            return self.filled_lineage
-        # if not, return lineage tuples down to desired rank
-        rank_idx = self.rank_index(rank)
-        return self.filled_lineage[:rank_idx+1]
 
     def find_lca(self, other):
         """
@@ -274,9 +284,10 @@ class BaseLineageInfo:
         """
         for rank in self.ascending_taxlist:
             if self.is_lineage_match(other, rank):
-                return self.pop_to_rank(rank)
+                return self.lineage_to_rank(rank)
         return None
 
+require_kwargs_on_init(BaseLineageInfo)
 
 @dataclass(frozen=True, order=True)
 class RankLineageInfo(BaseLineageInfo):
@@ -313,7 +324,10 @@ class RankLineageInfo(BaseLineageInfo):
         elif self.lineage_dict is not None:
             self._init_from_lineage_dict()
         elif self.ranks:
+            # @CTB check that ranks is legit
             self._init_empty()
+
+        assert self.lineage_str is not None
 
     def _init_from_lineage_dict(self):
         """
@@ -361,6 +375,15 @@ class RankLineageInfo(BaseLineageInfo):
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+        object.__setattr__(self, "lineage_str", self.display_lineage())
+
+    def __str__(self):
+        return self.lineage_str
+
+    def __repr__(self):
+        return f"RankLineageInfo(lineage_str='{self.lineage_str}')"
+        
+require_kwargs_on_init(RankLineageInfo)
 
 
 @dataclass(frozen=True, order=True)
@@ -397,6 +420,8 @@ class LINLineageInfo(BaseLineageInfo):
         else:
             self._init_empty()
 
+        assert self.lineage_str is not None
+
     def __eq__(self, other):
         """
         Check if two LINLineageInfo match. Since we sometimes want to match LINprefixes, which have fewer
@@ -425,6 +450,7 @@ class LINLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", ())
         object.__setattr__(self, "n_filled_pos", 0)
+        object.__setattr__(self, "lineage_str", "")
 
     def _init_from_lineage_str(self):
         """
@@ -468,7 +494,7 @@ class LINLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "ranks", tuple(ranks))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
         object.__setattr__(self, "n_filled_pos", len(filled_ranks))
-
+        object.__setattr__(self, "lineage_str", self.display_lineage())
 
     def is_compatible(self, other):
         """
@@ -485,6 +511,13 @@ class LINLineageInfo(BaseLineageInfo):
             return True
         return False
 
+    def __str__(self):
+        return self.lineage_str
+
+    def __repr__(self):
+        return f"LINLineageInfo(lineage_str='{self.lineage_str}')"
+        
+require_kwargs_on_init(LINLineageInfo)
 
 
 @dataclass
@@ -1973,7 +2006,7 @@ class QueryTaxResult:
                 # add this taxresult to summary
                 for rank in self.summarized_ranks:
                     if rank in lininfo.filled_ranks: # only store if this rank is filled.
-                        lin_at_rank = lininfo.pop_to_rank(rank)
+                        lin_at_rank = lininfo.lineage_to_rank(rank)
                         self.sum_uniq_weighted[rank][lin_at_rank] += taxres.f_unique_weighted
                         self.sum_uniq_to_query[rank][lin_at_rank] += taxres.f_unique_to_query
                         self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
