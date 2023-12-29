@@ -10,6 +10,7 @@ import screed
 from . import sourmash_args
 from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
+from .logging import notify, error, set_quiet, short_notify
 from .utils import RustObject
 from ._lowlevel import ffi, lib
 
@@ -154,9 +155,29 @@ def _compute_individual(args, signatures_factory):
     # this is where output signatures will go.
     save_sigs = None
 
+<<<<<<< HEAD
+    for filename in args.filenames:
+        sigfile = os.path.basename(filename) + '.sig'
+        if args.outdir:
+            sigfile = os.path.join(args.outdir, sigfile)
+
+        if not args.output and os.path.exists(sigfile) and not \
+            args.force:
+            short_notify('skipping {} - already done', filename)
+            continue
+
+        if args.singleton:
+            siglist = []
+            for n, record in enumerate(screed.open(filename)):
+                # make a new signature for each sequence
+                sigs = signatures_factory()
+                add_seq(sigs, record.sequence,
+                        args.input_is_protein, args.check_sequence)
+=======
     # track: is this the first file? in cases where we have empty inputs,
     # we don't want to open any outputs.
     first_file_for_output = True
+>>>>>>> fb1f0f474c84056df424e4ffc0bc543d52f249c5
 
     # if args.output is set, we are aggregating all output to a single file.
     # do not open a new output file for each input.
@@ -221,6 +242,17 @@ def _compute_individual(args, signatures_factory):
             else:
                 sigs = signatures_factory()
 
+<<<<<<< HEAD
+            # consume & calculate signatures
+            short_notify('... reading sequences from {}', filename)
+            name = None
+            for n, record in enumerate(screed.open(filename)):
+                if n % 10000 == 0:
+                    if n:
+                        short_notify('\r...{} {}', filename, n, end='')
+                    elif args.name_from_first:
+                        name = record.name
+=======
                 # consume & calculate signatures
                 notify(f'... reading sequences from {filename}')
                 name = None
@@ -230,6 +262,7 @@ def _compute_individual(args, signatures_factory):
                             notify('\r...{} {}', filename, n, end='')
                         elif args.name_from_first:
                             name = record.name
+>>>>>>> fb1f0f474c84056df424e4ffc0bc543d52f249c5
 
                     try:
                         add_seq(sigs, record.sequence,
@@ -239,12 +272,20 @@ def _compute_individual(args, signatures_factory):
                         error(str(exc))
                         sys.exit(-1)
 
+<<<<<<< HEAD
+            short_notify('...{} {} sequences', filename, n, end='')
+=======
                 notify('...{} {} sequences', filename, n, end='')
+>>>>>>> fb1f0f474c84056df424e4ffc0bc543d52f249c5
 
                 set_sig_name(sigs, filename, name)
                 save_sigs_to_location(sigs, save_sigs)
 
+<<<<<<< HEAD
+            short_notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
+=======
                 notify(f'calculated {len(sigs)} signatures for {n+1} sequences in {filename}')
+>>>>>>> fb1f0f474c84056df424e4ffc0bc543d52f249c5
 
         # if not args.output, close output for every input filename.
         if open_output_each_time:
