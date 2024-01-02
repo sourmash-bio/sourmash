@@ -1,4 +1,4 @@
-# Frequently Asked Questions
+# Frequently Asked Questions (FAQ)
 
 ```{contents} Contents
 :depth: 3
@@ -98,14 +98,19 @@ across all of the bacterial genomes in GTDB, we find that 99% (or
 more) of 31-mers are _genome_, _species_, or _genus_ specific.
 
 If you go lower (say, k=21), then you get a few percent of k-mers
-that match above the genus level - family or above.
+that match above the genus level - family or above. This is useful for
+fuzzier matching, e.g. if you have a metagenome with a high fraction of
+unknown k-mers.
 
 If you go higher (k=51), a higher percentage of k-mers are genome-specific.
+This can be valuable in situations where you have highly specific reference
+genomes (e.g. isolates, single-cell genomes, or MAGs) that should match
+very closely to this metagenome.
 
 For the core sourmash operations - search, gather, and compare - we
 believe (with evidence!) that (a) the differences between k=21, k=31,
 and k=51 are negligible; and that (b) k=31 works fine for most
-day-to-day use of sourmash.
+day-to-day use of sourmash. 
 
 We also provide [Genbank and GTDB databases](databases.md) for k=21,
 k=31, and k=51.
