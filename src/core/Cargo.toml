@@ -46,7 +46,7 @@ niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
 num-iter = "0.1.43"
 once_cell = "1.19.0"
-ouroboros = "0.18.1"
+ouroboros = "0.18.2"
 piz = "0.5.0"
 primal-check = "0.3.1"
 rkyv = { version = "0.7.43", optional = true }
