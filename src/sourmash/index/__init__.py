@@ -807,15 +807,18 @@ class CounterGather:
         if match_size < n_threshold_hashes:
             return []
 
-        ## at this point, we have a legitimate match above threshold!
+        ## at this point, we should have a legitimate match above threshold!
+        # @CTB
 
         # pull match and location.
         match = siglist[dataset_id]
 
-        # calculate containment
+        # confirm containment and bail if due to downsampling,
+        # containment is no longer significant.
         # CTB: this check is probably redundant with intersect_mh calc, below.
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
-        assert cont
+        if cont == 0:
+            return []
         assert cont >= threshold
 
         # calculate intersection of this "best match" with query.
