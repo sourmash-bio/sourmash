@@ -1169,7 +1169,7 @@ def kmers(args):
                     # output matching k-mers:
                     if kmer_w:
                         seq = record.sequence
-                        kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
+                        kh_iter = seq_mh.kmers_and_hashes(seq, force=True,
                                                           is_protein=is_protein)
                         for kmer, hashval in kh_iter:
                             if hashval in query_mh.hashes:
