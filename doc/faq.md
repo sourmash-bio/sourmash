@@ -113,11 +113,33 @@ and k=51 are negligible; and that (b) k=31 works fine for most
 day-to-day use of sourmash. 
 
 We also provide [Genbank and GTDB databases](databases.md) for k=21,
-k=31, and k=51.
+k=31, and k=51, so choosing from those k-mer sizes for your own sketches
+will allow you to directly use those databases.
 
 For some background on k-mer specificity, we recommend this paper:
 [MetaPalette: a k-mer Painting Approach for Metagenomic Taxonomic Profiling and Quantification of Novel Strain Variation](https://journals.asm.org/doi/10.1128/msystems.00020-16),
 Koslicki & Falush, 2016.
+
+## What scaled values should I use with sourmash?
+
+We recommend scaled=1000 or scaled=10000 when working with bacterial
+and archaeal sketches and DNA. We have quite a bit of experience with
+this, and even some
+[published benchmarks](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
+showing that this works very well.  You may need to use lower scaled
+values with smaller query and target sequences, such as viral genomes
+or genes, but we do not have systematic advice on this.
+
+That having been said, you can always use a lower scaled value - the only
+consequence is that memory and compute requirements increase.
+
+Also, sourmash will automatically use the larger of two scaled values
+when comparing two sketches with different scaled values. So if, for example,
+you use [the precomputed databases](databases.md), you will always end up
+using your query sketches at a minimum scaled of 1000, even if you created
+them with a lower scaled value.
+
+Please also see [What resolution should my signatures be?](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them).
 
 ## How do k-mer-based analyses compare with read mapping?
 
