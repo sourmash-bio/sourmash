@@ -9,7 +9,8 @@ def subparser(subparsers):
                            help='query signatures to classify')
     subparser.add_argument('--query-from-file',
                            help='file containing list of signature files to query')
-    subparser.add_argument('--threshold', metavar='T', type=int, default=5)
+    subparser.add_argument('--threshold', metavar='T', type=int, default=5,
+                           help="minimum number of hashes needed for a taxonomic classification (default: 5)")
     subparser.add_argument(
         '--majority', action='store_true',
         help='use majority vote classification instead of lca'
