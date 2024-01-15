@@ -5,7 +5,7 @@ from sourmash.sbt_storage import ZipStorage
 from sourmash.minhash import MinHash
 
 RANDOM_SEQ_SIZE=3000
-RANDOM_SEQ_SAMPLE=300
+RANDOM_SEQ_NUMBER=300
 
 MINHASH_NUM=500
 MINHASH_K=21
@@ -27,7 +27,7 @@ def load_sequences():
     sequences = []
     for i in range(10):
         random_seq = random.sample("A,C,G,T".split(",") * RANDOM_SEQ_SIZE,
-                                   RANDOM_SEQ_NUM)
+                                   RANDOM_SEQ_NUMBER)
         sequences.append("".join(random_seq))
     return sequences
 
