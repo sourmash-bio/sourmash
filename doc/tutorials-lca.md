@@ -126,7 +126,7 @@ on the command line; separate them with `--db` or `--query`.
 Download some pre-calculated signatures:
 
 ```
-curl -L https://osf.io/bw8d7/download?version=1 -o delmont-subsample-sigs.tar.gz
+curl -L https://osf.io/bw8d7/download -o delmont-subsample-sigs.tar.gz
 tar xzf delmont-subsample-sigs.tar.gz
 ```
 
