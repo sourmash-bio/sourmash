@@ -113,7 +113,7 @@ and k=51 are negligible; and that (b) k=31 works fine for most
 day-to-day use of sourmash. 
 
 We also provide [Genbank and GTDB databases](databases.md) for k=21,
-k=31, and k=51, so choosing those k-mer sizes for your own sketches
+k=31, and k=51, so choosing from those k-mer sizes for your own sketches
 will allow you to directly use those databases.
 
 For some background on k-mer specificity, we recommend this paper:
