@@ -141,6 +141,21 @@ them with a lower scaled value.
 
 Please also see [What resolution should my signatures be?](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them).
 
+## What threshold-bp value should I use with sourmash?
+
+We recommend a threshold-bp=50000, this parameter will only returning all
+matches above the threshold value set. Continuing that logic setting
+threshold-bp=0 will return *all* possible matches with shared hashes 
+(thresholding the necessaru containment or Jaccard similarity by
+`threshold-bp/scaled`).
+
+For genome length work (e.g. GTDB), this default value of 50,000 works well.
+The limited set of genomes returned because we are working on a [scale of 100 kbp
+to 16 Mbp](https://www.frontiersin.org/articles/10.3389/fmicb.2021.761869/full). However,
+as the scale of our query changes, threshold-bp values should change accordingly.
+Considering protein or more exploratory experiments setting `threshold-bp = scaled * 3`
+will limit the false positives returned when threshold-bp is set to 0.
+
 ## How do k-mer-based analyses compare with read mapping?
 
 tl;dr very well! But it's a bit one sided: if k-mers match, reads will
