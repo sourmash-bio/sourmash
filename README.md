@@ -3,21 +3,19 @@
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-
 <a href="https://github.com/sourmash-bio/sourmash/blob/latest/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Gitter](https://badges.gitter.im/sourmash-bio/community.svg)](https://gitter.im/sourmash-bio/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 
-[![Build Status](https://github.com/sourmash-bio/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/sourmash-bio/sourmash/actions/)
-[![codecov](https://codecov.io/gh/sourmash-bio/sourmash/branch/latest/graph/badge.svg)](https://codecov.io/gh/sourmash-bio/sourmash)
+[![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
+<a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
 
 ![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
-
-[![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
-<a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
+[![Build Status](https://github.com/sourmash-bio/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/sourmash-bio/sourmash/actions/)
+[![codecov](https://codecov.io/gh/sourmash-bio/sourmash/branch/latest/graph/badge.svg)](https://codecov.io/gh/sourmash-bio/sourmash)
 
 <p align="center"><img src="https://raw.githubusercontent.com/sourmash-bio/sourmash/latest/doc/_static/logo.png" height="256" /></p>
 
