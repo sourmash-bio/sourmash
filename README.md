@@ -82,7 +82,7 @@ you can install sourmash by running:
 
 ```bash
 $ conda create -n sourmash_env -c conda-forge -c bioconda sourmash
-$ source activate sourmash_env
+$ conda activate sourmash_env
 $ sourmash --help
 ```
 
