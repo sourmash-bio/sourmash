@@ -67,10 +67,10 @@ A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/t
 
 ### Requirements
 
-sourmash runs under Python 3.10 and later.  The base
-requirements are screed, cffi, numpy, matplotlib, and scipy.  Conda
-(see below) will install everything necessary, and is our recommended
-installation method.
+sourmash runs under Python 3.10 and later on Windows, Mac OS X, and
+Linux.  The base requirements are screed, cffi, numpy, matplotlib, and
+scipy.  Conda will install everything necessary, and is
+our recommended installation method (see below).
 
 ### Installation with conda
 
@@ -131,4 +131,5 @@ For more information, please visit
 ----
 
 CTB
-Feb 2021
+Jan 2024
+
