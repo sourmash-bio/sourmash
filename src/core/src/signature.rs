@@ -763,8 +763,7 @@ impl ToWriter for Signature {
 }
 
 impl Select for Signature {
-    // fn select(mut self, selection: &Selection) -> Result<Self, Error> {
-    fn select(mut self, selection: &Selection, downsample: bool) -> Result<Self, Error> {
+    fn select(mut self, selection: &Selection) -> Result<Self, Error> {
         self.signatures.retain(|s| {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
@@ -773,26 +772,14 @@ impl Select for Signature {
             } else {
                 valid
             };
-            // if valid after ksize check, execute downsample if needed / possible
-            // if valid {
-            if downsample && valid {
-                if let Some(sel_scaled) = selection.scaled() {
-                    match s {
-                        Sketch::MinHash(mh) | Sketch::LargeMinHash(mh) => {
-                            let sig_scaled = mh.scaled();
-                            if sig_scaled != sel_scaled {
-                                if sig_scaled < sel_scaled {
-                                    mh.downsample_scaled(sel_scaled);
-                                } else {
-                                    valid = false;
-                                }
-                            }
-                        }
-                        _ => {} // do nothing if sketch is not MinHash or LargeMinHash
-                    }
-                }
+            // keep compatible scaled if applicable
+            if let Some(sel_scaled) = selection.scaled() {
+                valid = if let Sketch::MinHash(mh) = s {
+                    valid && mh.scaled() <= sel_scaled as u64
+                } else {
+                    valid
+                };
             }
-
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund
@@ -805,6 +792,7 @@ impl Select for Signature {
                 valid
             };
             */
+
             valid
         });
         Ok(self)

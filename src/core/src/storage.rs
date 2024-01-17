@@ -432,11 +432,28 @@ impl SigStore {
     }
 }
 
+
 impl Select for SigStore {
     fn select(mut self, selection: &Selection) -> Result<Self> {
-        // TODO: find better error
+        // TODO: find better error (perhaps DataNotFound or similar?)
         let sig = self.data.take().ok_or(Error::MismatchKSizes)?;
-        self.data = OnceCell::with_value(sig.select(selection)?);
+
+        // first, select based on ksize, compatible scaled
+        let mut selected = sig.select(selection)?;
+        // then, check if downsample is needed
+        if let Some(sel_scaled) = selection.scaled() {
+            for sketch in selected.iter_mut() {
+                if let Sketch::MinHash(mh) = sketch {
+                    let sig_scaled = mh.scaled() as u32;
+                    if sig_scaled != sel_scaled && sig_scaled < sel_scaled {
+                        // downsample in place
+                        mh.downsample_scaled(sel_scaled as u64)?;
+                    }
+                }
+            }
+        }
+        self.data = OnceCell::with_value(selected);
+
         Ok(self)
     }
 }
