@@ -141,20 +141,24 @@ them with a lower scaled value.
 
 Please also see [What resolution should my signatures be?](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them).
 
-## What threshold-bp value should I use with sourmash?
+## What threshold-bp value should I use with `sourmash prefetch` and `sourmash gather`?
 
-We recommend a threshold-bp=50000, this parameter will only returning all
-matches above the threshold value set. Continuing that logic setting
-threshold-bp=0 will return *all* possible matches with shared hashes 
-(thresholding the necessaru containment or Jaccard similarity by
-`threshold-bp/scaled`).
+The parameter `--threshold-bp` sets the minimum estimated overlap for reporting
+a match, in both the `gather` and `prefetch` commands. The default is 50kb, and
+this works well for microbial-genome-scale work, where the genomes are often
+quite large (one or more megabases).
 
-For genome length work (e.g. GTDB), this default value of 50,000 works well.
-The limited set of genomes returned because we are working on a [scale of 100 kbp
-to 16 Mbp](https://www.frontiersin.org/articles/10.3389/fmicb.2021.761869/full). However,
-as the scale of our query changes, threshold-bp values should change accordingly.
-Considering protein or more exploratory experiments setting `threshold-bp = scaled * 3`
-will limit the false positives returned when threshold-bp is set to 0.
+In case you need more sensitivity, setting `--threshold-bp=0` will return any
+match that shares at least one hash. This will also increase potential
+false positives, however.
+
+We have found a good intermediate threshold is 3 times the `scaled` value, e.g.
+`--threshold-bp=3000` for a scaled value of 1000. This requires at least three
+overlapping hashes before a match is reported. If you are using a lower scaled
+value (a higher density sketch) because you are looking for matches between
+shorter sequences, then setting threshold-bp to 3 times that scaled value will
+take advantage of the increased sensitivity to short matches without introducing
+more false positives.
 
 ## How do k-mer-based analyses compare with read mapping?
 
