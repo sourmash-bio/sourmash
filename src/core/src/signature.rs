@@ -31,7 +31,6 @@ pub trait SigsTrait {
     fn ksize(&self) -> usize;
     fn check_compatible(&self, other: &Self) -> Result<(), Error>;
     fn seed(&self) -> u64;
-    fn scaled(&self) -> u32;
 
     fn hash_function(&self) -> HashFunctions;
 
@@ -81,7 +80,6 @@ pub trait SigsTrait {
         Ok(())
     }
 
-    fn downsample(&mut self, scaled: u32) -> Result<(), Error>;
 }
 
 impl SigsTrait for Sketch {
@@ -106,14 +104,6 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.ksize(),
             Sketch::LargeMinHash(ref mh) => mh.ksize(),
             Sketch::HyperLogLog(ref hll) => hll.ksize(),
-        }
-    }
-
-    fn scaled(&self) -> u32 {
-        match *self {
-            Sketch::MinHash(ref mh) => mh.scaled() as u32,
-            Sketch::LargeMinHash(ref mh) => mh.scaled() as u32,
-            Sketch::HyperLogLog(ref mh) => unimplemented!(),
         }
     }
 
@@ -171,26 +161,6 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::HyperLogLog(_) => unimplemented!(),
-        }
-    }
-
-    fn downsample(&mut self, scaled: u32) -> Result<(), Error> {
-        match *self {
-            Sketch::MinHash(ref mut mh) => {
-                mh.downsample_scaled(scaled as u64)?;
-                // or do we need to do it this way?
-                //let new_mh = mh.downsample_scaled(scaled as u64)?;
-                //*mh = new_mh;
-                Ok(())
-            }
-            Sketch::LargeMinHash(ref mut mh) => {
-                mh.downsample_scaled(scaled as u64)?;
-                Ok(())
-            }
-            Sketch::HyperLogLog(ref mut hll) => {
-                // Handle HyperLogLog case
-                unimplemented!()
-            }
         }
     }
 }
@@ -793,7 +763,8 @@ impl ToWriter for Signature {
 }
 
 impl Select for Signature {
-    fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+    // fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+    fn select(mut self, selection: &Selection, downsample: bool) -> Result<Self, Error> {
         self.signatures.retain(|s| {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
@@ -802,20 +773,22 @@ impl Select for Signature {
             } else {
                 valid
             };
-            // if valid after ksize check, execute downsample if needed
-            if valid {
+            // if valid after ksize check, execute downsample if needed / possible
+            // if valid {
+            if downsample && valid {
                 if let Some(sel_scaled) = selection.scaled() {
-                    // do we have a selection scaled?
-                    if let sig_scaled = s.scaled() {
-                        // do we have a signature scaled?
-                        if sig_scaled != sel_scaled {
-                            // downsample if we can
-                            if sig_scaled < sel_scaled {
-                                s.downsample(sel_scaled);
-                            } else {
-                                valid = false;
+                    match s {
+                        Sketch::MinHash(mh) | Sketch::LargeMinHash(mh) => {
+                            let sig_scaled = mh.scaled();
+                            if sig_scaled != sel_scaled {
+                                if sig_scaled < sel_scaled {
+                                    mh.downsample_scaled(sel_scaled);
+                                } else {
+                                    valid = false;
+                                }
                             }
                         }
+                        _ => {} // do nothing if sketch is not MinHash or LargeMinHash
                     }
                 }
             }
