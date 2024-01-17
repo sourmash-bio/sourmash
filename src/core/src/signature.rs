@@ -31,6 +31,7 @@ pub trait SigsTrait {
     fn ksize(&self) -> usize;
     fn check_compatible(&self, other: &Self) -> Result<(), Error>;
     fn seed(&self) -> u64;
+    fn scaled(&self) -> u32;
 
     fn hash_function(&self) -> HashFunctions;
 
@@ -79,6 +80,8 @@ pub trait SigsTrait {
         // Should be always ok
         Ok(())
     }
+
+    fn downsample(&mut self, scaled: u32) -> Result<(), Error>;
 }
 
 impl SigsTrait for Sketch {
@@ -103,6 +106,14 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.ksize(),
             Sketch::LargeMinHash(ref mh) => mh.ksize(),
             Sketch::HyperLogLog(ref hll) => hll.ksize(),
+        }
+    }
+
+    fn scaled(&self) -> u32 {
+        match *self {
+            Sketch::MinHash(ref mh) => mh.scaled() as u32,
+            Sketch::LargeMinHash(ref mh) => mh.scaled() as u32,
+            Sketch::HyperLogLog(ref mh) => unimplemented!(),
         }
     }
 
@@ -160,6 +171,25 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::HyperLogLog(_) => unimplemented!(),
+        }
+    }
+
+    fn downsample(&mut self, scaled: u32) -> Result<(), Error> {
+        match *self {
+            Sketch::MinHash(ref mut mh) => {
+                let new_mh = mh.downsample_scaled(scaled as u64)?;
+                *mh = new_mh; // Replace the old MinHash with the new one
+                Ok(())
+            },
+            Sketch::LargeMinHash(ref mut mh) => {
+                let new_mh = mh.downsample_scaled(scaled as u64)?;
+                *mh = new_mh; // Replace the old LargeMinHash with the new one
+                Ok(())
+            },
+            Sketch::HyperLogLog(ref mut hll) => {
+                // Handle HyperLogLog case
+                unimplemented!()
+            },
         }
     }
 }
@@ -771,7 +801,20 @@ impl Select for Signature {
             } else {
                 valid
             };
-            // TODO: execute downsample if needed
+            // execute downsample if needed
+            if let Some(sel_scaled) = selection.scaled() {
+                if let sig_scaled = s.scaled() {
+                    if sig_scaled < sel_scaled {
+                        s.downsample(sel_scaled);
+                    } else if sig_scaled != sel_scaled {
+                        // If the scaled values don't match and downsampling isn't applicable
+                        valid = false;
+                    }
+                } else {
+                    // If the signature doesn't have a scaled value, it's considered invalid
+                    valid = false;
+                }
+            }
 
             /*
             valid = if let Some(abund) = selection.abund() {
