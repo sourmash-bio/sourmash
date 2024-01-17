@@ -804,12 +804,13 @@ impl Select for Signature {
             };
             // if valid after ksize check, execute downsample if needed
             if valid {
-                if let Some(sel_scaled) = selection.scaled() {
-                    if let sig_scaled = s.scaled() {
+                if let Some(sel_scaled) = selection.scaled() { // do we have a selection scaled?
+                    if let sig_scaled = s.scaled() { // do we have a signature scaled?
                         if sig_scaled != sel_scaled {
+                            // downsample if we can
                             if sig_scaled < sel_scaled{
                                 s.downsample(sel_scaled);
-                            } else { // If we can't downsample
+                            } else {
                                 valid = false;
                             }
                         }
