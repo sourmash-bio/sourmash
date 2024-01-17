@@ -182,15 +182,15 @@ impl SigsTrait for Sketch {
                 //let new_mh = mh.downsample_scaled(scaled as u64)?;
                 //*mh = new_mh;
                 Ok(())
-            },
+            }
             Sketch::LargeMinHash(ref mut mh) => {
                 mh.downsample_scaled(scaled as u64)?;
                 Ok(())
-            },
+            }
             Sketch::HyperLogLog(ref mut hll) => {
                 // Handle HyperLogLog case
                 unimplemented!()
-            },
+            }
         }
     }
 }
@@ -804,11 +804,13 @@ impl Select for Signature {
             };
             // if valid after ksize check, execute downsample if needed
             if valid {
-                if let Some(sel_scaled) = selection.scaled() { // do we have a selection scaled?
-                    if let sig_scaled = s.scaled() { // do we have a signature scaled?
+                if let Some(sel_scaled) = selection.scaled() {
+                    // do we have a selection scaled?
+                    if let sig_scaled = s.scaled() {
+                        // do we have a signature scaled?
                         if sig_scaled != sel_scaled {
                             // downsample if we can
-                            if sig_scaled < sel_scaled{
+                            if sig_scaled < sel_scaled {
                                 s.downsample(sel_scaled);
                             } else {
                                 valid = false;
