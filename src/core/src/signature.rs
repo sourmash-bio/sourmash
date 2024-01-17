@@ -177,8 +177,10 @@ impl SigsTrait for Sketch {
     fn downsample(&mut self, scaled: u32) -> Result<(), Error> {
         match *self {
             Sketch::MinHash(ref mut mh) => {
-                //check: does downsample_scaled modify in place or do we need to copy here?
                 mh.downsample_scaled(scaled as u64)?;
+                // or do we need to do it this way?
+                //let new_mh = mh.downsample_scaled(scaled as u64)?;
+                //*mh = new_mh;
                 Ok(())
             },
             Sketch::LargeMinHash(ref mut mh) => {
