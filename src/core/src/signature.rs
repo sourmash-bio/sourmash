@@ -79,7 +79,6 @@ pub trait SigsTrait {
         // Should be always ok
         Ok(())
     }
-
 }
 
 impl SigsTrait for Sketch {
