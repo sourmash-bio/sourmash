@@ -794,6 +794,17 @@ impl Select for Signature {
 
             valid
         });
+
+        // downsample the retained sketches if needed
+        if let Some(sel_scaled) = selection.scaled() {
+            for sketch in self.signatures.iter_mut() {
+                if let Sketch::MinHash(mh) = sketch {
+                    if (mh.scaled() as u32) < sel_scaled {
+                        mh.downsample_scaled(sel_scaled as u64)?;
+                    }
+                }
+            }
+        }
         Ok(self)
     }
 }
