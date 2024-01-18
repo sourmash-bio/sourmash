@@ -29,3 +29,22 @@ fn selection_with_downsample() {
         }
     }
 }
+
+#[test]
+fn selection_scaled_too_low() {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/47+63-multisig.sig");
+
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+    // create Selection object
+    let mut selection = Selection::default();
+    selection.set_scaled(100);
+    // iterate and check no sigs are returned (original scaled is 1000)
+    for sig in &sigs {
+        let modified_sig = sig.clone().select(&selection).unwrap();
+        assert_eq!(modified_sig.size(), 0);
+    }
+}
