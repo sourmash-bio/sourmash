@@ -859,6 +859,10 @@ mod test {
 
     use super::Signature;
 
+    use crate::prelude::Select;
+    use crate::selection::Selection;
+    use crate::sketch::Sketch;
+
     #[test]
     fn load_sig() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -995,6 +999,49 @@ mod test {
         assert_eq!(sketches.len(), 12);
         for sk in sketches {
             assert_eq!(sk.size(), 500);
+        }
+    }
+
+    #[test]
+    fn selection_with_downsample() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(2000);
+        // iterate and check scaled
+        for sig in &sigs {
+            let modified_sig = sig.clone().select(&selection).unwrap();
+            for sketch in modified_sig.sketches() {
+                if let Sketch::MinHash(mh) = sketch {
+                    eprintln!("scaled: {:?}", mh.scaled());
+                    assert_eq!(mh.scaled(), 2000);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn selection_scaled_too_low() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(100);
+        // iterate and check no sigs are returned (original scaled is 1000)
+        for sig in &sigs {
+            let modified_sig = sig.clone().select(&selection).unwrap();
+            assert_eq!(modified_sig.size(), 0);
         }
     }
 }
