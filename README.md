@@ -51,10 +51,10 @@ community.
 
 ## Installation
 
-We recommend using bioconda to install sourmash:
+We recommend using conda-forge to install sourmash:
 
 ```
-conda install -c conda-forge -c bioconda sourmash
+conda install -c conda-forge sourmash-minimal
 ```
 This will install the latest stable version of sourmash 4.
 
@@ -75,14 +75,13 @@ our recommended installation method (see below).
 
 ### Installation with conda
 
-Bioconda is a channel for the
-[conda](http://conda.pydata.org/docs/intro.html) package manager with
-a focus on bioinformatics software. After
+conda-forge is a community maintained channel for the
+[conda](http://conda.pydata.org/docs/intro.html) package manager.
 [installing conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/),
 you can install sourmash by running:
 
 ```bash
-$ conda create -n sourmash_env -c conda-forge -c bioconda sourmash
+$ conda create -n sourmash_env -c conda-forge sourmash-minimal
 $ conda activate sourmash_env
 $ sourmash --help
 ```
@@ -133,4 +132,3 @@ For more information, please visit
 
 CTB
 Jan 2024
-
