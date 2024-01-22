@@ -2,14 +2,21 @@
 
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+<a href="https://github.com/sourmash-bio/sourmash/blob/latest/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Gitter](https://badges.gitter.im/sourmash-bio/community.svg)](https://gitter.im/sourmash-bio/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![Build Status](https://github.com/sourmash-bio/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/sourmash-bio/sourmash/actions/)
+[![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
+
 [![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
 <a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
+[![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/sourmash-minimal.svg)](https://anaconda.org/conda-forge/sourmash-minimal)
+
+![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+[![Build Status](https://github.com/sourmash-bio/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/sourmash-bio/sourmash/actions/)
 [![codecov](https://codecov.io/gh/sourmash-bio/sourmash/branch/latest/graph/badge.svg)](https://codecov.io/gh/sourmash-bio/sourmash)
-[![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
-<a href="https://github.com/sourmash-bio/sourmash/blob/latest/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
 
 <p align="center"><img src="https://raw.githubusercontent.com/sourmash-bio/sourmash/latest/doc/_static/logo.png" height="256" /></p>
 
@@ -44,10 +51,10 @@ community.
 
 ## Installation
 
-We recommend using bioconda to install sourmash:
+We recommend using conda-forge to install sourmash:
 
 ```
-conda install -c conda-forge -c bioconda sourmash
+conda install -c conda-forge sourmash-minimal
 ```
 This will install the latest stable version of sourmash 4.
 
@@ -61,22 +68,21 @@ A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/t
 
 ### Requirements
 
-sourmash runs under Python 3.10 and later.  The base
-requirements are screed, cffi, numpy, matplotlib, and scipy.  Conda
-(see below) will install everything necessary, and is our recommended
-installation method.
+sourmash runs under Python 3.10 and later on Windows, Mac OS X, and
+Linux.  The base requirements are screed, cffi, numpy, matplotlib, and
+scipy.  Conda will install everything necessary, and is
+our recommended installation method (see below).
 
 ### Installation with conda
 
-Bioconda is a channel for the
-[conda](http://conda.pydata.org/docs/intro.html) package manager with
-a focus on bioinformatics software. After
+conda-forge is a community maintained channel for the
+[conda](http://conda.pydata.org/docs/intro.html) package manager.
 [installing conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/),
 you can install sourmash by running:
 
 ```bash
-$ conda create -n sourmash_env -c conda-forge -c bioconda sourmash
-$ source activate sourmash_env
+$ conda create -n sourmash_env -c conda-forge sourmash-minimal
+$ conda activate sourmash_env
 $ sourmash --help
 ```
 
@@ -110,19 +116,5 @@ Tests require py.test and can be run with `make test`.
 Please see [the developer notes](doc/developer.md) for more information
 on getting set up with a development environment.
 
-## Research notice
-
-Please note that this repository is participating in a study into sustainability
- of open source projects. Data will be gathered about this repository for
- approximately the next 12 months, starting from 2021-06-11.
-
-Data collected will include number of contributors, number of PRs, time taken to
- close/merge these PRs, and issues closed.
-
-For more information, please visit
-[our informational page](https://sustainable-open-science-and-software.github.io/) or download our [participant information sheet](https://sustainable-open-science-and-software.github.io/assets/PIS_sustainable_software.pdf).
-
-----
-
 CTB
-Feb 2021
+Jan 2024
