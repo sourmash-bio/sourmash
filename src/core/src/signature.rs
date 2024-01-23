@@ -1019,7 +1019,7 @@ mod test {
             let modified_sig = sig.clone().select(&selection).unwrap();
             for sketch in modified_sig.sketches() {
                 if let Sketch::MinHash(mh) = sketch {
-                    eprintln!("scaled: {:?}", mh.scaled());
+                    dbg!("scaled: {:?}", mh.scaled());
                     assert_eq!(mh.scaled(), 2000);
                 }
             }
