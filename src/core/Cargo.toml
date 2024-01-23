@@ -45,7 +45,7 @@ murmurhash3 = "0.0.5"
 niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
 num-iter = "0.1.43"
-once_cell = "1.19.0"
+once_cell = "1.18.0"
 ouroboros = "0.18.2"
 piz = "0.5.0"
 primal-check = "0.3.1"
@@ -88,7 +88,7 @@ skip_feature_sets = [
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.wasm-bindgen]
-version = "0.2.90"
+version = "0.2.89"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
