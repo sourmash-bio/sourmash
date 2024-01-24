@@ -23,6 +23,9 @@ use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Result;
 
+use statistics::median;
+use mean::mean;
+
 const DB_VERSION: u8 = 1;
 
 fn compute_color(idxs: &Datasets) -> Color {
@@ -299,6 +302,7 @@ impl RevIndexOps for RevIndex {
         let mut matches = vec![];
         //let mut query: KmerMinHashBTree = orig_query.clone().into();
         let selection = selection.unwrap_or_else(|| self.collection.selection());
+        let mut remaining_bp = orig_query.scaled() as usize * orig_query.size();
 
         while match_size > threshold && !counter.is_empty() {
             trace!("counter len: {}", counter.len());
@@ -310,7 +314,6 @@ impl RevIndexOps for RevIndex {
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
             // Calculate stats
-            let f_orig_query = match_size as f64 / orig_query.size() as f64;
             let name = match_sig.name();
             let gather_result_rank = matches.len();
             let match_ = match_sig.clone();
@@ -322,16 +325,24 @@ impl RevIndexOps for RevIndex {
             let unique_intersect_bp = match_mh.scaled() as usize * match_size;
             let (intersect_orig, _) = match_mh.intersection_size(orig_query)?;
             let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
-            let f_unique_to_query = intersect_orig as f64 / orig_query.size() as f64;
 
-            // TODO: all of these
-            let filename = "".into();
-            let f_unique_weighted = 0.;
-            let average_abund = 0;
-            let median_abund = 0;
-            let std_abund = 0;
-            let f_match_orig = 0.;
-            let remaining_bp = 0;
+            let f_unique_to_query = match_size as f64 / orig_query.size() as f64;
+            let f_orig_query = intersect_orig as f64 / orig_query.size() as f64;
+            let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
+
+            let filename = match_sig.filename();
+            // weight common by query abundances
+            (common_abunds, total_common_weighted) = query.weighted_intersect_size(match_mh, abunds_from=orig_query);
+            let total_orig_query_abund = orig_query.abunds().iter().sum::<u64>();
+            //Calculate abund-related metrics
+            let f_unique_weighted = total_common_weighted as f64 / total_orig_query_abund as f64;
+            // mean, median, std of abundances
+            let average_abund: f64 = mean(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
+            let median_abund: f64 = median(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
+            let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
+
+            // remaining_bp is the number of base pairs in the query that are not in the match (or any prior match)
+            remaining_bp = remaining_bp - unique_intersect_bp;
 
             let result = GatherResult::builder()
                 .intersect_bp(intersect_bp)

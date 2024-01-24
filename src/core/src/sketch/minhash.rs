@@ -634,6 +634,90 @@ impl KmerMinHash {
         }
     }
 
+    pub fn weighted_intersection(
+        &self,
+        other: &KmerMinHash,
+        abunds_from: &KmerMinHash,
+    ) -> Result<(Vec<u64>, u64), Error> {
+        self.check_compatible(other)?;
+
+        let mut common: Vec<u64> = Vec::new();
+        if self.num != 0 {
+            // Intersection for regular MinHash sketches
+            let mut combined_mh = KmerMinHash::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
+
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+
+            common = it2.cloned().collect();
+            // Ok((common, combined_mh.mins.len() as u64))
+        } else {
+            let (common_num, _) = intersection(self.mins.iter(), other.mins.iter());
+            common = common_num;
+        }
+        let common_abunds: Vec<u64> = common
+            .iter()
+            .map(|min| {
+                // Find the index of min in abunds_from.mins
+                if let Some(index) = abunds_from.mins.iter().position(|&x| x == *min) {
+                    if let Some(abund_vec) = &abunds_from.abunds {
+                        if let Some(abundance) = abund_vec.get(index) {
+                            return *abundance;
+                        }
+                    }
+                }
+                // Default to 0 if abundance is not found in abunds_from
+                // This shouldn't happen for most applications, since abunds_from.mins
+                // should be a superset of intersection mins...
+                0
+            })
+            .collect();
+
+        // Calculate the sum of abundances
+        let common_abundance_weighted_count: u64 = common_abunds.iter().sum();
+        Ok((common, common_abundance_weighted_count))
+    }
+
+    pub fn subset_abundances(&self, subset_mins: Vec<u64>) -> Result<(Vec<u64>, u64), Error> {
+        // given a subset of mins (e.g. intersection mins), return abundances for those mins
+        let subset_abunds: Vec<u64> = subset_mins
+            .iter()
+            .map(|min| {
+                // Find the index of min in abunds_from.mins
+                if let Some(index) = self.mins.iter().position(|&x| x == *min) {
+                    if let Some(abund_vec) = &self.abunds {
+                        if let Some(abundance) = abund_vec.get(index) {
+                            return *abundance;
+                        }
+                    }
+                }
+                // Default to 0 if abundance is not found in this minhash.
+                // This shouldn't happen for most applications, since subset_mins
+                // should be a subset of self.mins (e.g. intersection with another mh)
+                0
+            })
+            .collect();
+
+        // Calculate the sum of abundances
+        let subset_abundance_weighted_count: u64 = subset_abunds.iter().sum();
+
+        Ok((subset_abunds, subset_abundance_weighted_count))
+    }
+
     // calculate Jaccard similarity, ignoring abundance.
     pub fn jaccard(&self, other: &KmerMinHash) -> Result<f64, Error> {
         self.check_compatible(other)?;
