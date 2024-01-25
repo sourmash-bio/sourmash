@@ -180,6 +180,14 @@ impl Collection {
         assert_eq!(sig.signatures.len(), 1);
         Ok(sig)
     }
+
+    pub fn sig_from_record(&self, record: &Record) -> Result<SigStore> {
+        let match_path = record.internal_location().as_str();
+        let selection = Selection::from_record(record)?;
+        let sig = self.storage.load_sig(match_path)?.select(&selection)?;
+        assert_eq!(sig.signatures.len(), 1);
+        Ok(sig)
+    }
 }
 
 impl Select for Collection {
