@@ -270,6 +270,23 @@ impl From<&[PathBuf]> for Manifest {
     }
 }
 
+impl From<&PathBuf> for Vec<PathBuf> {
+    fn from(pathlist: &PathBuf) -> Self {
+        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+        let reader = io::BufReader::new(file);
+
+        let paths: Vec<PathBuf> = reader
+            .lines()
+            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+            .map(|line| {
+                PathBuf::from(line)
+            })
+            .collect();
+
+        paths
+    }
+}
+
 impl Deref for Manifest {
     type Target = Vec<Record>;
 

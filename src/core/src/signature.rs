@@ -534,6 +534,40 @@ impl Signature {
         None
     }
 
+    // return single corresponding sketch
+    pub fn get_sketch(&self) -> Option<&Sketch> {
+        if self.signatures.len() != 1 {
+            if self.signatures.len() > 1 {
+                dbg!("Multiple sketches found! Please run select first.");
+            }
+            return None;
+        }
+        for sk in &self.signatures {
+            match sk {
+                Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_) => {
+                    return Some(sk);
+                }
+            }
+        }
+        None
+    }
+
+    // return minhash directly
+    pub fn minhash(&self) -> Option<&KmerMinHash> {
+        if self.signatures.len() != 1 {
+            if self.signatures.len() > 1 {
+                dbg!("Multiple sketches found! Please run select first.");
+            }
+            return None;
+        }
+        for sk in &self.signatures {
+            // TODO:  also account for Sketch::LargeMinHash?
+            if let Sketch::MinHash(mh) = sk {
+                return Some(mh);
+            }
+        None
+    }
+
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Signature::from_reader(&mut reader)
@@ -773,12 +807,25 @@ impl Select for Signature {
             };
             // keep compatible scaled if applicable
             if let Some(sel_scaled) = selection.scaled() {
-                valid = if let Sketch::MinHash(mh) = s {
-                    valid && mh.scaled() <= sel_scaled as u64
-                } else {
-                    valid
+                valid = match s {
+                    Sketch::MinHash(mh) | Sketch::LargeMinHash(mh) => {
+                        valid && mh.scaled() <= sel_scaled as u64
+                    }
+                    _ => {
+                        valid // Handle other sketch types or invalid cases
+                    }
                 };
             }
+            // explicitly select on sketchtype, if passed in selection
+            valid = if let Some(sketchtype) = selection.sketchtype() {
+                match s {
+                    Sketch::MinHash(_) => sketchtype == Sketch::MinHash,
+                    Sketch::LargeMinHash(_) => sketchtype == Sketch::LargeMinHash,
+                    Sketch::HyperLogLog(_) => sketchtype == Sketch::HyperLogLog,
+                }
+            } else {
+                valid
+            };
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund
@@ -798,10 +845,20 @@ impl Select for Signature {
         // downsample the retained sketches if needed.
         if let Some(sel_scaled) = selection.scaled() {
             for sketch in self.signatures.iter_mut() {
-                if let Sketch::MinHash(mh) = sketch {
-                    if (mh.scaled() as u32) < sel_scaled {
-                        *sketch = Sketch::MinHash(mh.downsample_scaled(sel_scaled as u64)?);
+                match sketch {
+                    Sketch::MinHash(mh) => {
+                        if (mh.scaled() as u32) < sel_scaled {
+                            let new_mh = mh.downsample_scaled(sel_scaled as u64)?;
+                            *sketch = Sketch::MinHash(new_mh);
+                        }
                     }
+                    Sketch::LargeMinHash(lmh) => {
+                        if (lmh.scaled() as u32) < sel_scaled {
+                            let new_lmh = lmh.downsample_scaled(sel_scaled as u64)?;
+                            *sketch = Sketch::LargeMinHash(new_lmh);
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
