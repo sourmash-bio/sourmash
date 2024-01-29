@@ -560,7 +560,7 @@ meantime, we welcome your questions and comments!
 * `match_containment_ani` - float: ANI estimated from the match containment in the query.
 * `average_containment_ani` - float: ANI estimated from the average of the query and match containment.
 * `max_containment_ani` - float: ANI estimated from the max containment between query/match.
-`potential_false_negative` - boolean: True if the sketch size(s) were too small to give a reliable ANI estimate. False if ANI estimate is reliable.
+* `potential_false_negative` - boolean: True if the sketch size(s) were too small to give a reliable ANI estimate. False if ANI estimate is reliable.
 
 ## `gather` CSV output columns
 
