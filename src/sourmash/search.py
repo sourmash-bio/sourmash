@@ -787,7 +787,6 @@ class GatherDatabases:
         # compute weighted information for remaining query hashes
         query_hashes = set(new_query_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
-        # @CTB
         n_weighted_missed += self.noident_query_sum_abunds
         sum_weighted_found = total_weighted_hashes - n_weighted_missed
 
@@ -797,10 +796,10 @@ class GatherDatabases:
                               filename=filename,
                               gather_result_rank=self.result_n,
                               gather_querymh=query.minhash,
-                              ignore_abundance= not track_abundance,
+                              ignore_abundance=not track_abundance,
                               threshold_bp=threshold_bp,
                               orig_query_len=orig_query_len,
-                              orig_query_abunds = self.orig_query_abunds,
+                              orig_query_abunds=self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
                               sum_weighted_found=sum_weighted_found,
                               total_weighted_hashes=total_weighted_hashes,
@@ -808,7 +807,6 @@ class GatherDatabases:
 
         self.result_n += 1
         self.query = new_query
-        self.orig_query_mh = orig_query_mh
 
         return result
 
