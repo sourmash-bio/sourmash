@@ -19,6 +19,7 @@ use typed_builder::TypedBuilder;
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::prelude::*;
 use crate::selection::{Select, Selection};
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
@@ -535,22 +536,22 @@ impl Signature {
     }
 
     // return single corresponding sketch
-    pub fn get_sketch(&self) -> Option<&Sketch> {
-        if self.signatures.len() != 1 {
-            if self.signatures.len() > 1 {
-                dbg!("Multiple sketches found! Please run select first.");
-            }
-            return None;
-        }
-        for sk in &self.signatures {
-            match sk {
-                Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_) => {
-                    return Some(sk);
-                }
-            }
-        }
-        None
-    }
+    // pub fn get_sketch(&self) -> Option<&Sketch> {
+    //     if self.signatures.len() != 1 {
+    //         if self.signatures.len() > 1 {
+    //             dbg!("Multiple sketches found! Please run select first.");
+    //         }
+    //         return None;
+    //     }
+    //     for sk in &self.signatures {
+    //         match sk {
+    //             Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_) => {
+    //                 return Some(sk);
+    //             }
+    //         }
+    //     }
+    //     None
+    // }
 
     // return minhash directly
     pub fn minhash(&self) -> Option<&KmerMinHash> {
@@ -565,6 +566,7 @@ impl Signature {
             if let Sketch::MinHash(mh) = sk {
                 return Some(mh);
             }
+        }
         None
     }
 
@@ -808,7 +810,8 @@ impl Select for Signature {
             // keep compatible scaled if applicable
             if let Some(sel_scaled) = selection.scaled() {
                 valid = match s {
-                    Sketch::MinHash(mh) | Sketch::LargeMinHash(mh) => {
+                    Sketch::MinHash(mh) => {
+                        // | Sketch::LargeMinHash(mh)
                         valid && mh.scaled() <= sel_scaled as u64
                     }
                     _ => {
@@ -817,15 +820,15 @@ impl Select for Signature {
                 };
             }
             // explicitly select on sketchtype, if passed in selection
-            valid = if let Some(sketchtype) = selection.sketchtype() {
-                match s {
-                    Sketch::MinHash(_) => sketchtype == Sketch::MinHash,
-                    Sketch::LargeMinHash(_) => sketchtype == Sketch::LargeMinHash,
-                    Sketch::HyperLogLog(_) => sketchtype == Sketch::HyperLogLog,
-                }
-            } else {
-                valid
-            };
+            // valid = if let Some(sketchtype) = selection.sketchtype() {
+            //     match s {
+            //         Sketch::MinHash(_) => sketchtype == Sketch::MinHash,
+            //         Sketch::LargeMinHash(_) => sketchtype == Sketch::LargeMinHash,
+            //         Sketch::HyperLogLog(_) => sketchtype == Sketch::HyperLogLog,
+            //     }
+            // } else {
+            //     valid
+            // };
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund
@@ -852,12 +855,12 @@ impl Select for Signature {
                             *sketch = Sketch::MinHash(new_mh);
                         }
                     }
-                    Sketch::LargeMinHash(lmh) => {
-                        if (lmh.scaled() as u32) < sel_scaled {
-                            let new_lmh = lmh.downsample_scaled(sel_scaled as u64)?;
-                            *sketch = Sketch::LargeMinHash(new_lmh);
-                        }
-                    }
+                    // Sketch::LargeMinHash(lmh) => {
+                    //     if (lmh.scaled() as u32) < sel_scaled {
+                    //         let new_lmh = lmh.downsample_scaled(sel_scaled as u64)?;
+                    //         *sketch = Sketch::LargeMinHash(new_lmh);
+                    //     }
+                    // }
                     _ => {}
                 }
             }

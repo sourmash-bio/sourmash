@@ -196,3 +196,95 @@ impl Select for Collection {
         Ok(self)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::convert::TryInto;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
+    use std::path::PathBuf;
+
+    use needletail::parse_fastx_reader;
+
+    use crate::cmd::ComputeParameters;
+    use crate::signature::SigsTrait;
+
+    use super::Collection;
+
+    use crate::prelude::Select;
+    use crate::selection::Selection;
+    use crate::signature::Signature;
+    use crate::sketch::Sketch;
+
+    #[test]
+    fn sigstore_selection_with_downsample() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(2000);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // count collection length
+        assert_eq!(cl.len(), 6);
+        for (idx, _rec) in cl.iter() {
+            // need to pass select again here so we actually downsample
+            let this_sig = cl.sig_for_dataset(idx).unwrap().select(&selection).unwrap();
+            let this_mh = this_sig.minhash().unwrap();
+            assert_eq!(this_mh.scaled(), 2000);
+        }
+    }
+
+    #[test]
+    fn sigstore_selection_with_downsample_too_low() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(500);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // no sigs should remain
+        assert_eq!(cl.len(), 0);
+    }
+
+    #[test]
+    fn sigstore_sig_from_record() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(2000);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // no sigs should remain
+        assert_eq!(cl.len(), 6);
+        for (_idx, rec) in cl.iter() {
+            // need to pass select again here so we actually downsample
+            let this_sig = cl.sig_from_record(rec).unwrap().select(&selection).unwrap();
+            let this_mh = this_sig.minhash().unwrap();
+            assert_eq!(this_mh.scaled(), 2000);
+        }
+    }
+}

@@ -200,6 +200,11 @@ impl Select for Manifest {
             } else {
                 valid
             };
+            valid = if let Some(scaled) = selection.scaled() {
+                valid && row.scaled <= scaled as u64
+            } else {
+                valid
+            };
             valid
         });
 
@@ -270,22 +275,22 @@ impl From<&[PathBuf]> for Manifest {
     }
 }
 
-impl From<&PathBuf> for Vec<PathBuf> {
-    fn from(pathlist: &PathBuf) -> Self {
-        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
-        let reader = io::BufReader::new(file);
+// impl From<&PathBuf> for Vec<PathBuf> {
+//     fn from(pathlist: &PathBuf) -> Self {
+//         let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+//         let reader = io::BufReader::new(file);
 
-        let paths: Vec<PathBuf> = reader
-            .lines()
-            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
-            .map(|line| {
-                PathBuf::from(line)
-            })
-            .collect();
+//         let paths: Vec<PathBuf> = reader
+//             .lines()
+//             .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+//             .map(|line| {
+//                 PathBuf::from(line)
+//             })
+//             .collect();
 
-        paths
-    }
-}
+//         paths
+//     }
+// }
 
 impl Deref for Manifest {
     type Target = Vec<Record>;
