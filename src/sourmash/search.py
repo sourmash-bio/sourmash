@@ -785,7 +785,7 @@ class GatherDatabases:
         new_query = SourmashSignature(new_query_mh)
 
         # compute weighted information for remaining query hashes
-        query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
+        query_hashes = set(new_query_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
         # @CTB
         n_weighted_missed += self.noident_query_sum_abunds
