@@ -5,7 +5,9 @@
 ```
 
 sourmash provides several different techniques for doing
-classification and breakdown of signatures.
+classification and breakdown of genomic and metagenomic signatures.
+These include taxonomic classification as well as decomposition of
+metagenomic data into constitutent genomes.
 
 ## Searching for similar samples with `search`.
 
