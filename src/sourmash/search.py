@@ -433,18 +433,27 @@ class GatherResult(PrefetchResult):
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
 
-    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
-                         'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
-                         'name', 'md5', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
-                         'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                         'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
-                         'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
+    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match',
+                         'f_unique_to_query',
+                         'f_unique_weighted','average_abund',
+                         'median_abund', 'std_abund', 'filename',
+                          'name', 'md5',
+                         'f_match_orig', 'unique_intersect_bp',
+                         'gather_result_rank', 'remaining_bp',
+                         'query_filename', 'query_name', 'query_md5',
+                         'query_bp', 'ksize', 'moltype', 'scaled',
+                         'query_n_hashes', 'query_abundance',
+                         'query_containment_ani',
+                         'match_containment_ani',
+                         'average_containment_ani',
+                         'max_containment_ani',
                          'potential_false_negative',
-                         'n_unique_weighted_found', 'sum_weighted_found',
+                         'n_unique_weighted_found',
+                         'sum_weighted_found',
                          'total_weighted_hashes']
 
     ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
-                   "match_containment_ani_low", "match_containment_ani_high"]
+               "match_containment_ani_low", "match_containment_ani_high"]
 
     gather_write_cols_ci = gather_write_cols + ci_cols
 
