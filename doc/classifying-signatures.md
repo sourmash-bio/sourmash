@@ -1,13 +1,13 @@
 # Classifying signatures: `search`, `gather`, and `lca` methods.
 
-```{contents} Contents
-:depth: 3
-```
-
 sourmash provides several different techniques for doing
 classification and breakdown of genomic and metagenomic signatures.
 These include taxonomic classification as well as decomposition of
 metagenomic data into constitutent genomes.
+
+```{contents} Contents
+:depth: 3
+```
 
 ## Searching for similar samples with `search`.
 
@@ -234,10 +234,11 @@ metagenomics, please see the simka paper,
 Benoit et al., 2016.
 
 **Implementation note:** Angular similarity searches cannot be done on
-SBT or LCA databases currently; you have to provide lists of signature
-files to `sourmash search` and `sourmash compare`.  sourmash will
-provide a warning if you run `sourmash search` on an LCA or SBT with
-an abundance-weighted query, and automatically apply `--ignore-abundance`.
+SBT or LCA databases currently; you have to provide collections of
+signature files or zip file collections to `sourmash search` and
+`sourmash compare`.  sourmash will provide a warning if you run
+`sourmash search` on an LCA or SBT with an abundance-weighted query,
+and automatically apply `--ignore-abundance`.
 
 ### Estimating ANI from FracMinHash comparisons.
 
@@ -254,10 +255,7 @@ For `sourmash search`, `sourmash prefetch`, and `sourmash gather`, you can
 optionally return confidence intervals around containment-derived ANI estimates,
 which take into account the impact of the scaling factor (via `--estimate-ani-ci`).
 
-For details on ANI estimation, please see our preprint "Debiasing FracMinHash and
-deriving confidence intervals for mutation rates across a wide range of evolutionary
-distances," [here](https://www.biorxiv.org/content/10.1101/2022.01.11.475870v2),
-Hera et al., 2022.
+For details on ANI estimation, please see the paper ["Deriving confidence intervals for mutation rates across a wide range of evolutionary distances using FracMinHash"](https://pubmed.ncbi.nlm.nih.gov/37344105/), Hera et al., 2023.
 
 ## What commands should I use?
 
