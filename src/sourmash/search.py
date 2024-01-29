@@ -671,9 +671,10 @@ class GatherDatabases:
         # do we pay attention to abundances?
         query_mh = query.minhash
         query_hashes = query_mh.hashes
-        orig_query_abunds = { k: 1 for k in query_hashes }
         if track_abundance:
             orig_query_abunds = query_hashes
+        else:
+            orig_query_abunds = { k: 1 for k in query_hashes }
 
         # adjust for not found...
         if noident_mh is None:  # create empty
@@ -786,6 +787,7 @@ class GatherDatabases:
         # compute weighted information for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
+        # @CTB
         n_weighted_missed += self.noident_query_sum_abunds
         sum_weighted_found = total_weighted_hashes - n_weighted_missed
 
