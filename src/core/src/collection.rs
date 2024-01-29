@@ -199,22 +199,15 @@ impl Select for Collection {
 
 #[cfg(test)]
 mod test {
-    use std::convert::TryInto;
     use std::fs::File;
-    use std::io::{BufReader, Read};
+    use std::io::BufReader;
     use std::path::PathBuf;
-
-    use needletail::parse_fastx_reader;
-
-    use crate::cmd::ComputeParameters;
-    use crate::signature::SigsTrait;
 
     use super::Collection;
 
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
-    use crate::sketch::Sketch;
 
     #[test]
     fn sigstore_selection_with_downsample() {
