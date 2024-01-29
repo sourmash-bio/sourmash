@@ -721,9 +721,9 @@ class GatherDatabases:
             orig_query_abunds = self.orig_query_abunds
             self.noident_query_sum_abunds = sum(( orig_query_abunds[k] \
                                                   for k in self.noident_mh.hashes ))
-            self.sum_abunds = sum(( orig_query_abunds[k] \
+            self.total_weighted_hashes = sum(( orig_query_abunds[k] \
                                     for k in self.orig_query_mh.hashes ))
-            self.sum_abunds += self.noident_query_sum_abunds
+            self.total_weighted_hashes += self.noident_query_sum_abunds
 
         if max_scaled != scaled:
             return max_scaled
@@ -770,7 +770,7 @@ class GatherDatabases:
 
         # retrieve various saved things, after potential downsampling
         orig_query_mh = self.orig_query_mh
-        sum_abunds = self.sum_abunds
+        total_weighted_hashes = self.total_weighted_hashes
         noident_mh = self.noident_mh
         orig_query_len = len(orig_query_mh) + len(noident_mh)
 
@@ -787,7 +787,7 @@ class GatherDatabases:
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
         n_weighted_missed += self.noident_query_sum_abunds
-        sum_weighted_found = sum_abunds - n_weighted_missed
+        sum_weighted_found = total_weighted_hashes - n_weighted_missed
 
         # build a GatherResult
         result = GatherResult(self.orig_query, best_match,
@@ -801,7 +801,7 @@ class GatherDatabases:
                               orig_query_abunds = self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
                               sum_weighted_found=sum_weighted_found,
-                              total_weighted_hashes=sum_abunds,
+                              total_weighted_hashes=total_weighted_hashes,
                               )
 
         self.result_n += 1
