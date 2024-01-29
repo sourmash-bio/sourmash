@@ -756,7 +756,6 @@ class GatherDatabases:
         cmp_scaled = self.cmp_scaled
 
         # will not be changed::
-        track_abundance = self.track_abundance
         threshold_bp = self.threshold_bp
         orig_query_abunds = self.orig_query_abunds
 
@@ -805,7 +804,7 @@ class GatherDatabases:
                               filename=filename,
                               gather_result_rank=self.result_n,
                               gather_querymh=query.minhash,
-                              ignore_abundance=not track_abundance,
+                              ignore_abundance=not self.track_abundance,
                               threshold_bp=threshold_bp,
                               orig_query_len=orig_query_len,
                               orig_query_abunds=self.orig_query_abunds,
