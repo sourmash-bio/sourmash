@@ -847,7 +847,7 @@ def gather(args):
     result = None
 
     ### open output handles as needed for (1) saving CSV (2) saving matches
-    
+
     # save matching signatures?
     if args.save_matches:
         notify(f"saving all matches to '{args.save_matches}'")
