@@ -192,15 +192,17 @@ first as "abundance projection" and the second as "angular similarity".
 
 `sourmash gather` can report approximate abundance information for
 containment queries against genome databases.  This will give you
-numbers that (approximately) match what you get from counting mapped
-reads.
+numbers that (approximately) match what you get from counting the coverage
+of each contig by mapping reads.
 
-If you create your input signatures with `-p abund`,
-`sourmash gather` will use that information
-to calculate an abundance-weighted result.  This will weight
-each match to a hash value by the multiplicity of the hash value in
+If you create your query signature with `-p abund`,
+`sourmash gather` will use the resulting k-mer multiplicity information
+to calculate an abundance-weighted result, weighting
+each hash value match by the multiplicity of the hash value in
 the query signature.  You can turn off this behavior with
-`--ignore-abundance`.
+`--ignore-abundance`.  The abundance is reported as column `avg_abund`
+in the console output, and columns `average_abund`, `median_abund`, and
+`std_abund` in the CSV output.
 
 For example, if you have a metagenome composed of two equal sized genomes
 A and B, with A present at 10 times the abundance of B, `gather` on
@@ -347,7 +349,7 @@ First, we make some synthetic data sets:
 then we make signature s10-s11 with r1 and r3, i.e. 1:1 abundance, and
 make signature s10x10-s11 with r2 and r3, i.e. 10:1 abundance.
 
-### A first experiment: 1:1 abundance.
+### A first experiment: 1:1 abundance ratio.
 
 When we project r1+r3, 1:1 abundance, onto s10, s11, and s12 genomes
 with gather:
@@ -367,10 +369,10 @@ overlap     p_query p_match avg_abund
 
 * approximately 50% of each query matching (first column, `p_query`)
 * approximately 80% of subject genome's contents being matched (this is due to the low coverage of 2 used to build queries; `p_match`)
-* approximately 2.0 abundance (third column, `avg_abund`)
+* approximately 2.0 coverage (third column, `avg_abund`)
 * no match to genome s12.
 
-### A second experiment: 10:1 abundance.
+### A second experiment: 10:1 abundance ratio.
 
 When we project r2+r3, 10:1 abundance, onto s10, s11, and s12 genomes
 with gather:
@@ -391,11 +393,11 @@ overlap     p_query p_match avg_abund
 * approximately 91% of s10 matching
 * approximately 9% of s11 matching
 * approximately 100% of the high coverage genome being matched, with only 80% of the low coverage genome
-* approximately 2.0 abundance (third column, avg_abund) for s11, and (very) approximately 20x abundance for genome s10.
+* approximately 2.0 coverage (third column, avg_abund) for s11, and (very) approximately 20x coverage for genome s10.
 
 The cause of the poor approximation for genome s10 is unclear; it
 could be due to low coverage, or small genome size, or something
-else. More investigation needed.
+else. More investigation is needed.
 
 ## Appendix C: sourmash gather output examples
 

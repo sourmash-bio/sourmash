@@ -24,7 +24,7 @@ Command line usage:
 sourmash gather query.sig [ list of signatures or SBTs ]
 ```
 
-Example output:
+Example output for an unweighted/noabund query:
 ```
 overlap     p_query p_match
 ---------   ------- --------
@@ -33,6 +33,17 @@ overlap     p_query p_match
 0.9 Mbp       7.4%%  11.8%%     BA000019.2 Nostoc sp. PCC 7120 DNA, c...
 0.7 Mbp       5.9%%  23.0%%     FOVK01000036.1 Proteiniclasticum rumi...
 0.7 Mbp       5.3%%  17.6%%     AE017285.1 Desulfovibrio vulgaris sub...
+```
+
+Example output for a weighted query:
+```
+overlap     p_query p_match avg_abund
+---------   ------- ------- ---------
+9.3 Mbp        0.8%   97.5%       6.7    NC_007951.1 Burkholderia xenovorans ...
+7.3 Mbp        2.3%   99.9%      23.9    NC_003272.1 Nostoc sp. PCC 7120 DNA,...
+7.0 Mbp        8.9%  100.0%      94.5    BX119912.1 Rhodopirellula baltica SH...
+6.6 Mbp        1.4%  100.0%      16.3    NC_009972.1 Herpetosiphon aurantiacu...
+...
 ```
 
 The command line option `--threshold-bp` sets the threshold below
