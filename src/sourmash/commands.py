@@ -1049,7 +1049,7 @@ def multigather(args):
                 noident_mh.remove_many(union_found)
                 ident_mh.add_many(union_found)
 
-            found = []
+            found = 0
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
             orig_query_mh = query.minhash
@@ -1062,9 +1062,32 @@ def multigather(args):
             screen_width = _get_screen_width()
             sum_f_uniq_found = 0.
             result = None
+
+            query_filename = query.filename
+            if not query_filename:
+                # use md5sum if query.filename not properly set
+                query_filename = query.md5sum()
+
+            output_base = os.path.basename(query_filename)
+            if args.output_dir:
+                output_base = os.path.join(args.output_dir, output_base)
+            output_csv = output_base + '.csv'
+
+            output_matches = output_base + '.matches.sig'
+            save_sig_obj = SaveSignaturesToLocation(output_matches)
+            save_sig = save_sig_obj.__enter__()
+            notify(f"saving all matching signatures to '{output_matches}'")
+
+            # track matches
+            notify(f'saving all CSV matches to "{output_csv}"')
+            csv_out_obj = FileOutputCSV(output_csv)
+            csv_outfp = csv_out_obj.__enter__()
+            csv_writer = None
+
             for result in gather_iter:
+                found += 1
                 sum_f_uniq_found += result.f_unique_to_query
-                if not len(found):                # first result? print header.
+                if found == 1:                # first result? print header.
                     if is_abundance:
                         print_results("")
                         print_results("overlap     p_query p_match avg_abund")
@@ -1090,7 +1113,13 @@ def multigather(args):
                     print_results('{:9}   {:>7} {:>7}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               name)
-                found.append(result)
+
+                ## @CTB
+                if csv_writer is None:
+                    csv_writer = result.init_dictwriter(csv_outfp)
+                result.write(csv_writer)
+
+                save_sig.add(result.match)
 
                 # check for size estimation accuracy, which impacts ANI estimation
                 if not size_may_be_inaccurate and result.size_may_be_inaccurate:
@@ -1102,7 +1131,14 @@ def multigather(args):
                 notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
             # basic reporting
-            print_results('\nfound {} matches total;', len(found))
+            print_results('\nfound {} matches total;', found)
+
+            # close saving etc.
+            save_sig_obj.close()
+            save_sig_obj = save_sig = None
+
+            csv_out_obj.close()
+            csv_out_obj = csv_outfp = csv_writer = None
 
             if is_abundance and result:
                 p_covered = result.sum_weighted_found / result.total_weighted_hashes
@@ -1112,32 +1148,9 @@ def multigather(args):
             print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
             print_results('')
 
-            if not found:
+            if found == 0:
                 notify('nothing found... skipping.')
                 continue
-
-            query_filename = query.filename
-            if not query_filename:
-                # use md5sum if query.filename not properly set
-                query_filename = query.md5sum()
-
-            output_base = os.path.basename(query_filename)
-            if args.output_dir:
-                output_base = os.path.join(args.output_dir, output_base)
-            output_csv = output_base + '.csv'
-
-            notify(f'saving all CSV matches to "{output_csv}"')
-            w = None
-            with FileOutputCSV(output_csv) as fp:
-                for result in found:
-                    if w is None:
-                        w = result.init_dictwriter(fp)
-                    result.write(w)
-
-            output_matches = output_base + '.matches.sig'
-            with SaveSignaturesToLocation(output_matches) as save_sig:
-                notify(f"saving all matching signatures to '{output_matches}'")
-                save_sig.add_many([ r.match for r in found ])
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
@@ -1151,7 +1164,7 @@ def multigather(args):
                     abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
                     remaining_query.minhash = abund_query_mh
 
-                if not found:
+                if found == 0:
                     notify('nothing found - entire query signature unassigned.')
                 elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
