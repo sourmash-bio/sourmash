@@ -256,6 +256,80 @@ mod test {
     }
 
     #[test]
+    fn sigstore_selection_scaled_handle_num_sig() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // four num=500 sigs
+        filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        assert_eq!(sigs.len(), 4);
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(1000);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // no sigs should remain
+        assert_eq!(cl.len(), 0);
+    }
+
+    #[test]
+    fn sigstore_selection_num() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // four num=500 sigs
+        filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs_copy = sigs.clone();
+        assert_eq!(sigs.len(), 4);
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_num(500);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // all sigs should remain
+        assert_eq!(cl.len(), 4);
+        //now select diff num and none should remain
+        selection.set_num(100);
+        let cl2 = Collection::from_sigs(sigs_copy)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        assert_eq!(cl2.len(), 0);
+    }
+
+    #[test]
+    fn sigstore_selection_num_handle_scaled_sig() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // four num=500 sigs
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        assert_eq!(sigs.len(), 6);
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_num(500);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // no sigs should remain
+        assert_eq!(cl.len(), 0);
+    }
+
+    #[test]
     fn sigstore_sig_from_record() {
         // load test sigs
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
