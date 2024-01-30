@@ -6,6 +6,7 @@ import os
 import os.path
 import sys
 import shutil
+import io
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -829,7 +830,7 @@ def gather(args):
     ## ok! now do gather -
     notify("Doing gather to generate minimum metagenome cover.")
 
-    found = []
+    found = 0
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
@@ -857,11 +858,16 @@ def gather(args):
         save_sig_obj = None
         save_sig = None
 
+    # save CSV?
+    csv_outfp = io.StringIO()
+    csv_writer = None
+
     try:
         for result in gather_iter:
+            found += 1
             sum_f_uniq_found += result.f_unique_to_query
 
-            if not len(found):                # first result? print header.
+            if found == 1:                # first result? print header.
                 if is_abundance:
                     print_results("")
                     print_results("overlap     p_query p_match avg_abund")
@@ -887,11 +893,18 @@ def gather(args):
                 print_results('{:9}   {:>7} {:>7}    {}',
                           format_bp(result.intersect_bp), pct_query, pct_genome,
                           name)
-            found.append(result)
+
+            # write out CSV
+            if args.output:
+                if csv_writer is None:
+                    csv_writer = result.init_dictwriter(csv_outfp)
+                result.write(csv_writer)
+
+            # save matches?
             if save_sig is not None:
                 save_sig.add(result.match)
 
-            if args.num_results and len(found) >= args.num_results:
+            if args.num_results and found >= args.num_results:
                 break
     finally:
         if save_sig_obj:
@@ -906,8 +919,8 @@ def gather(args):
 
     # basic reporting:
     if found:
-        print_results(f'\nfound {len(found)} matches total;')
-        if len(found) == args.num_results:
+        print_results(f'\nfound {found} matches total;')
+        if found == args.num_results:
             print_results(f'(truncated gather because --num-results={args.num_results})')
     else:
         display_bp = format_bp(args.threshold_bp)
@@ -928,11 +941,7 @@ def gather(args):
     # save CSV?
     if (found and args.output) or args.create_empty_results:
         with FileOutputCSV(args.output) as fp:
-            w = None
-            for result in found:
-                if w is None:
-                    w = result.init_dictwriter(fp)
-                result.write(w)
+            fp.write(csv_outfp.getvalue())
 
     # save unassigned hashes?
     if args.output_unassigned:
