@@ -373,9 +373,9 @@ the recovered matches hit 45.6% of the query k-mers (unweighted).
 ```
 
 For each match,
-* 'overlap', the first column, is the estimated number of k-mers shared between the match and the query.
-* 'p_query' is the _percentage_ of the query that overlaps with the match; it is the amount of the metagenome "explained" by this match.
-* 'p_match' is the percentage of the _match_ that overlaps with the query; it is the "detection" of the match in the metagenome.
+* 'overlap', the first column, is the estimated number of base pairs shared between the match and the query, based on the number of shared hashes.
+* 'p_query' is the _percentage_ of the query that overlaps with the match; it is the amount of the metagenome "explained" by this match. It is typically a lower bound on the percent of metagenomes reads that will map to this genome.
+* 'p_match' is the percentage of the _match_ that overlaps with the query; it is the "detection" of the match in the metagenome. It is typically a lower bound on the number of base pairs that will be covered by read mapping.
 
 Quite a bit more information per match row is available in the CSV
 output saved with `-o`; for details, see
