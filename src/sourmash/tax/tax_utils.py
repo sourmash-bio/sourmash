@@ -1540,6 +1540,10 @@ class GatherRow:
     n_unique_weighted_found: int = None
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
+    query_containment_ani_low: float = None
+    query_containment_ani_high: float = None
+    match_containment_ani_low: float = None
+    match_containment_ani_high: float = None
 
 
 @dataclass
