@@ -845,39 +845,59 @@ def gather(args):
     screen_width = _get_screen_width()
     sum_f_uniq_found = 0.
     result = None
-    for result in gather_iter:
-        sum_f_uniq_found += result.f_unique_to_query
 
-        if not len(found):                # first result? print header.
+    ### open output handles as needed for (1) saving CSV (2) saving matches
+    
+    # save matching signatures?
+    if args.save_matches:
+        notify(f"saving all matches to '{args.save_matches}'")
+        save_sig_obj = SaveSignaturesToLocation(args.save_matches)
+        save_sig = save_sig_obj.__enter__()
+    else:
+        save_sig_obj = None
+        save_sig = None
+
+    try:
+        for result in gather_iter:
+            sum_f_uniq_found += result.f_unique_to_query
+
+            if not len(found):                # first result? print header.
+                if is_abundance:
+                    print_results("")
+                    print_results("overlap     p_query p_match avg_abund")
+                    print_results("---------   ------- ------- ---------")
+                else:
+                    print_results("")
+                    print_results("overlap     p_query p_match")
+                    print_results("---------   ------- -------")
+
+
+            # print interim result & save in `found` list for later use
+            pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
+            pct_genome = '{:.1f}%'.format(result.f_match*100)
+
             if is_abundance:
-                print_results("")
-                print_results("overlap     p_query p_match avg_abund")
-                print_results("---------   ------- ------- ---------")
+                name = result.match._display_name(screen_width - 41)
+                average_abund ='{:.1f}'.format(result.average_abund)
+                print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                          format_bp(result.intersect_bp), pct_query, pct_genome,
+                          average_abund, name)
             else:
-                print_results("")
-                print_results("overlap     p_query p_match")
-                print_results("---------   ------- -------")
+                name = result.match._display_name(screen_width - 31)
+                print_results('{:9}   {:>7} {:>7}    {}',
+                          format_bp(result.intersect_bp), pct_query, pct_genome,
+                          name)
+            found.append(result)
+            if save_sig:
+                save_sig.add(result.match)
 
-
-        # print interim result & save in `found` list for later use
-        pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
-        pct_genome = '{:.1f}%'.format(result.f_match*100)
-
-        if is_abundance:
-            name = result.match._display_name(screen_width - 41)
-            average_abund ='{:.1f}'.format(result.average_abund)
-            print_results('{:9}   {:>7} {:>7} {:>9}    {}',
-                      format_bp(result.intersect_bp), pct_query, pct_genome,
-                      average_abund, name)
-        else:
-            name = result.match._display_name(screen_width - 31)
-            print_results('{:9}   {:>7} {:>7}    {}',
-                      format_bp(result.intersect_bp), pct_query, pct_genome,
-                      name)
-        found.append(result)
-
-        if args.num_results and len(found) >= args.num_results:
-            break
+            if args.num_results and len(found) >= args.num_results:
+                break
+    finally:
+        if save_sig_obj:
+            save_sig_obj.close()
+            save_sig_obj = None
+            save_sig = None
 
     # report on thresholding -
     if gather_iter.query:
@@ -913,13 +933,6 @@ def gather(args):
                 if w is None:
                     w = result.init_dictwriter(fp)
                 result.write(w)
-
-    # save matching signatures?
-    if found and args.save_matches:
-        notify(f"saving all matches to '{args.save_matches}'")
-        with SaveSignaturesToLocation(args.save_matches) as save_sig:
-            for sr in found:
-                save_sig.add(sr.match)
 
     # save unassigned hashes?
     if args.output_unassigned:
