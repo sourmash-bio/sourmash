@@ -3,7 +3,6 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::HashFunctions;
 use crate::manifest::Record;
-use crate::sketch::Sketch;
 use crate::Result;
 
 #[derive(Default, Debug, TypedBuilder, Clone)]
@@ -28,8 +27,6 @@ pub struct Selection {
 
     #[builder(default, setter(strip_option))]
     picklist: Option<Picklist>,
-    // #[builder(default, setter(strip_option))]
-    // sketchtype: Option<Sketch>,
 }
 
 #[derive(Default, TypedBuilder, CopyGetters, Getters, Setters, Clone, Debug)]
@@ -122,14 +119,6 @@ impl Selection {
         self.picklist = Some(value);
     }
 
-    // pub fn sketchtype(&self) -> Option<Sketch> {
-    //     self.sketchtype()
-    // }
-
-    // pub fn set_sketchtype(&mut self, value: Sketch) {
-    //     self.sketchtype = Some(value);
-    // }
-
     pub fn from_record(row: &Record) -> Result<Self> {
         Ok(Self {
             ksize: Some(*row.ksize()),
@@ -139,7 +128,6 @@ impl Selection {
             scaled: None,
             containment: None,
             picklist: None,
-            // sketchtype: None,
         })
     }
 }

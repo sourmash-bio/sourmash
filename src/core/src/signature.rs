@@ -820,16 +820,6 @@ impl Select for Signature {
                     }
                 };
             }
-            // explicitly select on sketchtype, if passed in selection
-            // valid = if let Some(sketchtype) = selection.sketchtype() {
-            //     match s {
-            //         Sketch::MinHash(_) => sketchtype == Sketch::MinHash,
-            //         Sketch::LargeMinHash(_) => sketchtype == Sketch::LargeMinHash,
-            //         Sketch::HyperLogLog(_) => sketchtype == Sketch::HyperLogLog,
-            //     }
-            // } else {
-            //     valid
-            // };
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund

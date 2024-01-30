@@ -1,5 +1,6 @@
 use std::convert::TryInto;
-use std::io::{Read, Write};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
 
 use camino::Utf8PathBuf as PathBuf;
@@ -275,27 +276,66 @@ impl From<&[PathBuf]> for Manifest {
     }
 }
 
-// impl From<&PathBuf> for Vec<PathBuf> {
-//     fn from(pathlist: &PathBuf) -> Self {
-//         let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
-//         let reader = io::BufReader::new(file);
+impl From<&PathBuf> for Manifest {
+    fn from(pathlist: &PathBuf) -> Self {
+        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+        let reader = BufReader::new(file);
 
-//         let paths: Vec<PathBuf> = reader
-//             .lines()
-//             .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
-//             .map(|line| {
-//                 PathBuf::from(line)
-//             })
-//             .collect();
+        let paths: Vec<PathBuf> = reader
+            .lines()
+            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+            .map(|line| PathBuf::from(line))
+            .collect();
 
-//         paths
-//     }
-// }
+        paths.as_slice().into()
+    }
+}
 
 impl Deref for Manifest {
     type Target = Vec<Record>;
 
     fn deref(&self) -> &Self::Target {
         &self.records
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use camino::Utf8PathBuf as PathBuf;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    use super::Manifest;
+
+    #[test]
+    fn manifest_from_pathlist() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let mut filename = utf8_output.join("sig-pathlist.txt");
+        //convert to camino utf8pathbuf
+        filename = PathBuf::from(filename);
+        // build sig filenames
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/63.fa.sig",
+        ];
+
+        let full_paths: Vec<_> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // write a file in test directory with a filename on each line
+        let mut pathfile = File::create(&filename).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile, "{}", sigfile).unwrap();
+        }
+
+        // load into manifest
+        let manifest = Manifest::from(&filename);
+        assert_eq!(manifest.len(), 2);
     }
 }
