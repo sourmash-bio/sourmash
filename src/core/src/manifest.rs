@@ -363,4 +363,22 @@ mod test {
         // load into manifest
         let _manifest = Manifest::from(&filename);
     }
+
+    #[test]
+    #[should_panic]
+    fn manifest_from_paths_badpath() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            PathBuf::from("no-exist"),
+            PathBuf::from("../../tests/test-data/63.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // load into manifest
+        let _manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+    }
 }
