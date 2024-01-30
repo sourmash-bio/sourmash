@@ -543,14 +543,12 @@ impl Signature {
             }
             return None;
         }
-        for sk in &self.signatures {
-            match sk {
-                Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_) => {
-                    return Some(sk);
-                }
-            }
-        }
-        None
+        self.signatures.iter().find(|sk| {
+            matches!(
+                sk,
+                Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_)
+            )
+        })
     }
 
     // return minhash directly
@@ -561,13 +559,13 @@ impl Signature {
             }
             return None;
         }
-        for sk in &self.signatures {
-            // TODO:  also account for Sketch::LargeMinHash?
+        self.signatures.iter().find_map(|sk| {
             if let Sketch::MinHash(mh) = sk {
-                return Some(mh);
+                Some(mh)
+            } else {
+                None
             }
-        }
-        None
+        })
     }
 
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
@@ -808,18 +806,16 @@ impl Select for Signature {
                 valid
             };
             // keep compatible scaled if applicable
-            if let Some(sel_scaled) = selection.scaled() {
-                valid = match s {
+            valid = if let Some(sel_scaled) = selection.scaled() {
+                match s {
                     Sketch::MinHash(mh) => valid && mh.scaled() <= sel_scaled as u64,
-                    //TODO: Test LMH
-                    // Sketch::LargeMinHash(lmh) => {
-                    //     valid && lmh.scaled() <= sel_scaled as u64
-                    // }
-                    _ => {
-                        valid // Handle other sketch types or invalid cases
-                    }
-                };
-            }
+                    // TODO: test LargeMinHash
+                    // Sketch::LargeMinHash(lmh) => valid && lmh.scaled() <= sel_scaled as u64,
+                    _ => valid, // other sketch types or invalid cases
+                }
+            } else {
+                valid // if selection.scaled() is None, keep prior valid
+            };
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund
@@ -839,21 +835,12 @@ impl Select for Signature {
         // downsample the retained sketches if needed.
         if let Some(sel_scaled) = selection.scaled() {
             for sketch in self.signatures.iter_mut() {
-                match sketch {
-                    Sketch::MinHash(mh) => {
-                        if (mh.scaled() as u32) < sel_scaled {
-                            let new_mh = mh.downsample_scaled(sel_scaled as u64)?;
-                            *sketch = Sketch::MinHash(new_mh);
-                        }
+                // TODO: also account for LargeMinHash
+                if let Sketch::MinHash(mh) = sketch {
+                    if (mh.scaled() as u32) < sel_scaled {
+                        let new_mh = mh.downsample_scaled(sel_scaled as u64)?;
+                        *sketch = Sketch::MinHash(new_mh);
                     }
-                    // TODO: test LMH
-                    // Sketch::LargeMinHash(lmh) => {
-                    //     if (lmh.scaled() as u32) < sel_scaled {
-                    //         let new_lmh = lmh.downsample_scaled(sel_scaled as u64)?;
-                    //         *sketch = Sketch::LargeMinHash(new_lmh);
-                    //     }
-                    // }
-                    _ => {}
                 }
             }
         }
@@ -1091,6 +1078,37 @@ mod test {
             // error
             assert!(false);
         }
+    }
+
+    #[test]
+    fn load_sketch_or_minhash_from_signature_fail() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mut mhdirect = sig.minhash().unwrap().clone();
+        // change slightly and push into new_sig
+        mhdirect.add_sequence(b"ATGGA", false).unwrap();
+        let new_sketch = Sketch::MinHash(mhdirect.clone());
+        let mut new_sig = sig.clone();
+        new_sig.push(new_sketch);
+        // check there are now two sketches in new_sig
+        assert_eq!(new_sig.signatures.len(), 2);
+
+        let sketch = new_sig.get_sketch();
+        // assert_eq!(sketch, None); --> can't use this, would need to derive PartialEq for Sketch
+        match sketch {
+            None => assert!(true),
+            _ => assert!(false),
+        }
+        let mh = new_sig.minhash();
+        assert_eq!(mh, None);
     }
 
     #[test]

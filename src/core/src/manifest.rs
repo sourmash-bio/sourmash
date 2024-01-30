@@ -284,7 +284,7 @@ impl From<&PathBuf> for Manifest {
         let paths: Vec<PathBuf> = reader
             .lines()
             .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
-            .map(|line| PathBuf::from(line))
+            .map(PathBuf::from)
             .collect();
 
         paths.as_slice().into()
