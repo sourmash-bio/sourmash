@@ -888,7 +888,7 @@ def gather(args):
                           format_bp(result.intersect_bp), pct_query, pct_genome,
                           name)
             found.append(result)
-            if save_sig:
+            if save_sig is not None:
                 save_sig.add(result.match)
 
             if args.num_results and len(found) >= args.num_results:
