@@ -199,12 +199,13 @@ impl Select for Collection {
 
 #[cfg(test)]
 mod test {
+    use camino::Utf8PathBuf as PathBuf;
     use std::fs::File;
     use std::io::BufReader;
-    use std::path::PathBuf;
 
     use super::Collection;
 
+    use crate::encodings::HashFunctions;
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
@@ -352,6 +353,57 @@ mod test {
             let this_sig = cl.sig_from_record(rec).unwrap().select(&selection).unwrap();
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 2000);
+        }
+    }
+
+    #[test]
+    fn sigstore_selection_moltype_zip() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/prot/hp.zip");
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(100);
+        selection.set_moltype(HashFunctions::Murmur64Hp);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_zipfile(&filename)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // count collection length
+        assert_eq!(cl.len(), 2);
+        for (idx, _rec) in cl.iter() {
+            // need to pass select again here so we actually downsample
+            let this_sig = cl.sig_for_dataset(idx).unwrap().select(&selection).unwrap();
+            let this_mh = this_sig.minhash().unwrap();
+            assert_eq!(this_mh.scaled(), 100);
+        }
+    }
+
+    #[test]
+    fn sigstore_selection_moltype_sig() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename
+            .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_moltype(HashFunctions::Murmur64Hp);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap()
+            .select(&selection)
+            .unwrap();
+        // count collection length
+        assert_eq!(cl.len(), 1);
+        for (idx, _rec) in cl.iter() {
+            // need to pass select again here so we actually downsample
+            let this_sig = cl.sig_for_dataset(idx).unwrap().select(&selection).unwrap();
+            let this_mh = this_sig.minhash().unwrap();
+            assert_eq!(this_mh.scaled(), 100);
         }
     }
 }

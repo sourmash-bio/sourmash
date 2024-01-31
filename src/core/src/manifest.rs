@@ -202,14 +202,13 @@ impl Select for Manifest {
                 valid
             };
             valid = if let Some(scaled) = selection.scaled() {
-                // num sigs have row.scaled = 0
+                // num sigs have row.scaled = 0, don't include them
                 valid && row.scaled != 0 && row.scaled <= scaled as u64
             } else {
                 valid
             };
             valid = if let Some(num) = selection.num() {
-                // scaled sigs have row.num = 0
-                valid && row.num != 0 && row.num == num
+                valid && row.num == num
             } else {
                 valid
             };
