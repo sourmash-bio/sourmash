@@ -433,18 +433,27 @@ class GatherResult(PrefetchResult):
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
 
-    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
-                         'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
-                         'name', 'md5', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
-                         'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                         'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
-                         'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
+    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match',
+                         'f_unique_to_query',
+                         'f_unique_weighted','average_abund',
+                         'median_abund', 'std_abund', 'filename',
+                          'name', 'md5',
+                         'f_match_orig', 'unique_intersect_bp',
+                         'gather_result_rank', 'remaining_bp',
+                         'query_filename', 'query_name', 'query_md5',
+                         'query_bp', 'ksize', 'moltype', 'scaled',
+                         'query_n_hashes', 'query_abundance',
+                         'query_containment_ani',
+                         'match_containment_ani',
+                         'average_containment_ani',
+                         'max_containment_ani',
                          'potential_false_negative',
-                         'n_unique_weighted_found', 'sum_weighted_found',
+                         'n_unique_weighted_found',
+                         'sum_weighted_found',
                          'total_weighted_hashes']
 
     ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
-                   "match_containment_ani_low", "match_containment_ani_high"]
+               "match_containment_ani_low", "match_containment_ani_high"]
 
     gather_write_cols_ci = gather_write_cols + ci_cols
 
@@ -671,9 +680,10 @@ class GatherDatabases:
         # do we pay attention to abundances?
         query_mh = query.minhash
         query_hashes = query_mh.hashes
-        orig_query_abunds = { k: 1 for k in query_hashes }
         if track_abundance:
             orig_query_abunds = query_hashes
+        else:
+            orig_query_abunds = { k: 1 for k in query_hashes }
 
         # adjust for not found...
         if noident_mh is None:  # create empty
@@ -721,9 +731,9 @@ class GatherDatabases:
             orig_query_abunds = self.orig_query_abunds
             self.noident_query_sum_abunds = sum(( orig_query_abunds[k] \
                                                   for k in self.noident_mh.hashes ))
-            self.sum_abunds = sum(( orig_query_abunds[k] \
+            self.total_weighted_hashes = sum(( orig_query_abunds[k] \
                                     for k in self.orig_query_mh.hashes ))
-            self.sum_abunds += self.noident_query_sum_abunds
+            self.total_weighted_hashes += self.noident_query_sum_abunds
 
         if max_scaled != scaled:
             return max_scaled
@@ -746,7 +756,6 @@ class GatherDatabases:
         cmp_scaled = self.cmp_scaled
 
         # will not be changed::
-        track_abundance = self.track_abundance
         threshold_bp = self.threshold_bp
         orig_query_abunds = self.orig_query_abunds
 
@@ -770,7 +779,7 @@ class GatherDatabases:
 
         # retrieve various saved things, after potential downsampling
         orig_query_mh = self.orig_query_mh
-        sum_abunds = self.sum_abunds
+        total_weighted_hashes = self.total_weighted_hashes
         noident_mh = self.noident_mh
         orig_query_len = len(orig_query_mh) + len(noident_mh)
 
@@ -784,10 +793,10 @@ class GatherDatabases:
         new_query = SourmashSignature(new_query_mh)
 
         # compute weighted information for remaining query hashes
-        query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
+        query_hashes = set(new_query_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
         n_weighted_missed += self.noident_query_sum_abunds
-        sum_weighted_found = sum_abunds - n_weighted_missed
+        sum_weighted_found = total_weighted_hashes - n_weighted_missed
 
         # build a GatherResult
         result = GatherResult(self.orig_query, best_match,
@@ -795,18 +804,17 @@ class GatherDatabases:
                               filename=filename,
                               gather_result_rank=self.result_n,
                               gather_querymh=query.minhash,
-                              ignore_abundance= not track_abundance,
+                              ignore_abundance=not self.track_abundance,
                               threshold_bp=threshold_bp,
                               orig_query_len=orig_query_len,
-                              orig_query_abunds = self.orig_query_abunds,
+                              orig_query_abunds=self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
                               sum_weighted_found=sum_weighted_found,
-                              total_weighted_hashes=sum_abunds,
+                              total_weighted_hashes=total_weighted_hashes,
                               )
 
         self.result_n += 1
         self.query = new_query
-        self.orig_query_mh = orig_query_mh
 
         return result
 

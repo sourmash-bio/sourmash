@@ -15,7 +15,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## How-To Guides
 
-* [Classifying genome sketches](classifying-signatures.md)
+* [Classifying genome and metagenome sketches](classifying-signatures.md)
 
 * [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
