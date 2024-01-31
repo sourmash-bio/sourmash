@@ -1,5 +1,5 @@
----
-title: 'sourmash: a tool to quickly search, compare, and analyze genomic and metagenomic data sets'
+title: 'sourmash: a tool to quickly search, compare, and analyze genomic
+and metagenomic data sets'
 tags:
   - FracMinHash
   - MinHash
@@ -114,38 +114,49 @@ affiliations:
  - name: No affiliation
    index: 9
 
-date: 27 Mar 2023
+date: 31 Jan 2024
 bibliography: paper.bib
 ---
 
 # Summary
 
-sourmash is a command line tool and Python library for sketching
-collections of DNA, RNA, and amino acid k-mers for biological sequence
-search, comparison, and analysis [@Pierce:2019]. sourmash's FracMinHash sketching supports fast and accurate sequence comparisons between datasets of different sizes [@gather], including petabase-scale database search [@branchwater]. From release 4.x, sourmash is built on top of Rust and provides an experimental Rust interface.
+sourmash is a command line tool and Python library for sketching collections
+of DNA, RNA, and amino acid k-mers for biological sequence search, comparison,
+and analysis [@Pierce:2019]. sourmash's FracMinHash sketching supports fast and
+accurate sequence comparisons between datasets of different sizes [@gather],
+including taxonomic profiling [@portik2022evaluation], functional profiling
+[@liu2023fast], and petabase-scale sequence search [@branchwater]. From
+release 4.x, sourmash is built on top of Rust and provides an experimental
+Rust interface.
 
-FracMinHash sketching is a lossy compression approach that represents
-data sets using a "fractional" sketch containing $1/S$ of the original 
-k-mers. Like other sequence sketching techniques (e.g. MinHash, [@Ondov:2015]), FracMinHash provides a lightweight way to store representations of large DNA or RNA sequence collections for comparison and search. Sketches can be used to identify samples, find similar samples, identify data sets with shared sequences, and build phylogenetic trees. FracMinHash sketching supports estimation of overlap, bidirectional containment, and Jaccard similarity between data sets and is accurate even for data sets of very different sizes.
+FracMinHash sketching is a lossy compression approach that represents data
+sets using a "fractional" sketch containing $1/S$ of the original k-mers. Like
+other sequence sketching techniques (e.g. MinHash, [@Ondov:2015]), FracMinHash
+provides a lightweight way to store representations of large DNA or RNA
+sequence collections for comparison and search. Sketches can be used to
+identify samples, find similar samples, identify data sets with shared
+sequences, and build phylogenetic trees. FracMinHash sketching supports
+estimation of overlap, bidirectional containment, and Jaccard similarity
+between data sets and is accurate even for data sets of very different sizes.
 
 Since sourmash v1 was released in 2016 [@Brown:2016], sourmash has expanded
 to support new database types and many more command line functions.
 In particular, sourmash now has robust support for both Jaccard similarity
-and containment calculations, which enables analysis and comparison of data sets
-of different sizes, including large metagenomic samples. As of v4.4,
+and Containment calculations, which enables analysis and comparison of data
+sets of different sizes, including large metagenomic samples. As of v4.4,
 sourmash can convert these to estimated Average Nucleotide Identity (ANI)
-values, which can provide improved biological context to sketch comparisons [@hera2022debiasing].
+values, which can provide improved biological context to sketch comparisons
+[@hera2022debiasing].
 
 # Statement of Need
 
-Large collections of genomes, transcriptomes, and raw sequencing data
-sets are readily available in biology, and the field needs lightweight
-computational methods for searching and summarizing the content of
-both public and private collections. sourmash provides a flexible set
-of programmatic functionality for this purpose, together with a robust
-and well-tested command-line interface. It has been used in well over 200
-publications (based on citations of @Brown:2016 and @Pierce:2019) and it continues
-to expand in functionality.
+Large collections of genomes, transcriptomes, and raw sequencing data sets are
+readily available in biology, and the field needs lightweight computational
+methods for searching and summarizing the content of both public and private
+collections. sourmash provides a flexible set of programmatic functionality
+for this purpose, together with a robust and well-tested command-line
+interface. It has been used in over 350 publications (based on citations of
+@Brown:2016 and @Pierce:2019) and it continues to expand in functionality.
 
 # Acknowledgements
 
@@ -153,12 +164,12 @@ This work is funded in part by the Gordon and Betty Moore Foundation’s
 Data-Driven Discovery Initiative [GBMF4551 to CTB].
 
 Notice: This manuscript has been authored by BNBI under Contract
-No. HSHQDC-15-C-00064 with the DHS. The US Government retains
-and the publisher, by accepting the article for publication, acknowledges
-that the USG retains a non-exclusive, paid-up, irrevocable, world-wide
-license to publish or reproduce the published form of this manuscript,
-or allow others to do so, for USG purposes. Views and conclusions
-contained herein are those of the authors and should not be interpreted
-to represent policies, expressed or implied, of the DHS.
+No. HSHQDC-15-C-00064 with the DHS. The US Government retains and the
+publisher, by accepting the article for publication, acknowledges that the USG
+retains a non-exclusive, paid-up, irrevocable, world-wide license to publish
+or reproduce the published form of this manuscript, or allow others to do
+so, for USG purposes. Views and conclusions contained herein are those of
+the authors and should not be interpreted to represent policies, expressed
+or implied, of the DHS.
 
 # References
