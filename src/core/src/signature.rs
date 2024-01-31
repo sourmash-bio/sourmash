@@ -838,8 +838,7 @@ impl Select for Signature {
                 // TODO: also account for LargeMinHash
                 if let Sketch::MinHash(mh) = sketch {
                     if (mh.scaled() as u32) < sel_scaled {
-                        let new_mh = mh.downsample_scaled(sel_scaled as u64)?;
-                        *sketch = Sketch::MinHash(new_mh);
+                        *sketch = Sketch::MinHash(mh.downsample_scaled(sel_scaled as u64)?);
                     }
                 }
             }
