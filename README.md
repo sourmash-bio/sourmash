@@ -36,6 +36,12 @@ to upgrade!
 
 ----
 
+sourmash is a k-mer analysis multitool, and we aim to provide stable, robust programmatic and command-line APIs for a variety of sequence comparisons. Our unique functionality includes:
+- `FracMinHash` sketching, which enables accurate comparisons (including ANI) between data sets of different sizes
+- `sourmash gather`, a combinatorial k-mer approach for more accurate metagenomic profiling
+
+Please see the [sourmash publications](https://sourmash.readthedocs.io/en/latest/publications.html#sourmash-fundamentals) for details.
+
 The name is a riff off of [Mash](https://github.com/marbl/Mash),
 combined with @ctb's love of whiskey.
 ([Sour mash](https://en.wikipedia.org/wiki/Sour_mash) is used in
