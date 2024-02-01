@@ -7,7 +7,7 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt}
 use fixedbitset::FixedBitSet;
 
 use crate::prelude::*;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::Error;
 use crate::HashIntoType;
 
@@ -50,6 +50,15 @@ impl Update<Nodegraph> for Nodegraph {
 }
 
 impl Update<Nodegraph> for KmerMinHash {
+    fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
+        for h in self.mins() {
+            other.count(h);
+        }
+        Ok(())
+    }
+}
+
+impl Update<Nodegraph> for KmerMinHashBTree {
     fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
         for h in self.mins() {
             other.count(h);

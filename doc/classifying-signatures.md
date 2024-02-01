@@ -1,11 +1,13 @@
 # Classifying signatures: `search`, `gather`, and `lca` methods.
 
+sourmash provides several different techniques for doing
+classification and breakdown of genomic and metagenomic signatures.
+These include taxonomic classification as well as decomposition of
+metagenomic data into constitutent genomes.
+
 ```{contents} Contents
 :depth: 3
 ```
-
-sourmash provides several different techniques for doing
-classification and breakdown of signatures.
 
 ## Searching for similar samples with `search`.
 
@@ -190,15 +192,17 @@ first as "abundance projection" and the second as "angular similarity".
 
 `sourmash gather` can report approximate abundance information for
 containment queries against genome databases.  This will give you
-numbers that (approximately) match what you get from counting mapped
-reads.
+numbers that (approximately) match what you get from counting the coverage
+of each contig by mapping reads.
 
-If you create your input signatures with `-p abund`,
-`sourmash gather` will use that information
-to calculate an abundance-weighted result.  This will weight
-each match to a hash value by the multiplicity of the hash value in
+If you create your query signature with `-p abund`,
+`sourmash gather` will use the resulting k-mer multiplicity information
+to calculate an abundance-weighted result, weighting
+each hash value match by the multiplicity of the hash value in
 the query signature.  You can turn off this behavior with
-`--ignore-abundance`.
+`--ignore-abundance`.  The abundance is reported as column `avg_abund`
+in the console output, and columns `average_abund`, `median_abund`, and
+`std_abund` in the CSV output.
 
 For example, if you have a metagenome composed of two equal sized genomes
 A and B, with A present at 10 times the abundance of B, `gather` on
@@ -232,10 +236,11 @@ metagenomics, please see the simka paper,
 Benoit et al., 2016.
 
 **Implementation note:** Angular similarity searches cannot be done on
-SBT or LCA databases currently; you have to provide lists of signature
-files to `sourmash search` and `sourmash compare`.  sourmash will
-provide a warning if you run `sourmash search` on an LCA or SBT with
-an abundance-weighted query, and automatically apply `--ignore-abundance`.
+SBT or LCA databases currently; you have to provide collections of
+signature files or zip file collections to `sourmash search` and
+`sourmash compare`.  sourmash will provide a warning if you run
+`sourmash search` on an LCA or SBT with an abundance-weighted query,
+and automatically apply `--ignore-abundance`.
 
 ### Estimating ANI from FracMinHash comparisons.
 
@@ -252,10 +257,7 @@ For `sourmash search`, `sourmash prefetch`, and `sourmash gather`, you can
 optionally return confidence intervals around containment-derived ANI estimates,
 which take into account the impact of the scaling factor (via `--estimate-ani-ci`).
 
-For details on ANI estimation, please see our preprint "Debiasing FracMinHash and
-deriving confidence intervals for mutation rates across a wide range of evolutionary
-distances," [here](https://www.biorxiv.org/content/10.1101/2022.01.11.475870v2),
-Hera et al., 2022.
+For details on ANI estimation, please see the paper ["Deriving confidence intervals for mutation rates across a wide range of evolutionary distances using FracMinHash"](https://pubmed.ncbi.nlm.nih.gov/37344105/), Hera et al., 2023.
 
 ## What commands should I use?
 
@@ -293,7 +295,8 @@ match that is _unique_ with respect to the original query. It will
 always decrease as you get more matches. The sum of
 `f_unique_to_query` across all rows is what is reported in by gather
 as the fraction of query k-mers hit by the recovered matches
-(unweighted) and should never be greater than 1!
+(unweighted) and should never be greater than 1! This column should
+be used in any analysis that needs to avoid double-counting matches.
 
 The second column, `f_match_orig`, is how much of the match is in the
 _original_ query.  For this fictional metagenome, each match is
@@ -346,7 +349,7 @@ First, we make some synthetic data sets:
 then we make signature s10-s11 with r1 and r3, i.e. 1:1 abundance, and
 make signature s10x10-s11 with r2 and r3, i.e. 10:1 abundance.
 
-### A first experiment: 1:1 abundance.
+### A first experiment: 1:1 abundance ratio.
 
 When we project r1+r3, 1:1 abundance, onto s10, s11, and s12 genomes
 with gather:
@@ -366,10 +369,10 @@ overlap     p_query p_match avg_abund
 
 * approximately 50% of each query matching (first column, `p_query`)
 * approximately 80% of subject genome's contents being matched (this is due to the low coverage of 2 used to build queries; `p_match`)
-* approximately 2.0 abundance (third column, `avg_abund`)
+* approximately 2.0 coverage (third column, `avg_abund`)
 * no match to genome s12.
 
-### A second experiment: 10:1 abundance.
+### A second experiment: 10:1 abundance ratio.
 
 When we project r2+r3, 10:1 abundance, onto s10, s11, and s12 genomes
 with gather:
@@ -390,8 +393,214 @@ overlap     p_query p_match avg_abund
 * approximately 91% of s10 matching
 * approximately 9% of s11 matching
 * approximately 100% of the high coverage genome being matched, with only 80% of the low coverage genome
-* approximately 2.0 abundance (third column, avg_abund) for s11, and (very) approximately 20x abundance for genome s10.
+* approximately 2.0 coverage (third column, avg_abund) for s11, and (very) approximately 20x coverage for genome s10.
 
 The cause of the poor approximation for genome s10 is unclear; it
 could be due to low coverage, or small genome size, or something
-else. More investigation needed.
+else. More investigation is needed.
+
+## Appendix C: sourmash gather output examples
+
+Below we show two real gather analyses done with a mock metagenome,
+SRR606249 (from
+[Shakya et al., 2014](https://pubmed.ncbi.nlm.nih.gov/23387867/)) and
+three of the known genomes contained within it - two *Shewanella baltica*
+strains and one *Akkermansia muciniphila* genome
+
+### sourmash gather with a query containing abundance information
+
+```
+% sourmash gather -k 31 SRR606249.trim.sig.zip podar-ref/2.fa.sig podar-ref/47.fa.sig podar-ref/63.fa.sig
+
+== This is sourmash version 4.8.5.dev0. ==
+== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==
+
+selecting specified query k=31
+loaded query: SRR606249... (k=31, DNA)
+--
+loaded 9 total signatures from 3 locations.
+after selecting signatures compatible with search, 3 remain.
+
+Starting prefetch sweep across databases.
+Prefetch found 3 signatures with overlap >= 50.0 kbp.
+Doing gather to generate minimum metagenome cover.
+
+overlap     p_query p_match avg_abund
+---------   ------- ------- ---------
+5.2 Mbp        0.8%   99.0%      11.7    NC_011663.1 Shewanella baltica OS223...
+2.7 Mbp        0.9%  100.0%      24.5    CP001071.1 Akkermansia muciniphila A...
+5.2 Mbp        0.3%   51.0%       8.1    NC_009665.1 Shewanella baltica OS185...
+found less than 50.0 kbp in common. => exiting
+
+found 3 matches total;
+the recovered matches hit 2.0% of the abundance-weighted query.
+the recovered matches hit 2.5% of the query k-mers (unweighted).
+```
+
+### sourmash gather with the same query, *ignoring* abundances
+
+```
+% sourmash gather -k 31 SRR606249.trim.sig.zip podar-ref/2.fa.sig podar-ref/47.fa.sig podar-ref/63.fa.sig --ignore-abundance
+
+== This is sourmash version 4.8.5.dev0. ==
+== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==
+
+selecting specified query k=31
+loaded query: SRR606249... (k=31, DNA)
+--
+loaded 9 total signatures from 3 locations.
+after selecting signatures compatible with search, 3 remain.
+
+Starting prefetch sweep across databases.
+Prefetch found 3 signatures with overlap >= 50.0 kbp.
+Doing gather to generate minimum metagenome cover.
+
+overlap     p_query p_match
+---------   ------- -------
+5.2 Mbp        1.2%   99.0%    NC_011663.1 Shewanella baltica OS223, complete...
+2.7 Mbp        0.6%  100.0%    CP001071.1 Akkermansia muciniphila ATCC BAA-83...
+5.2 Mbp        0.6%   51.0%    NC_009665.1 Shewanella baltica OS185, complete...
+found less than 50.0 kbp in common. => exiting
+
+found 3 matches total;
+the recovered matches hit 2.5% of the query k-mers (unweighted).
+```
+
+### Notes and comparisons
+
+There are a few interesting things to point out about the above output:
+
+* `p_match` is the same whether or not abundance information is used.
+  This is because it is the fraction of the matching genome detected in
+  the metagenome, which is inherently "flat". It is also reported
+  progressively: only the portions of the metagenome that have not
+  matched to any previous matches are used in `p_match`; read on for
+  details :).
+* `p_query` is different when abundance information is used. For
+  queries with abundance information, `p_query` provides a weighted
+  estimate that approximates the number of metagenome reads that would
+  map to this genome _after_ mapping reads to all previously reported
+  matches, i.e. all matches above this match.
+* When abundance information is not available or
+  not used, `p_query` is an estimate of what fraction of the remaining k-mers
+  in the metagenome match to this genome, after all previous matches
+  have been removed.
+* The `avg_abund` column only shows up when abundance information is
+  supplied. This is the k-mer coverage of the detected portion of the
+  match; it is a lower bound on the expected mapping-based coverage
+  for metagenome reads mapped to the detected portion of the match.
+* The percent of recovered matches for the abundance-weighted query
+  is the sum of the `p_query` column and estimates the total fraction
+  of metagenome reads that will map across all of the matching references.
+* The percent of recovered matches when _ignoring_ abundances is likewise
+  the sum of the (unweighted) `p_query` column and is not particularly
+  informative - it will always be low for real metagenomes, because sourmash
+  cannot match erroneous k-mers created by sequencing errors.
+* The `overlap` column is the estimated size of the overlap between the
+  (unweighted) original query metagenome and the match. It does not take
+  into account previous matches.
+
+Last but not least, something interesting is going on here with strains.
+While it is not highlighted in the text output of gather, there is
+substantial overlap between the two *Shewanella baltica* genomes. And,
+in fact, both of them are entirely (well, 99%) present in the metagenome
+if measured individually with `sourmash search --containment`.
+
+Consider a few more details:
+
+* `p_match` for the first *Shewanella* match, `NC_011663.1`, is 99%!
+* `p_match` for the second *Shewanella* match, `NC_009665.1`, is only 50%!
+* and, confusingly, the `overlap` for both matches is 5.2 Mbp!
+
+What's up?!
+
+What's happening here is that `sourmash gather` is subtracting the match
+to the first *Shewanella* genome from the metagenome before moving on to
+the next result, and `p_match` reports only the amount of the match
+detected in the _remaining_ metagenome after that subtraction.
+However, `overlap` is reported as the amount of overlap with the
+_original_ metagenome, which is essentially the entire genome in all
+three cases.
+
+The main things to keep in mind for gather are this:
+
+* `p_query` and `p_match` do not double-count k-mers or matches; in particular, you can sum across `p_query` for a metagenome without
+  counting anything more than once.
+* `overlap` _does_ count matches redundantly.
+* the percent of recovered matches is a useful summary of the whole
+  metagenome!
+
+We know it's confusing but it's the best output we've been able to
+figure out across all of the different use cases for gather.  Perhaps
+in the future we'll find a better way to represent all of these
+numbers in a more clear, concise, and interpretable way; in the
+meantime, we welcome your questions and comments!
+
+## Appendix D: Gather CSV output columns
+
+Note that order of columns is not guaranteed and may change between versions.
+
+| `Gather` column header                | Type          | Description |
+| :------------------------------: | :-------------: | :----------- |
+| `unique_intersect_bp`          | integer       | Size of overlap between match and _remaining_ query, estimated by multiplying the number of overlapping hashes by scaled. Rank/order dependent. Does not double count hashes. |
+| `intersect_bp`                 | integer       | Size of overlap between match and query, estimated by multiplying the number of overlapping hashes by scaled. Independent of rank order and will often double-count hashes. |
+| `f_orig_query`                 | float         | The fraction of the original query represented by this match. Approximates the fraction of metagenomic reads that will map to this genome. |
+| `f_match`                      | float         | The containment of the match in the query. |
+| `f_unique_to_query`            | float         | The fraction of matching hashes (unweighted) that are unique to this query; rank dependent. Will sum to the fraction of total k-mers (unweighted) that were identified. |
+| `f_unique_weighted`            | float         | The fraction of matching hashes (weighted by multiplicity) that are unique to this query. This will sum to the fraction of total _weighted_ k-mers that were identified. Approximates the fraction of metagenomic reads that will map to this genome _after_ all previous matches at lower (earlier) ranks are mapped. |
+| `average_abund`                | float         | Mean abundance of the weighted hashes unique to the intersection. Empty if query does not have abundance. Rank dependent, does not double count. |
+| `median_abund`                 | integer       | Median abundance of the weighted hashes unique to the intersection. Empty if query has no abundance. Rank dependent, does not double count. |
+| `std_abund`                    | float         | Std deviation of the abundance of the hashes unique to the intersection. Empty if query has no abundance. Rank dependent, does not double count. |
+| `filename`                     | string        | Filename/location of the database from which the match was loaded. |
+| `name`                         | string        | Full sketch name of the match. |
+| `md5`                          | string        | Full md5sum of the match sketch. |
+| `f_match_orig`                 | float         | The fraction of the match in the full query. Rank independent. |
+| `gather_result_rank`           | float         | Rank of this match in the results. |
+| `remaining_bp`                 | integer       | How many bp remain in the query after subtracting this match, estimated by multiplying remaining hashes by scaled. |
+| `query_filename`               | string        | The filename from which the query was loaded. |
+| `query_name`                   | string        | The query sketch name. |
+| `query_md5`                    | string        | Truncated md5sum of the query sketch. |
+| `query_bp`                     | integer       | Estimated number of bp in the query, estimated by multiplying the sketch size by scaled. |
+| `ksize`                        | integer       | K-mer size for the sketches used in the comparison. |
+| `moltype`                      | string        | Molecule type of the comparison. |
+| `scaled`                       | integer       | Scaled value of the comparison. |
+| `query_n_hashes`               | integer       | Number of hashes in the query sketch. |
+| `query_abundance`              | boolean       | True if the query has abundance information; False otherwise. |
+| `query_containment_ani`        | float         | ANI estimated from the query containment in the match. |
+| `match_containment_ani`        | float         | ANI estimated from the match containment in the query. |
+| `average_containment_ani`      | float         | ANI estimated from the average of the query and match containment. |
+| `max_containment_ani`          | float         | ANI estimated from the max of the query and match containment. |
+| `potential_false_negative`     | boolean       | True if the sketch size(s) were too small to give a reliable ANI estimate. False otherwise. |
+| `n_unique_weighted_found`      | integer       | Sum of (abundance-weighted) hashes found in this rank. |
+| `sum_weighted_found`            | integer       | Sum of the hashes x abundance found thus far, i.e., running total of `n_unique_weighted_found`. The last value divided by `total_weighted_hashes` will equal the total fraction of (weighted) k-mers identified. |
+| `total_weighted_hashes`         | integer       | Sum of hashes x abundance for the entire dataset. Constant value. |
+
+## Appendix E: Prefetch CSV output columns
+
+Note that order of columns is not guaranteed and may change between versions.
+
+| `Prefetch` column header                   | Type          | Description |
+| :----------------------------: | :-------------: | :----------- |
+| `intersect_bp`               | integer       | Size of overlap between match and original query, estimated by multiplying the number of overlapping hashes by `scaled`. |
+| `jaccard`                    | float         | Jaccard similarity of the two sketches. |
+| `max_containment`            | float         | Max of `f_query_match` and `f_match_query`. |
+| `f_query_match`              | float         | The fraction of the query contained by the match. |
+| `f_match_query`              | float         | The fraction of the match contained by the query. |
+| `match_filename`             | string        | Filename the match sketch was loaded from. |
+| `match_name`                 | string        | Full name of the match sketch. |
+| `match_md5`                  | string        | Truncated md5sum of match sketch (8 char). |
+| `match_bp`                   | integer       | Size of match, estimated by multiplying the sketch size by scaled. |
+| `query_filename`             | string        | Filename the query sketch was loaded from. |
+| `query_name`                 | string        | Full name of the query sketch. |
+| `query_md5`                  | string        | Truncated md5sum of query sketch (8 char). |
+| `query_bp`                   | integer       | Size of query, estimated by multiplying the sketch size by scaled. |
+| `ksize`                      | integer       | K-mer size for the sketches used in the comparison. |
+| `moltype`                    | string        | Molecule type of the sketches. |
+| `scaled`                     | integer       | Scaled value at which the comparison was done. |
+| `query_n_hashes`             | integer       | Number of hashes in the query. |
+| `query_abundance`            | integer       | Median hash abundance in the sketch, if available. |
+| `query_containment_ani`      | float         | ANI estimated from the query containment in the match. |
+| `match_containment_ani`      | float         | ANI estimated from the match containment in the query. |
+| `average_containment_ani`    | float         | ANI estimated from the average of the query and match containment. |
+| `max_containment_ani`        | float         | ANI estimated from the max containment between query/match. |
+| `potential_false_negative`   | boolean       | True if the sketch size(s) were too small to give a reliable ANI estimate. False if ANI estimate is reliable. |

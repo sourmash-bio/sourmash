@@ -33,11 +33,15 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
 }
 
 #[derive(Debug, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct KmerMinHash {
     num: u32,
     ksize: u32,
 
-    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
+    #[builder(setter(into), default = HashFunctions::Murmur64Dna)]
     hash_function: HashFunctions,
 
     #[builder(default = 42u64)]
@@ -53,6 +57,8 @@ pub struct KmerMinHash {
     abunds: Option<Vec<u64>>,
 
     #[builder(default)]
+    //#[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
 
@@ -68,7 +74,7 @@ impl Clone for KmerMinHash {
         KmerMinHash {
             num: self.num,
             ksize: self.ksize,
-            hash_function: self.hash_function,
+            hash_function: self.hash_function.clone(),
             seed: self.seed,
             max_hash: self.max_hash,
             mins: self.mins.clone(),
@@ -83,7 +89,7 @@ impl Default for KmerMinHash {
         KmerMinHash {
             num: 1000,
             ksize: 21,
-            hash_function: HashFunctions::murmur64_DNA,
+            hash_function: HashFunctions::Murmur64Dna,
             seed: 42,
             max_hash: 0,
             mins: Vec::with_capacity(1000),
@@ -142,10 +148,10 @@ impl<'de> Deserialize<'de> for KmerMinHash {
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
         let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
-            "protein" => HashFunctions::murmur64_protein,
-            "dayhoff" => HashFunctions::murmur64_dayhoff,
-            "hp" => HashFunctions::murmur64_hp,
-            "dna" => HashFunctions::murmur64_DNA,
+            "protein" => HashFunctions::Murmur64Protein,
+            "dayhoff" => HashFunctions::Murmur64Dayhoff,
+            "hp" => HashFunctions::Murmur64Hp,
+            "dna" => HashFunctions::Murmur64Dna,
             _ => unimplemented!(), // TODO: throw error here
         };
 
@@ -216,7 +222,7 @@ impl KmerMinHash {
     }
 
     pub fn is_protein(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_protein
+        self.hash_function == HashFunctions::Murmur64Protein
     }
 
     pub fn max_hash(&self) -> u64 {
@@ -573,7 +579,7 @@ impl KmerMinHash {
             let mut combined_mh = KmerMinHash::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -606,7 +612,7 @@ impl KmerMinHash {
             let mut combined_mh = KmerMinHash::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -709,11 +715,11 @@ impl KmerMinHash {
     }
 
     pub fn dayhoff(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_dayhoff
+        self.hash_function == HashFunctions::Murmur64Dayhoff
     }
 
     pub fn hp(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_hp
+        self.hash_function == HashFunctions::Murmur64Hp
     }
 
     pub fn mins(&self) -> Vec<u64> {
@@ -735,7 +741,7 @@ impl KmerMinHash {
         let mut new_mh = KmerMinHash::new(
             scaled,
             self.ksize,
-            self.hash_function,
+            self.hash_function.clone(),
             self.seed,
             self.abunds.is_some(),
             self.num,
@@ -799,7 +805,7 @@ impl SigsTrait for KmerMinHash {
     }
 
     fn hash_function(&self) -> HashFunctions {
-        self.hash_function
+        self.hash_function.clone()
     }
 
     fn add_hash(&mut self, hash: u64) {
@@ -823,6 +829,8 @@ impl SigsTrait for KmerMinHash {
             // TODO: fix this error
             return Err(Error::MismatchDNAProt);
         }
+        // TODO: if supporting downsampled to be compatible
+        //if self.max_hash < other.max_hash {
         if self.max_hash != other.max_hash {
             return Err(Error::MismatchScaled);
         }
@@ -927,11 +935,15 @@ mod test {
 // A MinHash implementation for low scaled or large cardinalities
 
 #[derive(Debug, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct KmerMinHashBTree {
     num: u32,
     ksize: u32,
 
-    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
+    #[builder(setter(into), default = HashFunctions::Murmur64Dna)]
     hash_function: HashFunctions,
 
     #[builder(default = 42u64)]
@@ -950,6 +962,8 @@ pub struct KmerMinHashBTree {
     current_max: u64,
 
     #[builder(default)]
+    //#[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
 
@@ -965,7 +979,7 @@ impl Clone for KmerMinHashBTree {
         KmerMinHashBTree {
             num: self.num,
             ksize: self.ksize,
-            hash_function: self.hash_function,
+            hash_function: self.hash_function.clone(),
             seed: self.seed,
             max_hash: self.max_hash,
             mins: self.mins.clone(),
@@ -981,7 +995,7 @@ impl Default for KmerMinHashBTree {
         KmerMinHashBTree {
             num: 1000,
             ksize: 21,
-            hash_function: HashFunctions::murmur64_DNA,
+            hash_function: HashFunctions::Murmur64Dna,
             seed: 42,
             max_hash: 0,
             mins: Default::default(),
@@ -1042,10 +1056,10 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
         let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
-            "protein" => HashFunctions::murmur64_protein,
-            "dayhoff" => HashFunctions::murmur64_dayhoff,
-            "hp" => HashFunctions::murmur64_hp,
-            "dna" => HashFunctions::murmur64_DNA,
+            "protein" => HashFunctions::Murmur64Protein,
+            "dayhoff" => HashFunctions::Murmur64Dayhoff,
+            "hp" => HashFunctions::Murmur64Hp,
+            "dna" => HashFunctions::Murmur64Dna,
             _ => unimplemented!(), // TODO: throw error here
         };
 
@@ -1115,7 +1129,7 @@ impl KmerMinHashBTree {
     }
 
     pub fn is_protein(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_protein
+        self.hash_function == HashFunctions::Murmur64Protein
     }
 
     pub fn max_hash(&self) -> u64 {
@@ -1358,7 +1372,7 @@ impl KmerMinHashBTree {
             let mut combined_mh = KmerMinHashBTree::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -1390,7 +1404,7 @@ impl KmerMinHashBTree {
             let mut combined_mh = KmerMinHashBTree::new(
                 self.scaled(),
                 self.ksize,
-                self.hash_function,
+                self.hash_function.clone(),
                 self.seed,
                 self.abunds.is_some(),
                 self.num,
@@ -1478,15 +1492,15 @@ impl KmerMinHashBTree {
     }
 
     pub fn dayhoff(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_dayhoff
+        self.hash_function == HashFunctions::Murmur64Dayhoff
     }
 
     pub fn hp(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_hp
+        self.hash_function == HashFunctions::Murmur64Hp
     }
 
     pub fn hash_function(&self) -> HashFunctions {
-        self.hash_function
+        self.hash_function.clone()
     }
 
     pub fn mins(&self) -> Vec<u64> {
@@ -1510,7 +1524,7 @@ impl KmerMinHashBTree {
         let mut new_mh = KmerMinHashBTree::new(
             scaled,
             self.ksize,
-            self.hash_function,
+            self.hash_function.clone(),
             self.seed,
             self.abunds.is_some(),
             self.num,
@@ -1560,7 +1574,7 @@ impl SigsTrait for KmerMinHashBTree {
     }
 
     fn hash_function(&self) -> HashFunctions {
-        self.hash_function
+        self.hash_function.clone()
     }
 
     fn add_hash(&mut self, hash: u64) {

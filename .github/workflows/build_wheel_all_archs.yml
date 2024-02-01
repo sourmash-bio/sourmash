@@ -1,92 +1,82 @@
-name: cibuildwheel_ubuntu
+name: maturin wheels
 
 on:
-  #pull_request:        # use for testing modifications to this action
+  pull_request:        # use for testing modifications to this action
   push:
     branches: [latest]
     tags: v*
+  workflow_dispatch:
   schedule:
     - cron: "0 0 * * *" # daily
 
+permissions:
+  contents: read
+
 jobs:
-  build_wheels:
-    name: Build wheels for ${{ matrix.os }}-${{ matrix.arch }}
-    runs-on: ${{ matrix.os }}
+
+  linux:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        build: [
-          linux-aarch64,
-          linux-ppc64le,
-          linux-s390x,
-        ]
-        include:
-          - build: linux-aarch64
-            os: ubuntu-20.04
-            arch: aarch64
-            macos_target: ''
-          - build: linux-ppc64le
-            os: ubuntu-20.04
-            arch: ppc64le
-            macos_target: ''
-          - build: linux-s390x
-            os: ubuntu-20.04
-            arch: s390x
-            macos_target: ''
-      fail-fast: false
-
+        target: [aarch64, ppc64le]
+        #target: [aarch64, s390x, ppc64le]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
-        name: Install Python
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
-
-      # Added due to weird error when building inside docker container
-      # for other platforms...
-      # https://github.com/JonasAlfredsson/docker-nginx-certbot/issues/30
-      - name: Set Swap Space
-        if: runner.os == 'Linux'
-        uses: pierotofy/set-swap-space@v1.0
-        with:
-          swap-size-gb: 10
-      - run: |
-          # Workaround for https://github.com/rust-lang/cargo/issues/8719
-          sudo mkdir -p /var/lib/docker
-          sudo mount -t tmpfs -o size=10G none /var/lib/docker
-          sudo systemctl restart docker
-        if: runner.os == 'Linux'
-
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
+          python-version: '3.10'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.0
-        env:
-          CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
-          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
-          CIBW_ARCHS_MACOS: ${{ matrix.arch }}
-          CARGO_NET_GIT_FETCH_WITH_CLI: true
-
-      - uses: actions/upload-artifact@v3
+        uses: PyO3/maturin-action@v1
         with:
-          path: './wheelhouse/sourmash*.whl'
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter --zig --strip
+          sccache: 'true'
+          manylinux: auto
+          container: 'off'
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.target }}
+          path: dist
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          architecture: ${{ matrix.target }}
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: x64
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-win64
+          path: dist
 
   release:
     name: Publish wheels
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build_wheels
+    needs: [linux, windows]
 
     steps:
       - name: Fetch wheels from artifacts
         id: fetch_artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: 'wheels/'
 

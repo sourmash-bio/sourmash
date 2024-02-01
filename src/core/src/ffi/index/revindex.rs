@@ -1,21 +1,37 @@
-use std::path::PathBuf;
 use std::slice;
 
-use crate::index::revindex::RevIndex;
-use crate::index::Index;
-use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
-use crate::sketch::Sketch;
+use camino::Utf8PathBuf as PathBuf;
 
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::index::revindex::mem_revindex::RevIndex;
+use crate::index::Index;
+use crate::prelude::*;
+use crate::signature::{Signature, SigsTrait};
+use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::Sketch;
 
 pub struct SourmashRevIndex;
 
 impl ForeignObject for SourmashRevIndex {
     type RustObject = RevIndex;
+}
+
+// TODO: remove this when it is possible to pass Selection thru the FFI
+fn from_template(template: &Sketch) -> Selection {
+    let (num, scaled) = match template {
+        Sketch::MinHash(mh) => (mh.num(), mh.scaled() as u32),
+        Sketch::LargeMinHash(mh) => (mh.num(), mh.scaled() as u32),
+        _ => unimplemented!(),
+    };
+
+    Selection::builder()
+        .ksize(template.ksize() as u32)
+        .num(num)
+        .scaled(scaled)
+        .build()
 }
 
 ffi_fn! {
@@ -58,13 +74,16 @@ unsafe fn revindex_new_with_paths(
             .collect();
         Some(queries_vec.as_ref())
     };
+
+    let selection = from_template(&template);
+
     let revindex = RevIndex::new(
         search_sigs.as_ref(),
-        &template,
+        &selection,
         threshold,
         queries,
         keep_sigs,
-    );
+    )?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
@@ -105,7 +124,9 @@ unsafe fn revindex_new_with_sigs(
             .collect();
         Some(queries_vec.as_ref())
     };
-    let revindex = RevIndex::new_with_sigs(search_sigs, &template, threshold, queries);
+
+    let selection = from_template(&template);
+    let revindex = RevIndex::new_with_sigs(search_sigs, &selection, threshold, queries)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }

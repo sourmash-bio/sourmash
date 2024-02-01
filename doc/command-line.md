@@ -5,7 +5,7 @@
 ```
 
 From the command line, sourmash can be used to create
-[MinHash sketches][0] from DNA and protein sequences, compare them to
+[FracMinHash sketches][0] from DNA and protein sequences, compare them to
 each other, and plot the results; these sketches are saved into
 "signature files".  These signatures allow you to estimate sequence
 similarity and containment quickly and accurately in large
@@ -45,7 +45,10 @@ Next, compare all the signatures to each other:
 sourmash compare *.sig -o cmp.dist
 ```
 
-Finally, plot a dendrogram: ``` sourmash plot cmp.dist --labels ```
+Finally, plot a dendrogram:
+```
+sourmash plot cmp.dist --labels
+```
 This will output three files, `cmp.dist.dendro.png`,
 `cmp.dist.matrix.png`, and `cmp.dist.hist.png`, containing a
 clustering & dendrogram of the sequences, a similarity matrix and
@@ -259,15 +262,18 @@ sourmash plot <matrix_file>
 ```
 
 Options:
-```
---pdf -- output PDF files.
---labels -- display the signature names (by default, the filenames) on the plot
---indices -- turn off index display on the plot.
---vmax -- maximum value (default 1.0) for heatmap.
---vmin -- minimum value (default 0.0) for heatmap.
---subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
---subsample-seed=<seed> -- seed for pseudorandom number generator.
-```
+* `--pdf` -- output PDF files. (defaults to PNG)
+* `--labels` -- display the signature names on the plot (default)
+* `--indices` -- turn on index display on the plot.
+* `--vmax` -- maximum value (default 1.0) for heatmap.
+* `--vmin` -- minimum value (default 0.0) for heatmap.
+* `--subsample=<N>` -- plot a maximum of <N> samples, randomly chosen.
+* `--subsample-seed=<seed>` -- seed for pseudorandom number generator.
+
+Example command lines for label and index display -
+
+* `--indices` will show only numbers;
+* `--no-labels --no-indices` will remove all labels!
 
 Example output:
 
@@ -358,11 +364,40 @@ overlap     p_query p_match
 0.9 Mbp       7.4%   11.8%      BA000019.2 Nostoc sp. PCC 7120 DNA, c...
 0.7 Mbp       5.9%   23.0%      FOVK01000036.1 Proteiniclasticum rumi...
 0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris sub...
+...
+found less than 50.0 kbp in common. => exiting
+
+found 64 matches total;
+the recovered matches hit 94.0% of the abundance-weighted query.
+the recovered matches hit 45.6% of the query k-mers (unweighted).
 ```
+
+For each match,
+* 'overlap', the first column, is the estimated number of base pairs shared between the match and the query, based on the number of shared hashes.
+* 'p_query' is the _percentage_ of the query that overlaps with the match; it is the amount of the metagenome "explained" by this match. It is typically a lower bound on the percent of metagenomes reads that will map to this genome.
+* 'p_match' is the percentage of the _match_ that overlaps with the query; it is the "detection" of the match in the metagenome. It is typically a lower bound on the number of base pairs that will be covered by read mapping.
+
+Quite a bit more information per match row is available in the CSV
+output saved with `-o`; for details, see
+[Classifying signatures: how sourmash gather works](classifying-signatures.md#appendix-a-how-sourmash-gather-works).
+
+The "recovered matches" lines detail how much of the query is
+explained by the entire collection of matches. You will get two numbers if
+your metagenome sketch has been calculated with `-p abund`, and only
+one if it does not have abundances. The abundance-weighted
+number should approximate the fraction of metagenome reads that will
+map to at least one reference genome, while the unweighted number
+describes how much of the metagenome itself matches to genomes.
+Here's another way to put it: if the metagenome could be perfectly
+assembled into contigs, the unweighted number would approximate the
+number of bases from the contigs that would match perfectly to at
+least one genome in the reference database.  More practically,
+the abundance-weighted number is less sensitive to sequencing errors.
+See [classifying signatures](classifying-signatures.md#abundance-weighting) or [the FAQ](faq.md) for more information!
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
-50kb. see the Appendix in
+50kb. See the Appendix in
 [Classifying Signatures](classifying-signatures.md) for details.
 
 As of sourmash 4.2.0, `gather` supports `--picklist`, to
@@ -530,15 +565,16 @@ As with all reference-based analysis, results can be affected by the
  and redundancy of reference databases.
 
 For more details on how `gather` works and can be used to classify
- signatures, see [classifying-signatures](classifying-signatures.md).
+signatures, see <project:classifying-signatures.md>
 
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
 `sourmash tax metagenome` summarizes gather results for each query metagenome by
- taxonomic lineage.
+taxonomic lineage.
 
-example command to summarize a single `gather csv`, where the query was gathered
- against `gtdb-rs202` representative species database:
+Here is an example command to summarize a single `gather csv`, where
+ the query was gathered against `gtdb-rs202` representative species
+database:
 
 ```
 sourmash tax metagenome
@@ -557,10 +593,10 @@ The possible output formats are:
 #### `csv_summary` output format
 
 `csv_summary` is the default output format. This outputs a `csv` with lineage
- summarization for each taxonomic rank. This output currently consists of six
- columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
- `fraction` is the  fraction of the query matched to the reported rank and
- lineage.
+summarization for each taxonomic rank. This output currently consists of six
+columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
+`fraction` is the  fraction of the query matched to the reported rank and
+lineage.
 
 example `csv_summary` output from the command above:
 
@@ -579,7 +615,7 @@ o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri
 HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
 o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
 ```
-> The `query_md5` and `query_filename` columns are omitted here for brevity.
+The `query_md5` and `query_filename` columns are omitted here for brevity.
 
 #### `krona` output format
 
@@ -973,14 +1009,14 @@ commands.
 
 All `sourmash tax` commands must be given one or more taxonomy files as
 parameters to the `--taxonomy` argument. These files can be either CSV
-files or (as of sourmash 4.2.1) sqlite3 databases. sqlite3 databases
+files or (as of sourmash 4.2.1) SQLite databases. SQLite databases
 are much faster for large taxonomies, while CSV files are easier to view
 and modify using spreadsheet software.
 
 `sourmash tax prepare` is a utility function that can ingest and validate
-multiple CSV files or sqlite3 databases, and output a CSV file or a sqlite3
+multiple CSV files or SQLite databases, and output a CSV file or a SQLite
 database. It can be used to combine multiple taxonomies into a single file,
-as well as change formats between CSV and sqlite3.
+as well as change formats between CSV and SQLite.
 
 The following command will take in two taxonomy files and combine them into
 a single taxonomy SQLite database.
@@ -1041,8 +1077,11 @@ superkingdom, phylum, class, order, family, genus, and species.
 to ignore case and `-v` to output only taxonomic lineages that do
 _not_ match the pattern.
 
+Note: `tax grep` only searches taxonomic ranks, not identifier strings.
+Use `sig grep` to search for identifiers in sketch collections.
+
 Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
-convert CSV output from `tax grep` into a sqlite3 taxonomy database.
+convert CSV output from `tax grep` into a SQLite taxonomy database.
 
 ### `sourmash tax summarize` - print summary information for lineage spreadsheets or taxonomy databases
 
@@ -1153,7 +1192,7 @@ a status of `disagree` with the genus-level assignment of *Shewanella*;
 species level assignments would not be reported.
 Here, the assigned rank is the rank immediately *above* where there is
 a taxonomic disagreement, and the taxid & lineage refer to the name at
-that rank (the least-common-ancestor at which an assignment can be
+that rank (the lowest common ancestor at which an assignment can be
 made).
 
 For another example, if you saw this line in the CSV file: 
@@ -1329,8 +1368,8 @@ agreement/disagreement.  Please see the blog post
 [Why are taxonomic assignments so different for Tara bins?](http://ivory.idyll.org/blog/2017-taxonomic-disagreements-in-tara-mags.html)
 for an example use case.
 
-[0]:https://en.wikipedia.org/wiki/MinHash   
-[1]:http://mash.readthedocs.io/en/latest/__
+[0]:https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2
+[1]:http://mash.readthedocs.io/en/latest/
 [2]:http://biorxiv.org/content/early/2015/10/26/029827
 [3]:https://en.wikipedia.org/wiki/Jaccard_index
 
@@ -1367,6 +1406,12 @@ sourmash signature cat file1.sig file2.sig -o all.zip
 ```
 will combine all signatures in `file1.sig` and `file2.sig` and put them
 in the file `all.zip`.
+
+#### Using picklists with `sourmash sig cat`
+
+As of sourmash 4.2.0, `cat` also supports picklists, a feature by
+which you can select signatures based on values in a CSV file. See
+[Using picklists to subset large collections of signatures](#using-picklists-to-subset-large-collections-of-signatures), below.
 
 ### `sourmash signature describe` - display detailed information about signatures
 
@@ -1732,9 +1777,36 @@ and/or containment might be very close to zero.
 
 For example,
 ```
-sourmash signature overlap file1.sig file2.sig
+sourmash signature overlap tests/test-data/63.fa.sig \
+    tests/test-data/47.fa.sig
 ```
-will display the detailed comparison of `file1.sig` and `file2.sig`.
+will display the detailed comparison of the two files like so:
+```text
+loaded one signature each from tests/test-data/63.fa.sig and tests/test-data/47.fa.sig
+first signature:
+  signature filename: tests/test-data/63.fa.sig
+  signature: NC_011663.1 Shewanella baltica OS223, complete genome
+  md5: 38729c6374925585db28916b82a6f513
+  k=31 molecule=DNA num=0 scaled=1000
+
+second signature:
+  signature filename: tests/test-data/47.fa.sig
+  signature: NC_009665.1 Shewanella baltica OS185, complete genome
+  md5: 09a08691ce52952152f0e866a59f6261
+  k=31 molecule=DNA num=0 scaled=1000
+
+similarity:                  0.32069
+first contained in second:   0.48282
+second contained in first:   0.48851
+
+number of hashes in first:   5238
+number of hashes in second:  5177
+
+number of hashes in common:  2529
+only in first:               2709
+only in second:              2648
+total (union):               7886
+```
 
 `sig overlap` can only work with compatible sketches - if there are multiple
 k-mer sizes or molecule types present in any of the signature files,
@@ -1935,7 +2007,7 @@ CSV file (based on the headers in the first line of the CSV file), and
 `:include` or `:exclude`, can be added as a fourth parameter; if
 omitted, the default is `:include`.
 
-The following `coltype`s are currently supported by `sourmash sig extract`:
+The following `coltype`s are currently supported for picklists:
 
 * `name` - exact match to signature's name
 * `md5` - exact match to signature's md5sum
@@ -1997,8 +2069,8 @@ slow, especially for many (100s or 1000s) of signatures.
 
 All of the `sourmash` commands support loading collections of
 signatures from zip files.  You can create a compressed collection of
-signatures using `zip -r collection.zip *.sig` and then specify
-`collections.zip` on the command line.
+signatures using `sourmash sig cat *.sig -o collections.zip` and then
+specifying `collections.zip` on the command line in place of `*.sig`.
 
 ### Choosing signature output formats
 
@@ -2026,6 +2098,13 @@ All of these save formats can be loaded by sourmash commands.
 
 **We strongly suggest using .zip files to store signatures: they are fast,
 small, and fully supported by all the sourmash commands.**
+
+Note that when outputting large collections of signatures, some save
+formats require holding all the sketches in memory until they can be
+written out, and others can save progressively. This can affect memory
+usage! Currently `.sig` and `.sig.gz` formats are held in memory,
+while `.zip`, directory outputs, and `.sqldb` formats write progressively
+to disk.
 
 For more detailed information on database formats and performance
 tradeoffs, please see [the advanced usage information for

@@ -163,7 +163,7 @@ jobs:
         run: "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh"
 
       - name: Prepare node for running tests
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 16
           registry-url: https://registry.npmjs.org/
@@ -179,7 +179,7 @@ jobs:
         working-directory: pkg
         run: npm pack
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: 'pkg/sourmash*.tgz'
 
@@ -229,6 +229,14 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          crate-name: sourmash
+          version-tag-prefix: r
+          feature-group: default-features
+          features: branchwater
+
       - name: Make sure we can publish the sourmash crate
         uses: actions-rs/cargo@v1
         with:
@@ -242,11 +250,11 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: "1.64.0"
+          toolchain: "1.65.0"
           override: true
 
       - name: check if README matches MSRV defined here
-        run: grep '1.64.0' src/core/README.md
+        run: grep '1.65.0' src/core/README.md
 
       - name: Check if it builds properly
         uses: actions-rs/cargo@v1

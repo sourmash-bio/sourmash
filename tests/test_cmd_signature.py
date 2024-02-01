@@ -3994,7 +3994,8 @@ def test_sig_kmers_1_dna(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
 
@@ -4031,8 +4032,9 @@ def test_sig_kmers_1_dna_more_in_query(runtmp):
     # make a new sequence for query, with more k-mers
     query_seqfile = runtmp.output('query.fa')
     with open(query_seqfile, 'wt') as fp:
-        for record in screed.open(seqfile):
-            fp.write(f">{record.name}\n{record.sequence}AGTTACGATC\n")
+        with screed.open(seqfile) as screed_iter:
+            for record in screed_iter:
+                fp.write(f">{record.name}\n{record.sequence}AGTTACGATC\n")
 
     runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
                     '--seq', query_seqfile)
@@ -4140,7 +4142,8 @@ def test_sig_kmers_1_dna_lowscaled(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
 
@@ -4189,7 +4192,8 @@ def test_sig_kmers_1_dna_num(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
 
@@ -4238,7 +4242,8 @@ def test_sig_kmers_1_dna_translate_protein(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
 
@@ -4287,7 +4292,8 @@ def test_sig_kmers_1_dna_translate_dayhoff(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
 
@@ -4336,7 +4342,8 @@ def test_sig_kmers_1_dna_translate_hp(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
 
@@ -4385,7 +4392,8 @@ def test_sig_kmers_2_protein(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 2
     assert len(records[0].sequence) == 820, len(records[0].sequence)
     assert len(records[1].sequence) == 310, len(records[1].sequence)
@@ -4435,7 +4443,8 @@ def test_sig_kmers_2_dayhoff(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 2
     assert len(records[0].sequence) == 820, len(records[0].sequence)
     assert len(records[1].sequence) == 310, len(records[1].sequence)
@@ -4485,7 +4494,8 @@ def test_sig_kmers_2_hp(runtmp):
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
-    records = list(screed.open(runtmp.output('matched.fa')))
+    with screed.open(runtmp.output('matched.fa')) as f:
+        records = list(f)
     assert len(records) == 2
     assert len(records[0].sequence) == 820, len(records[0].sequence)
     assert len(records[1].sequence) == 310, len(records[1].sequence)

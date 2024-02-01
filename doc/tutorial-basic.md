@@ -1,55 +1,14 @@
 # The first sourmash tutorial - making signatures, comparing, and searching
 
-This tutorial should run without modification on Linux or Mac OS X,
-under [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
-
 You'll need about 5 GB of free disk space, and about 5 GB of RAM to
 search GenBank.  The tutorial should take about 20 minutes total to
 run. In fact, we have successfully tested it on
 [binder.pangeo.io](https://binder.pangeo.io/v2/gh/binder-examples/r-conda/master?urlpath=urlpath%3Drstudio)
 if you want to give it a try!
 
-## Install miniconda
-
-If you don't have the `conda` command installed, you'll need to install
-miniconda for Python 3.x.
-
-On Linux, this should work:
-```
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b
-echo export PATH="$HOME/miniconda3/bin:$PATH" >> ~/.bash_profile
-source ~/.bash_profile
-```
-otherwise, follow
-[the miniconda install](https://docs.conda.io/en/latest/miniconda.html).
-
-## Enable [bioconda](https://bioconda.github.io/)
-
-```
-conda config --add channels defaults
-conda config --add channels bioconda
-conda config --add channels conda-forge
-```
-
 ## Install sourmash
 
-To install sourmash, create a new environment named `smash` and install sourmash:
-
-```
-conda create -y -n smash sourmash
-```
-
-and then activate:
-```
-conda activate smash
-```
-
-You should now be able to use the `sourmash` command:
-
-```
-sourmash info
-```
+You'll need to [install sourmash](tutorial-install.md) first!
 
 ## Generate a signature for Illumina reads
 
@@ -308,4 +267,4 @@ and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
 [2]:https://pubmed.ncbi.nlm.nih.gov/23387867/
 [3]:index.md
 [4]:tutorials-lca.md
-[5]:sourmash-collections.md
+[5]:sourmash-collections.ipynb

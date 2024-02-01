@@ -23,18 +23,19 @@ def test_hll_add_python():
     hll = HLL(ERR_RATE, K)
     counter = set()
 
-    for n, record in enumerate(fasta_iter(open(filename))):
-        sequence = record['sequence']
-        seq_len = len(sequence)
-        for n in range(0, seq_len + 1 - K):
-            kmer = sequence[n:n + K]
-            rc = "".join(TRANSLATE[c] for c in kmer[::-1])
+    with open(filename) as f:
+        for n, record in enumerate(fasta_iter(f)):
+            sequence = record['sequence']
+            seq_len = len(sequence)
+            for n in range(0, seq_len + 1 - K):
+                kmer = sequence[n:n + K]
+                rc = "".join(TRANSLATE[c] for c in kmer[::-1])
 
-            hll.add(kmer)
+                hll.add(kmer)
 
-            if rc in counter:
-                kmer = rc
-            counter.update([kmer])
+                if rc in counter:
+                    kmer = rc
+                counter.update([kmer])
 
     n_unique = len(counter)
 
@@ -49,8 +50,9 @@ def test_hll_consume_string():
     filename = utils.get_test_data('ecoli.genes.fna')
     hll = HLL(ERR_RATE, K)
     n_consumed = n = 0
-    for n, record in enumerate(fasta_iter(open(filename)), 1):
-        hll.add_sequence(record['sequence'])
+    with open(filename) as f:
+        for n, record in enumerate(fasta_iter(f), 1):
+            hll.add_sequence(record['sequence'])
 
     assert abs(1 - float(len(hll)) / N_UNIQUE) < ERR_RATE
 
@@ -71,22 +73,24 @@ def test_hll_similarity_containment():
     hllu = HLL(ERR_RATE, K)
 
     filename = utils.get_test_data('genome-s10.fa.gz')
-    for n, record in enumerate(fasta_iter(gzip.GzipFile(filename))):
-        sequence = record['sequence']
-        seq_len = len(sequence)
-        for n in range(0, seq_len + 1 - K):
-            kmer = sequence[n:n + K]
-            hll1.add(kmer)
-            hllu.add(kmer)
+    with gzip.GzipFile(filename) as f:
+        for n, record in enumerate(fasta_iter(f)):
+            sequence = record['sequence']
+            seq_len = len(sequence)
+            for n in range(0, seq_len + 1 - K):
+                kmer = sequence[n:n + K]
+                hll1.add(kmer)
+                hllu.add(kmer)
 
     filename = utils.get_test_data('genome-s10+s11.fa.gz')
-    for n, record in enumerate(fasta_iter(gzip.GzipFile(filename))):
-        sequence = record['sequence']
-        seq_len = len(sequence)
-        for n in range(0, seq_len + 1 - K):
-            kmer = sequence[n:n + K]
-            hll2.add(kmer)
-            hllu.add(kmer)
+    with gzip.GzipFile(filename) as f:
+        for n, record in enumerate(fasta_iter(f)):
+            sequence = record['sequence']
+            seq_len = len(sequence)
+            for n in range(0, seq_len + 1 - K):
+                kmer = sequence[n:n + K]
+                hll2.add(kmer)
+                hllu.add(kmer)
 
     assert abs(1 - float(hll1.cardinality()) / N_UNIQUE_H1) < ERR_RATE
     assert abs(1 - float(hll2.cardinality()) / N_UNIQUE_H2) < ERR_RATE
@@ -113,8 +117,9 @@ def test_hll_save_load():
     filename = utils.get_test_data('ecoli.genes.fna')
     hll = HLL(ERR_RATE, K)
     n_consumed = n = 0
-    for n, record in enumerate(fasta_iter(open(filename)), 1):
-        hll.add_sequence(record['sequence'])
+    with open(filename) as f:
+        for n, record in enumerate(fasta_iter(f), 1):
+            hll.add_sequence(record['sequence'])
 
     assert abs(1 - float(len(hll)) / N_UNIQUE) < ERR_RATE
 

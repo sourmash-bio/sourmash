@@ -55,12 +55,12 @@ fn copy_c_bindings(crate_dir: &str) {
     let new_header: String = header
         .lines()
         .filter_map(|s| {
-            if s.starts_with("#") {
+            if s.starts_with('#') {
                 None
             } else {
                 Some({
                     let mut s = s.to_owned();
-                    s.push_str("\n");
+                    s.push('\n');
                     s
                 })
             }
@@ -71,5 +71,5 @@ fn copy_c_bindings(crate_dir: &str) {
     let target_dir = find_target_dir(&out_dir);
     std::fs::create_dir_all(&target_dir).expect("error creating target dir");
     let out_path = target_dir.join("header.h");
-    std::fs::write(out_path, &new_header).expect("error writing header");
+    std::fs::write(out_path, new_header).expect("error writing header");
 }
