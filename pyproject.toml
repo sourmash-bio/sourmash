@@ -50,8 +50,9 @@ authors = [
 ]
 
 maintainers = [
-  { name="Luiz Irber", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
+  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
   { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
+  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu", orcid="0000-0002-2942-5331" },
 ]
 
 classifiers = [
