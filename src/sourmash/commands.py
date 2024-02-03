@@ -6,6 +6,7 @@ import os
 import os.path
 import sys
 import shutil
+import io
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -829,7 +830,7 @@ def gather(args):
     ## ok! now do gather -
     notify("Doing gather to generate minimum metagenome cover.")
 
-    found = []
+    found = 0
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
@@ -845,39 +846,71 @@ def gather(args):
     screen_width = _get_screen_width()
     sum_f_uniq_found = 0.
     result = None
-    for result in gather_iter:
-        sum_f_uniq_found += result.f_unique_to_query
 
-        if not len(found):                # first result? print header.
+    ### open output handles as needed for (1) saving CSV (2) saving matches
+
+    # save matching signatures?
+    if args.save_matches:
+        notify(f"saving all matches to '{args.save_matches}'")
+        save_sig_obj = SaveSignaturesToLocation(args.save_matches)
+        save_sig = save_sig_obj.__enter__()
+    else:
+        save_sig_obj = None
+        save_sig = None
+
+    # save CSV?
+    csv_outfp = io.StringIO()
+    csv_writer = None
+
+    try:
+        for result in gather_iter:
+            found += 1
+            sum_f_uniq_found += result.f_unique_to_query
+
+            if found == 1:                # first result? print header.
+                if is_abundance:
+                    print_results("")
+                    print_results("overlap     p_query p_match avg_abund")
+                    print_results("---------   ------- ------- ---------")
+                else:
+                    print_results("")
+                    print_results("overlap     p_query p_match")
+                    print_results("---------   ------- -------")
+
+
+            # print interim result & save in `found` list for later use
+            pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
+            pct_genome = '{:.1f}%'.format(result.f_match*100)
+
             if is_abundance:
-                print_results("")
-                print_results("overlap     p_query p_match avg_abund")
-                print_results("---------   ------- ------- ---------")
+                name = result.match._display_name(screen_width - 41)
+                average_abund ='{:.1f}'.format(result.average_abund)
+                print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                          format_bp(result.intersect_bp), pct_query, pct_genome,
+                          average_abund, name)
             else:
-                print_results("")
-                print_results("overlap     p_query p_match")
-                print_results("---------   ------- -------")
+                name = result.match._display_name(screen_width - 31)
+                print_results('{:9}   {:>7} {:>7}    {}',
+                          format_bp(result.intersect_bp), pct_query, pct_genome,
+                          name)
 
+            # write out CSV
+            if args.output:
+                if csv_writer is None:
+                    csv_writer = result.init_dictwriter(csv_outfp)
+                result.write(csv_writer)
 
-        # print interim result & save in `found` list for later use
-        pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
-        pct_genome = '{:.1f}%'.format(result.f_match*100)
+            # save matches?
+            if save_sig is not None:
+                save_sig.add(result.match)
 
-        if is_abundance:
-            name = result.match._display_name(screen_width - 41)
-            average_abund ='{:.1f}'.format(result.average_abund)
-            print_results('{:9}   {:>7} {:>7} {:>9}    {}',
-                      format_bp(result.intersect_bp), pct_query, pct_genome,
-                      average_abund, name)
-        else:
-            name = result.match._display_name(screen_width - 31)
-            print_results('{:9}   {:>7} {:>7}    {}',
-                      format_bp(result.intersect_bp), pct_query, pct_genome,
-                      name)
-        found.append(result)
-
-        if args.num_results and len(found) >= args.num_results:
-            break
+            if args.num_results and found >= args.num_results:
+                break
+    finally:
+        if save_sig_obj:
+            save_sig_obj.close()
+            save_sig_obj = None
+            save_sig = None
 
     # report on thresholding -
     if gather_iter.query:
@@ -886,8 +919,8 @@ def gather(args):
 
     # basic reporting:
     if found:
-        print_results(f'\nfound {len(found)} matches total;')
-        if len(found) == args.num_results:
+        print_results(f'\nfound {found} matches total;')
+        if found == args.num_results:
             print_results(f'(truncated gather because --num-results={args.num_results})')
     else:
         display_bp = format_bp(args.threshold_bp)
@@ -908,18 +941,7 @@ def gather(args):
     # save CSV?
     if (found and args.output) or args.create_empty_results:
         with FileOutputCSV(args.output) as fp:
-            w = None
-            for result in found:
-                if w is None:
-                    w = result.init_dictwriter(fp)
-                result.write(w)
-
-    # save matching signatures?
-    if found and args.save_matches:
-        notify(f"saving all matches to '{args.save_matches}'")
-        with SaveSignaturesToLocation(args.save_matches) as save_sig:
-            for sr in found:
-                save_sig.add(sr.match)
+            fp.write(csv_outfp.getvalue())
 
     # save unassigned hashes?
     if args.output_unassigned:
@@ -1027,7 +1049,7 @@ def multigather(args):
                 noident_mh.remove_many(union_found)
                 ident_mh.add_many(union_found)
 
-            found = []
+            found = 0
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
             orig_query_mh = query.minhash
@@ -1040,9 +1062,32 @@ def multigather(args):
             screen_width = _get_screen_width()
             sum_f_uniq_found = 0.
             result = None
+
+            query_filename = query.filename
+            if not query_filename:
+                # use md5sum if query.filename not properly set
+                query_filename = query.md5sum()
+
+            output_base = os.path.basename(query_filename)
+            if args.output_dir:
+                output_base = os.path.join(args.output_dir, output_base)
+            output_csv = output_base + '.csv'
+
+            output_matches = output_base + '.matches.sig'
+            save_sig_obj = SaveSignaturesToLocation(output_matches)
+            save_sig = save_sig_obj.__enter__()
+            notify(f"saving all matching signatures to '{output_matches}'")
+
+            # track matches
+            notify(f'saving all CSV matches to "{output_csv}"')
+            csv_out_obj = FileOutputCSV(output_csv)
+            csv_outfp = csv_out_obj.__enter__()
+            csv_writer = None
+
             for result in gather_iter:
+                found += 1
                 sum_f_uniq_found += result.f_unique_to_query
-                if not len(found):                # first result? print header.
+                if found == 1:                # first result? print header.
                     if is_abundance:
                         print_results("")
                         print_results("overlap     p_query p_match avg_abund")
@@ -1068,7 +1113,13 @@ def multigather(args):
                     print_results('{:9}   {:>7} {:>7}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               name)
-                found.append(result)
+
+                ## @CTB
+                if csv_writer is None:
+                    csv_writer = result.init_dictwriter(csv_outfp)
+                result.write(csv_writer)
+
+                save_sig.add(result.match)
 
                 # check for size estimation accuracy, which impacts ANI estimation
                 if not size_may_be_inaccurate and result.size_may_be_inaccurate:
@@ -1080,7 +1131,14 @@ def multigather(args):
                 notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
             # basic reporting
-            print_results('\nfound {} matches total;', len(found))
+            print_results('\nfound {} matches total;', found)
+
+            # close saving etc.
+            save_sig_obj.close()
+            save_sig_obj = save_sig = None
+
+            csv_out_obj.close()
+            csv_out_obj = csv_outfp = csv_writer = None
 
             if is_abundance and result:
                 p_covered = result.sum_weighted_found / result.total_weighted_hashes
@@ -1090,32 +1148,9 @@ def multigather(args):
             print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
             print_results('')
 
-            if not found:
+            if found == 0:
                 notify('nothing found... skipping.')
                 continue
-
-            query_filename = query.filename
-            if not query_filename:
-                # use md5sum if query.filename not properly set
-                query_filename = query.md5sum()
-
-            output_base = os.path.basename(query_filename)
-            if args.output_dir:
-                output_base = os.path.join(args.output_dir, output_base)
-            output_csv = output_base + '.csv'
-
-            notify(f'saving all CSV matches to "{output_csv}"')
-            w = None
-            with FileOutputCSV(output_csv) as fp:
-                for result in found:
-                    if w is None:
-                        w = result.init_dictwriter(fp)
-                    result.write(w)
-
-            output_matches = output_base + '.matches.sig'
-            with SaveSignaturesToLocation(output_matches) as save_sig:
-                notify(f"saving all matching signatures to '{output_matches}'")
-                save_sig.add_many([ r.match for r in found ])
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
@@ -1129,7 +1164,7 @@ def multigather(args):
                     abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
                     remaining_query.minhash = abund_query_mh
 
-                if not found:
+                if found == 0:
                     notify('nothing found - entire query signature unassigned.')
                 elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
