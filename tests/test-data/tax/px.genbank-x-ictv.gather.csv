@@ -1,0 +1,4 @@
+query_name,query_md5,match_name,match_md5,f_match_query,intersect_bp,lineage
+GCA_025628125.1 Monkeypox virus,1de1459c5ed3b8b57f9a4719ca1f6e33,GCF_000857045.1 Monkeypox virus,3cc15a6294579d8298bd6a86a2ad063d,0.7645228215767634,147400,Varidnaviria;;Bamfordvirae;;Nucleocytoviricota;;Pokkesviricetes;;Chitovirales;;Poxviridae;Chordopoxvirinae;Orthopoxvirus;;Monkeypox virus;monkeypox virus
+GCA_023533995.1 Myxoma virus,666e8b6403ff39b2b79ae2616d15baf6,GCF_000840165.1 Goatpox virus Pellor,55bb019558118fd09aa3e9b781f072fa,0,200,Varidnaviria;;Bamfordvirae;;Nucleocytoviricota;;Pokkesviricetes;;Chitovirales;;Poxviridae;Chordopoxvirinae;Capripoxvirus;;Goatpox virus;goatpox virus
+GCA_016865695.1 Molluscum contagiosum virus,2e54f52c9297c3babc7acdf120f02019,GCF_000840205.1 Sheeppox virus,22bb2521ca83bc975ef99243331478d4,0,200,Varidnaviria;;Bamfordvirae;;Nucleocytoviricota;;Pokkesviricetes;;Chitovirales;;Poxviridae;Chordopoxvirinae;Capripoxvirus;;Sheeppox virus;sheeppox virus

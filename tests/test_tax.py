@@ -1597,6 +1597,26 @@ def test_genome_gather_two_queries(runtmp):
     assert "q47,match,species,0.664,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica," in c.last_result.out
 
 
+def test_genome_gather_ictv(runtmp):
+    '''
+    test genome classification with ictv taxonomy
+    '''
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/px.ictv-lineages.csv')
+    g_res = utils.get_test_data('tax/px.genbank-x-ictv.gather.csv')
+
+    c.run_sourmash('tax', 'genome', '-g', g_res, '--taxonomy-csv', taxonomy_csv,
+                   '--containment-threshold', '0', '--ictv')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    # assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    # assert "q63,match,species,0.336,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica,491c0a81," in c.last_result.out
+    # assert "q47,match,species,0.664,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica," in c.last_result.out
+
+
 def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
