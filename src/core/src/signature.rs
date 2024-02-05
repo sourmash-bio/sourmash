@@ -1104,7 +1104,6 @@ mod test {
         let _ = new_sig.get_sketch();
     }
 
-
     #[test]
     #[should_panic]
     fn load_minhash_multisketch_panic() {
