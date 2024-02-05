@@ -454,14 +454,18 @@ impl KmerMinHash {
                 None => {
                     merged.push(*value);
                     merged.extend(self_iter);
-                    merged_abunds.as_mut().map(|v| v.extend(self_abunds_iter));
+                    if let Some(v) = merged_abunds.as_mut() {
+                        v.extend(self_abunds_iter)
+                    }
                     break;
                 }
                 Some(x) if x < value => {
                     merged.push(*x);
                     other_value = other_iter.next();
                     if let Some(v) = other_abunds_iter.next() {
-                        merged_abunds.as_mut().map(|n| n.push(*v));
+                        if let Some(n) = merged_abunds.as_mut() {
+                            n.push(*v)
+                        }
                     }
                 }
                 Some(x) if x == value => {
@@ -471,7 +475,9 @@ impl KmerMinHash {
 
                     if let (Some(v), Some(s)) = (other_abunds_iter.next(), self_abunds_iter.next())
                     {
-                        merged_abunds.as_mut().map(|n| n.push(*v + *s));
+                        if let Some(n) = merged_abunds.as_mut() {
+                            n.push(*v + *s)
+                        }
                     }
                 }
                 Some(x) if x > value => {
@@ -479,7 +485,9 @@ impl KmerMinHash {
                     self_value = self_iter.next();
 
                     if let Some(v) = self_abunds_iter.next() {
-                        merged_abunds.as_mut().map(|n| n.push(*v));
+                        if let Some(n) = merged_abunds.as_mut() {
+                            n.push(*v)
+                        }
                     }
                 }
                 Some(_) => {}
@@ -489,13 +497,15 @@ impl KmerMinHash {
             merged.push(*value);
         }
         merged.extend(other_iter);
-        merged_abunds.as_mut().map(|n| n.extend(other_abunds_iter));
+        if let Some(n) = merged_abunds.as_mut() {
+            n.extend(other_abunds_iter)
+        }
 
         if merged.len() > (self.num as usize) && (self.num as usize) != 0 {
             merged.truncate(self.num as usize);
-            merged_abunds
-                .as_mut()
-                .map(|v| v.truncate(self.num as usize));
+            if let Some(v) = merged_abunds.as_mut() {
+                v.truncate(self.num as usize)
+            }
         }
         self.mins = merged;
         self.abunds = merged_abunds;
