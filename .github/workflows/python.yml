@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, macos-latest]
-        py: ["3.11", "3.10", "3.9", "3.8"]
+        py: ["3.12", "3.11", "3.10"]
       fail-fast: false
 
     steps:
@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python ${{ matrix.py }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.py }}
 
@@ -33,7 +33,7 @@ jobs:
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: pip cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-v4-${{ hashFiles('**/pyproject.toml') }}
@@ -49,20 +49,20 @@ jobs:
         uses: r-lib/actions/setup-pandoc@v2
 
       - name: Set up IPFS
-        if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
+        if: startsWith(runner.os, 'Linux') && (matrix.py == '3.10')
         uses: ibnesayeed/setup-ipfs@master
         with:
           ipfs_version: 0.6
           run_daemon: true
 
       - name: Start Redis
-        if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
-        uses: supercharge/redis-github-action@1.7.0
+        if: startsWith(runner.os, 'Linux') && (matrix.py == '3.10')
+        uses: supercharge/redis-github-action@1.8.0
         with:
           redis-version: 6
 
       - name: tox cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .tox/
           key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/pyproject.toml') }}

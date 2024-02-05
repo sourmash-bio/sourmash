@@ -7,6 +7,7 @@ from pytest import approx
 import os
 from os.path import basename
 import gzip
+from pathlib import Path
 
 import sourmash_tst_utils as utils
 
@@ -539,10 +540,9 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     #  make gather results with taxonomy name not in tax_assign
     g_res2 = runtmp.output('gA.gather.csv')
-    g_results = [x.replace("GCF_001881345.1", "gA") for x in open(g_csv, 'r')]
+    g_results = [x.replace("GCF_001881345.1", "gA") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(g_res2, 'w') as fp:
-        for line in g_results:
-            fp.write(line)
+        fp.writelines(g_results)
     # make empty gather results
     g_res3 = runtmp.output('empty.gather.csv')
     with open(g_res3, 'w') as fp:
@@ -611,10 +611,9 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     # make gather results with taxonomy name not in tax_assign
     g_res2 = runtmp.output('gA.gather.csv')
-    g_results = [x.replace("GCF_001881345.1", "gA") for x in open(g_csv, 'r')]
+    g_results = [x.replace("GCF_001881345.1", "gA") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(g_res2, 'w') as fp:
-        for line in g_results:
-            fp.write(line)
+        fp.writelines(g_results)
 
     csvs = [g_res2]
 
@@ -671,10 +670,9 @@ def test_load_gather_results_bad_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("f_unique_to_query", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("f_unique_to_query", "nope") + "\n" for x in Path(g_csv).read_text().splitlines()]
     with open(bad_g_csv, 'w') as fp:
-        for line in bad_g:
-            fp.write(line)
+        fp.writelines(bad_g)
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
@@ -729,7 +727,7 @@ def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
     mimatchLIN_csv = runtmp.output('mmLIN-taxonomy.csv')
     with open(mimatchLIN_csv, 'w') as mm:
         tax21=[]
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         for n, taxline in enumerate(tax):
             if n == 2: # add ;0 to a LIN
                 taxlist = taxline.split(',')
@@ -772,7 +770,7 @@ def test_load_taxonomy_csv_with_ncbi_id(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     upd_csv = runtmp.output("updated_taxonomy.csv")
     with open(upd_csv, 'w') as new_tax:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         ncbi_id = "ncbi_id after_space"
         fake_lin = [ncbi_id] + ["sk", "phy", "cls", "ord", "fam", "gen", "sp"]
         ncbi_tax = ",".join(fake_lin)
@@ -789,7 +787,7 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     upd_csv = runtmp.output("updated_taxonomy.csv")
     with open(upd_csv, 'w') as new_tax:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         ncbi_id = "ncbi_id after_space"
         fake_lin = [ncbi_id] + ["sk", "phy", "cls", "ord", "fam", "gen", "sp"]
         ncbi_tax = ",".join(fake_lin)
@@ -812,7 +810,7 @@ def test_load_taxonomy_csv_duplicate(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax.append(tax[1] + 'FOO') # add first tax_assign again
         print(tax[-1])
         dup.write("\n".join(tax))
@@ -828,7 +826,7 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
-        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [x.rstrip() for x in Path(taxonomy_csv).read_text().splitlines()]
         tax.append(tax[1]) # add first tax_assign again
         dup.write("\n".join(tax))
 
@@ -925,7 +923,7 @@ def test_write_krona(runtmp):
     with open(outk, 'w') as out_fp:
         write_krona(header, krona_results, out_fp)
 
-    kr = [x.strip().split('\t') for x in open(outk, 'r')]
+    kr = [x.strip().split('\t') for x in Path(outk).read_text().splitlines()]
     print("krona_results_from_file: \n", kr)
     assert kr[0] == ["fraction", "superkingdom", "phylum", "class"]
     assert kr[1] == ["0.5", "a", "b", "c"]
@@ -939,7 +937,7 @@ def test_write_lineage_sample_frac(runtmp):
     with open(outfrac, 'w') as out_fp:
         write_lineage_sample_frac(sample_names, sk_linD, out_fp)
 
-    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    frac_lines = [x.strip().split('\t') for x in Path(outfrac).read_text().splitlines()]
     print("csv_lines: ", frac_lines)
     assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a', '0.500', '0.700']]
 
@@ -947,7 +945,7 @@ def test_write_lineage_sample_frac(runtmp):
     with open(outfrac, 'w') as out_fp:
         write_lineage_sample_frac(sample_names, phy_linD, out_fp)
 
-    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    frac_lines = [x.strip().split('\t') for x in Path(outfrac).read_text().splitlines()]
     print("csv_lines: ", frac_lines)
     assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a;b', '0.500', '0'],  ['a;c', '0', '0.700']]
 
@@ -961,7 +959,7 @@ def test_write_lineage_sample_frac_format_lineage(runtmp):
     with open(outfrac, 'w') as out_fp:
         write_lineage_sample_frac(sample_names, sk_linD, out_fp)
 
-    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    frac_lines = [x.strip().split('\t') for x in Path(outfrac).read_text().splitlines()]
     print("csv_lines: ", frac_lines)
     assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a', '0.500', '0.700']]
 
@@ -973,7 +971,7 @@ def test_write_lineage_sample_frac_format_lineage(runtmp):
     with open(outfrac, 'w') as out_fp:
         write_lineage_sample_frac(sample_names, phy_linD, out_fp)
 
-    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    frac_lines = [x.strip().split('\t') for x in Path(outfrac).read_text().splitlines()]
     print("csv_lines: ", frac_lines)
     assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a;b', '0.500', '0'],  ['a;c', '0', '0.700']]
 

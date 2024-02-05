@@ -10,7 +10,7 @@ You can get the latest development branch with:
 ```
 git clone https://github.com/sourmash-bio/sourmash.git
 ```
-sourmash runs under Python 3.8 and later.
+sourmash runs under Python 3.10 and later.
 
 We recommend using `conda` or `Nix` for setting up an environment for developing
 new features, running tests and code quality checks.
@@ -25,7 +25,7 @@ and the [`conda-forge`](https://conda-forge.org/) channel by default).
 
 Once `mamba` is installed, run
 ```
-mamba create -n sourmash_dev 'tox>=3.27,<4' tox-conda rust git compilers pandoc
+mamba create -n sourmash_dev 'tox>=3.27,<4' tox-conda rust git compilers pandoc libstdcxx-ng
 ```
 to create an environment called `sourmash_dev` containing the programs needed
 for development.
@@ -87,7 +87,7 @@ running tests and checks during development.
 `tox -l` lists available tasks.
 
 You can run tests by invoking `make test` in the sourmash directory;
-`tox -e py39` will run the Python tests with Python 3.9,
+`tox -e py310` will run the Python tests with Python 3.10,
 and `cargo test` will run the Rust tests.
 
 ## Adding new changes

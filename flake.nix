@@ -48,7 +48,7 @@
 
           sourmash = python.buildPythonPackage rec {
             pname = "sourmash";
-            version = "4.8.5-dev";
+            version = "4.8.6-dev";
             format = "pyproject";
 
             src = ./.;
@@ -89,13 +89,13 @@
           buildInputs = [
             rustVersion
             openssl
-            pkgconfig
+            pkg-config
 
             git
             stdenv.cc.cc.lib
+            (python312.withPackages (ps: with ps; [ virtualenv ]))
             (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
             (python310.withPackages (ps: with ps; [ virtualenv ]))
-            (python39.withPackages (ps: with ps; [ virtualenv ]))
 
             rust-cbindgen
             maturin
@@ -103,17 +103,21 @@
             wasmtime
             wasm-pack
             nodejs_20
+            #emscripten
 
             #py-spy
             #heaptrack
+            cargo-all-features
             cargo-watch
             cargo-limit
             cargo-outdated
             cargo-udeps
             cargo-deny
+            cargo-semver-checks
             nixpkgs-fmt
           ];
 
+          # Needed for matplotlib
           LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
 
           # workaround for https://github.com/NixOS/nixpkgs/blob/48dfc9fa97d762bce28cc8372a2dd3805d14c633/doc/languages-frameworks/python.section.md#python-setuppy-bdist_wheel-cannot-create-whl

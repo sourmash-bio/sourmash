@@ -1,5 +1,6 @@
 use std::os::raw::c_char;
 use std::slice;
+use std::sync::Arc;
 
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::prelude::*;
@@ -8,7 +9,7 @@ use crate::storage::ZipStorage;
 pub struct SourmashZipStorage;
 
 impl ForeignObject for SourmashZipStorage {
-    type RustObject = ZipStorage;
+    type RustObject = Arc<ZipStorage>;
 }
 
 ffi_fn! {
@@ -20,7 +21,7 @@ unsafe fn zipstorage_new(ptr: *const c_char, insize: usize) -> Result<*mut Sourm
     };
     let zipstorage = ZipStorage::from_file(path)?;
 
-    Ok(SourmashZipStorage::from_rust(zipstorage))
+    Ok(SourmashZipStorage::from_rust(Arc::new(zipstorage)))
 }
 }
 
@@ -110,7 +111,7 @@ unsafe fn zipstorage_set_subdir(
         std::str::from_utf8(path)?
     };
 
-    storage.set_subdir(path.to_string());
+    (*Arc::get_mut(storage).unwrap()).set_subdir(path.to_string());
     Ok(())
 }
 }
@@ -120,7 +121,7 @@ unsafe fn zipstorage_path(ptr: *const SourmashZipStorage) -> Result<SourmashStr>
     let storage = SourmashZipStorage::as_rust(ptr);
 
     if let Some(ref path) = storage.path() {
-        Ok(path.clone().into())
+        Ok(path.clone().into_string().into())
     } else {
         Ok("".into())
     }

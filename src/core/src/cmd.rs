@@ -119,7 +119,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                     KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
-                        .hash_function(HashFunctions::murmur64_protein)
+                        .hash_function(HashFunctions::Murmur64Protein)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
@@ -136,7 +136,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                     KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
-                        .hash_function(HashFunctions::murmur64_dayhoff)
+                        .hash_function(HashFunctions::Murmur64Dayhoff)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
@@ -153,7 +153,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                     KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
-                        .hash_function(HashFunctions::murmur64_hp)
+                        .hash_function(HashFunctions::Murmur64Hp)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
@@ -170,7 +170,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                     KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
-                        .hash_function(HashFunctions::murmur64_DNA)
+                        .hash_function(HashFunctions::Murmur64Dna)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {

@@ -1,27 +1,28 @@
 use std::io::Write;
 
-use crate::Error;
+use crate::Result;
 
+pub use crate::selection::{Select, Selection};
 pub use crate::signature::Signature;
 pub use crate::storage::Storage;
 
 pub trait ToWriter {
-    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
+    fn to_writer<W>(&self, writer: &mut W) -> Result<()>
     where
         W: Write;
 }
 
 pub trait Update<O> {
-    fn update(&self, other: &mut O) -> Result<(), Error>;
+    fn update(&self, other: &mut O) -> Result<()>;
 }
 
 pub trait FromFactory<N> {
-    fn factory(&self, name: &str) -> Result<N, Error>;
+    fn factory(&self, name: &str) -> Result<N>;
 }
 
 /// Implemented by anything that wants to read specific data from a storage.
 pub trait ReadData<D> {
-    fn data(&self) -> Result<&D, Error>;
+    fn data(&self) -> Result<&D>;
 }
 
 // TODO: split into two traits, Similarity and Containment?

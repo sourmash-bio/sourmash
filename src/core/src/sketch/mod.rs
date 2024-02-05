@@ -10,6 +10,10 @@ use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum Sketch {
     MinHash(KmerMinHash),
     LargeMinHash(KmerMinHashBTree),

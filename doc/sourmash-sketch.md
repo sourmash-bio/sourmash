@@ -204,6 +204,7 @@ A parameter string is a space-delimited collection that can contain one or more 
 * `num=<int>` - create a standard MinHash with no more than `<num>` k-mers kept. This will produce sketches identical to [mash sketches](https://mash.readthedocs.io/en/latest/). `num` is incompatible with `scaled`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be--how-should-i-create-them) for more information.
 * `abund` / `noabund` - create abundance-weighted (or not) sketches. See [Classify signatures: Abundance Weighting](classifying-signatures.md#abundance-weighting) for details of how this works.
 * `dna`, `protein`, `dayhoff`, `hp` - create this kind of sketch. Note that `sourmash sketch dna -p protein` and `sourmash sketch protein -p dna` are invalid; please use `sourmash sketch translate` for the former.
+* `seed=<int>` - set the random number seed used for k-mer hashing. This is for advanced users who want to choose a completely different set of k-mers for sketches! The default is 42.
 
 For all field names but `k`, if multiple fields in a parameter string are provided, the last one encountered overrides the previous values. For `k`, if multiple ksizes are specified in a single parameter string, sketches for all ksizes specified are created.
 

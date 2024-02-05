@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<2",
+    "maturin>=1,<1.5.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -9,7 +9,7 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.8.5-dev"
+version = "4.8.6-dev"
 
 authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
@@ -23,6 +23,7 @@ authors = [
   { name="Phillip Brooks", orcid="0000-0003-3987-244X" },
   { name="Peter Cock", orcid="0000-0001-9513-9993" },
   { name="Daniel Dsouza", orcid="0000-0001-7843-8596" },
+  { name="Jade Gardner", orcid="0009-0005-0787-5752" },
   { name="Laurent Gautier", orcid="0000-0003-0638-3391" },
   { name="Tim Head", orcid="0000-0003-0931-3698" },
   { name="Mahmudur Rahman Hera", orcid="0000-0002-5992-9012" },
@@ -49,8 +50,9 @@ authors = [
 ]
 
 maintainers = [
-  { name="Luiz Irber", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
+  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
   { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
+  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu", orcid="0000-0002-2942-5331" },
 ]
 
 classifiers = [
@@ -63,8 +65,8 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
   "Programming Language :: Rust",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -78,10 +80,9 @@ dependencies = [
   "deprecation>=2.0.6",
   "cachetools>=4,<6",
   "bitstring>=3.1.9,<5",
-  "importlib_metadata>=3.6;python_version<'3.10'"
 ]
 
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -98,7 +99,7 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<7.5.0",
+  "pytest>=6.2.4,<8.1.0",
   "pytest-cov>=2.12,<5.0",
   "pytest-xdist",
   "pyyaml>=6,<7",
@@ -114,7 +115,7 @@ demo = [
 doc = [
   "sphinx>=4.4.0,<8",
   "myst-parser==2.0.0",
-  "Jinja2==3.1.2",
+  "Jinja2==3.1.3",
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
@@ -144,13 +145,13 @@ include = [
 exclude = [
   { path = "**/__pycache__/*", format = ["sdist", "wheel"] },
 ]
-features = ["maturin"]
+features = ["maturin", "branchwater"]
 locked = true
 module-name = "sourmash._lowlevel"
 
 # macOS deployment target SDK version
 [tool.maturin.target.x86_64-apple-darwin]
-macos-deployment-target = "11.0"
+macos-deployment-target = "10.14"
 [tool.maturin.target.aarch64-apple-darwin]
 macos-deployment-target = "11.0"
 
@@ -163,8 +164,8 @@ line_length = 88
 known_first_party = ["sourmash"]
 
 [tool.cibuildwheel]
-build = "cp39-*"
-skip = "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
+build = "cp310-*"
+skip = "*-win32 *-manylinux_i686 *-musllinux_* *-ppc64le *-s390x"
 before-all = [
   "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
   "cargo update --dry-run",
@@ -177,6 +178,18 @@ build-verbosity = 3
 [tool.cibuildwheel.environment]
 CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
 PATH="$HOME/.cargo/bin:$PATH"
+
+[tool.cibuildwheel.linux]
+before-all = [
+  "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
+  "cargo update --dry-run",
+  "if [ -f /etc/system-release ]; then yum -y install centos-release-scl; fi",
+  "if [ -f /etc/system-release ]; then yum -y install llvm-toolset-7.0; fi",
+]
+before-build = [
+  "if [ -f /etc/system-release ]; then source scl_source enable llvm-toolset-7.0; fi",
+  "if [ -f /etc/system-release ]; then source scl_source enable devtoolset-10; fi",
+]
 
 [tool.cibuildwheel.linux.environment]
 CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"

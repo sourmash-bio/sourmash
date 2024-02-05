@@ -270,12 +270,13 @@ def _compute_merged(args, signatures_factory):
         notify('... reading sequences from {}', filename)
 
         n = None
-        for n, record in enumerate(screed.open(filename)):
-            if n % 10000 == 0 and n:
-                notify('\r... {} {}', filename, n, end='')
+        with screed.open(filename) as f:
+            for n, record in enumerate(f):
+                if n % 10000 == 0 and n:
+                    notify('\r... {} {}', filename, n, end='')
 
-            add_seq(sigs, record.sequence,
-                    args.input_is_protein, args.check_sequence)
+                add_seq(sigs, record.sequence,
+                        args.input_is_protein, args.check_sequence)
         if n is not None:
             notify('... {} {} sequences', filename, n + 1)
             total_seq += n + 1

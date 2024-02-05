@@ -25,6 +25,7 @@ doc: .PHONY
 	tox -e docs
 
 include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/mod.rs \
                     src/core/src/ffi/hyperloglog.rs \
                     src/core/src/ffi/minhash.rs \
                     src/core/src/ffi/signature.rs \
@@ -32,7 +33,8 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/index/mod.rs \
                     src/core/src/ffi/index/revindex.rs \
                     src/core/src/ffi/storage.rs \
-                    src/core/src/errors.rs
+                    src/core/src/errors.rs \
+                    src/core/cbindgen.toml
 	cd src/core && \
 	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@
 
