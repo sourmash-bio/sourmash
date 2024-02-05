@@ -95,8 +95,9 @@ def subparser(subparsers):
         help="write matrix to specified file in CSV format (with column " "headers)",
     )
     subparser.add_argument(
-        '--labels-to', '--labels-save',
-        help='a CSV file containing label information',
+        "--labels-to",
+        "--labels-save",
+        help="a CSV file containing label information",
     )
     subparser.add_argument(
         "-p",

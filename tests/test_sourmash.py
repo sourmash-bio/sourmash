@@ -1293,7 +1293,7 @@ def test_plot_override_labeltext_fail(runtmp):
     print(runtmp.last_result.err)
     assert runtmp.last_result.status != 0
     assert "loading labels from text file 'new.labels.txt'" in runtmp.last_result.err
-    assert '3 labels != matrix size, exiting' in runtmp.last_result.err
+    assert "3 labels != matrix size, exiting" in runtmp.last_result.err
 
 
 def test_plot_reordered_labels_csv(runtmp):
@@ -1409,16 +1409,29 @@ def test_plot_subsample_2(runtmp):
 
 def test_compare_and_plot_labels_from_to(runtmp):
     # test doing compare --labels-to and plot --labels-from.
-    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+    testdata1 = utils.get_test_data("genome-s10.fa.gz.sig")
+    testdata2 = utils.get_test_data("genome-s11.fa.gz.sig")
+    testdata3 = utils.get_test_data("genome-s12.fa.gz.sig")
+    testdata4 = utils.get_test_data("genome-s10+s11.sig")
 
-    labels_csv = runtmp.output('label.csv')
+    labels_csv = runtmp.output("label.csv")
 
-    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna', '--labels-to', labels_csv)
+    runtmp.run_sourmash(
+        "compare",
+        testdata1,
+        testdata2,
+        testdata3,
+        testdata4,
+        "-o",
+        "cmp",
+        "-k",
+        "21",
+        "--dna",
+        "--labels-to",
+        labels_csv,
+    )
 
-    runtmp.sourmash('plot', 'cmp', '--labels-from', labels_csv)
+    runtmp.sourmash("plot", "cmp", "--labels-from", labels_csv)
 
     print(runtmp.last_result.out)
 
@@ -1434,16 +1447,27 @@ def test_compare_and_plot_labels_from_to(runtmp):
 
 def test_compare_and_plot_labels_from_changed(runtmp):
     # test 'plot --labels-from' with changed labels
-    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+    testdata1 = utils.get_test_data("genome-s10.fa.gz.sig")
+    testdata2 = utils.get_test_data("genome-s11.fa.gz.sig")
+    testdata3 = utils.get_test_data("genome-s12.fa.gz.sig")
+    testdata4 = utils.get_test_data("genome-s10+s11.sig")
 
-    labels_csv = utils.get_test_data('compare/labels_from-test.csv')
+    labels_csv = utils.get_test_data("compare/labels_from-test.csv")
 
-    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+    runtmp.run_sourmash(
+        "compare",
+        testdata1,
+        testdata2,
+        testdata3,
+        testdata4,
+        "-o",
+        "cmp",
+        "-k",
+        "21",
+        "--dna",
+    )
 
-    runtmp.sourmash('plot', 'cmp', '--labels-from', labels_csv)
+    runtmp.sourmash("plot", "cmp", "--labels-from", labels_csv)
 
     print(runtmp.last_result.out)
 
@@ -1459,18 +1483,36 @@ def test_compare_and_plot_labels_from_changed(runtmp):
 
 def test_compare_and_plot_labels_from_error(runtmp):
     # 'plot --labels-from ... --labeltext ...' should fail
-    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+    testdata1 = utils.get_test_data("genome-s10.fa.gz.sig")
+    testdata2 = utils.get_test_data("genome-s11.fa.gz.sig")
+    testdata3 = utils.get_test_data("genome-s12.fa.gz.sig")
+    testdata4 = utils.get_test_data("genome-s10+s11.sig")
 
-    labels_csv = utils.get_test_data('compare/labels_from-test.csv')
+    labels_csv = utils.get_test_data("compare/labels_from-test.csv")
 
-    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+    runtmp.run_sourmash(
+        "compare",
+        testdata1,
+        testdata2,
+        testdata3,
+        testdata4,
+        "-o",
+        "cmp",
+        "-k",
+        "21",
+        "--dna",
+    )
 
-    with pytest.raises(SourmashCommandFailed) as exc:
-        runtmp.sourmash('plot', 'cmp', '--labels-from', labels_csv,
-                        '--labeltext', labels_csv, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(
+            "plot",
+            "cmp",
+            "--labels-from",
+            labels_csv,
+            "--labeltext",
+            labels_csv,
+            fail_ok=True,
+        )
 
     err = runtmp.last_result.err
     assert "ERROR: cannot supply both --labeltext and --labels-from" in err

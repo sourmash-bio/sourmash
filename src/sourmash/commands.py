@@ -80,7 +80,9 @@ def compare(args):
             moltypes.add(sourmash_args.get_moltype(s))
 
         if s is None:
-            notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
+            notify(
+                f"\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}"
+            )
 
         # error out while loading if we have more than one ksize/moltype
         if len(ksizes) > 1 or len(moltypes) > 1:
@@ -205,7 +207,7 @@ def compare(args):
     # do all-by-all calculation
 
     labeltext = [str(ss) for ss, _ in siglist]
-    sigsonly = [ ss for ss, _ in siglist ]
+    sigsonly = [ss for ss, _ in siglist]
     if args.containment:
         similarity = compare_serial_containment(sigsonly, return_ani=return_ani)
     elif args.max_containment:
@@ -214,7 +216,10 @@ def compare(args):
         similarity = compare_serial_avg_containment(sigsonly, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(
-            sigsonly, args.ignore_abundance, n_jobs=args.processes, return_ani=return_ani
+            sigsonly,
+            args.ignore_abundance,
+            n_jobs=args.processes,
+            return_ani=return_ani,
         )
 
     # if distance matrix desired, switch to 1-similarity
@@ -258,11 +263,12 @@ def compare(args):
     # output labels information via --labels-to?
     if args.labels_to:
         labeloutname = args.labels_to
-        notify(f'saving labels to: {labeloutname}')
+        notify(f"saving labels to: {labeloutname}")
         with sourmash_args.FileOutputCSV(labeloutname) as fp:
             w = csv.writer(fp)
-            w.writerow(['sort_order', 'md5', 'label', 'name', 'filename',
-                        'signature_file'])
+            w.writerow(
+                ["sort_order", "md5", "label", "name", "filename", "signature_file"]
+            )
 
             for n, (ss, location) in enumerate(siglist):
                 md5 = ss.md5sum()
@@ -271,7 +277,7 @@ def compare(args):
                 name = ss.name
                 filename = ss.filename
 
-                w.writerow([str(n+1), md5, label, name, filename, sigfile])
+                w.writerow([str(n + 1), md5, label, name, filename, sigfile])
 
     # output CSV?
     if args.csv:
@@ -340,10 +346,10 @@ def plot(args):
         labeltext = []
         with sourmash_args.FileInputCSV(labelfilename) as r:
             for row in r:
-                order, label = row['sort_order'], row['label']
+                order, label = row["sort_order"], row["label"]
                 labeltext.append((int(order), label))
         labeltext.sort()
-        labeltext = [ t[1] for t in labeltext ]
+        labeltext = [t[1] for t in labeltext]
     elif args.labels:
         if args.labeltext:
             labelfilename = args.labeltext
