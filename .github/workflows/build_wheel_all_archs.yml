@@ -10,9 +10,6 @@ on:
   schedule:
     - cron: "0 0 * * *" # daily
 
-permissions:
-  contents: read
-
 jobs:
 
   linux:
