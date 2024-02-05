@@ -5,7 +5,6 @@ from sourmash.np_utils import to_memmap
 
 
 def test_memmap():
-
     e1 = sourmash.MinHash(n=1, ksize=20)
     sig1 = SourmashSignature(e1)
 

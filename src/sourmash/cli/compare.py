@@ -1,6 +1,6 @@
 """create a similarity matrix comparing many samples"""
 
-usage="""
+usage = """
 
 The `compare` subcommand compares one or more signatures (created with
 `sketch`) using estimated Jaccard index [1] or (if signatures are
@@ -27,69 +27,91 @@ sourmash compare file1.sig [ file2.sig ... ]
 ---
 """
 
-from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_pattern_args,
-                                add_scaled_arg)
+from sourmash.cli.utils import (
+    add_ksize_arg,
+    add_moltype_args,
+    add_picklist_args,
+    add_pattern_args,
+    add_scaled_arg,
+)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('compare', description=__doc__, usage=usage)
+    subparser = subparsers.add_parser("compare", description=__doc__, usage=usage)
     subparser.add_argument(
-        'signatures', nargs='*', help='list of signatures to compare',
-        default=[]
+        "signatures", nargs="*", help="list of signatures to compare", default=[]
     )
     subparser.add_argument(
-        '-q', '--quiet', action='store_true', help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '-o', '--output', metavar='F',
-        help='file to which output will be written; default is terminal '
-        '(standard output)'
+        "-o",
+        "--output",
+        metavar="F",
+        help="file to which output will be written; default is terminal "
+        "(standard output)",
     )
     subparser.add_argument(
-        '--ignore-abundance', action='store_true',
-        help='do NOT use k-mer abundances even if present'
+        "--ignore-abundance",
+        action="store_true",
+        help="do NOT use k-mer abundances even if present",
     )
     subparser.add_argument(
-        '--containment', action='store_true',
-        help='calculate containment instead of similarity'
+        "--containment",
+        action="store_true",
+        help="calculate containment instead of similarity",
     )
     subparser.add_argument(
-        '--max-containment', action='store_true',
-        help='calculate max containment instead of similarity'
+        "--max-containment",
+        action="store_true",
+        help="calculate max containment instead of similarity",
     )
     subparser.add_argument(
-        '--avg-containment', '--average-containment', action='store_true',
-        help='calculate average containment instead of similarity'
+        "--avg-containment",
+        "--average-containment",
+        action="store_true",
+        help="calculate average containment instead of similarity",
     )
     subparser.add_argument(
-        '--estimate-ani', '--ANI', '--ani', action='store_true',
-        help='return ANI estimated from jaccard, containment, average containment, or max containment; see https://doi.org/10.1101/2022.01.11.475870'
+        "--estimate-ani",
+        "--ANI",
+        "--ani",
+        action="store_true",
+        help="return ANI estimated from jaccard, containment, average containment, or max containment; see https://doi.org/10.1101/2022.01.11.475870",
     )
     subparser.add_argument(
-        '--from-file',
-        help='a text file containing a list of files to load signatures from'
+        "--from-file",
+        help="a text file containing a list of files to load signatures from",
     )
     subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='continue past errors in file loading'
+        "-f",
+        "--force",
+        action="store_true",
+        help="continue past errors in file loading",
     )
     subparser.add_argument(
-        '--csv', metavar='F',
-        help='write matrix to specified file in CSV format (with column '
-        'headers)'
+        "--csv",
+        metavar="F",
+        help="write matrix to specified file in CSV format (with column " "headers)",
     )
     subparser.add_argument(
-        '-p', '--processes', metavar='N', type=int, default=None,
-        help='Number of processes to use to calculate similarity')
-    subparser.add_argument(
-        '--distance-matrix', action='store_true',
-        help='output a distance matrix, instead of a similarity matrix'
+        "-p",
+        "--processes",
+        metavar="N",
+        type=int,
+        default=None,
+        help="Number of processes to use to calculate similarity",
     )
     subparser.add_argument(
-        '--similarity-matrix', action='store_false',
-        dest='distance_matrix',
-        help='output a similarity matrix; this is the default',
+        "--distance-matrix",
+        action="store_true",
+        help="output a distance matrix, instead of a similarity matrix",
+    )
+    subparser.add_argument(
+        "--similarity-matrix",
+        action="store_false",
+        dest="distance_matrix",
+        help="output a similarity matrix; this is the default",
     )
 
     add_ksize_arg(subparser)
@@ -101,4 +123,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.commands.compare(args)

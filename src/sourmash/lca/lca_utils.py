@@ -7,12 +7,23 @@ from collections import namedtuple, defaultdict, Counter
 from .lca_db import LCA_Database, load_single_database, load_databases
 
 
-__all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
-           'load_single_database', 'load_databases', 'gather_assignments',
-           'count_lca_for_assignments', 'LineagePair', 'display_lineage',
-           'make_lineage', 'pop_to_rank', 'is_lineage_match']
+__all__ = [
+    "taxlist",
+    "zip_lineage",
+    "build_tree",
+    "find_lca",
+    "load_single_database",
+    "load_databases",
+    "gather_assignments",
+    "count_lca_for_assignments",
+    "LineagePair",
+    "display_lineage",
+    "make_lineage",
+    "pop_to_rank",
+    "is_lineage_match",
+]
 
-try:                                      # py2/py3 compat
+try:  # py2/py3 compat
     from itertools import zip_longest
 except ImportError:
     from itertools import izip_longest as zip_longest
@@ -20,7 +31,7 @@ except ImportError:
 from sourmash.logging import notify, error, debug
 
 # type to store an element in a taxonomic lineage
-LineagePair = namedtuple('LineagePair', ['rank', 'name'])
+LineagePair = namedtuple("LineagePair", ["rank", "name"])
 
 
 def check_files_exist(*files):
@@ -32,8 +43,12 @@ def check_files_exist(*files):
             ret = False
 
     if len(not_found):
-        error('Error! Could not find the following files.'
-              ' Make sure the file paths are specified correctly.\n{}'.format('\n'.join(not_found)))
+        error(
+            "Error! Could not find the following files."
+            " Make sure the file paths are specified correctly.\n{}".format(
+                "\n".join(not_found)
+            )
+        )
 
     return ret
 
@@ -43,11 +58,17 @@ def taxlist(include_strain=True):
     """
     Provide an ordered list of taxonomic ranks.
     """
-    for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
-              'species']:
-        yield k
+    yield from [
+        "superkingdom",
+        "phylum",
+        "class",
+        "order",
+        "family",
+        "genus",
+        "species",
+    ]
     if include_strain:
-        yield 'strain'
+        yield "strain"
 
 
 # produce an ordered list of tax names from lineage
@@ -67,10 +88,11 @@ def zip_lineage(lineage, include_strain=True, truncate_empty=False):
     ['a', '', 'c', '', '', '', '', '']
     """
 
-    empty = LineagePair(None, '')
+    empty = LineagePair(None, "")
 
-    pairs = zip_longest(taxlist(include_strain=include_strain),
-                        lineage, fillvalue=empty)
+    pairs = zip_longest(
+        taxlist(include_strain=include_strain), lineage, fillvalue=empty
+    )
     pairs = list(pairs)
 
     # eliminate empty if so requested
@@ -85,22 +107,30 @@ def zip_lineage(lineage, include_strain=True, truncate_empty=False):
     for taxrank, lineage_tup in pairs:
         # validate non-empty tax, e.g. superkingdom/phylum/class in order.
         if lineage_tup != empty and lineage_tup.rank != taxrank:
-            raise ValueError('incomplete lineage at {} - is {} instead'.format(taxrank, lineage_tup.rank))
+            raise ValueError(
+                f"incomplete lineage at {taxrank} - is {lineage_tup.rank} instead"
+            )
 
         row.append(lineage_tup.name)
     return row
 
 
 def display_lineage(lineage, include_strain=True, truncate_empty=True):
-    return ";".join(zip_lineage(lineage,
-                                include_strain=include_strain,
-                                truncate_empty=truncate_empty))
+    return ";".join(
+        zip_lineage(
+            lineage, include_strain=include_strain, truncate_empty=truncate_empty
+        )
+    )
 
 
 # filter function toreplace blank/na/null with 'unassigned'
-filter_null = lambda x: 'unassigned' if x is None or x.strip() in \
-  ('[Blank]', 'na', 'null', '') else x
-null_names = set(['[Blank]', 'na', 'null'])
+def filter_null(x):
+    return (
+        "unassigned" if x is None or x.strip() in ("[Blank]", "na", "null", "") else x
+    )
+
+
+null_names = set(["[Blank]", "na", "null"])
 
 
 def build_tree(assignments, initial=None):
@@ -142,13 +172,13 @@ def find_lca(tree):
     node = tree
     lineage = []
     while 1:
-        if len(node) == 1:                # descend to only child; track path
+        if len(node) == 1:  # descend to only child; track path
             lineage_tup = next(iter(node.keys()))
             lineage.append(lineage_tup)
             node = node[lineage_tup]
-        elif len(node) == 0:              # at leaf; end
+        elif len(node) == 0:  # at leaf; end
             return tuple(lineage), 0
-        else:                             # len(node) > 1 => confusion!!
+        else:  # len(node) > 1 => confusion!!
             return tuple(lineage), len(node)
 
 
@@ -231,14 +261,14 @@ def pop_to_rank(lin, rank):
     return tuple(lin)
 
 
-
 def make_lineage(lineage):
     "Turn a ; or ,-separated set of lineages into a tuple of LineagePair objs."
     from sourmash.tax.tax_utils import LineagePair
-    lin = lineage.split(';')
+
+    lin = lineage.split(";")
     if len(lin) == 1:
-        lin = lineage.split(',')
-    lin = [ LineagePair(rank, n) for (rank, n) in zip(taxlist(), lin) ]
+        lin = lineage.split(",")
+    lin = [LineagePair(rank, n) for (rank, n) in zip(taxlist(), lin)]
     lin = tuple(lin)
 
     return lin
