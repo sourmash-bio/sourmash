@@ -539,7 +539,7 @@ impl Signature {
     pub fn get_sketch(&self) -> Option<&Sketch> {
         if self.signatures.len() != 1 {
             if self.signatures.len() > 1 {
-                dbg!("Multiple sketches found! Please run select first.");
+                todo!("Multiple sketches found! Please run select first.");
             }
             return None;
         }
