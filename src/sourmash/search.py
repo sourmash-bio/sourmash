@@ -7,7 +7,8 @@ from enum import Enum
 import numpy as np
 from dataclasses import dataclass
 
-from .signature import SourmashSignature, MinHash
+from .minhash import MinHash
+from .signature import SourmashSignature
 from .sketchcomparison import FracMinHashComparison, NumMinHashComparison
 
 

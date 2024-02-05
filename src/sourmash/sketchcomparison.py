@@ -4,7 +4,7 @@ Sketch Comparison Classes
 import numpy as np
 from dataclasses import dataclass
 
-from .signature import MinHash
+from .minhash import MinHash
 
 @dataclass
 class BaseMinHashComparison:
