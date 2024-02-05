@@ -35,6 +35,9 @@ similarity   match
 
 [1] https://en.wikipedia.org/wiki/Jaccard_index
 
+When `--containment` is provided, the containment of the query in each
+of the search signatures or databases is reported.
+
 ---
 """
 
