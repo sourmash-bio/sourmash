@@ -19,6 +19,7 @@ use typed_builder::TypedBuilder;
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::prelude::*;
 use crate::selection::{Select, Selection};
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
@@ -534,6 +535,39 @@ impl Signature {
         None
     }
 
+    // return single corresponding sketch
+    pub fn get_sketch(&self) -> Option<&Sketch> {
+        if self.signatures.len() != 1 {
+            if self.signatures.len() > 1 {
+                todo!("Multiple sketches found! Please run select first.");
+            }
+            return None;
+        }
+        self.signatures.iter().find(|sk| {
+            matches!(
+                sk,
+                Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_)
+            )
+        })
+    }
+
+    // return minhash directly
+    pub fn minhash(&self) -> Option<&KmerMinHash> {
+        if self.signatures.len() != 1 {
+            if self.signatures.len() > 1 {
+                todo!("Multiple sketches found! Please run select first.");
+            }
+            return None;
+        }
+        self.signatures.iter().find_map(|sk| {
+            if let Sketch::MinHash(mh) = sk {
+                Some(mh)
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Signature::from_reader(&mut reader)
@@ -772,13 +806,16 @@ impl Select for Signature {
                 valid
             };
             // keep compatible scaled if applicable
-            if let Some(sel_scaled) = selection.scaled() {
-                valid = if let Sketch::MinHash(mh) = s {
-                    valid && mh.scaled() <= sel_scaled as u64
-                } else {
-                    valid
-                };
-            }
+            valid = if let Some(sel_scaled) = selection.scaled() {
+                match s {
+                    Sketch::MinHash(mh) => valid && mh.scaled() <= sel_scaled as u64,
+                    // TODO: test LargeMinHash
+                    // Sketch::LargeMinHash(lmh) => valid && lmh.scaled() <= sel_scaled as u64,
+                    _ => valid, // other sketch types or invalid cases
+                }
+            } else {
+                valid // if selection.scaled() is None, keep prior valid
+            };
             /*
             valid = if let Some(abund) = selection.abund() {
                 valid && *s.with_abundance() == abund
@@ -798,6 +835,7 @@ impl Select for Signature {
         // downsample the retained sketches if needed.
         if let Some(sel_scaled) = selection.scaled() {
             for sketch in self.signatures.iter_mut() {
+                // TODO: also account for LargeMinHash
                 if let Sketch::MinHash(mh) = sketch {
                     if (mh.scaled() as u32) < sel_scaled {
                         *sketch = Sketch::MinHash(mh.downsample_scaled(sel_scaled as u64)?);
@@ -1000,6 +1038,95 @@ mod test {
         for sk in sketches {
             assert_eq!(sk.size(), 500);
         }
+    }
+
+    #[test]
+    fn load_minhash_from_signature() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mh = sig.minhash().unwrap();
+        assert_eq!(mh.scaled(), 1000);
+    }
+
+    #[test]
+    fn load_single_sketch_from_signature() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mhdirect = sig.minhash().unwrap();
+        let sketch = sig.get_sketch().unwrap();
+        if let Sketch::MinHash(mh) = sketch {
+            assert_eq!(mh.scaled(), 1000);
+            assert_eq!(mhdirect, mh); // should be the same
+        } else {
+            // error
+            assert!(false);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_sketch_multisketch_panic() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mut mhdirect = sig.minhash().unwrap().clone();
+        // change slightly and push into new_sig
+        mhdirect.add_sequence(b"ATGGA", false).unwrap();
+        let new_sketch = Sketch::MinHash(mhdirect.clone());
+        let mut new_sig = sig.clone();
+        new_sig.push(new_sketch);
+        // check there are now two sketches in new_sig
+        assert_eq!(new_sig.signatures.len(), 2);
+
+        let _ = new_sig.get_sketch();
+    }
+
+    #[test]
+    #[should_panic]
+    fn load_minhash_multisketch_panic() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mut mhdirect = sig.minhash().unwrap().clone();
+        // change slightly and push into new_sig
+        mhdirect.add_sequence(b"ATGGA", false).unwrap();
+        let new_sketch = Sketch::MinHash(mhdirect.clone());
+        let mut new_sig = sig.clone();
+        new_sig.push(new_sketch);
+        // check there are now two sketches in new_sig
+        assert_eq!(new_sig.signatures.len(), 2);
+
+        let _ = new_sig.minhash();
     }
 
     #[test]

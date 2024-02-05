@@ -1,5 +1,6 @@
 use std::convert::TryInto;
-use std::io::{Read, Write};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
 
 use camino::Utf8PathBuf as PathBuf;
@@ -200,6 +201,17 @@ impl Select for Manifest {
             } else {
                 valid
             };
+            valid = if let Some(scaled) = selection.scaled() {
+                // num sigs have row.scaled = 0, don't include them
+                valid && row.scaled != 0 && row.scaled <= scaled as u64
+            } else {
+                valid
+            };
+            valid = if let Some(num) = selection.num() {
+                valid && row.num == num
+            } else {
+                valid
+            };
             valid
         });
 
@@ -270,10 +282,109 @@ impl From<&[PathBuf]> for Manifest {
     }
 }
 
+impl From<&PathBuf> for Manifest {
+    fn from(pathlist: &PathBuf) -> Self {
+        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+        let reader = BufReader::new(file);
+
+        let paths: Vec<PathBuf> = reader
+            .lines()
+            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+            .map(PathBuf::from)
+            .collect();
+
+        paths.as_slice().into()
+    }
+}
+
 impl Deref for Manifest {
     type Target = Vec<Record>;
 
     fn deref(&self) -> &Self::Target {
         &self.records
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use camino::Utf8PathBuf as PathBuf;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    use super::Manifest;
+
+    #[test]
+    fn manifest_from_pathlist() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let mut filename = utf8_output.join("sig-pathlist.txt");
+        //convert to camino utf8pathbuf
+        filename = PathBuf::from(filename);
+        // build sig filenames
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/63.fa.sig",
+        ];
+
+        let full_paths: Vec<_> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // write a file in test directory with a filename on each line
+        let mut pathfile = File::create(&filename).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile, "{}", sigfile).unwrap();
+        }
+
+        // load into manifest
+        let manifest = Manifest::from(&filename);
+        assert_eq!(manifest.len(), 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to open \"no-exist\"")]
+    fn manifest_from_pathlist_nonexistent_file() {
+        let filename = PathBuf::from("no-exist");
+        let _manifest = Manifest::from(&filename);
+    }
+
+    #[test]
+    #[should_panic]
+    fn manifest_from_pathlist_badfile() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let mut filename = utf8_output.join("sig-pathlist.txt");
+        //convert to camino utf8pathbuf
+        filename = PathBuf::from(filename);
+
+        let mut pathfile = File::create(&filename).unwrap();
+        write!(pathfile, "Valid line\n").unwrap();
+        pathfile.write_all(&[0xED, 0xA0, 0x80]).unwrap(); // invalid UTF-8
+
+        // load into manifest
+        let _manifest = Manifest::from(&filename);
+    }
+
+    #[test]
+    #[should_panic]
+    fn manifest_from_paths_badpath() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            PathBuf::from("no-exist"),
+            PathBuf::from("../../tests/test-data/63.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // load into manifest
+        let _manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
     }
 }
