@@ -107,10 +107,6 @@ def subparser(subparsers):
         help="Number of processes to use to calculate similarity",
     )
     subparser.add_argument(
-        '--distance-matrix', action='store_true',
-        help='output a distance matrix, instead of a similarity matrix'
-    )
-    subparser.add_argument(
         "--distance-matrix",
         action="store_true",
         help="output a distance matrix, instead of a similarity matrix",

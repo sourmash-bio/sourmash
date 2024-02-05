@@ -71,7 +71,6 @@ def compare(args):
             notify(
                 f"\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}"
             )
-        siglist.extend(loaded)
 
         # add to siglist; track ksizes/moltypes
         s = None
@@ -110,7 +109,7 @@ def compare(args):
 
     # check to make sure they're potentially compatible - either using
     # scaled, or not.
-    scaled_sigs = [s.minhash.scaled for s, _ in siglist]
+    scaled_sigs = [s.minhash.scaled for (s, _) in siglist]
     is_scaled = all(scaled_sigs)
     is_scaled_2 = any(scaled_sigs)
 
@@ -215,7 +214,7 @@ def compare(args):
         similarity = compare_serial_avg_containment(sigsonly, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(
-            siglist, args.ignore_abundance, n_jobs=args.processes, return_ani=return_ani
+            sigsonly, args.ignore_abundance, n_jobs=args.processes, return_ani=return_ani
         )
 
     # if distance matrix desired, switch to 1-similarity
