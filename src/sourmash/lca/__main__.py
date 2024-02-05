@@ -9,7 +9,7 @@ from . import classify, index, summarize_main, rankinfo_main
 from .command_compare_csv import compare_csv
 from ..logging import set_quiet, error
 
-usage='''
+usage = """
 sourmash lca <command> [<args>] - work with taxonomic information.
 
 ** Commands can be:
@@ -23,14 +23,15 @@ compare_csv <csv1> <csv2>                                - compare spreadsheets
 ** Use '-h' to get subcommand-specific help, e.g.
 
 sourmash lca index -h
-'''
+"""
+
 
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, 'main')
+    mainmethod = getattr(submod, "main")
     return mainmethod(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)
