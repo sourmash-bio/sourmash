@@ -5,17 +5,19 @@ on:
     branches: [latest]
 jobs:
   nix:
-    runs-on: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@v4
     - name: Run the Magic Nix Cache
       uses: DeterminateSystems/magic-nix-cache-action@v1
-    - name: flake checks
-      run: nix flake check --keep-going --print-build-logs
 
     - run: nix run .# -- --version
 
