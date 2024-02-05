@@ -325,6 +325,13 @@ Match information can be saved to a CSV file with `-o/--output`; with
 `-o`, all matches above the threshold will be saved, not just those
 printed to stdout (which are limited to `-n/--num-results`).
 
+The `--containment` flag calculates the containment of the query in
+database matches; this is an asymmetric order-dependent measure,
+unlike Jaccard. Here, `search --containment Q A B C D` will report the
+containment of `Q` in each of `A`, `B`, `C`, and `D`. This is opposite
+to the order used by `prefetch`, where the composite sketch (e.g. metagenomes)
+is the query, and the matches are contained items (e.g. genomes).
+
 As of sourmash 4.2.0, `search` supports `--picklist`, to
 [select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to search only a small subset of a large collection, or to
@@ -477,7 +484,10 @@ The `prefetch` subcommand searches a collection of scaled signatures
 for matches in a large database, using containment. It is similar to
 `search --containment`, while taking a `--threshold-bp` argument like
 `gather` does for thresholding matches (instead of using Jaccard
-similarity or containment).
+similarity or containment). Note that `prefetch` uses the composite
+sketch (e.g. a metagenome) as the query, and finds all matching
+subjects (e.g. genomes) from the database - the arguments are in the
+opposite order from `search --containment`.
 
 `sourmash prefetch` is intended to select a subset of a large database
 for further processing. As such, it can search very large collections

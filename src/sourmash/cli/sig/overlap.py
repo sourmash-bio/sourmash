@@ -1,6 +1,6 @@
 """see detailed comparison of signatures"""
 
-usage="""
+usage = """
 
 ### `sourmash signature overlap` - detailed comparison of two signatures' overlap
 
@@ -28,12 +28,11 @@ from sourmash.cli.utils import add_moltype_args, add_ksize_arg
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('overlap', description=__doc__, usage=usage)
-    subparser.add_argument('signature1')
-    subparser.add_argument('signature2')
+    subparser = subparsers.add_parser("overlap", description=__doc__, usage=usage)
+    subparser.add_argument("signature1")
+    subparser.add_argument("signature2")
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
@@ -41,4 +40,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.sig.__main__.overlap(args)

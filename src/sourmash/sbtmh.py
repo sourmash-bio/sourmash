@@ -7,9 +7,12 @@ from . import signature
 
 def load_sbt_index(filename, *, print_version_warning=True, cache_size=None):
     "Load and return an SBT index."
-    return SBT.load(filename, leaf_loader=SigLeaf.load,
-                    print_version_warning=print_version_warning,
-                    cache_size=cache_size)
+    return SBT.load(
+        filename,
+        leaf_loader=SigLeaf.load,
+        print_version_warning=print_version_warning,
+        cache_size=cache_size,
+    )
 
 
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
@@ -29,21 +32,18 @@ def search_sbt_index(tree, query, threshold):
         for match_sig, similarity in search_sbt_index(tree, query, threshold):
            ...
     """
-    for (score, match, _) in tree.search(query, threshold=threshold,
-                                         unload_data=True):
+    for score, match, _ in tree.search(query, threshold=threshold, unload_data=True):
         yield match, score
 
 
 class SigLeaf(Leaf):
     def __str__(self):
-        return '**Leaf:{name} -> {metadata}'.format(
-                name=self.name, metadata=self.metadata)
+        return f"**Leaf:{self.name} -> {self.metadata}"
 
     def make_manifest_row(self, loc):
         from .index import CollectionManifest
-        row = CollectionManifest.make_manifest_row(self.data,
-                                                   loc,
-                                                   include_signature=0)
+
+        row = CollectionManifest.make_manifest_row(self.data, loc, include_signature=0)
         return row
 
     def save(self, path):
@@ -58,13 +58,13 @@ class SigLeaf(Leaf):
     def update(self, parent):
         mh = self.data.minhash
         parent.data.update(mh)
-        min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
+        min_n_below = parent.metadata.get("min_n_below", sys.maxsize)
         min_n_below = min(len(mh), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1
 
-        parent.metadata['min_n_below'] = min_n_below
+        parent.metadata["min_n_below"] = min_n_below
 
     @property
     def data(self):
