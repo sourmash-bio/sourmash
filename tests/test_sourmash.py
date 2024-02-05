@@ -1257,6 +1257,25 @@ def test_compare_and_plot_labels_from_changed(runtmp):
     assert expected in runtmp.last_result.out
 
 
+def test_compare_and_plot_labels_from_error(runtmp):
+    # 'plot --labels-from ... --labeltext ...' should fail
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+    labels_csv = utils.get_test_data('compare/labels_from-test.csv')
+
+    runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('plot', 'cmp', '--labels-from', labels_csv,
+                        '--labeltext', labels_csv, fail_ok=True)
+
+    err = runtmp.last_result.err
+    assert "ERROR: cannot supply both --labeltext and --labels-from" in err
+
+
 @utils.in_tempdir
 def test_search_query_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
