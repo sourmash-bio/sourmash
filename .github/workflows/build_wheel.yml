@@ -1,4 +1,5 @@
 name: cibuildwheel
+permissions: write-all
 
 on:
   push:

@@ -1,4 +1,5 @@
 name: maturin wheels
+permissions: write-all
 
 on:
   pull_request:        # use for testing modifications to this action
