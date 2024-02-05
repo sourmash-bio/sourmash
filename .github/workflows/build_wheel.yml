@@ -104,5 +104,5 @@ jobs:
       - name: Release
         uses: fnkr/github-action-ghr@v1
         env:
-          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}/artifact
+          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
