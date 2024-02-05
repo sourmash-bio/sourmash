@@ -21,7 +21,7 @@ jobs:
 
     - run: nix run .# -- --version
 
-    - run: nix develop --command "tox -e py310"
+    - run: nix develop --command bash -c "tox -e py310"
 
   mamba:
     runs-on: ubuntu-latest
