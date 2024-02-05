@@ -285,7 +285,7 @@ fn lookup<'a, P: AsRef<Path>>(
     metadata
         .get(&path.as_os_str())
         .ok_or_else(|| StorageError::PathNotFoundError(path.to_string()).into())
-        .map(|entry| *entry)
+        .copied()
 }
 
 fn find_subdirs<'a>(archive: &'a piz::ZipArchive<'a>) -> Result<Option<String>> {
