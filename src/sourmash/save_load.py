@@ -43,7 +43,7 @@ from .index.sqlite_index import load_sqlite_index, SqliteIndex
 from .sbtmh import load_sbt_index
 from .lca.lca_db import load_single_database
 from . import signature as sigmod
-from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .index import LinearIndex, ZipFileLinearIndex, MultiIndex
 from .manifest import CollectionManifest
 
 
@@ -74,16 +74,18 @@ def SaveSignaturesToLocation(location):
     with SaveSignaturesToLocation(filename_or_location) as save_sigs:
        save_sigs.add(sig_obj)
     """
-    save_list = itertools.chain(_save_classes,
-                                sourmash_plugins.get_save_to_functions())
-    for priority, cls in sorted(save_list, key=lambda x:x[0]):
+    save_list = itertools.chain(_save_classes, sourmash_plugins.get_save_to_functions())
+    for priority, cls in sorted(save_list, key=lambda x: x[0]):
         debug_literal(f"trying to match save function {cls}, priority={priority}")
 
         if cls.matches(location):
             debug_literal(f"{cls} is a match!")
             return cls(location)
 
-    raise Exception(f"cannot determine how to open location {location} for saving; this should never happen!?")
+    raise Exception(
+        f"cannot determine how to open location {location} for saving; this should never happen!?"
+    )
+
 
 ### Implementation machinery for _load_databases
 
@@ -101,18 +103,19 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     plugin_fns = sourmash_plugins.get_load_from_functions()
 
     # aggregate with default load_from functions & sort by priority
-    load_from_functions = sorted(itertools.chain(_loader_functions,
-                                                 plugin_fns))
-                                                 
+    load_from_functions = sorted(itertools.chain(_loader_functions, plugin_fns))
+
     # iterate through loader functions, sorted by priority; try them all.
     # Catch ValueError & IndexNotLoaded but nothing else.
-    for (priority, desc, load_fn) in load_from_functions:
+    for priority, desc, load_fn in load_from_functions:
         db = None
         try:
-            debug_literal(f"_load_databases: trying loader fn - priority {priority} - '{desc}'")
-            db = load_fn(filename,
-                         traverse_yield_all=traverse_yield_all,
-                         cache_size=cache_size)
+            debug_literal(
+                f"_load_databases: trying loader fn - priority {priority} - '{desc}'"
+            )
+            db = load_fn(
+                filename, traverse_yield_all=traverse_yield_all, cache_size=cache_size
+            )
         except (ValueError, IndexNotLoaded):
             debug_literal(f"_load_databases: FAIL with ValueError: on fn {desc}.")
             debug_literal(traceback.format_exc())
@@ -126,16 +129,20 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     if loaded:
         assert db is not None
         return db
-    
+
     raise ValueError(f"Error while reading signatures from '{filename}'.")
 
 
 _loader_functions = []
+
+
 def add_loader(name, priority):
     "decorator to add name/priority to _loader_functions"
+
     def dec_priority(func):
         _loader_functions.append((priority, name, func))
         return func
+
     return dec_priority
 
 
@@ -143,10 +150,10 @@ def add_loader(name, priority):
 def _load_stdin(filename, **kwargs):
     "Load collection from .sig file streamed in via stdin"
     db = None
-    if filename == '-':
+    if filename == "-":
         # load as LinearIndex, then pass into MultiIndex to generate a
         # manifest.
-        lidx = LinearIndex.load(sys.stdin, filename='-')
+        lidx = LinearIndex.load(sys.stdin, filename="-")
         db = MultiIndex.load((lidx,), (None,), parent="-")
 
     return db
@@ -175,7 +182,7 @@ def _multiindex_load_from_pathlist(filename, **kwargs):
 @add_loader("load from path (file or directory)", 40)
 def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
-    traverse_yield_all = kwargs['traverse_yield_all']
+    traverse_yield_all = kwargs["traverse_yield_all"]
     db = MultiIndex.load_from_path(filename, traverse_yield_all)
 
     return db
@@ -184,7 +191,7 @@ def _multiindex_load_from_path(filename, **kwargs):
 @add_loader("load SBT", 60)
 def _load_sbt(filename, **kwargs):
     "Load collection from an SBT."
-    cache_size = kwargs.get('cache_size')
+    cache_size = kwargs.get("cache_size")
 
     try:
         db = load_sbt_index(filename, cache_size=cache_size)
@@ -210,11 +217,12 @@ def _load_sqlite_db(filename, **kwargs):
 def _load_zipfile(filename, **kwargs):
     "Load collection from a .zip file."
     db = None
-    if filename.endswith('.zip'):
-        traverse_yield_all = kwargs['traverse_yield_all']
+    if filename.endswith(".zip"):
+        traverse_yield_all = kwargs["traverse_yield_all"]
         try:
-            db = ZipFileLinearIndex.load(filename,
-                                         traverse_yield_all=traverse_yield_all)
+            db = ZipFileLinearIndex.load(
+                filename, traverse_yield_all=traverse_yield_all
+            )
         except FileNotFoundError as exc:
             # turn this into an IndexNotLoaded => proper exception handling by
             # _load_database.
@@ -236,13 +244,17 @@ def _error_on_fastaq(filename, **kwargs):
         pass
 
     if success:
-        raise Exception(f"Error while reading signatures from '{filename}' - got sequences instead! Is this a FASTA/FASTQ file?")
+        raise Exception(
+            f"Error while reading signatures from '{filename}' - got sequences instead! Is this a FASTA/FASTQ file?"
+        )
 
 
 ### Implementation machinery for SaveSignaturesToLocation
 
+
 class Base_SaveSignaturesToLocation:
     "Base signature saving class. Track location (if any) and count."
+
     def __init__(self, location):
         self.location = location
         self.count = 0
@@ -288,14 +300,14 @@ def _get_signatures_from_rust(siglist):
     # Rust supports multiple. For now, go through serializing
     # and deserializing the signature! See issue #1167 for more.
     json_str = sourmash.save_signatures(siglist)
-    for ss in sourmash.signature.load_signatures(json_str):
-        yield ss
+    yield from sourmash.signature.load_signatures(json_str)
 
 
 class SaveSignatures_NoOutput(Base_SaveSignaturesToLocation):
     "Do not save signatures."
+
     def __repr__(self):
-        return 'SaveSignatures_NoOutput()'
+        return "SaveSignatures_NoOutput()"
 
     @classmethod
     def matches(cls, location):
@@ -310,6 +322,7 @@ class SaveSignatures_NoOutput(Base_SaveSignaturesToLocation):
 
 class SaveSignatures_Directory(Base_SaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
+
     def __init__(self, location):
         super().__init__(location)
 
@@ -320,7 +333,7 @@ class SaveSignatures_Directory(Base_SaveSignaturesToLocation):
     def matches(cls, location):
         "anything ending in /"
         if location:
-            return location.endswith('/')
+            return location.endswith("/")
 
     def close(self):
         pass
@@ -354,6 +367,7 @@ class SaveSignatures_Directory(Base_SaveSignaturesToLocation):
 
 class SaveSignatures_SqliteIndex(Base_SaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
+
     def __init__(self, location):
         super().__init__(location)
         self.location = location
@@ -364,14 +378,14 @@ class SaveSignatures_SqliteIndex(Base_SaveSignaturesToLocation):
     def matches(cls, location):
         "anything ending in .sqldb"
         if location:
-            return location.endswith('.sqldb')
+            return location.endswith(".sqldb")
 
     def __repr__(self):
         return f"SaveSignatures_SqliteIndex('{self.location}')"
 
     def close(self):
         self.idx.commit()
-        self.cursor.execute('VACUUM')
+        self.cursor.execute("VACUUM")
         self.idx.close()
 
     def open(self):
@@ -390,11 +404,12 @@ class SaveSignatures_SqliteIndex(Base_SaveSignaturesToLocation):
 
 class SaveSignatures_SigFile(Base_SaveSignaturesToLocation):
     "Save signatures to a .sig JSON file."
+
     def __init__(self, location):
         super().__init__(location)
         self.keep = []
         self.compress = 0
-        if self.location.endswith('.gz'):
+        if self.location.endswith(".gz"):
             self.compress = 1
 
     @classmethod
@@ -409,12 +424,12 @@ class SaveSignatures_SigFile(Base_SaveSignaturesToLocation):
         pass
 
     def close(self):
-        if self.location == '-':
+        if self.location == "-":
             sourmash.save_signatures(self.keep, sys.stdout)
         else:
             # text mode? encode in utf-8
             mode = "w"
-            encoding = 'utf-8'
+            encoding = "utf-8"
 
             # compressed? bytes & binary.
             if self.compress:
@@ -422,8 +437,7 @@ class SaveSignatures_SigFile(Base_SaveSignaturesToLocation):
                 mode = "wb"
 
             with open(self.location, mode, encoding=encoding) as fp:
-                sourmash.save_signatures(self.keep, fp,
-                                         compression=self.compress)
+                sourmash.save_signatures(self.keep, fp, compression=self.compress)
 
     def add(self, ss):
         super().add(ss)
@@ -432,6 +446,7 @@ class SaveSignatures_SigFile(Base_SaveSignaturesToLocation):
 
 class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
     "Save compressed signatures in an uncompressed Zip file."
+
     def __init__(self, location):
         super().__init__(location)
         self.storage = None
@@ -440,7 +455,7 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
     def matches(cls, location):
         "anything ending in .zip"
         if location:
-            return location.endswith('.zip')
+            return location.endswith(".zip")
 
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
@@ -454,8 +469,7 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
         manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
-        self.storage.save(manifest_name, manifest_data, overwrite=True,
-                          compress=True)
+        self.storage.save(manifest_name, manifest_data, overwrite=True, compress=True)
         self.storage.flush()
         self.storage.close()
 
@@ -476,19 +490,21 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
             raise ValueError(f"File '{self.location}' cannot be opened as a zip file.")
 
         if not storage.subdir:
-            storage.subdir = 'signatures'
+            storage.subdir = "signatures"
 
         # now, try to load manifest
         try:
-            manifest_data = storage.load('SOURMASH-MANIFEST.csv')
+            manifest_data = storage.load("SOURMASH-MANIFEST.csv")
         except (FileNotFoundError, KeyError):
             # if file already exists must have manifest...
             if not do_create:
-                raise ValueError(f"Cannot add to existing zipfile '{self.location}' without a manifest")
+                raise ValueError(
+                    f"Cannot add to existing zipfile '{self.location}' without a manifest"
+                )
             self.manifest_rows = []
         else:
             # success! decode manifest_data, create manifest rows => append.
-            manifest_data = manifest_data.decode('utf-8')
+            manifest_data = manifest_data.decode("utf-8")
             manifest_fp = StringIO(manifest_data)
             manifest = CollectionManifest.load_from_csv(manifest_fp)
             self.manifest_rows = list(manifest._select())
@@ -511,12 +527,13 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
             md5 = ss.md5sum()
 
             storage = self.storage
-            path = f'{storage.subdir}/{md5}.sig.gz'
+            path = f"{storage.subdir}/{md5}.sig.gz"
             location = storage.save(path, buf)
 
             # update manifest
-            row = CollectionManifest.make_manifest_row(ss, location,
-                                                       include_signature=False)
+            row = CollectionManifest.make_manifest_row(
+                ss, location, include_signature=False
+            )
             self.manifest_rows.append(row)
             super().add(ss)
 

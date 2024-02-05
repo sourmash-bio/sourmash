@@ -51,8 +51,7 @@ from .logging import notify, error, debug_literal
 from .index import LinearIndex
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
-from .save_load import (SaveSignaturesToLocation, load_file_as_index,
-                        _load_database)
+from .save_load import SaveSignaturesToLocation, load_file_as_index, _load_database
 
 
 DEFAULT_LOAD_K = 31
@@ -64,9 +63,9 @@ def check_scaled_bounds(arg):
     if f < 0:
         raise argparse.ArgumentTypeError("ERROR: scaled value must be positive")
     if f < 100:
-        notify('WARNING: scaled value should be >= 100. Continuing anyway.')
+        notify("WARNING: scaled value should be >= 100. Continuing anyway.")
     if f > 1e6:
-        notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+        notify("WARNING: scaled value should be <= 1e6. Continuing anyway.")
     return f
 
 
@@ -76,18 +75,18 @@ def check_num_bounds(arg):
     if f < 0:
         raise argparse.ArgumentTypeError("ERROR: num value must be positive")
     if f < 50:
-        notify('WARNING: num value should be >= 50. Continuing anyway.')
+        notify("WARNING: num value should be >= 50. Continuing anyway.")
     if f > 50000:
-        notify('WARNING: num value should be <= 50000. Continuing anyway.')
+        notify("WARNING: num value should be <= 50000. Continuing anyway.")
     return f
 
 
 def get_moltype(sig, require=False):
     mh = sig.minhash
-    if mh.moltype in ('DNA', 'dayhoff', 'hp', 'protein'):
+    if mh.moltype in ("DNA", "dayhoff", "hp", "protein"):
         moltype = mh.moltype
     else:
-        raise ValueError('unknown molecule type for sig {}'.format(sig))
+        raise ValueError(f"unknown molecule type for sig {sig}")
 
     return moltype
 
@@ -97,20 +96,22 @@ def calculate_moltype(args, default=None):
 
     n = 0
     if args.dna:
-        moltype = 'DNA'
+        moltype = "DNA"
         n += 1
     if args.dayhoff:
-        moltype = 'dayhoff'
+        moltype = "dayhoff"
         n += 1
     if args.hp:
-        moltype = 'hp'
+        moltype = "hp"
         n += 1
     if args.protein:
-        moltype = 'protein'
+        moltype = "protein"
         n += 1
 
     if n > 1:
-        error("cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff")
+        error(
+            "cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff"
+        )
         sys.exit(-1)
 
     return moltype
@@ -123,7 +124,9 @@ def load_picklist(args):
         try:
             picklist = SignaturePicklist.from_picklist_args(args.picklist)
 
-            notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+            notify(
+                f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'"
+            )
 
             n_empty_val, dup_vals = picklist.load()
         except ValueError as exc:
@@ -133,19 +136,27 @@ def load_picklist(args):
 
         notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
         if n_empty_val:
-            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
+            notify(
+                f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file"
+            )
         if dup_vals:
-            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
+            notify(
+                f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct"
+            )
 
     return picklist
 
 
 def report_picklist(args, picklist):
     if picklist.pickstyle == PickStyle.INCLUDE:
-        notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
+        notify(
+            f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values"
+        )
         n_missing = len(picklist.pickset - picklist.found)
     elif picklist.pickstyle == PickStyle.EXCLUDE:
-        notify(f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values")
+        notify(
+            f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values"
+        )
         n_missing = 0
     if n_missing:
         notify(f"WARNING: {n_missing} missing picklist values.")
@@ -157,19 +168,27 @@ def report_picklist(args, picklist):
 
 def load_include_exclude_db_patterns(args):
     if args.picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        error("ERROR: --picklist and --include-db-pattern/--exclude cannot be used together.")
+        error(
+            "ERROR: --picklist and --include-db-pattern/--exclude cannot be used together."
+        )
         sys.exit(-1)
 
     if args.include_db_pattern and args.exclude_db_pattern:
-        error("ERROR: --include-db-pattern and --exclude-db-pattern cannot be used together.")
+        error(
+            "ERROR: --include-db-pattern and --exclude-db-pattern cannot be used together."
+        )
         sys.exit(-1)
 
     if args.include_db_pattern:
         pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        search_pattern = lambda vals: any(pattern.search(val) for val in vals)
+
+        def search_pattern(vals):
+            return any(pattern.search(val) for val in vals)
     elif args.exclude_db_pattern:
         pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        search_pattern = lambda vals: all(not pattern.search(val) for val in vals)
+
+        def search_pattern(vals):
+            return all(not pattern.search(val) for val in vals)
     else:
         search_pattern = None
 
@@ -187,8 +206,7 @@ def apply_picklist_and_pattern(db, picklist, pattern):
             error("--include-db-pattern/--exclude-db-pattern require a manifest.")
             sys.exit(-1)
 
-        manifest = manifest.filter_on_columns(pattern,
-                                              ["name", "filename", "md5"])
+        manifest = manifest.filter_on_columns(pattern, ["name", "filename", "md5"])
         pattern_picklist = manifest.to_picklist()
         db = db.select(picklist=pattern_picklist)
 
@@ -202,8 +220,9 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     and indexed databases.
     """
     try:
-        sl = load_file_as_signatures(filename, ksize=ksize,
-                                     select_moltype=select_moltype)
+        sl = load_file_as_signatures(
+            filename, ksize=ksize, select_moltype=select_moltype
+        )
         sl = list(sl)
     except (OSError, ValueError):
         error(f"Cannot open query file '{filename}'")
@@ -225,21 +244,21 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
             sl = [found_sig]
 
     if len(sl) and ksize is None:
-        ksizes = set([ ss.minhash.ksize for ss in sl ])
+        ksizes = set([ss.minhash.ksize for ss in sl])
         if len(ksizes) == 1:
             ksize = ksizes.pop()
-            sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
-            notify(f'select query k={ksize} automatically.')
+            sl = [ss for ss in sl if ss.minhash.ksize == ksize]
+            notify(f"select query k={ksize} automatically.")
         elif DEFAULT_LOAD_K in ksizes:
-            sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
-            notify(f'selecting default query k={DEFAULT_LOAD_K}.')
+            sl = [ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K]
+            notify(f"selecting default query k={DEFAULT_LOAD_K}.")
     elif ksize:
-        notify(f'selecting specified query k={ksize}')
+        notify(f"selecting specified query k={ksize}")
 
     if len(sl) != 1:
         error(f"When loading query from '{filename}'", filename)
-        error(f'{len(sl)} signatures matching ksize and molecule type;')
-        error('need exactly one. Specify --ksize or --dna, --rna, or --protein.')
+        error(f"{len(sl)} signatures matching ksize and molecule type;")
+        error("need exactly one. Specify --ksize or --dna, --rna, or --protein.")
         sys.exit(-1)
 
     return sl[0]
@@ -259,7 +278,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
     If 'yield_all_files' is True, this will return _all_ files
     (but not directories).
     """
-    endings = ('.sig', '.sig.gz')
+    endings = (".sig", ".sig.gz")
     for filename in filenames:
         # check for files in filenames:
         if os.path.isfile(filename):
@@ -275,9 +294,16 @@ def traverse_find_sigs(filenames, yield_all_files=False):
                         yield fullname
 
 
-def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
-                      cache_size=None, picklist=None, pattern=None,
-                      fail_on_empty_database=False):
+def load_dbs_and_sigs(
+    filenames,
+    query,
+    is_similarity_query,
+    *,
+    cache_size=None,
+    picklist=None,
+    pattern=None,
+    fail_on_empty_database=False,
+):
     """
     Load one or more Index objects to search - databases, etc.
 
@@ -294,7 +320,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
     total_signatures_loaded = 0
     sum_signatures_after_select = 0
     for filename in filenames:
-        notify(f"loading from '{filename}'...", end='\r')
+        notify(f"loading from '{filename}'...", end="\r")
 
         try:
             db = _load_database(filename, False, cache_size=cache_size)
@@ -308,11 +334,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
 
         # get compatible signatures - moltype/ksize/num/scaled
         try:
-            db = db.select(moltype=query_mh.moltype,
-                           ksize=query_mh.ksize,
-                           num=query_mh.num,
-                           scaled=query_mh.scaled,
-                           containment=containment)
+            db = db.select(
+                moltype=query_mh.moltype,
+                ksize=query_mh.ksize,
+                num=query_mh.num,
+                scaled=query_mh.scaled,
+                containment=containment,
+            )
         except ValueError as exc:
             # incompatible collection specified!
             notify(f"ERROR: cannot use '{filename}' for this query.")
@@ -337,9 +365,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
 
     # display num loaded/num selected
     notify("--")
-    notify(f"loaded {total_signatures_loaded} total signatures from {len(databases)} locations.")
-    notify(f"after selecting signatures compatible with search, {sum_signatures_after_select} remain.")
-    print('')
+    notify(
+        f"loaded {total_signatures_loaded} total signatures from {len(databases)} locations."
+    )
+    notify(
+        f"after selecting signatures compatible with search, {sum_signatures_after_select} remain."
+    )
+    print("")
 
     return databases
 
@@ -347,15 +379,17 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
 def load_pathlist_from_file(filename):
     "Load a list-of-files text file."
     try:
-        with open(filename, 'rt') as fp:
-            file_list = [ x.rstrip('\r\n') for x in fp ]
+        with open(filename) as fp:
+            file_list = [x.rstrip("\r\n") for x in fp]
         file_list = set(file_list)
         if not file_list:
             raise ValueError("pathlist is empty")
         for checkfile in file_list:
             if not os.path.exists(checkfile):
-                raise ValueError(f"file '{checkfile}' inside the pathlist does not exist")
-    except IOError:
+                raise ValueError(
+                    f"file '{checkfile}' inside the pathlist does not exist"
+                )
+    except OSError:
         raise ValueError(f"pathlist file '{filename}' does not exist")
     except OSError:
         raise ValueError(f"cannot open file '{filename}'")
@@ -385,7 +419,8 @@ class FileOutput:
 
     will properly handle no argument or '-' as sys.stdout.
     """
-    def __init__(self, filename, mode='wt', *, newline=None, encoding='utf-8'):
+
+    def __init__(self, filename, mode="wt", *, newline=None, encoding="utf-8"):
         self.filename = filename
         self.mode = mode
         self.fp = None
@@ -393,14 +428,15 @@ class FileOutput:
         self.encoding = encoding
 
     def open(self):
-        if self.filename == '-' or self.filename is None:
+        if self.filename == "-" or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, self.mode, newline=self.newline,
-                       encoding=self.encoding)
+        self.fp = open(
+            self.filename, self.mode, newline=self.newline, encoding=self.encoding
+        )
         return self.fp
 
     def close(self):
-        if self.fp is not None: # in case of stdout
+        if self.fp is not None:  # in case of stdout
             self.fp.close()
 
     def __enter__(self):
@@ -435,17 +471,18 @@ class FileOutputCSV(FileOutput):
 
     will properly handle no argument or '-' as sys.stdout.
     """
+
     def __init__(self, filename):
         self.filename = filename
         self.fp = None
 
     def open(self):
-        if self.filename == '-' or self.filename is None:
+        if self.filename == "-" or self.filename is None:
             return sys.stdout
-        if self.filename.endswith('.gz'):
-            self.fp = gzip.open(self.filename, 'wt', newline='')
+        if self.filename.endswith(".gz"):
+            self.fp = gzip.open(self.filename, "wt", newline="")
         else:
-            self.fp = open(self.filename, 'w', newline='')
+            self.fp = open(self.filename, "w", newline="")
         return self.fp
 
 
@@ -457,38 +494,44 @@ class _DictReader_with_version:
 
     The version is stored as a 2-tuple in the 'version_info' attribute.
     """
-    def __init__(self, textfp, *, delimiter=','):
+
+    def __init__(self, textfp, *, delimiter=","):
         self.version_info = []
 
         # is there a '#' in the raw buffer pos 0?
         ch = textfp.buffer.peek(1)
 
         try:
-            ch = ch.decode('utf-8')
+            ch = ch.decode("utf-8")
         except UnicodeDecodeError:
             raise csv.Error("unable to read CSV file")
 
         # yes - read a line from the text buffer => parse
-        if ch.startswith('#'):
+        if ch.startswith("#"):
             line = textfp.readline()
-            assert line.startswith('# '), line
+            assert line.startswith("# "), line
 
             # note, this can set version_info to lots of different things.
             # revisit later, I guess. CTB.
-            self.version_info = line[2:].strip().split(': ', 2)
+            self.version_info = line[2:].strip().split(": ", 2)
 
         # build a DictReader from the remaining stream
         self.reader = csv.DictReader(textfp, delimiter=delimiter)
         self.fieldnames = self.reader.fieldnames
 
     def __iter__(self):
-        for row in self.reader:
-            yield row
+        yield from self.reader
 
 
 @contextlib.contextmanager
-def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
-                 zipfile_obj=None, delimiter=','):
+def FileInputCSV(
+    filename,
+    *,
+    encoding="utf-8",
+    default_csv_name=None,
+    zipfile_obj=None,
+    delimiter=",",
+):
     """A context manager for reading in CSV files in gzip, zip or text format.
 
     Assumes comma delimiter, and uses csv.DictReader.
@@ -513,24 +556,20 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
             try:
                 zi = zipfile_obj.getinfo(default_csv_name)
                 with zipfile_obj.open(zi) as fp:
-                    textfp = TextIOWrapper(fp,
-                                           encoding=encoding,
-                                           newline="")
+                    textfp = TextIOWrapper(fp, encoding=encoding, newline="")
                     r = _DictReader_with_version(textfp, delimiter=delimiter)
                     yield r
             except (zipfile.BadZipFile, KeyError):
-                pass # uh oh, we were given a zipfile_obj and it FAILED.
+                pass  # uh oh, we were given a zipfile_obj and it FAILED.
 
             # no matter what, if given zipfile_obj don't try .gz or regular csv
             return
         else:
             try:
-                with zipfile.ZipFile(filename, 'r') as zip_fp:
+                with zipfile.ZipFile(filename, "r") as zip_fp:
                     zi = zip_fp.getinfo(default_csv_name)
                     with zip_fp.open(zi) as fp:
-                        textfp = TextIOWrapper(fp,
-                                               encoding=encoding,
-                                               newline="")
+                        textfp = TextIOWrapper(fp, encoding=encoding, newline="")
                         r = _DictReader_with_version(textfp, delimiter=delimiter)
                         yield r
 
@@ -545,7 +584,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
     # ok, not a zip file - try .gz:
     try:
         with gzip.open(filename, "rt", newline="", encoding=encoding) as fp:
-            fp.buffer.peek(1)          # force exception if not a gzip file
+            fp.buffer.peek(1)  # force exception if not a gzip file
             r = _DictReader_with_version(fp, delimiter=delimiter)
             yield r
         return
@@ -553,7 +592,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
         pass
 
     # neither zip nor gz; regular file!
-    with open(filename, 'rt', newline="", encoding=encoding) as fp:
+    with open(filename, newline="", encoding=encoding) as fp:
         r = _DictReader_with_version(fp, delimiter=delimiter)
         yield r
 
@@ -569,6 +608,7 @@ class SignatureLoadingProgress:
 
     You can optionally notify of reading a file with `.notify(location)`.
     """
+
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
         self.interval = reporting_interval
@@ -584,17 +624,19 @@ class SignatureLoadingProgress:
         """
 
         msg = msg_template.format(*args, **kwargs)
-        end = kwargs.get('end', '\n')
+        end = kwargs.get("end", "\n")
         w = self.screen_width
 
         if len(msg) > w:
             truncate_len = len(msg) - w + 3
-            msg = '<<<' + msg[truncate_len:]
+            msg = "<<<" + msg[truncate_len:]
 
         notify(msg, end=end)
 
     def notify(self, location):
-        self.short_notify(f"...{self.n_sig} sigs so far. Now reading from file '{location}'", end='\r')
+        self.short_notify(
+            f"...{self.n_sig} sigs so far. Now reading from file '{location}'", end="\r"
+        )
 
     def start_file(self, location, loader):
         n_this = 0
@@ -606,24 +648,35 @@ class SignatureLoadingProgress:
                 n_this += 1
                 n_total = n_before + n_this
                 if n_this and n_total % self.interval == 0:
-                    self.short_notify("...loading from '{}' / {} sigs total",
-                                      location, n_total, end='\r')
+                    self.short_notify(
+                        "...loading from '{}' / {} sigs total",
+                        location,
+                        n_total,
+                        end="\r",
+                    )
 
                 yield result
         except KeyboardInterrupt:
             # might as well nicely handle CTRL-C while we're at it!
-            notify('\n(CTRL-C received! quitting.)')
+            notify("\n(CTRL-C received! quitting.)")
             sys.exit(-1)
         finally:
             self.n_sig += n_this
 
-        self.short_notify(f"Loaded {n_this} sigs from '{location}'",
-                          end='\r')
+        self.short_notify(f"Loaded {n_this} sigs from '{location}'", end="\r")
 
 
-def load_many_signatures(locations, progress, *, yield_all_files=False,
-                         ksize=None, moltype=None, picklist=None, force=False,
-                         pattern=None):
+def load_many_signatures(
+    locations,
+    progress,
+    *,
+    yield_all_files=False,
+    ksize=None,
+    moltype=None,
+    picklist=None,
+    force=False,
+    pattern=None,
+):
     """
     Load many signatures from multiple files, with progress indicators.
 
@@ -648,11 +701,11 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
             loader = idx.signatures_with_location()
 
             # go!
-            n = 0               # count signatures loaded
+            n = 0  # count signatures loaded
             for sig, sigloc in progress.start_file(loc, loader):
                 yield sig, sigloc
                 n += 1
-            notify(f"loaded {n} signatures from '{loc}'", end='\r')
+            notify(f"loaded {n} signatures from '{loc}'", end="\r")
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
             if force:
@@ -693,8 +746,9 @@ def get_manifest(idx, *, require=True, rebuild=False):
     # need to build one...
     try:
         notify("Generating a manifest...")
-        m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
-                                               include_signature=False)
+        m = CollectionManifest.create_manifest(
+            idx._signatures_with_internal(), include_signature=False
+        )
         debug_literal("get_manifest: rebuilt manifest.")
     except NotImplementedError:
         if require:
@@ -707,12 +761,17 @@ def get_manifest(idx, *, require=True, rebuild=False):
     return m
 
 
-def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
-                            picklist=None,
-                            yield_all_files=False,
-                            progress=None,
-                            pattern=None,
-                            _use_manifest=True):
+def load_file_as_signatures(
+    filename,
+    *,
+    select_moltype=None,
+    ksize=None,
+    picklist=None,
+    yield_all_files=False,
+    progress=None,
+    pattern=None,
+    _use_manifest=True,
+):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular

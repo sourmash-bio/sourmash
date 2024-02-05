@@ -4,30 +4,31 @@ from tempfile import NamedTemporaryFile
 from sourmash.sbt_storage import ZipStorage
 from sourmash.minhash import MinHash
 
-RANDOM_SEQ_SIZE=3000
-RANDOM_SEQ_NUMBER=300
+RANDOM_SEQ_SIZE = 3000
+RANDOM_SEQ_NUMBER = 300
 
-MINHASH_NUM=500
-MINHASH_K=21
+MINHASH_NUM = 500
+MINHASH_K = 21
 
-GET_MINS_RANGE=500
-ADD_HASH_RANGE=10_000
-ADD_MANY_RANGE=1000
-SIMILARITY_TIMES=500
-COUNT_COMMON_TIMES=500
-MERGE_TIMES=500
-COPY_TIMES=500
-CONCAT_TIMES=500
-SET_ABUNDANCES_RANGE=500
-ZIP_STORAGE_WRITE=100_000
-ZIP_STORAGE_LOAD=20
+GET_MINS_RANGE = 500
+ADD_HASH_RANGE = 10_000
+ADD_MANY_RANGE = 1000
+SIMILARITY_TIMES = 500
+COUNT_COMMON_TIMES = 500
+MERGE_TIMES = 500
+COPY_TIMES = 500
+CONCAT_TIMES = 500
+SET_ABUNDANCES_RANGE = 500
+ZIP_STORAGE_WRITE = 100_000
+ZIP_STORAGE_LOAD = 20
 
 
 def load_sequences():
     sequences = []
     for i in range(10):
-        random_seq = random.sample("A,C,G,T".split(",") * RANDOM_SEQ_SIZE,
-                                   RANDOM_SEQ_NUMBER)
+        random_seq = random.sample(
+            "A,C,G,T".split(",") * RANDOM_SEQ_SIZE, RANDOM_SEQ_NUMBER
+        )
         sequences.append("".join(random_seq))
     return sequences
 
@@ -35,12 +36,12 @@ def load_sequences():
 class TimeMinHashSuite:
     def setup(self):
         self.mh = MinHash(MINHASH_NUM, MINHASH_K, track_abundance=False)
-        self.protein_mh = MinHash(MINHASH_NUM, MINHASH_K, is_protein=True,
-                                  track_abundance=False)
+        self.protein_mh = MinHash(
+            MINHASH_NUM, MINHASH_K, is_protein=True, track_abundance=False
+        )
         self.sequences = load_sequences()
 
-        self.populated_mh = MinHash(MINHASH_NUM, MINHASH_K,
-                                    track_abundance=False)
+        self.populated_mh = MinHash(MINHASH_NUM, MINHASH_K, track_abundance=False)
         for seq in self.sequences:
             self.populated_mh.add_sequence(seq)
 
@@ -103,8 +104,9 @@ class TimeMinHashSuite:
 class PeakmemMinHashSuite:
     def setup(self):
         self.mh = MinHash(MINHASH_NUM, MINHASH_K, track_abundance=True)
-        self.protein_mh = MinHash(MINHASH_NUM, MINHASH_K,
-                                  is_protein=True, track_abundance=True)
+        self.protein_mh = MinHash(
+            MINHASH_NUM, MINHASH_K, is_protein=True, track_abundance=True
+        )
         self.sequences = load_sequences()
 
     def peakmem_add_sequence(self):
@@ -158,21 +160,25 @@ class TimeMinAbundanceSuite(TimeMinHashSuite):
         for i in range(SET_ABUNDANCES_RANGE):
             mh.set_abundances(mins, clear=False)
 
+
 class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):
         PeakmemMinHashSuite.setup(self)
         self.mh = MinHash(MINHASH_NUM, MINHASH_K, track_abundance=True)
 
+
 ####################
 
-class TimeZipStorageSuite:
 
+class TimeZipStorageSuite:
     def setup(self):
         import zipfile
+
         self.zipfile = NamedTemporaryFile()
 
-        with zipfile.ZipFile(self.zipfile, mode='w',
-                          compression=zipfile.ZIP_STORED) as storage:
+        with zipfile.ZipFile(
+            self.zipfile, mode="w", compression=zipfile.ZIP_STORED
+        ) as storage:
             for i in range(ZIP_STORAGE_WRITE):
                 # just so we have lots of entries
                 storage.writestr(str(i), b"0")
@@ -196,16 +202,17 @@ class TimeZipStorageSuite:
 class PeakmemZipStorageSuite:
     def setup(self):
         import zipfile
+
         self.zipfile = NamedTemporaryFile()
 
-        with zipfile.ZipFile(self.zipfile, mode='w',
-                          compression=zipfile.ZIP_STORED) as storage:
+        with zipfile.ZipFile(
+            self.zipfile, mode="w", compression=zipfile.ZIP_STORED
+        ) as storage:
             for i in range(ZIP_STORAGE_WRITE):
                 # just so we have lots of entries
                 storage.writestr(str(i), b"0")
             # one big-ish entry
             storage.writestr("sig1", b"9" * 1_000_000)
-
 
     def peakmem_load_from_zipstorage(self):
         with ZipStorage(self.zipfile.name) as storage:
