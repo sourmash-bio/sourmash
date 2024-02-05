@@ -54,7 +54,7 @@ class BaseLineageInfo:
     and will not be used or compared in any other class methods.
     """
     # need to set compare=False for any mutable type to keep this class hashable
-    ranks: tuple() # require ranks
+    ranks: () # require ranks
     lineage: tuple = None # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
 
