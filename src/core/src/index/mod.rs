@@ -21,11 +21,9 @@ use typed_builder::TypedBuilder;
 use crate::encodings::Idx;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
-use crate::Result;
-// use crate::sketch::hyperloglog::HyperLogLog;
-// use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
+use crate::Result;
 
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
@@ -154,8 +152,6 @@ where
 pub struct FastGatherResult {
     #[serde(skip)]
     orig_query: KmerMinHash, // can we make this a reference?
-    #[serde(skip)]
-    query: KmerMinHash,
 
     #[serde(skip)]
     match_: Signature,
@@ -165,9 +161,6 @@ pub struct FastGatherResult {
     gather_result_rank: usize,
 
     total_orig_query_abund: u64,
-
-    #[serde(skip)] // do we need this at all?
-    selection: Selection, // borrow / use static??
 }
 
 impl FastGatherResult {
@@ -202,32 +195,31 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> GatherResult {
 
     let filename = fgres.match_.filename();
 
-    // todo
-    let f_unique_weighted = 0.0;
-    let average_abund: usize = 0;
-    let median_abund: usize = 0;
-    let std_abund: usize = 0;
+    // remaining_bp is the number of base pairs in the query that are not in the match (or any prior match)
+    let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
 
-    // weight common by query abundances
-    // let (common_abunds, total_common_weighted) = match_mh.weighted_intersect_size(match_mh, abunds_from=fgres.orig_query);
     // //Calculate abund-related metrics
-    // let f_unique_weighted = total_common_weighted as f64 / fgres.total_orig_query_abund as f64;
+    let Ok((abunds, total_abund)) = match_mh.inflated_abundances(&fgres.orig_query) else { todo!()};
+    let f_unique_weighted = total_abund as f64 / fgres.total_orig_query_abund as f64;
+    let average_abund = abunds.iter().sum::<u64>() as f64 / total_abund as f64;
+
+    // todo
+    let median_abund = 0.0;
+    let std_abund = 0.0;
+
     // // mean, median, std of abundances
-    // let average_abund: f64 = mean(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
     // let median_abund: f64 = median(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
     // let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
 
-    // remaining_bp is the number of base pairs in the query that are not in the match (or any prior match)
-    let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
     let result = GatherResult::builder()
         .intersect_bp(intersect_bp)
         .f_orig_query(f_orig_query)
         .f_match(f_match)
         .f_unique_to_query(f_unique_to_query)
         .f_unique_weighted(f_unique_weighted)
-        .average_abund(average_abund)
-        .median_abund(median_abund)
-        .std_abund(std_abund)
+        .average_abund(average_abund as usize)
+        .median_abund(median_abund as usize)
+        .std_abund(std_abund as usize)
         .filename(filename)
         .name(name)
         .md5(md5)

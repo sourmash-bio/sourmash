@@ -298,7 +298,7 @@ impl RevIndexOps for RevIndex {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
         // is this the right way?
-        let mut query: KmerMinHashBTree = orig_query.clone().into();
+        // let mut query: KmerMinHashBTree = orig_query.clone().into();
         let selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
         let total_orig_query_abund = orig_query.abunds().iter().sum::<u64>();
@@ -320,7 +320,7 @@ impl RevIndexOps for RevIndex {
 
             let result = FastGatherResult::builder()
                 .orig_query(orig_query)
-                .query(query)
+                // .query(query)
                 .match_(match_sig.clone())
                 .remaining_hashes(remaining_hashes)
                 .gather_result_rank(gather_result_rank)
@@ -336,7 +336,7 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            query.remove_many(match_mh.to_vec().as_slice())?; // need this for abundance weighting. Can we get current mh from colors instead?
+            // query.remove_many(match_mh.to_vec().as_slice())?; // need this for abundance weighting. Can we get current mh from colors instead?
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.
