@@ -23,9 +23,6 @@ use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Result;
 
-use statistics::median;
-use mean::mean;
-
 const DB_VERSION: u8 = 1;
 
 fn compute_color(idxs: &Datasets) -> Color {
@@ -300,9 +297,12 @@ impl RevIndexOps for RevIndex {
     ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
-        //let mut query: KmerMinHashBTree = orig_query.clone().into();
+        // is this the right way?
+        let mut query: KmerMinHashBTree = orig_query.clone().into();
         let selection = selection.unwrap_or_else(|| self.collection.selection());
-        let mut remaining_bp = orig_query.scaled() as usize * orig_query.size();
+        let mut remaining_hashes = orig_query.size();
+        let total_orig_query_abund = orig_query.abunds().iter().sum::<u64>();
+        // let orig_query_abunds = ??
 
         while match_size > threshold && !counter.is_empty() {
             trace!("counter len: {}", counter.len());
@@ -311,64 +311,32 @@ impl RevIndexOps for RevIndex {
             let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
             match_size = if size >= threshold { size } else { break };
 
+            // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
-            // Calculate stats
-            let name = match_sig.name();
+            // just calculate essentials for now
             let gather_result_rank = matches.len();
-            let match_ = match_sig.clone();
-            let md5 = match_sig.md5sum();
+            remaining_hashes = remaining_hashes - match_size;
 
-            let match_mh = prepare_query(match_sig.into(), &selection)
-                .expect("Couldn't find a compatible MinHash");
-            let f_match = match_size as f64 / match_mh.size() as f64;
-            let unique_intersect_bp = match_mh.scaled() as usize * match_size;
-            let (intersect_orig, _) = match_mh.intersection_size(orig_query)?;
-            let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
-
-            let f_unique_to_query = match_size as f64 / orig_query.size() as f64;
-            let f_orig_query = intersect_orig as f64 / orig_query.size() as f64;
-            let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
-
-            let filename = match_sig.filename();
-            // weight common by query abundances
-            (common_abunds, total_common_weighted) = query.weighted_intersect_size(match_mh, abunds_from=orig_query);
-            let total_orig_query_abund = orig_query.abunds().iter().sum::<u64>();
-            //Calculate abund-related metrics
-            let f_unique_weighted = total_common_weighted as f64 / total_orig_query_abund as f64;
-            // mean, median, std of abundances
-            let average_abund: f64 = mean(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
-            let median_abund: f64 = median(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
-            let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
-
-            // remaining_bp is the number of base pairs in the query that are not in the match (or any prior match)
-            remaining_bp = remaining_bp - unique_intersect_bp;
-
-            let result = GatherResult::builder()
-                .intersect_bp(intersect_bp)
-                .f_orig_query(f_orig_query)
-                .f_match(f_match)
-                .f_unique_to_query(f_unique_to_query)
-                .f_unique_weighted(f_unique_weighted)
-                .average_abund(average_abund)
-                .median_abund(median_abund)
-                .std_abund(std_abund)
-                .filename(filename)
-                .name(name)
-                .md5(md5)
-                .match_(match_.into())
-                .f_match_orig(f_match_orig)
-                .unique_intersect_bp(unique_intersect_bp)
+            let result = FastGatherResult::builder()
+                .orig_query(orig_query)
+                .query(query)
+                .match_(match_sig.clone())
+                .remaining_hashes(remaining_hashes)
                 .gather_result_rank(gather_result_rank)
-                .remaining_bp(remaining_bp)
+                .total_orig_query_abund(total_orig_query_abund)
                 .build();
-            matches.push(result);
+
+            let gather_result = calculate_gather_stats(result);
+
+            // Calculate stats
+            matches.push(gatherresult);
 
             trace!("Preparing counter for next round");
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            //query.remove_many(match_mh.to_vec().as_slice())?;
+            query.remove_many(match_mh.to_vec().as_slice())?; // need this for abundance weighting. Can we get current mh from colors instead?
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.
