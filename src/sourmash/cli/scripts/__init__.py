@@ -21,16 +21,20 @@ import sourmash
 # by sourmash.plugins.add_cli_scripts.
 _extension_dict = {}
 
+
 def __getattr__(name):
     if name in _extension_dict:
         return _extension_dict[name]
     raise AttributeError(name)
 
+
 def subparser(subparsers):
-    subparser = subparsers.add_parser('scripts',
-                                      usage=argparse.SUPPRESS,
-                                      formatter_class=argparse.RawDescriptionHelpFormatter,
-                                      aliases=['ext'])
+    subparser = subparsers.add_parser(
+        "scripts",
+        usage=argparse.SUPPRESS,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        aliases=["ext"],
+    )
 
     # get individual help strings:
     descrs = list(sourmash.plugins.get_cli_scripts_descriptions())
@@ -39,10 +43,12 @@ def subparser(subparsers):
     else:
         description = "(No script plugins detected!)"
 
-    s = subparser.add_subparsers(title="available plugin/extension commands",
-                                 dest='subcmd',
-                                 metavar='subcmd',
-                                 help=argparse.SUPPRESS,
-                                 description=description)
+    s = subparser.add_subparsers(
+        title="available plugin/extension commands",
+        dest="subcmd",
+        metavar="subcmd",
+        help=argparse.SUPPRESS,
+        description=description,
+    )
 
     _extension_dict.update(sourmash.plugins.add_cli_scripts(s))

@@ -36,12 +36,18 @@ to upgrade!
 
 ----
 
+sourmash is a k-mer analysis multitool, and we aim to provide stable, robust programmatic and command-line APIs for a variety of sequence comparisons. Some of our special sauce includes:
+- `FracMinHash` sketching, which enables accurate comparisons (including ANI) between data sets of different sizes
+- `sourmash gather`, a combinatorial k-mer approach for more accurate metagenomic profiling
+
+Please see the [sourmash publications](https://sourmash.readthedocs.io/en/latest/publications.html#sourmash-fundamentals) for details.
+
 The name is a riff off of [Mash](https://github.com/marbl/Mash),
 combined with @ctb's love of whiskey.
 ([Sour mash](https://en.wikipedia.org/wiki/Sour_mash) is used in
 making whiskey.)
 
-Primary authors: [C. Titus Brown](mailto:titus@idyll.org) ([@ctb](http://github.com/ctb)) and [Luiz C. Irber, Jr](mailto:sourmash@luizirber.org) ([@luizirber](http://github.com/luizirber)).
+Maintainers: [C. Titus Brown](mailto:titus@idyll.org) ([@ctb](http://github.com/ctb)), [Luiz C. Irber, Jr](mailto:luiz@sourmash.bio) ([@luizirber](http://github.com/luizirber)), and [N. Tessa Pierce-Ward](mailto:tessa@sourmash.bio) ([@bluegenes](http://github.com/bluegenes)).
 
 sourmash was initially developed by the
 [Lab for Data-Intensive Biology](http://ivory.idyll.org/lab/) at the

@@ -45,7 +45,7 @@ class SourmashParser(ArgumentParser):
     _citation_printed = False
 
     def __init__(self, citation=True, **kwargs):
-        super(SourmashParser, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.citation = citation
 
     @classmethod
@@ -53,6 +53,7 @@ class SourmashParser(ArgumentParser):
         if cls._citation_printed:
             return
         from sourmash.logging import notify
+
         notify(f"\n== This is sourmash version {sourmash.VERSION}. ==")
         notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
         cls._citation_printed = True
@@ -70,53 +71,56 @@ class SourmashParser(ArgumentParser):
 
     def print_help(self):
         self.print_citation()
-        super(SourmashParser, self).print_help()
-
+        super().print_help()
 
     def parse_args(self, args=None, namespace=None):
-        if (args is None and len(sys.argv) == 1) or (args is not None and len(args) == 0):
+        if (args is None and len(sys.argv) == 1) or (
+            args is not None and len(args) == 0
+        ):
             self.print_help()
             raise SystemExit(1)
-        args = super(SourmashParser, self).parse_args(args=args, namespace=namespace)
-        if ('quiet' not in args or not args.quiet) and self.citation:
+        args = super().parse_args(args=args, namespace=namespace)
+        if ("quiet" not in args or not args.quiet) and self.citation:
             self.print_citation()
 
-        if 'subcmd' in args and args.subcmd is None:
+        if "subcmd" in args and args.subcmd is None:
             self._subparser_from_name(args.cmd).print_help()
             raise SystemExit(1)
 
         # BEGIN: dirty hacks to simultaneously support new and previous interface
-        if hasattr(args, 'subcmd') and args.subcmd == 'import':
-            args.subcmd = 'ingest'
+        if hasattr(args, "subcmd") and args.subcmd == "import":
+            args.subcmd = "ingest"
         # END: dirty hacks to simultaneously support new and previous interface
         return args
 
 
 def get_parser():
     module_descs = {
-        'tax': 'Integrate taxonomy information based on "gather" results',
-        'lca': 'Taxonomic operations',
-        'sketch': 'Create signatures',
-        'sig': 'Manipulate signature files',
-        'storage': 'Operations on storage',
-        'scripts': "Plug-ins",
+        "tax": 'Integrate taxonomy information based on "gather" results',
+        "lca": "Taxonomic operations",
+        "sketch": "Create signatures",
+        "sig": "Manipulate signature files",
+        "storage": "Operations on storage",
+        "scripts": "Plug-ins",
     }
     alias = {
         "sig": "signature",
         "ext": "scripts",
     }
-    expert = set(['categorize', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
+    expert = set(
+        ["categorize", "import_csv", "migrate", "multigather", "sbt_combine", "watch"]
+    )
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)
 
     # provide a list of the basic operations - not expert, not submodules.
     user_ops = [op for op in basic_ops if op not in expert and op not in module_descs]
-    usage = '    Basic operations\n'
+    usage = "    Basic operations\n"
     for op in user_ops:
         docstring = getattr(sys.modules[__name__], op).__doc__
-        helpstring = 'sourmash {op:s} --help'.format(op=op)
-        usage += '        {hs:25s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
+        helpstring = f"sourmash {op:s} --help"
+        usage += f"        {helpstring:25s} {docstring:s}\n"
     # next, all the subcommand ones - dive into subdirectories.
     cmd_group_dirs = next(os.walk(clidir))[1]
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
@@ -124,18 +128,33 @@ def get_parser():
 
     cmd_group_usage = [cmd for cmd in cmd_group_dirs if cmd not in alias.values()]
     for dirpath in cmd_group_usage:
-        usage += '\n    ' + module_descs[dirpath] + '\n'
-        usage += '        sourmash {gd:s} --help\n'.format(gd=dirpath)
+        usage += "\n    " + module_descs[dirpath] + "\n"
+        usage += f"        sourmash {dirpath:s} --help\n"
         if dirpath in alias:
-            usage += '        sourmash {gd:s} --help\n'.format(gd=alias[dirpath])
+            usage += f"        sourmash {alias[dirpath]:s} --help\n"
 
-    desc = 'Create, compare, and manipulate k-mer sketches of biological sequences.\n\nUsage instructions:\n' + usage
-    parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
-    parser._optionals.title = 'Options'
-    parser.add_argument('-v', '--version', action='version', version='sourmash '+ sourmash.VERSION)
-    parser.add_argument('-q', '--quiet', action='store_true', help='don\'t print citation information')
+    desc = (
+        "Create, compare, and manipulate k-mer sketches of biological sequences.\n\nUsage instructions:\n"
+        + usage
+    )
+    parser = SourmashParser(
+        prog="sourmash",
+        description=desc,
+        formatter_class=RawDescriptionHelpFormatter,
+        usage=SUPPRESS,
+    )
+    parser._optionals.title = "Options"
+    parser.add_argument(
+        "-v", "--version", action="version", version="sourmash " + sourmash.VERSION
+    )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="don't print citation information"
+    )
     sub = parser.add_subparsers(
-        title='Instructions', dest='cmd', metavar='cmd', help=SUPPRESS,
+        title="Instructions",
+        dest="cmd",
+        metavar="cmd",
+        help=SUPPRESS,
     )
     for op in basic_ops + cmd_group_dirs:
         getattr(sys.modules[__name__], op).subparser(sub)

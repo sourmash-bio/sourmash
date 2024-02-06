@@ -539,7 +539,7 @@ impl Signature {
     pub fn get_sketch(&self) -> Option<&Sketch> {
         if self.signatures.len() != 1 {
             if self.signatures.len() > 1 {
-                dbg!("Multiple sketches found! Please run select first.");
+                todo!("Multiple sketches found! Please run select first.");
             }
             return None;
         }
@@ -555,7 +555,7 @@ impl Signature {
     pub fn minhash(&self) -> Option<&KmerMinHash> {
         if self.signatures.len() != 1 {
             if self.signatures.len() > 1 {
-                dbg!("Multiple sketches found! Please run select first.");
+                todo!("Multiple sketches found! Please run select first.");
             }
             return None;
         }
@@ -1079,7 +1079,8 @@ mod test {
     }
 
     #[test]
-    fn load_sketch_or_minhash_from_signature_fail() {
+    #[should_panic]
+    fn get_sketch_multisketch_panic() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1099,14 +1100,32 @@ mod test {
         // check there are now two sketches in new_sig
         assert_eq!(new_sig.signatures.len(), 2);
 
-        let sketch = new_sig.get_sketch();
-        // assert_eq!(sketch, None); --> can't use this, would need to derive PartialEq for Sketch
-        match sketch {
-            None => assert!(true),
-            _ => assert!(false),
-        }
-        let mh = new_sig.minhash();
-        assert_eq!(mh, None);
+        let _ = new_sig.get_sketch();
+    }
+
+    #[test]
+    #[should_panic]
+    fn load_minhash_multisketch_panic() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mut mhdirect = sig.minhash().unwrap().clone();
+        // change slightly and push into new_sig
+        mhdirect.add_sequence(b"ATGGA", false).unwrap();
+        let new_sketch = Sketch::MinHash(mhdirect.clone());
+        let mut new_sig = sig.clone();
+        new_sig.push(new_sketch);
+        // check there are now two sketches in new_sig
+        assert_eq!(new_sig.signatures.len(), 2);
+
+        let _ = new_sig.minhash();
     }
 
     #[test]

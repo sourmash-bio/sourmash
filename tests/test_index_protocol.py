@@ -8,27 +8,30 @@ import glob
 
 import sourmash
 from sourmash import SourmashSignature
-from sourmash.index import (LinearIndex, ZipFileLinearIndex,
-                            LazyLinearIndex, MultiIndex,
-                            StandaloneManifestIndex,
-                            IndexSearchResult)
+from sourmash.index import (
+    LinearIndex,
+    ZipFileLinearIndex,
+    LazyLinearIndex,
+    MultiIndex,
+    StandaloneManifestIndex,
+    IndexSearchResult,
+)
 from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
-from sourmash.minhash import (flatten_and_intersect_scaled,
-                              flatten_and_downsample_scaled)
+from sourmash.minhash import flatten_and_intersect_scaled, flatten_and_downsample_scaled
 
 import sourmash_tst_utils as utils
 
 
 def _load_three_sigs():
     # utility function - load & return these three sigs.
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
 
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
     ss47 = sourmash.load_one_signature(sig47)
@@ -55,7 +58,7 @@ def build_lazy_linear_index(runtmp):
 
 def build_sbt_index(runtmp):
     ss2, ss47, ss63 = _load_three_sigs()
-    
+
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=2)
 
@@ -68,7 +71,7 @@ def build_sbt_index(runtmp):
 
 def build_sbt_index_save_load(runtmp):
     root = build_sbt_index(runtmp)
-    out = runtmp.output('xyz.sbt.zip')
+    out = runtmp.output("xyz.sbt.zip")
     root.save(out)
 
     return sourmash.load_file_as_index(out)
@@ -77,7 +80,7 @@ def build_sbt_index_save_load(runtmp):
 def build_zipfile_index(runtmp):
     from sourmash.save_load import SaveSignatures_ZipFile
 
-    location = runtmp.output('index.zip')
+    location = runtmp.output("index.zip")
     with SaveSignatures_ZipFile(location) as save_sigs:
         for ss in _load_three_sigs():
             save_sigs.add(ss)
@@ -95,9 +98,9 @@ def build_multi_index(runtmp):
 
 
 def build_standalone_manifest_index(runtmp):
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
 
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
     ss47 = sourmash.load_one_signature(sig47)
@@ -106,10 +109,10 @@ def build_standalone_manifest_index(runtmp):
     siglist = [(ss2, sig2), (ss47, sig47), (ss63, sig63)]
 
     rows = []
-    rows.extend((CollectionManifest.make_manifest_row(ss, loc) for ss, loc in siglist ))
+    rows.extend((CollectionManifest.make_manifest_row(ss, loc) for ss, loc in siglist))
     mf = CollectionManifest(rows)
     mf_filename = runtmp.output("mf.csv")
-    
+
     mf.write_to_filename(mf_filename)
 
     idx = StandaloneManifestIndex.load(mf_filename)
@@ -118,7 +121,7 @@ def build_standalone_manifest_index(runtmp):
 
 def build_lca_index(runtmp):
     siglist = _load_three_sigs()
-    db = LCA_Database(31, 1000, 'DNA')
+    db = LCA_Database(31, 1000, "DNA")
     for ss in siglist:
         db.insert(ss)
 
@@ -127,14 +130,14 @@ def build_lca_index(runtmp):
 
 def build_lca_index_save_load(runtmp):
     db = build_lca_index(runtmp)
-    outfile = runtmp.output('db.lca.json')
+    outfile = runtmp.output("db.lca.json")
     db.save(outfile)
 
     return sourmash.load_file_as_index(outfile)
 
 
 def build_sqlite_index(runtmp):
-    filename = runtmp.output('idx.sqldb')
+    filename = runtmp.output("idx.sqldb")
     db = SqliteIndex.create(filename)
 
     siglist = _load_three_sigs()
@@ -157,8 +160,8 @@ def build_revindex(runtmp):
 
 def build_lca_index_save_load_sql(runtmp):
     db = build_lca_index(runtmp)
-    outfile = runtmp.output('db.lca.json')
-    db.save(outfile, format='sql')
+    outfile = runtmp.output("db.lca.json")
+    db.save(outfile, format="sql")
 
     x = load_single_database(outfile)
     db_load = x[0]
@@ -171,19 +174,22 @@ def build_lca_index_save_load_sql(runtmp):
 # building functions.
 #
 
-@pytest.fixture(params=[build_linear_index,
-                        build_lazy_linear_index,
-                        build_sbt_index,
-                        build_zipfile_index,
-                        build_multi_index,
-                        build_standalone_manifest_index,
-                        build_lca_index,
-                        build_sbt_index_save_load,
-                        build_lca_index_save_load,
-                        build_sqlite_index,
-                        build_lca_index_save_load_sql,
-#                        build_revindex,
-                        ]
+
+@pytest.fixture(
+    params=[
+        build_linear_index,
+        build_lazy_linear_index,
+        build_sbt_index,
+        build_zipfile_index,
+        build_multi_index,
+        build_standalone_manifest_index,
+        build_lca_index,
+        build_sbt_index_save_load,
+        build_lca_index_save_load,
+        build_sqlite_index,
+        build_lca_index_save_load_sql,
+        #                        build_revindex,
+    ]
 )
 def index_obj(request, runtmp):
     build_fn = request.param
@@ -271,7 +277,7 @@ def test_index_signatures(index_obj):
     assert len(siglist) == 3
 
     # check md5sums, since 'in' doesn't always work
-    md5s = set(( ss.md5sum() for ss in siglist ))
+    md5s = set(ss.md5sum() for ss in siglist)
     assert ss2.md5sum() in md5s
     assert ss47.md5sum() in md5s
     assert ss63.md5sum() in md5s
@@ -285,7 +291,7 @@ def test_index_signatures_with_location(index_obj):
     assert len(siglist) == 3
 
     # check md5sums, since 'in' doesn't always work
-    md5s = set(( ss.md5sum() for ss, loc in siglist ))
+    md5s = set((ss.md5sum() for ss, loc in siglist))
     assert ss2.md5sum() in md5s
     assert ss47.md5sum() in md5s
     assert ss63.md5sum() in md5s
@@ -315,15 +321,22 @@ def test_index_manifest(index_obj):
 
 def test_index_select_basic(index_obj):
     # select does the basic thing ok
-    idx = index_obj.select(ksize=31, moltype='DNA', abund=False,
-                           containment=True, scaled=1000, num=0, picklist=None)
+    idx = index_obj.select(
+        ksize=31,
+        moltype="DNA",
+        abund=False,
+        containment=True,
+        scaled=1000,
+        num=0,
+        picklist=None,
+    )
 
     assert len(idx) == 3
     siglist = list(idx.signatures())
     assert len(siglist) == 3
 
     # check md5sums, since 'in' doesn't always work
-    md5s = set(( ss.md5sum() for ss in siglist ))
+    md5s = set(ss.md5sum() for ss in siglist)
     ss2, ss47, ss63 = _load_three_sigs()
     assert ss2.md5sum() in md5s
     assert ss47.md5sum() in md5s
@@ -477,6 +490,7 @@ class CounterGather_LinearIndex:
     Provides an (inefficient) CounterGather-style class, for
     protocol testing purposes.
     """
+
     def __init__(self, orig_query):
         "Constructor - take a SourmashSignature that is the original query."
         orig_query_mh = orig_query.minhash
@@ -564,6 +578,7 @@ class CounterGather_LCA:
     based on LCA_Database. This is currently just for protocol
     and API testing purposes.
     """
+
     def __init__(self, query):
         from sourmash.lca.lca_db import LCA_Database
 
@@ -572,8 +587,7 @@ class CounterGather_LCA:
             raise ValueError("must use scaled MinHash")
 
         self.orig_query_mh = query_mh
-        lca_db = LCA_Database(query_mh.ksize, query_mh.scaled,
-                              query_mh.moltype)
+        lca_db = LCA_Database(query_mh.ksize, query_mh.scaled, query_mh.moltype)
         self.db = lca_db
         self.siglist = {}
         self.locations = {}
@@ -598,8 +612,7 @@ class CounterGather_LCA:
 
     def signatures(self):
         "Yield all signatures."
-        for ss in self.siglist.values():
-            yield ss
+        yield from self.siglist.values()
 
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
@@ -635,8 +648,7 @@ class CounterGather_LCA:
         cont = result.score
         match = result.signature
 
-        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash,
-                                                    query_mh)
+        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash, query_mh)
 
         md5 = result.signature.md5sum()
         location = self.locations[md5]
@@ -648,10 +660,12 @@ class CounterGather_LCA:
         self.query_started = 1
 
 
-@pytest.fixture(params=[CounterGather,
-                        CounterGather_LinearIndex,
-                        CounterGather_LCA,
-                        ]
+@pytest.fixture(
+    params=[
+        CounterGather,
+        CounterGather_LinearIndex,
+        CounterGather_LCA,
+    ]
 )
 def counter_gather_constructor(request):
     build_fn = request.param
@@ -664,19 +678,19 @@ def test_counter_get_signatures(counter_gather_constructor):
     # test .signatures() method
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
     match_mh_2.add_many(range(10, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear()
     match_mh_3.add_many(range(15, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     counter = counter_gather_constructor(query_ss)
     counter.add(match_ss_1)
@@ -720,19 +734,19 @@ def test_counter_gather_1(counter_gather_constructor):
     # generated via CounterGather
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
     match_mh_2.add_many(range(10, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear()
     match_mh_3.add_many(range(15, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -742,9 +756,11 @@ def test_counter_gather_1(counter_gather_constructor):
 
     results = _consume_all(query_ss.minhash, counter)
 
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
+    expected = (
+        ["match1", 10],
+        ["match2", 5],
+        ["match3", 2],
+    )
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -762,19 +778,19 @@ def test_counter_gather_1_b(counter_gather_constructor):
     # larger.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
     match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear()
     match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -784,9 +800,11 @@ def test_counter_gather_1_b(counter_gather_constructor):
 
     results = _consume_all(query_ss.minhash, counter)
 
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
+    expected = (
+        ["match1", 10],
+        ["match2", 5],
+        ["match3", 2],
+    )
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -806,19 +824,19 @@ def test_counter_gather_1_c_with_threshold(counter_gather_constructor):
 
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
     match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear()
     match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -826,11 +844,9 @@ def test_counter_gather_1_c_with_threshold(counter_gather_constructor):
     counter.add(match_ss_2)
     counter.add(match_ss_3)
 
-    results = _consume_all(query_ss.minhash, counter,
-                           threshold_bp=3)
+    results = _consume_all(query_ss.minhash, counter, threshold_bp=3)
 
-    expected = (['match1', 10],
-                ['match2', 5])
+    expected = (["match1", 10], ["match2", 5])
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -844,19 +860,19 @@ def test_counter_gather_1_d_diff_scaled(counter_gather_constructor):
     # test as above, but with different scaled.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
     match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear().downsample(scaled=30)
     match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -866,9 +882,11 @@ def test_counter_gather_1_d_diff_scaled(counter_gather_constructor):
 
     results = _consume_all(query_ss.minhash, counter)
 
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
+    expected = (
+        ["match1", 10],
+        ["match2", 5],
+        ["match3", 2],
+    )
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -885,18 +903,18 @@ def test_counter_gather_1_d_diff_scaled_query(counter_gather_constructor):
 
     match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
     match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear().downsample(scaled=30)
     match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # downsample query now -
-    query_ss = SourmashSignature(query_mh.downsample(scaled=100), name='query')
+    query_ss = SourmashSignature(query_mh.downsample(scaled=100), name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -906,9 +924,11 @@ def test_counter_gather_1_d_diff_scaled_query(counter_gather_constructor):
 
     results = _consume_all(query_ss.minhash, counter)
 
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
+    expected = (
+        ["match1", 10],
+        ["match2", 5],
+        ["match3", 2],
+    )
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -922,19 +942,19 @@ def test_counter_gather_1_e_abund_query(counter_gather_constructor):
     # test as above, but abund query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear().flatten()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear().flatten()
     match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear().flatten()
     match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -945,9 +965,11 @@ def test_counter_gather_1_e_abund_query(counter_gather_constructor):
     # must flatten before peek!
     results = _consume_all(query_ss.minhash.flatten(), counter)
 
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
+    expected = (
+        ["match1", 10],
+        ["match2", 5],
+        ["match3", 2],
+    )
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -961,19 +983,19 @@ def test_counter_gather_1_f_abund_match(counter_gather_constructor):
     # test as above, but abund query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh.flatten(), name='query')
+    query_ss = SourmashSignature(query_mh.flatten(), name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
     match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+    match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     match_mh_3 = query_mh.copy_and_clear()
     match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+    match_ss_3 = SourmashSignature(match_mh_3, name="match3")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -984,9 +1006,11 @@ def test_counter_gather_1_f_abund_match(counter_gather_constructor):
     # must flatten before peek!
     results = _consume_all(query_ss.minhash.flatten(), counter)
 
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
+    expected = (
+        ["match1", 10],
+        ["match2", 5],
+        ["match3", 2],
+    )
     assert len(results) == len(expected), results
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -999,13 +1023,14 @@ def test_counter_gather_1_f_abund_match(counter_gather_constructor):
 def test_counter_gather_2(counter_gather_constructor):
     # check basic set of gather results on semi-real data,
     # generated via CounterGather
-    testdata_combined = utils.get_test_data('gather/combined.sig')
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_combined = utils.get_test_data("gather/combined.sig")
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_ss = sourmash.load_one_signature(testdata_combined, ksize=21)
-    subject_sigs = [ (sourmash.load_one_signature(t, ksize=21), t)
-                     for t in testdata_sigs ]
+    subject_sigs = [
+        (sourmash.load_one_signature(t, ksize=21), t) for t in testdata_sigs
+    ]
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -1014,18 +1039,20 @@ def test_counter_gather_2(counter_gather_constructor):
 
     results = _consume_all(query_ss.minhash, counter)
 
-    expected = (['NC_003198.1', 487],
-                ['NC_000853.1', 192],
-                ['NC_011978.1', 169],
-                ['NC_002163.1', 157],
-                ['NC_003197.2', 152],
-                ['NC_009486.1', 92],
-                ['NC_006905.1', 76],
-                ['NC_011080.1', 59],
-                ['NC_011274.1', 42],
-                ['NC_006511.1', 31],
-                ['NC_011294.1', 7],
-                ['NC_004631.1', 2])
+    expected = (
+        ["NC_003198.1", 487],
+        ["NC_000853.1", 192],
+        ["NC_011978.1", 169],
+        ["NC_002163.1", 157],
+        ["NC_003197.2", 152],
+        ["NC_009486.1", 92],
+        ["NC_006905.1", 76],
+        ["NC_011080.1", 59],
+        ["NC_011274.1", 42],
+        ["NC_006511.1", 31],
+        ["NC_011294.1", 7],
+        ["NC_004631.1", 2],
+    )
     assert len(results) == len(expected)
 
     for (sr, size), (exp_name, exp_size) in zip(results, expected):
@@ -1040,11 +1067,11 @@ def test_counter_gather_exact_match(counter_gather_constructor):
     # query == match
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter; provide a location override, too.
     counter = counter_gather_constructor(query_ss)
-    counter.add(query_ss, location='somewhere over the rainbow')
+    counter.add(query_ss, location="somewhere over the rainbow")
 
     results = _consume_all(query_ss.minhash, counter)
     assert len(results) == 1
@@ -1052,14 +1079,14 @@ def test_counter_gather_exact_match(counter_gather_constructor):
 
     assert sr.score == 1.0
     assert sr.signature == query_ss
-    assert sr.location == 'somewhere over the rainbow'
+    assert sr.location == "somewhere over the rainbow"
 
 
 def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
     # test multiple identical matches being inserted, with only one return
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # create counter...
     counter = counter_gather_constructor(query_ss)
@@ -1068,7 +1095,7 @@ def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
     match_mh = query_mh.copy_and_clear()
     match_mh.add_many(range(5, 15))
 
-    for name in 'match1', 'match2', 'match3':
+    for name in "match1", "match2", "match3":
         match_ss = SourmashSignature(match_mh, name=name)
         counter.add(match_ss, location=name)
 
@@ -1080,18 +1107,18 @@ def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
     assert overlap_count == 10
 
     # any one of the three is valid
-    assert sr.location in ('match1', 'match2', 'match3')
+    assert sr.location in ("match1", "match2", "match3")
 
 
 def test_counter_gather_add_after_peek(counter_gather_constructor):
     # cannot add after peek or consume
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
-    counter.add(query_ss, location='somewhere over the rainbow')
+    counter.add(query_ss, location="somewhere over the rainbow")
 
     counter.peek(query_ss.minhash)
 
@@ -1103,11 +1130,11 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
     # cannot add after peek or consume
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
-    counter.add(query_ss, location='somewhere over the rainbow')
+    counter.add(query_ss, location="somewhere over the rainbow")
 
     counter.consume(query_ss.minhash)
 
@@ -1119,11 +1146,11 @@ def test_counter_gather_consume_empty_intersect(counter_gather_constructor):
     # check that consume works fine when there is an empty signature.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
-    counter.add(query_ss, location='somewhere over the rainbow')
+    counter.add(query_ss, location="somewhere over the rainbow")
 
     # nothing really happens here :laugh:, just making sure there's no error
     counter.consume(query_ss.minhash.copy_and_clear())
@@ -1132,11 +1159,11 @@ def test_counter_gather_consume_empty_intersect(counter_gather_constructor):
 def test_counter_gather_empty_initial_query(counter_gather_constructor):
     # check empty initial query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -1149,7 +1176,7 @@ def test_counter_gather_num_query(counter_gather_constructor):
     # check num query
     query_mh = sourmash.MinHash(n=500, ksize=31)
     query_mh.add_many(range(0, 10))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     with pytest.raises(ValueError):
         counter_gather_constructor(query_ss)
@@ -1159,11 +1186,11 @@ def test_counter_gather_empty_cur_query(counter_gather_constructor):
     # test empty cur query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
-    counter.add(query_ss, location='somewhere over the rainbow')
+    counter.add(query_ss, location="somewhere over the rainbow")
 
     cur_query_mh = query_ss.minhash.copy_and_clear()
     results = _consume_all(cur_query_mh, counter)
@@ -1174,27 +1201,27 @@ def test_counter_gather_add_num_matchy(counter_gather_constructor):
     # test add num query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh = sourmash.MinHash(n=500, ksize=31)
     match_mh.add_many(range(0, 20))
-    match_ss = SourmashSignature(match_mh, name='query')
+    match_ss = SourmashSignature(match_mh, name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
     with pytest.raises(ValueError):
-        counter.add(match_ss, location='somewhere over the rainbow')
+        counter.add(match_ss, location="somewhere over the rainbow")
 
 
 def test_counter_gather_bad_cur_query(counter_gather_constructor):
     # test cur query that is not subset of original query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
-    counter.add(query_ss, location='somewhere over the rainbow')
+    counter.add(query_ss, location="somewhere over the rainbow")
 
     cur_query_mh = query_ss.minhash.copy_and_clear()
     cur_query_mh.add_many(range(20, 30))
@@ -1206,11 +1233,11 @@ def test_counter_gather_add_no_overlap(counter_gather_constructor):
     # check adding match with no overlap w/query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 10))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(10, 20))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
@@ -1224,18 +1251,18 @@ def test_counter_gather_big_threshold(counter_gather_constructor):
     # check 'peek' with a huge threshold
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
     match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+    match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
     counter.add(match_ss_1)
 
     # impossible threshold:
-    threshold_bp=30*query_ss.minhash.scaled
+    threshold_bp = 30 * query_ss.minhash.scaled
     results = counter.peek(query_ss.minhash, threshold_bp=threshold_bp)
     assert results == []
 
@@ -1243,7 +1270,7 @@ def test_counter_gather_big_threshold(counter_gather_constructor):
 def test_counter_gather_empty_counter(counter_gather_constructor):
     # check empty counter
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_ss = SourmashSignature(query_mh, name='query')
+    query_ss = SourmashSignature(query_mh, name="query")
 
     # empty counter!
     counter = counter_gather_constructor(query_ss)
