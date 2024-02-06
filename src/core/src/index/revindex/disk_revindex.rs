@@ -11,10 +11,10 @@ use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, prepare_query, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors,
-    RevIndexOps, DB, HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DB,
+    HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
 };
-use crate::index::{GatherResult, SigCounter};
+use crate::index::{calculate_gather_stats, FastGatherResult, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
@@ -297,10 +297,11 @@ impl RevIndexOps for RevIndex {
     ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
-        let mut query: KmerMinHashBTree = orig_query.clone().into();
-        let selection = selection.unwrap_or_else(|| self.collection.selection());
+        // let mut query: KmerMinHashBTree = orig_query.clone().into();
+        let mut query: KmerMinHash = orig_query.clone();
+        let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
-        let total_orig_query_abund = orig_query.abunds().iter().sum::<u64>();
+        // let total_orig_query_abund = orig_query.sum_abunds();
 
         while match_size > threshold && !counter.is_empty() {
             trace!("counter len: {}", counter.len());
@@ -311,25 +312,27 @@ impl RevIndexOps for RevIndex {
 
             // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
+            // todo - if we're getting it here already, pass into FastGatherResult?
+            let match_mh = match_sig.minhash().unwrap();
 
             // just calculate essentials for now
             let gather_result_rank = matches.len();
             remaining_hashes = remaining_hashes - match_size;
 
             let result = FastGatherResult::builder()
-                .orig_query(orig_query)
-                .query(query)
-                .match_(match_sig.clone())
+                .orig_query(orig_query.clone()) // this should be reference - what is best way?
+                .query(query.clone())
+                .match_(match_sig.clone()) // this could also be reference?
                 .match_size(match_size)
                 .remaining_hashes(remaining_hashes)
                 .gather_result_rank(gather_result_rank)
-                .total_orig_query_abund(total_orig_query_abund)
+                // .total_orig_query_abund(total_orig_query_abund)
                 .build();
 
-            let gather_result = calculate_gather_stats(result);
+            let gather_result = calculate_gather_stats(result)?;
 
             // Calculate stats
-            matches.push(gatherresult);
+            matches.push(gather_result);
 
             trace!("Preparing counter for next round");
             // Prepare counter for finding the next match by decrementing

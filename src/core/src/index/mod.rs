@@ -23,6 +23,7 @@ use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
+use crate::storage::SigStore;
 use crate::Result;
 
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
@@ -151,26 +152,25 @@ where
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
 pub struct FastGatherResult {
     #[serde(skip)]
-    orig_query: KmerMinHash, // can we make this a reference?
+    orig_query: KmerMinHash, // make static/ref?
 
     #[serde(skip)]
-    query: KmerMinHash, // can we make this a reference?
+    query: KmerMinHash,
 
     #[serde(skip)]
-    match_: Signature,
+    match_: SigStore, // sigstore ok? or signature?
 
     match_size: usize,
 
     remaining_hashes: usize,
 
     gather_result_rank: usize,
-
-    total_orig_query_abund: u64,
+    // total_orig_query_abund: u64,
 }
 
 impl FastGatherResult {
     pub fn get_match(&self) -> Signature {
-        self.match_.clone()
+        self.match_.clone().into()
     }
 }
 
@@ -188,15 +188,16 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     //bp remaining in subtracted query
     let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
 
-    // stats for this match vs current (subtracted) query
-    let f_match = fgres.match_size as f64 / match_mh.size() as f64;
-    let unique_intersect_bp = match_mh.scaled() as usize * fgres.match_size;
-    let f_unique_to_query = fgres.match_size as f64 / fgres.query.size() as f64;
-
+    // stats for this match vs original query
     let (intersect_orig, _) = match_mh.intersection_size(&fgres.orig_query).unwrap(); //?;
     let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
     let f_orig_query = intersect_orig as f64 / fgres.orig_query.size() as f64;
     let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
+
+    // stats for this match vs current (subtracted) query
+    let f_match = fgres.match_size as f64 / match_mh.size() as f64;
+    let unique_intersect_bp = match_mh.scaled() as usize * fgres.match_size;
+    let f_unique_to_query = fgres.match_size as f64 / fgres.query.size() as f64;
 
     // set up non-abundance weighted values
     let mut f_unique_weighted = f_unique_to_query;
@@ -204,7 +205,7 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     let mut median_abund = 1.0;
     let mut std_abund = 0.0;
 
-    // If abundance, calculate abund-related metrics
+    // If abundance, calculate abund-related metrics (vs current query)
     if fgres.query.track_abundance() {
         // need current downsampled query here to get f_unique_weighted
         let (abunds, matched_abund) = match match_mh.inflated_abundances(&fgres.query) {
@@ -225,7 +226,7 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
         // let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
     }
 
-    // do we want the f_weighted / abundance info for the original query as well? Would need to redo abund instersection above, then:
+    // do want the f_weighted / abundance info for the original query?
     // f_weighted = match_mh_total_abund as f64 / fgres.total_orig_query_abund as f64;
 
     let result = GatherResult::builder()
