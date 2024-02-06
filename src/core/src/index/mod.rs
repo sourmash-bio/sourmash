@@ -301,11 +301,11 @@ mod test_calculate_gather_stats {
         let fgres = FastGatherResult::builder()
             .orig_query(orig_query)
             .query(query)
-            .match_(match_sig)
+            .match_(match_sig.into())
             .match_size(2) // 2  -- only 2 hashes match, one was previously consumed
             .remaining_hashes(30) // arbitrary
             .gather_result_rank(5) // arbitrary
-            .total_orig_query_abund(20) // sum of orig_query abundances
+            // .total_orig_query_abund(20) // sum of orig_query abundances
             .build();
 
         let result = calculate_gather_stats(fgres).unwrap();
