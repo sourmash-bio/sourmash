@@ -224,7 +224,6 @@ sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
 Options:
 
 * `--output <filename>` -- save the output matrix to this file, as a numpy binary matrix.
-* `--csv <filename>` -- save the output matrix to this file in CSV format.
 * `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize <k>` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
@@ -233,6 +232,7 @@ Options:
 * `--ignore-abundance` -- ignore abundances in signatures.
 * `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 * `--csv <outfile.csv>` -- save the output matrix in CSV format.
+* `--labels-to <labels.csv>` -- create a CSV file (spreadsheet) that can be passed in to `sourmash plot` with `--labels-from` in order to customize the labels.
 
 **Note:** compare by default produces a symmetric similarity matrix
 that can be used for clustering in downstream tasks. With `--containment`,

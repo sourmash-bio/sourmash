@@ -71,12 +71,18 @@ def compare(args):
             notify(
                 f"\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}"
             )
-        siglist.extend(loaded)
 
-        # track ksizes/moltypes
+        # add to siglist; track ksizes/moltypes
+        s = None
         for s in loaded:
+            siglist.append((s, filename))
             ksizes.add(s.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(s))
+
+        if s is None:
+            notify(
+                f"\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}"
+            )
 
         # error out while loading if we have more than one ksize/moltype
         if len(ksizes) > 1 or len(moltypes) > 1:
@@ -105,7 +111,7 @@ def compare(args):
 
     # check to make sure they're potentially compatible - either using
     # scaled, or not.
-    scaled_sigs = [s.minhash.scaled for s in siglist]
+    scaled_sigs = [s.minhash.scaled for (s, _) in siglist]
     is_scaled = all(scaled_sigs)
     is_scaled_2 = any(scaled_sigs)
 
@@ -145,16 +151,20 @@ def compare(args):
 
     # notify about implicit --ignore-abundance:
     if is_containment or return_ani:
-        track_abundances = any(s.minhash.track_abundance for s in siglist)
+        track_abundances = any(s.minhash.track_abundance for s, _ in siglist)
         if track_abundances:
             notify(
                 "NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances."
             )
 
+    # CTB: note, up to this point, we could do everything with manifests
+    # w/o actually loading any signatures. I'm not sure the manifest
+    # API allows it tho.
+
     # if using scaled sketches or --scaled, downsample to common max scaled.
     printed_scaled_msg = False
     if is_scaled:
-        max_scaled = max(s.minhash.scaled for s in siglist)
+        max_scaled = max(s.minhash.scaled for s, _ in siglist)
         if args.scaled:
             args.scaled = int(args.scaled)
 
@@ -166,7 +176,7 @@ def compare(args):
                 notify(f"WARNING: continuing with scaled value of {max_scaled}.")
 
         new_siglist = []
-        for s in siglist:
+        for s, filename in siglist:
             if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
                 size_may_be_inaccurate = True
             if s.minhash.scaled != max_scaled:
@@ -177,9 +187,9 @@ def compare(args):
                     printed_scaled_msg = True
                 with s.update() as s:
                     s.minhash = s.minhash.downsample(scaled=max_scaled)
-                new_siglist.append(s)
+                new_siglist.append((s, filename))
             else:
-                new_siglist.append(s)
+                new_siglist.append((s, filename))
         siglist = new_siglist
     elif args.scaled is not None:
         error("ERROR: cannot specify --scaled with non-scaled signatures.")
@@ -196,16 +206,20 @@ def compare(args):
 
     # do all-by-all calculation
 
-    labeltext = [str(item) for item in siglist]
+    labeltext = [str(ss) for ss, _ in siglist]
+    sigsonly = [ss for ss, _ in siglist]
     if args.containment:
-        similarity = compare_serial_containment(siglist, return_ani=return_ani)
+        similarity = compare_serial_containment(sigsonly, return_ani=return_ani)
     elif args.max_containment:
-        similarity = compare_serial_max_containment(siglist, return_ani=return_ani)
+        similarity = compare_serial_max_containment(sigsonly, return_ani=return_ani)
     elif args.avg_containment:
-        similarity = compare_serial_avg_containment(siglist, return_ani=return_ani)
+        similarity = compare_serial_avg_containment(sigsonly, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(
-            siglist, args.ignore_abundance, n_jobs=args.processes, return_ani=return_ani
+            sigsonly,
+            args.ignore_abundance,
+            n_jobs=args.processes,
+            return_ani=return_ani,
         )
 
     # if distance matrix desired, switch to 1-similarity
@@ -215,7 +229,7 @@ def compare(args):
         matrix = similarity
 
     if len(siglist) < 30:
-        for i, ss in enumerate(siglist):
+        for i, (ss, filename) in enumerate(siglist):
             # for small matrices, pretty-print some output
             name_num = f"{i}-{str(ss)}"
             if len(name_num) > 20:
@@ -245,6 +259,25 @@ def compare(args):
         notify(f"saving comparison matrix to: {args.output}")
         with open(args.output, "wb") as fp:
             numpy.save(fp, matrix)
+
+    # output labels information via --labels-to?
+    if args.labels_to:
+        labeloutname = args.labels_to
+        notify(f"saving labels to: {labeloutname}")
+        with sourmash_args.FileOutputCSV(labeloutname) as fp:
+            w = csv.writer(fp)
+            w.writerow(
+                ["sort_order", "md5", "label", "name", "filename", "signature_file"]
+            )
+
+            for n, (ss, location) in enumerate(siglist):
+                md5 = ss.md5sum()
+                sigfile = location
+                label = str(ss)
+                name = ss.name
+                filename = ss.filename
+
+                w.writerow([str(n + 1), md5, label, name, filename, sigfile])
 
     # output CSV?
     if args.csv:
@@ -289,7 +322,10 @@ def plot(args):
     notify("...got {} x {} matrix.", *D.shape)
 
     # see sourmash#2790 for details :)
-    if args.labeltext or args.labels:
+    if args.labeltext or args.labels or args.labels_from:
+        if args.labeltext and args.labels_from:
+            notify("ERROR: cannot supply both --labeltext and --labels-from")
+            sys.exit(-1)
         display_labels = True
         args.labels = True  # override => labels always true
     elif args.labels is None and not args.indices:
@@ -303,13 +339,24 @@ def plot(args):
     else:
         display_labels = False
 
-    if args.labels:
+    if args.labels_from:
+        labelfilename = args.labels_from
+        notify(f"loading labels from CSV file '{labelfilename}'")
+
+        labeltext = []
+        with sourmash_args.FileInputCSV(labelfilename) as r:
+            for row in r:
+                order, label = row["sort_order"], row["label"]
+                labeltext.append((int(order), label))
+        labeltext.sort()
+        labeltext = [t[1] for t in labeltext]
+    elif args.labels:
         if args.labeltext:
             labelfilename = args.labeltext
         else:
             labelfilename = D_filename + ".labels.txt"
 
-        notify(f"loading labels from {labelfilename}")
+        notify(f"loading labels from text file '{labelfilename}'")
         with open(labelfilename) as f:
             labeltext = [x.strip() for x in f]
 
