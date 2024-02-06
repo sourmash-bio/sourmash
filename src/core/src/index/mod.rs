@@ -154,7 +154,12 @@ pub struct FastGatherResult {
     orig_query: KmerMinHash, // can we make this a reference?
 
     #[serde(skip)]
+    query: KmerMinHash, // can we make this a reference?
+
+    #[serde(skip)]
     match_: Signature,
+
+    match_size: usize,
 
     remaining_hashes: usize,
 
@@ -169,13 +174,7 @@ impl FastGatherResult {
     }
 }
 
-// let match_mh = fgres.match_.select(&selection).minhash();
-//how does the sig.sketches().swap_remove(0) in prepare_query compare with sig.minhash()?
-// do we need to do prepare_query here?
-// let match_mh = prepare_query(match_sig.into(), &selection)
-//     .expect("Couldn't find a compatible MinHash");
-
-pub fn calculate_gather_stats(fgres: FastGatherResult) -> GatherResult {
+pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     // Calculate stats
     let name = fgres.match_.name();
     let md5 = fgres.match_.md5sum();
@@ -183,33 +182,51 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> GatherResult {
         .match_
         .minhash()
         .expect("Couldn't find a compatible MinHash");
-    let match_size = match_mh.size();
-    let f_match = match_size as f64 / match_mh.size() as f64;
-    let unique_intersect_bp = match_mh.scaled() as usize * match_size;
+
+    // basics
+    let filename = fgres.match_.filename();
+    //bp remaining in subtracted query
+    let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
+
+    // stats for this match vs current (subtracted) query
+    let f_match = fgres.match_size as f64 / match_mh.size() as f64;
+    let unique_intersect_bp = match_mh.scaled() as usize * fgres.match_size;
+    let f_unique_to_query = fgres.match_size as f64 / fgres.query.size() as f64;
+
     let (intersect_orig, _) = match_mh.intersection_size(&fgres.orig_query).unwrap(); //?;
     let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
-
-    let f_unique_to_query = match_size as f64 / fgres.orig_query.size() as f64;
     let f_orig_query = intersect_orig as f64 / fgres.orig_query.size() as f64;
     let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
 
-    let filename = fgres.match_.filename();
+    // set up non-abundance weighted values
+    let mut f_unique_weighted = f_unique_to_query;
+    let mut average_abund = 1.0;
+    let mut median_abund = 1.0;
+    let mut std_abund = 0.0;
 
-    // remaining_bp is the number of base pairs in the query that are not in the match (or any prior match)
-    let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
+    // If abundance, calculate abund-related metrics
+    if fgres.query.track_abundance() {
+        // need current downsampled query here to get f_unique_weighted
+        let (abunds, matched_abund) = match match_mh.inflated_abundances(&fgres.query) {
+            Ok((abunds, matched_abund)) => (abunds, matched_abund),
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let match_mh_total_abund = match_mh.sum_abunds();
+        f_unique_weighted = match_mh_total_abund as f64 / matched_abund as f64;
 
-    // //Calculate abund-related metrics
-    let Ok((abunds, total_abund)) = match_mh.inflated_abundances(&fgres.orig_query) else { todo!()};
-    let f_unique_weighted = total_abund as f64 / fgres.total_orig_query_abund as f64;
-    let average_abund = abunds.iter().sum::<u64>() as f64 / total_abund as f64;
+        average_abund = matched_abund as f64 / abunds.len() as f64;
 
-    // todo
-    let median_abund = 0.0;
-    let std_abund = 0.0;
+        // todo
+        median_abund = 1.0;
+        std_abund = 0.0;
+        // let median_abund: f64 = median(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
+        // let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
+    }
 
-    // // mean, median, std of abundances
-    // let median_abund: f64 = median(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
-    // let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
+    // do we want the f_weighted / abundance info for the original query as well? Would need to redo abund instersection above, then:
+    // f_weighted = match_mh_total_abund as f64 / fgres.total_orig_query_abund as f64;
 
     let result = GatherResult::builder()
         .intersect_bp(intersect_bp)
@@ -229,5 +246,89 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> GatherResult {
         .gather_result_rank(fgres.gather_result_rank)
         .remaining_bp(remaining_bp)
         .build();
-    result
+    Ok(result)
+}
+
+#[cfg(test)]
+mod test_calculate_gather_stats {
+    use super::*;
+    use crate::cmd::ComputeParameters;
+    use crate::encodings::HashFunctions;
+    use crate::signature::Signature;
+    use crate::sketch::minhash::KmerMinHash;
+    use crate::sketch::Sketch;
+    // TODO: use f64::EPSILON when we bump MSRV
+    const EPSILON: f64 = 0.01;
+
+    #[test]
+    fn test_calculate_gather_stats() {
+        let scaled = 10;
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3])
+            .scaled(scaled)
+            .build();
+
+        let mut match_sig = Signature::from_params(&params);
+        // create two minhash
+        let mut match_mh = KmerMinHash::new(scaled, 3, HashFunctions::Murmur64Dna, 42, true, 0);
+        match_mh.add_hash(1);
+        match_mh.add_hash(2);
+        match_mh.add_hash(3);
+        match_mh.add_hash(5);
+
+        match_sig.reset_sketches();
+        match_sig.push(Sketch::MinHash(match_mh));
+        match_sig.set_filename("match-filename");
+        match_sig.set_name("match-name");
+
+        eprintln!("num_sketches: {:?}", match_sig.size());
+        eprintln!("match_md5: {:?}", match_sig.md5sum());
+
+        // Setup orig_query minhash with abundances and non-matching hash
+        let mut orig_query = KmerMinHash::new(scaled, 3, HashFunctions::Murmur64Dna, 42, true, 0);
+        orig_query.add_hash_with_abundance(1, 1);
+        orig_query.add_hash_with_abundance(2, 3);
+        orig_query.add_hash_with_abundance(4, 6); // Non-matching hash
+        orig_query.add_hash_with_abundance(5, 9);
+        orig_query.add_hash_with_abundance(6, 1);
+
+        let mut query = orig_query.clone();
+        let rm_hashes = vec![1];
+        query.remove_many(rm_hashes.as_slice()).unwrap(); // remove hash 1
+
+        // build FastGatherResult
+        let fgres = FastGatherResult::builder()
+            .orig_query(orig_query)
+            .query(query)
+            .match_(match_sig)
+            .match_size(2) // 2  -- only 2 hashes match, one was previously consumed
+            .remaining_hashes(30) // arbitrary
+            .gather_result_rank(5) // arbitrary
+            .total_orig_query_abund(20) // sum of orig_query abundances
+            .build();
+
+        let result = calculate_gather_stats(fgres).unwrap();
+        // first, print all results
+        eprintln!("result: {:?}", result);
+        assert_eq!(result.filename(), "match-filename");
+        assert_eq!(result.name(), "match-name");
+        assert_eq!(result.md5(), "d70f195edbc052d647a288e3d46b3b2e");
+        assert_eq!(result.gather_result_rank, 5);
+        assert_eq!(result.remaining_bp, 300);
+
+        // results from match vs subtracted query
+        assert_eq!(result.f_match, 0.5);
+        assert_eq!(result.unique_intersect_bp, 20);
+        assert_eq!(result.f_unique_to_query, 0.5);
+        assert!((result.f_unique_weighted - 0.333).abs() < EPSILON);
+        assert_eq!(result.average_abund, 6);
+        // todo: implement median and std
+        assert_eq!(result.median_abund, 1);
+        assert_eq!(result.std_abund, 0);
+
+        // results from match vs orig_query
+        assert_eq!(result.intersect_bp, 30);
+        assert_eq!(result.f_orig_query, 0.6);
+        assert_eq!(result.f_match_orig, 0.75);
+    }
 }

@@ -740,6 +740,13 @@ impl KmerMinHash {
         Ok(new_mh)
     }
 
+    pub fn sum_abunds(&self) -> u64 {
+        if let Some(abunds) = &self.abunds {
+            abunds.iter().sum()
+        } else {
+            self.size() as u64
+        }
+    }
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             self.mins
@@ -1598,6 +1605,14 @@ impl KmerMinHashBTree {
                 .cloned()
                 .zip(std::iter::repeat(1))
                 .collect()
+        }
+    }
+
+    pub fn sum_abunds(&self) -> u64 {
+        if let Some(abunds) = &self.abunds {
+            abunds.values().sum()
+        } else {
+            self.size() as u64
         }
     }
 }
