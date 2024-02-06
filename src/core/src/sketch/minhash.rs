@@ -793,7 +793,7 @@ impl KmerMinHash {
 
         let (mins, abunds): (Vec<u64>, Vec<u64>) = self_iter
             .merge_join_by(abunds_from_iter, |&self_val, &(other_val, _)| {
-                self_val.cmp(&other_val)
+                self_val.cmp(other_val)
             })
             .filter_map(|either| match either {
                 itertools::EitherOrBoth::Both(self_val, (_other_val, &other_abund)) => {
@@ -823,7 +823,7 @@ impl KmerMinHash {
 
         let (abundances, total_abundance): (Vec<u64>, u64) = self_iter
             .merge_join_by(abunds_from_iter, |&self_val, &(other_val, _)| {
-                self_val.cmp(&other_val)
+                self_val.cmp(other_val)
             })
             .filter_map(|either| match either {
                 itertools::EitherOrBoth::Both(_self_val, (_other_val, other_abund)) => {
