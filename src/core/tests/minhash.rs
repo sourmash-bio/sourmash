@@ -789,3 +789,25 @@ fn seq_to_hashes_2(seq in "QRMTHINK") {
 }
 
 }
+
+#[test]
+fn test_inflate() {
+    // Setup minhash_a with some mins but no abundances
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Hp, 42, true, 0);
+    a.add_hash(10);
+    a.add_hash(20);
+    a.add_hash(30);
+
+    // Setup minhash_b with mins, some of which match a, and with abundances
+    let mut b = KmerMinHash::new(5, 3, HashFunctions::Murmur64Hp, 42, true, 0);
+    b.add_hash_with_abundance(10, 2);
+    b.add_hash_with_abundance(20, 4);
+    b.add_hash_with_abundance(40, 6); // Non-matching hash
+
+    // Attempt to inflate minhash_a using minhash_b's abundances
+    assert!(a.inflate(&b).is_ok());
+
+    a.inflate(&b).unwrap();
+    eprintln!("{:?}", a.to_vec_abunds());
+    assert_eq!(a.to_vec_abunds(), vec![(10, 2), (20, 4)]);
+}
