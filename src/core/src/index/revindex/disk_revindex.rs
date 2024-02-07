@@ -299,6 +299,7 @@ impl RevIndexOps for RevIndex {
         let mut matches = vec![];
         // let mut query: KmerMinHashBTree = orig_query.clone().into();
         let mut query: KmerMinHash = orig_query.clone();
+        // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
         // let total_orig_query_abund = orig_query.sum_abunds();

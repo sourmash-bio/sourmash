@@ -26,6 +26,7 @@ use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
 use crate::Result;
 
+// Todo: evaluate get vs get_copy for added fields
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
     #[getset(get_copy = "pub")]
@@ -205,7 +206,10 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
 
     // stats for this match vs original query
-    let (intersect_orig, _) = match_mh.intersection_size(&fgres.orig_query).unwrap(); //?;
+    // downsample here?? this seems like unnecesary work for each round -- how to get around?
+    let orig_query_ds = &fgres.orig_query.downsample_scaled(match_mh.scaled())?;
+
+    let (intersect_orig, _) = match_mh.intersection_size(&orig_query_ds).unwrap(); //?;
     let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
     let f_orig_query = intersect_orig as f64 / fgres.orig_query.size() as f64;
     let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
