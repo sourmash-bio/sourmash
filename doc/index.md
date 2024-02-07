@@ -58,7 +58,7 @@ sourmash is inspired by [mash](https://mash.readthedocs.io), and
 supports most mash analyses. sourmash also implements an expanded set
 of functionality for metagenome and taxonomic analysis.
 
-While sourmash is currently single-threaded, the [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater) provides faster and lower-memory implementations of several important sourmash features - sketching, searching, and gather (metagenome decomposition). It does so by implementing higher-level functions in Rust on top of the core Rust library of sourmash. As a result it provides some of the same functionality as sourmash, but 10-100x faster and in 10x lower memory. Note that this code is functional and tested, but does not have all of the features of sourmash. Code and features will be integrated back into sourmash as they mature.
+While sourmash is currently single-threaded, the [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater) provides faster and lower-memory multithreaded implementations of several important sourmash features - sketching, searching, and gather (metagenome decomposition). It does so by implementing higher-level functions in Rust on top of the core Rust library of sourmash. As a result it provides some of the same functionality as sourmash, but 10-100x faster and in 10x lower memory. Note that this code is functional and tested, but does not have all of the features of sourmash. Code and features will be integrated back into sourmash as they mature.
 
 sourmash development was initiated with a grant from the Moore
 Foundation under the Data Driven Discovery program, and has been
