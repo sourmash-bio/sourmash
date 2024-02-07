@@ -26,6 +26,7 @@ use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
 use crate::Result;
 
+// temporarily make all fields public so can use directly in branchwater
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
     #[getset(get_copy = "pub")]
@@ -59,6 +60,14 @@ pub struct GatherResult {
     unique_intersect_bp: usize,
     gather_result_rank: usize,
     remaining_bp: usize,
+
+    // add query info needed for tax summarization downstream
+    query_filename: String,
+    query_name: String,
+    query_md5: String,
+    query_bp: usize,
+    scaled: usize,
+    ksize: usize,
 }
 
 impl GatherResult {
@@ -153,6 +162,9 @@ where
 pub struct FastGatherResult {
     #[serde(skip)]
     orig_query: KmerMinHash, // make static/ref?
+    query_filename: String,
+    query_name: String,
+    orig_query_bp: usize,
 
     #[serde(skip)]
     query: KmerMinHash,
@@ -246,6 +258,12 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
         .unique_intersect_bp(unique_intersect_bp)
         .gather_result_rank(fgres.gather_result_rank)
         .remaining_bp(remaining_bp)
+        .query_filename(fgres.query_filename)
+        .query_name(fgres.query_name)
+        .query_md5(fgres.orig_query.md5sum())
+        .query_bp(fgres.orig_query_bp)
+        .scaled(fgres.orig_query.scaled() as usize)
+        .ksize(fgres.orig_query.ksize())
         .build();
     Ok(result)
 }
@@ -264,6 +282,7 @@ mod test_calculate_gather_stats {
     #[test]
     fn test_calculate_gather_stats() {
         let scaled = 10;
+        let ksize = 3;
         let params = ComputeParameters::builder()
             .ksizes(vec![3])
             .scaled(scaled)
@@ -271,7 +290,7 @@ mod test_calculate_gather_stats {
 
         let mut match_sig = Signature::from_params(&params);
         // create two minhash
-        let mut match_mh = KmerMinHash::new(scaled, 3, HashFunctions::Murmur64Dna, 42, true, 0);
+        let mut match_mh = KmerMinHash::new(scaled, ksize, HashFunctions::Murmur64Dna, 42, true, 0);
         match_mh.add_hash(1);
         match_mh.add_hash(2);
         match_mh.add_hash(3);
@@ -286,7 +305,8 @@ mod test_calculate_gather_stats {
         eprintln!("match_md5: {:?}", match_sig.md5sum());
 
         // Setup orig_query minhash with abundances and non-matching hash
-        let mut orig_query = KmerMinHash::new(scaled, 3, HashFunctions::Murmur64Dna, 42, true, 0);
+        let mut orig_query =
+            KmerMinHash::new(scaled, ksize, HashFunctions::Murmur64Dna, 42, true, 0);
         orig_query.add_hash_with_abundance(1, 1);
         orig_query.add_hash_with_abundance(2, 3);
         orig_query.add_hash_with_abundance(4, 6); // Non-matching hash
@@ -305,6 +325,9 @@ mod test_calculate_gather_stats {
             .match_size(2) // 2  -- only 2 hashes match, one was previously consumed
             .remaining_hashes(30) // arbitrary
             .gather_result_rank(5) // arbitrary
+            .query_filename("query-filename".to_string())
+            .query_name("query-name".to_string())
+            .orig_query_bp(50)
             // .total_orig_query_abund(20) // sum of orig_query abundances
             .build();
 
@@ -331,5 +354,13 @@ mod test_calculate_gather_stats {
         assert_eq!(result.intersect_bp, 30);
         assert_eq!(result.f_orig_query, 0.6);
         assert_eq!(result.f_match_orig, 0.75);
+
+        // check query info
+        assert_eq!(result.query_filename, "query-filename");
+        assert_eq!(result.query_name, "query-name");
+        assert_eq!(result.query_md5, "d9c0ce8ad3995b2d30f9ec1e9537b82f");
+        assert_eq!(result.query_bp, 50);
+        assert_eq!(result.scaled, 10);
+        assert_eq!(result.ksize, 3);
     }
 }

@@ -299,6 +299,9 @@ impl RevIndexOps for RevIndex {
         let mut matches = vec![];
         // let mut query: KmerMinHashBTree = orig_query.clone().into();
         let mut query: KmerMinHash = orig_query.clone();
+        let query_filename = orig_query.filename();
+        let query_name = orig_query.name();
+        let orig_query_bp = orig_query.size() * orig_query.scaled as usize;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
         // let total_orig_query_abund = orig_query.sum_abunds();
@@ -321,6 +324,9 @@ impl RevIndexOps for RevIndex {
 
             let result = FastGatherResult::builder()
                 .orig_query(orig_query.clone()) // this should be reference - what is best way?
+                .query_filename(query_filename.clone())
+                .query_name(query_name.clone())
+                .orig_query_bp(orig_query_bp)
                 .query(query.clone())
                 .match_(match_sig.clone()) // this could also be reference?
                 .match_size(match_size)

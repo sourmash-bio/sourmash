@@ -192,6 +192,14 @@ impl LinearIndex {
         let f_match_orig = 0.;
         let remaining_bp = 0;
 
+        // just for compatibility. Ultimately: revisit how to get/handle query info so we're not recalculating each round
+        let query_filename: String = "query-filename".into();
+        let query_name: String = "query-name".into();
+        let query_md5 = query.md5sum();
+        let query_bp = query.size() * query.scaled() as usize;
+        let scaled = query.scaled() as usize;
+        let ksize = query.ksize();
+
         Ok(GatherResult {
             intersect_bp,
             f_orig_query,
@@ -209,6 +217,13 @@ impl LinearIndex {
             unique_intersect_bp,
             gather_result_rank,
             remaining_bp,
+            // add query info
+            query_filename,
+            query_name,
+            query_md5,
+            query_bp,
+            scaled,
+            ksize,
         })
     }
 
