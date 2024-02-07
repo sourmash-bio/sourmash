@@ -37,10 +37,19 @@ pub struct GatherResult {
     #[getset(get_copy = "pub")]
     f_match: f64,
 
+    #[getset(get_copy = "pub")]
     f_unique_to_query: f64,
+
+    #[getset(get_copy = "pub")]
     f_unique_weighted: f64,
+
+    #[getset(get_copy = "pub")]
     average_abund: usize,
+
+    #[getset(get_copy = "pub")]
     median_abund: usize,
+
+    #[getset(get_copy = "pub")]
     std_abund: usize,
 
     #[getset(get = "pub")]
@@ -55,9 +64,16 @@ pub struct GatherResult {
     #[serde(skip)]
     match_: Signature,
 
+    #[getset(get_copy = "pub")]
     f_match_orig: f64,
+
+    #[getset(get_copy = "pub")]
     unique_intersect_bp: usize,
+
+    #[getset(get_copy = "pub")]
     gather_result_rank: usize,
+
+    #[getset(get_copy = "pub")]
     remaining_bp: usize,
 }
 
