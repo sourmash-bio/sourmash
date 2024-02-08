@@ -302,6 +302,7 @@ impl RevIndexOps for RevIndex {
         // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
+        let mut orig_query_ds = orig_query.clone();
         // let total_orig_query_abund = orig_query.sum_abunds();
 
         while match_size > threshold && !counter.is_empty() {
@@ -313,17 +314,22 @@ impl RevIndexOps for RevIndex {
 
             // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-            // todo - if we're getting it here already, pass into FastGatherResult?
+
+            // get downsampled minhashes for comparison. Better way to handle this???
             let match_mh = match_sig.minhash().unwrap();
+            query = query.downsample_scaled(match_mh.scaled())?;
+            orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
 
             // just calculate essentials for now
             let gather_result_rank = matches.len();
             remaining_hashes = remaining_hashes - match_size;
 
             let result = FastGatherResult::builder()
-                .orig_query(orig_query.clone()) // this should be reference - what is best way?
+                // .selection(selection.clone())
+                .orig_query(orig_query_ds.clone()) // this should be reference - what is best way?
                 .query(query.clone())
-                .match_(match_sig.clone()) // this could also be reference?
+                .match_(match_sig.clone())
+                .match_mh(match_mh.clone())
                 .match_size(match_size)
                 .remaining_hashes(remaining_hashes)
                 .gather_result_rank(gather_result_rank)

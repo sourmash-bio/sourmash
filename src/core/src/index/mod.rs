@@ -21,6 +21,7 @@ use typed_builder::TypedBuilder;
 use crate::encodings::Idx;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
+use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
@@ -168,6 +169,8 @@ where
 
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
 pub struct FastGatherResult {
+    // #[serde(skip)]
+    // selection: Selection,
     #[serde(skip)]
     orig_query: KmerMinHash, // make static/ref?
 
@@ -176,6 +179,9 @@ pub struct FastGatherResult {
 
     #[serde(skip)]
     match_: SigStore, // sigstore ok? or signature?
+
+    #[serde(skip)]
+    match_mh: KmerMinHash,
 
     match_size: usize,
 
@@ -195,28 +201,24 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     // Calculate stats
     let name = fgres.match_.name();
     let md5 = fgres.match_.md5sum();
-    let match_mh = fgres
-        .match_
-        .minhash()
-        .expect("Couldn't find a compatible MinHash");
 
     // basics
     let filename = fgres.match_.filename();
     //bp remaining in subtracted query
-    let remaining_bp = fgres.remaining_hashes * match_mh.scaled() as usize;
+    let remaining_bp = fgres.remaining_hashes * fgres.match_mh.scaled() as usize;
 
     // stats for this match vs original query
     // downsample here?? this seems like unnecesary work for each round -- how to get around?
-    let orig_query_ds = &fgres.orig_query.downsample_scaled(match_mh.scaled())?;
+    // let orig_query_ds = &fgres.orig_query.downsample_scaled(fgres.match_mh.scaled())?;
 
-    let (intersect_orig, _) = match_mh.intersection_size(&orig_query_ds).unwrap(); //?;
-    let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
+    let (intersect_orig, _) = fgres.match_mh.intersection_size(&fgres.orig_query).unwrap(); //?;
+    let intersect_bp = (fgres.match_mh.scaled() * intersect_orig) as usize;
     let f_orig_query = intersect_orig as f64 / fgres.orig_query.size() as f64;
-    let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
+    let f_match_orig = intersect_orig as f64 / fgres.match_mh.size() as f64;
 
     // stats for this match vs current (subtracted) query
-    let f_match = fgres.match_size as f64 / match_mh.size() as f64;
-    let unique_intersect_bp = match_mh.scaled() as usize * fgres.match_size;
+    let f_match = fgres.match_size as f64 / fgres.match_mh.size() as f64;
+    let unique_intersect_bp = fgres.match_mh.scaled() as usize * fgres.match_size;
     let f_unique_to_query = fgres.match_size as f64 / fgres.query.size() as f64;
 
     // set up non-abundance weighted values
@@ -228,13 +230,13 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     // If abundance, calculate abund-related metrics (vs current query)
     if fgres.query.track_abundance() {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, matched_abund) = match match_mh.inflated_abundances(&fgres.query) {
+        let (abunds, matched_abund) = match fgres.match_mh.inflated_abundances(&fgres.query) {
             Ok((abunds, matched_abund)) => (abunds, matched_abund),
             Err(e) => {
                 return Err(e);
             }
         };
-        let match_mh_total_abund = match_mh.sum_abunds();
+        let match_mh_total_abund = fgres.match_mh.sum_abunds();
         f_unique_weighted = match_mh_total_abund as f64 / matched_abund as f64;
 
         average_abund = matched_abund as f64 / abunds.len() as f64;
@@ -298,7 +300,7 @@ mod test_calculate_gather_stats {
         match_mh.add_hash(5);
 
         match_sig.reset_sketches();
-        match_sig.push(Sketch::MinHash(match_mh));
+        match_sig.push(Sketch::MinHash(match_mh.clone()));
         match_sig.set_filename("match-filename");
         match_sig.set_name("match-name");
 
@@ -322,6 +324,7 @@ mod test_calculate_gather_stats {
             .orig_query(orig_query)
             .query(query)
             .match_(match_sig.into())
+            .match_mh(match_mh.clone())
             .match_size(2) // 2  -- only 2 hashes match, one was previously consumed
             .remaining_hashes(30) // arbitrary
             .gather_result_rank(5) // arbitrary
