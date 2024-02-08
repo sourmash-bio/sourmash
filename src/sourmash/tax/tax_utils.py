@@ -1733,6 +1733,11 @@ class GatherRow:
     match_containment_ani_low: float = None
     match_containment_ani_high: float = None
 
+    def __post_init__(self):
+        if 'match_name' in self.__dict__ and self.__dict__['match_name'] is not None:
+            if self.name is None: # if name wasn't provided, use match_name
+                self.name = self.__dict__['match_name']
+            del self.__dict__['match_name'] # rm bc not needed 
 
 @dataclass
 class QueryInfo:
