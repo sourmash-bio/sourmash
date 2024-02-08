@@ -37,7 +37,7 @@ from sourmash.tax.tax_utils import (
     LineageDB,
     LineageDB_Sqlite,
     MultiLineageDB,
-    filter_row
+    filter_row,
 )
 
 

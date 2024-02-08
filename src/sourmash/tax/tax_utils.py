@@ -742,7 +742,9 @@ def load_gather_results(
         for n, row in enumerate(r):
             # try reading each gather row into a TaxResult
             try:
-                filt_row = filter_row(row, GatherRow) # filter row first to allow extra (unused) columns in csv
+                filt_row = filter_row(
+                    row, GatherRow
+                )  # filter row first to allow extra (unused) columns in csv
                 gatherRow = GatherRow(**filt_row)
             except TypeError as exc:
                 raise ValueError(
@@ -1685,9 +1687,10 @@ def filter_row(row, dataclass_type):
     """
     valid_keys = {field.name for field in fields(dataclass_type)}
     # 'match_name' and 'name' should be interchangeable (sourmash 4.x)
-    if 'match_name' in row.keys() and 'name' not in row.keys():
-        row['name'] = row.pop('match_name')
+    if "match_name" in row.keys() and "name" not in row.keys():
+        row["name"] = row.pop("match_name")
     return {k: v for k, v in row.items() if k in valid_keys}
+
 
 @dataclass
 class GatherRow:
