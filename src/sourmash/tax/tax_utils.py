@@ -1680,7 +1680,7 @@ def filter_row(row, dataclass_type):
     """
     Filter the row to only include keys that exist in the dataclass fields.
     This allows extra columns to be passed in with the gather csv while still
-    taking advantage of the type setting and checks that come with dataclass
+    taking advantage of the checks for required columns that come with dataclass
     initialization.
     """
     valid_keys = {field.name for field in fields(dataclass_type)}
