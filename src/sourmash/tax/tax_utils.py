@@ -6,7 +6,7 @@ import csv
 from collections import abc, defaultdict
 from itertools import zip_longest
 from typing import NamedTuple
-from dataclasses import dataclass, field, replace, asdict
+from dataclasses import dataclass, field, replace, asdict, fields
 import gzip
 
 from sourmash import sqlite_utils, sourmash_args
@@ -742,7 +742,8 @@ def load_gather_results(
         for n, row in enumerate(r):
             # try reading each gather row into a TaxResult
             try:
-                gatherRow = GatherRow(**row)
+                filt_row = filter_row(row, GatherRow) # filter row first to allow extra (unused) columns in csv
+                gatherRow = GatherRow(**filt_row)
             except TypeError as exc:
                 raise ValueError(
                     f"'{gather_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4."
@@ -1675,6 +1676,19 @@ class MultiLineageDB(abc.Mapping):
         return tax_assign
 
 
+def filter_row(row, dataclass_type):
+    """
+    Filter the row to only include keys that exist in the dataclass fields.
+    This allows extra columns to be passed in with the gather csv while still
+    taking advantage of the type setting and checks that come with dataclass
+    initialization.
+    """
+    valid_keys = {field.name for field in fields(dataclass_type)}
+    # 'match_name' and 'name' should be interchangeable (sourmash 4.x)
+    if 'match_name' in row.keys() and 'name' not in row.keys():
+        row['name'] = row.pop('match_name')
+    return {k: v for k, v in row.items() if k in valid_keys}
+
 @dataclass
 class GatherRow:
     """
@@ -1689,7 +1703,8 @@ class GatherRow:
 
     with sourmash_args.FileInputCSV(gather_csv) as r:
         for row in enumerate(r):
-            gatherRow = GatherRow(**row)
+            filt_row = filter_row(row, GatherRow) # filter first to allow extra columns
+            gatherRow = GatherRow(**filt_row)
     """
 
     # essential columns
@@ -1733,11 +1748,6 @@ class GatherRow:
     match_containment_ani_low: float = None
     match_containment_ani_high: float = None
 
-    def __post_init__(self):
-        if 'match_name' in self.__dict__ and self.__dict__['match_name'] is not None:
-            if self.name is None: # if name wasn't provided, use match_name
-                self.name = self.__dict__['match_name']
-            del self.__dict__['match_name'] # rm bc not needed 
 
 @dataclass
 class QueryInfo:
@@ -1859,7 +1869,8 @@ class TaxResult(BaseTaxResult):
 
         with sourmash_args.FileInputCSV(gather_csv) as r:
             for row in enumerate(r):
-                gatherRow = GatherRow(**row)
+                filt_row = filter_row(row, GatherRow) # this filters any extra columns
+                gatherRow = GatherRow(**filt_row) # this checks for required columns and raises TypeError for any missing
                 # initialize TaxResult
                 tax_res = TaxResult(raw=gatherRow)
 
