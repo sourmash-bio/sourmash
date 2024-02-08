@@ -1721,32 +1721,10 @@ class GatherRow:
     ksize: int
     scaled: int
 
-    # non-essential
-    intersect_bp: int = None
-    f_orig_query: float = None
-    f_match: float = None
-    average_abund: float = None
-    median_abund: float = None
-    std_abund: float = None
-    filename: str = None
-    md5: str = None
-    f_match_orig: float = None
-    gather_result_rank: str = None
-    moltype: str = None
+    # non-essential, but used if available
     query_n_hashes: int = None
-    query_abundance: int = None
-    query_containment_ani: float = None
-    match_containment_ani: float = None
-    average_containment_ani: float = None
-    max_containment_ani: float = None
-    potential_false_negative: bool = None
-    n_unique_weighted_found: int = None
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
-    query_containment_ani_low: float = None
-    query_containment_ani_high: float = None
-    match_containment_ani_low: float = None
-    match_containment_ani_high: float = None
 
 
 @dataclass
