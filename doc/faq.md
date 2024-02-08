@@ -302,6 +302,6 @@ lot of new k-mers that pop up with a longer k-mer size (e.g. because
 of included variation)? These questions must be answered by experimentation
 and may be data-set specific.
 
-## Can sourmash run multi-threaded?
+## Can sourmash run with multiple theads?
 
 sourmash is currently single-threaded, but the [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater) provides faster and lower-memory  multithreaded implementations of several important sourmash features - sketching, searching, and gather (metagenome decomposition). It does so by implementing higher-level functions in Rust on top of the core Rust library of sourmash. As a result it provides some of the same functionality as sourmash, but 10-100x faster and in 10x lower memory. Note that this code is functional and tested, but does not have all of the features of sourmash. Code and features will be integrated back into sourmash as they mature.
