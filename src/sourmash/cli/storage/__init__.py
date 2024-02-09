@@ -12,19 +12,24 @@ import sys
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('storage', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
-    desc = 'Operations\n'
+    subparser = subparsers.add_parser(
+        "storage", formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS
+    )
+    desc = "Operations\n"
     clidir = os.path.dirname(__file__)
     ops = command_list(clidir)
     for subcmd in ops:
         docstring = getattr(sys.modules[__name__], subcmd).__doc__
-        helpstring = 'sourmash storage {op:s} --help'.format(op=subcmd)
-        desc += '        {hs:33s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
+        helpstring = f"sourmash storage {subcmd:s} --help"
+        desc += f"        {helpstring:33s} {docstring:s}\n"
     s = subparser.add_subparsers(
-        title='Storage utilities', dest='subcmd', metavar='subcmd', help=SUPPRESS,
-        description=desc
+        title="Storage utilities",
+        dest="subcmd",
+        metavar="subcmd",
+        help=SUPPRESS,
+        description=desc,
     )
     for subcmd in ops:
         getattr(sys.modules[__name__], subcmd).subparser(s)
     subparser._action_groups.reverse()
-    subparser._optionals.title = 'Options'
+    subparser._optionals.title = "Options"

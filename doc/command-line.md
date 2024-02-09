@@ -224,7 +224,6 @@ sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
 Options:
 
 * `--output <filename>` -- save the output matrix to this file, as a numpy binary matrix.
-* `--csv <filename>` -- save the output matrix to this file in CSV format.
 * `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize <k>` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
@@ -233,6 +232,7 @@ Options:
 * `--ignore-abundance` -- ignore abundances in signatures.
 * `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 * `--csv <outfile.csv>` -- save the output matrix in CSV format.
+* `--labels-to <labels.csv>` -- create a CSV file (spreadsheet) that can be passed in to `sourmash plot` with `--labels-from` in order to customize the labels.
 
 **Note:** compare by default produces a symmetric similarity matrix
 that can be used for clustering in downstream tasks. With `--containment`,
@@ -324,6 +324,13 @@ similarity   match
 Match information can be saved to a CSV file with `-o/--output`; with
 `-o`, all matches above the threshold will be saved, not just those
 printed to stdout (which are limited to `-n/--num-results`).
+
+The `--containment` flag calculates the containment of the query in
+database matches; this is an asymmetric order-dependent measure,
+unlike Jaccard. Here, `search --containment Q A B C D` will report the
+containment of `Q` in each of `A`, `B`, `C`, and `D`. This is opposite
+to the order used by `prefetch`, where the composite sketch (e.g. metagenomes)
+is the query, and the matches are contained items (e.g. genomes).
 
 As of sourmash 4.2.0, `search` supports `--picklist`, to
 [select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
@@ -477,7 +484,10 @@ The `prefetch` subcommand searches a collection of scaled signatures
 for matches in a large database, using containment. It is similar to
 `search --containment`, while taking a `--threshold-bp` argument like
 `gather` does for thresholding matches (instead of using Jaccard
-similarity or containment).
+similarity or containment). Note that `prefetch` uses the composite
+sketch (e.g. a metagenome) as the query, and finds all matching
+subjects (e.g. genomes) from the database - the arguments are in the
+opposite order from `search --containment`.
 
 `sourmash prefetch` is intended to select a subset of a large database
 for further processing. As such, it can search very large collections

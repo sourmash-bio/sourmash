@@ -1,0 +1,5 @@
+sort_order,md5,label,name,filename,signature_file
+4,8a619747693c045afde376263841806b,genome-s10+s11-CHANGED,genome-s10+s11,-,/Users/t/dev/sourmash/tests/test-data/genome-s10+s11.sig
+3,ff511252a80bb9a7dbb0acf62626e123,genome-s12-CHANGED,genome-s12,genome-s12.fa.gz,/Users/t/dev/sourmash/tests/test-data/genome-s12.fa.gz.sig
+2,1437d8eae64bad9bdc8d13e1daa0a43e,genome-s11-CHANGED,genome-s11,genome-s11.fa.gz,/Users/t/dev/sourmash/tests/test-data/genome-s11.fa.gz.sig
+1,4cb3290263eba24548f5bef38bcaefc9,genome-s10-CHANGED,genome-s10,genome-s10.fa.gz,/Users/t/dev/sourmash/tests/test-data/genome-s10.fa.gz.sig

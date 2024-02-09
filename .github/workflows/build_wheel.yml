@@ -1,4 +1,5 @@
 name: cibuildwheel
+permissions: write-all
 
 on:
   push:
@@ -45,7 +46,7 @@ jobs:
           python-version: '3.10'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.4
+        uses: pypa/cibuildwheel@v2.16.5
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
@@ -104,5 +105,5 @@ jobs:
       - name: Release
         uses: fnkr/github-action-ghr@v1
         env:
-          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}/artifact
+          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

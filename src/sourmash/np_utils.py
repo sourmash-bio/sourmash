@@ -12,9 +12,11 @@ def to_memmap(array):
     """
     import numpy as np
 
-    filename = tempfile.NamedTemporaryFile(prefix="array", suffix=".mmap", delete=False).name
+    filename = tempfile.NamedTemporaryFile(
+        prefix="array", suffix=".mmap", delete=False
+    ).name
     shape = array.shape
-    f = np.memmap(filename, mode='w+', shape=shape, dtype=array.dtype)
+    f = np.memmap(filename, mode="w+", shape=shape, dtype=array.dtype)
     f[:] = array[:]
     del f
     large_memmap = np.memmap(filename, dtype=array.dtype, shape=shape)

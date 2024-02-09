@@ -88,6 +88,7 @@ class Nodegraph(RustObject):
 
     def to_khmer_nodegraph(self):
         import khmer
+
         try:
             load_nodegraph = khmer.load_nodegraph
         except AttributeError:
@@ -117,41 +118,44 @@ def extract_nodegraph_info(filename):
     ht_type = None
     occupied = None
 
-    uint_size = len(pack('I', 0))
-    uchar_size = len(pack('B', 0))
-    ulonglong_size = len(pack('Q', 0))
+    uint_size = len(pack("I", 0))
+    uchar_size = len(pack("B", 0))
+    ulonglong_size = len(pack("Q", 0))
 
     try:
-        with open(filename, 'rb') as nodegraph:
-            signature, = unpack('4s', nodegraph.read(4))
-            version, = unpack('B', nodegraph.read(1))
-            ht_type, = unpack('B', nodegraph.read(1))
-            ksize, = unpack('I', nodegraph.read(uint_size))
-            n_tables, = unpack('B', nodegraph.read(uchar_size))
-            occupied, = unpack('Q', nodegraph.read(ulonglong_size))
-            table_size, = unpack('Q', nodegraph.read(ulonglong_size))
+        with open(filename, "rb") as nodegraph:
+            (signature,) = unpack("4s", nodegraph.read(4))
+            (version,) = unpack("B", nodegraph.read(1))
+            (ht_type,) = unpack("B", nodegraph.read(1))
+            (ksize,) = unpack("I", nodegraph.read(uint_size))
+            (n_tables,) = unpack("B", nodegraph.read(uchar_size))
+            (occupied,) = unpack("Q", nodegraph.read(ulonglong_size))
+            (table_size,) = unpack("Q", nodegraph.read(ulonglong_size))
         if signature != b"OXLI":
-            raise ValueError("Node graph '{}' is missing file type "
-                             "signature".format(filename) + str(signature))
+            raise ValueError(
+                f"Node graph '{filename}' is missing file type "
+                "signature" + str(signature)
+            )
     except:
-        raise ValueError("Node graph '{}' is corrupt ".format(filename))
+        raise ValueError(f"Node graph '{filename}' is corrupt ")
 
     return ksize, round(table_size, -2), n_tables, version, ht_type, occupied
 
 
-def calc_expected_collisions(graph, force=False, max_false_pos=.2):
+def calc_expected_collisions(graph, force=False, max_false_pos=0.2):
     fp_all = graph.expected_collisions
 
     if fp_all > max_false_pos:
         print("**", file=sys.stderr)
-        print("** ERROR: the graph structure is too small for ",
-              file=sys.stderr)
-        print("** this data set.  Increase data structure size.",
-              file=sys.stderr)
+        print("** ERROR: the graph structure is too small for ", file=sys.stderr)
+        print("** this data set.  Increase data structure size.", file=sys.stderr)
         print("** Do not use these results!!", file=sys.stderr)
         print("**", file=sys.stderr)
-        print("** (estimated false positive rate of %.3f;" % fp_all,
-              file=sys.stderr, end=' ')
+        print(
+            "** (estimated false positive rate of %.3f;" % fp_all,
+            file=sys.stderr,
+            end=" ",
+        )
         print("max recommended %.3f)" % max_false_pos, file=sys.stderr)
         print("**", file=sys.stderr)
 
