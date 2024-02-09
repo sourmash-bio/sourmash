@@ -5614,6 +5614,44 @@ def test_tax_summarize_strain_csv_with_lineages(runtmp):
         assert c["1"] == 11
 
 
+def test_tax_summarize_ictv(runtmp):
+    # test basic operation w/csv output on lineages-style file w/strain csv
+    taxfile = utils.get_test_data("tax/test.ictv-taxonomy.csv")
+    lineage_csv = runtmp.output("ictv-lins.csv")
+
+    taxdb = tax_utils.LineageDB.load(taxfile)
+    with open(lineage_csv, "w", newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(["name", "lineage"])
+        for k, v in taxdb.items():
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+    runtmp.sourmash("tax", "summarize", lineage_csv, "-o", "ranks.csv", "--ictv")
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 7" in out
+    assert "saved 14 lineage counts to" in err
+
+    csv_out = runtmp.output("ranks.csv")
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row["lineage_count"]
+            c[val] += 1
+
+        print(list(c.most_common()))
+        print(c)
+        assert c["1"] == 8
+        assert c["7"] == 5
+        assert c["6"] == 1
+
+
 def test_tax_summarize_LINS(runtmp):
     # test basic operation w/LINs
     taxfile = utils.get_test_data("tax/test.LIN-taxonomy.csv")
