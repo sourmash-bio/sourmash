@@ -1,6 +1,6 @@
 """search a metagenome signature against dbs"""
 
-usage="""
+usage = """
 
 The `gather` subcommand selects the best reference genomes to use for
 a metagenome analysis, by finding the smallest set of non-overlapping
@@ -62,103 +62,133 @@ with taxonomic information.
 ---
 """
 
-from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_scaled_arg,
-                                add_pattern_args)
+from sourmash.cli.utils import (
+    add_ksize_arg,
+    add_moltype_args,
+    add_picklist_args,
+    add_scaled_arg,
+    add_pattern_args,
+)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('gather', description=__doc__, usage=usage)
-    subparser.add_argument('query', help='query signature')
+    subparser = subparsers.add_parser("gather", description=__doc__, usage=usage)
+    subparser.add_argument("query", help="query signature")
     subparser.add_argument(
-        'databases', nargs='+',
-        help='signatures/SBTs to search',
+        "databases",
+        nargs="+",
+        help="signatures/SBTs to search",
     )
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
+    )
+    subparser.add_argument("-d", "--debug", action="store_true")
+    subparser.add_argument(
+        "-n",
+        "--num-results",
+        default=None,
+        type=int,
+        metavar="N",
+        help="number of results to report (default: terminate at --threshold-bp)",
     )
     subparser.add_argument(
-        '-d', '--debug', action='store_true'
+        "-o",
+        "--output",
+        metavar="FILE",
+        help="output CSV containing matches to this file",
     )
     subparser.add_argument(
-        '-n', '--num-results', default=None, type=int, metavar='N',
-        help='number of results to report (default: terminate at --threshold-bp)'
+        "--save-matches",
+        metavar="FILE",
+        help="save gather matched signatures from the database to the "
+        "specified file",
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
-        help='output CSV containing matches to this file'
+        "--save-prefetch",
+        metavar="FILE",
+        help="save all prefetch-matched signatures from the databases to the "
+        "specified file or directory",
     )
     subparser.add_argument(
-        '--save-matches', metavar='FILE',
-        help='save gather matched signatures from the database to the '
-        'specified file'
+        "--save-prefetch-csv",
+        metavar="FILE",
+        help="save a csv with information from all prefetch-matched signatures "
+        "to the specified file",
     )
     subparser.add_argument(
-        '--save-prefetch', metavar='FILE',
-        help='save all prefetch-matched signatures from the databases to the '
-        'specified file or directory'
+        "--threshold-bp",
+        metavar="REAL",
+        type=float,
+        default=5e4,
+        help="reporting threshold (in bp) for estimated overlap with remaining query (default=50kb)",
     )
     subparser.add_argument(
-        '--save-prefetch-csv', metavar='FILE',
-        help='save a csv with information from all prefetch-matched signatures '
-        'to the specified file'
+        "--output-unassigned",
+        metavar="FILE",
+        help="output unassigned portions of the query as a signature to the "
+        "specified file",
     )
     subparser.add_argument(
-        '--threshold-bp', metavar='REAL', type=float, default=5e4,
-        help='reporting threshold (in bp) for estimated overlap with remaining query (default=50kb)'
+        "--ignore-abundance",
+        action="store_true",
+        help="do NOT use k-mer abundances if present",
     )
     subparser.add_argument(
-        '--output-unassigned', metavar='FILE',
-        help='output unassigned portions of the query as a signature to the '
-        'specified file'
+        "--md5", default=None, help="select the signature with this md5 as query"
     )
     subparser.add_argument(
-        '--ignore-abundance',  action='store_true',
-        help='do NOT use k-mer abundances if present'
-    )
-    subparser.add_argument(
-        '--md5', default=None,
-        help='select the signature with this md5 as query'
-    )
-    subparser.add_argument(
-        '--cache-size', default=0, type=int, metavar='N',
-        help='number of internal SBT nodes to cache in memory (default: 0, cache all nodes)'
+        "--cache-size",
+        default=0,
+        type=int,
+        metavar="N",
+        help="number of internal SBT nodes to cache in memory (default: 0, cache all nodes)",
     )
 
     # advanced parameters
     subparser.add_argument(
-        '--linear', dest="linear", action='store_true',
+        "--linear",
+        dest="linear",
+        action="store_true",
         help="force a low-memory but maybe slower database search",
     )
     subparser.add_argument(
-        '--no-linear', dest="linear", action='store_false',
+        "--no-linear",
+        dest="linear",
+        action="store_false",
     )
     subparser.add_argument(
-        '--no-prefetch', dest="prefetch", action='store_false',
+        "--no-prefetch",
+        dest="prefetch",
+        action="store_false",
         help="do not use prefetch before gather; see documentation",
     )
     subparser.add_argument(
-        '--prefetch', dest="prefetch", action='store_true',
+        "--prefetch",
+        dest="prefetch",
+        action="store_true",
         help="use prefetch before gather; see documentation",
     )
     subparser.add_argument(
-        '--estimate-ani-ci', action='store_true',
-        help='also output confidence intervals for ANI estimates'
+        "--estimate-ani-ci",
+        action="store_true",
+        help="also output confidence intervals for ANI estimates",
     )
     subparser.add_argument(
-        '--fail-on-empty-database', action='store_true',
-        help='stop at databases that contain no compatible signatures'
+        "--fail-on-empty-database",
+        action="store_true",
+        help="stop at databases that contain no compatible signatures",
     )
     subparser.add_argument(
-        '--no-fail-on-empty-database', action='store_false',
-        dest='fail_on_empty_database',
-        help='continue past databases that contain no compatible signatures'
+        "--no-fail-on-empty-database",
+        action="store_false",
+        dest="fail_on_empty_database",
+        help="continue past databases that contain no compatible signatures",
     )
     subparser.set_defaults(fail_on_empty_database=True)
     subparser.add_argument(
-        '--create-empty-results', action='store_true',
-        help='create an empty results file even if no matches.'
+        "--create-empty-results",
+        action="store_true",
+        help="create an empty results file even if no matches.",
     )
 
     add_ksize_arg(subparser)
@@ -170,4 +200,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.commands.gather(args)

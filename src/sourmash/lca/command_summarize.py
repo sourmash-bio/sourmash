@@ -13,7 +13,7 @@ from .lca_utils import check_files_exist
 from sourmash.index import MultiIndex
 
 
-DEFAULT_THRESHOLD=5
+DEFAULT_THRESHOLD = 5
 
 
 def summarize(hashvals, dblist, threshold, ignore_abundance):
@@ -32,7 +32,7 @@ def summarize(hashvals, dblist, threshold, ignore_abundance):
     # now convert to trees -> do LCA & counts
     if not ignore_abundance:
         counts = lca_utils.count_lca_for_assignments(assignments, hashvals)
-    else: # flatten
+    else:  # flatten
         counts = lca_utils.count_lca_for_assignments(assignments, None)
     debug(counts.most_common())
 
@@ -69,9 +69,10 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
         idx = idx.select(ksize=ksize)
 
         for query_sig, query_filename in idx.signatures_with_location():
-            notify(u'\r\033[K', end=u'')
-            notify(f'... loading {query_sig} (file {n} of {total_n})',
-                   total_n, end='\r')
+            notify("\r\033[K", end="")
+            notify(
+                f"... loading {query_sig} (file {n} of {total_n})", total_n, end="\r"
+            )
             total_count += 1
 
             if ignore_abundance and query_sig.minhash.track_abundance:
@@ -82,8 +83,8 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
             count_signature(query_sig, scaled, hashvals)
             yield query_filename, query_sig, hashvals
 
-    notify(u'\r\033[K', end=u'')
-    notify(f'loaded {total_count} signatures from {n} files total.')
+    notify("\r\033[K", end="")
+    notify(f"loaded {total_count} signatures from {n} files total.")
 
 
 def count_signature(sig, scaled, hashvals):
@@ -104,32 +105,34 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
     Output results in ~human-readable format.
     """
 
-    for (lineage, count) in lineage_counts.items():
+    for lineage, count in lineage_counts.items():
         if lineage:
             lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
-            lineage = ';'.join(lineage)
+            lineage = ";".join(lineage)
         else:
-            lineage = '(root)'
+            lineage = "(root)"
 
-        p = count / total_counts * 100.
-        p = '{:.1f}%'.format(p)
+        p = count / total_counts * 100.0
+        p = f"{p:.1f}%"
 
-        print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
+        print_results(
+            f"{p:5} {count:>5}   {lineage}   {filename}:{sig.md5sum()[:8]} {sig}"
+        )
 
-def output_csv(lineage_counts, total_counts, csv_fp, filename, sig,
-               write_header=True):
+
+def output_csv(lineage_counts, total_counts, csv_fp, filename, sig, write_header=True):
     """\
     Output results in CSV.
     """
 
     w = csv.writer(csv_fp)
     if write_header:
-        headers = ['count'] + list(lca_utils.taxlist())
-        headers += ['filename', 'sig_name', 'sig_md5', 'total_counts']
+        headers = ["count"] + list(lca_utils.taxlist())
+        headers += ["filename", "sig_name", "sig_md5", "total_counts"]
         w.writerow(headers)
 
-    for (lineage, count) in lineage_counts.items():
-        debug('lineage:', lineage)
+    for lineage, count in lineage_counts.items():
+        debug("lineage:", lineage)
         row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
         row += [filename, sig.name, sig.md5sum(), total_counts]
         w.writerow(row)
@@ -140,7 +143,7 @@ def summarize_main(args):
     main summarization function.
     """
     if not args.db:
-        error('Error! must specify at least one LCA database with --db')
+        error("Error! must specify at least one LCA database with --db")
         sys.exit(-1)
 
     set_quiet(args.quiet, args.debug)
@@ -160,10 +163,12 @@ def summarize_main(args):
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
     if ignore_abundance:
-        notify("Ignoring any k-mer abundances in query, since --ignore-abundance given.")
+        notify(
+            "Ignoring any k-mer abundances in query, since --ignore-abundance given."
+        )
 
     # find all the queries
-    notify('finding query signatures...')
+    notify("finding query signatures...")
     inp_files = args.query
 
     if args.query_from_file:
@@ -171,7 +176,7 @@ def summarize_main(args):
         inp_files.extend(more_files)
 
     if not inp_files:
-        error('Error! must specify at least one query signature with --query')
+        error("Error! must specify at least one query signature with --query")
         sys.exit(-1)
 
     if not check_files_exist(*inp_files):
@@ -181,31 +186,37 @@ def summarize_main(args):
     csv_fp = None
     write_header = True
     if args.output:
-        csv_fp = open(args.output, 'w', newline='')
+        csv_fp = open(args.output, "w", newline="")
 
     try:
-        for filename, sig, hashvals in \
-          load_singletons_and_count(inp_files, ksize, scaled, ignore_abundance):
-
+        for filename, sig, hashvals in load_singletons_and_count(
+            inp_files, ksize, scaled, ignore_abundance
+        ):
             # get the full counted list of lineage counts in this signature
-            lineage_counts = summarize(hashvals, dblist, args.threshold,
-                                       ignore_abundance)
+            lineage_counts = summarize(
+                hashvals, dblist, args.threshold, ignore_abundance
+            )
             if not ignore_abundance:
                 total = float(sum(hashvals.values()))
             else:
                 total = float(len(hashvals))
 
-            output_results(lineage_counts, total,
-                           filename=filename, sig=sig)
+            output_results(lineage_counts, total, filename=filename, sig=sig)
 
             if csv_fp:
-                output_csv(lineage_counts, total, csv_fp, filename, sig,
-                           write_header=write_header)
+                output_csv(
+                    lineage_counts,
+                    total,
+                    csv_fp,
+                    filename,
+                    sig,
+                    write_header=write_header,
+                )
                 write_header = False
     finally:
         if csv_fp:
             csv_fp.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(summarize_main(sys.argv[1:]))

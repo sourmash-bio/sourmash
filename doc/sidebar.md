@@ -25,6 +25,10 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [A short guide to using sourmash output with R](other-languages.md).
 
+## Frequently Asked Questions
+
+* [Frequently asked questions](faq.md)
+
 ## How sourmash works under the hood
 
 * [An introduction to k-mers for genome comparison and analysis](kmers-and-minhash.ipynb)
@@ -38,7 +42,6 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 * [Publications about sourmash](publications.md)
 * [A guide to the internal design and structure of sourmash](sourmash-internals.md)
 * [Funding acknowledgements](funding.md)
-* [Frequently asked questions](faq.md)
 
 ## Developing and extending sourmash
 

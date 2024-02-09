@@ -1,7 +1,7 @@
 from ._lowlevel import lib
 
 
-__all__ = ['SourmashError']
+__all__ = ["SourmashError"]
 exceptions_by_code = {}
 
 
@@ -16,13 +16,15 @@ class SourmashError(Exception):
     def __str__(self):
         rv = self.message
         if self.rust_info is not None:
-            return u'%s\n\n%s' % (rv, self.rust_info)
+            return f"{rv}\n\n{self.rust_info}"
         return rv
 
 
 class IndexNotSupported(SourmashError):
     def __init__(self):
-        SourmashError.__init__(self, "This index format is not supported in this version of sourmash")
+        SourmashError.__init__(
+            self, "This index format is not supported in this version of sourmash"
+        )
 
 
 class IndexNotLoaded(SourmashError):
@@ -55,7 +57,7 @@ def _get_error_base(error_name):
 
 def _make_exceptions():
     for attr in dir(lib):
-        if not attr.startswith('SOURMASH_ERROR_CODE_'):
+        if not attr.startswith("SOURMASH_ERROR_CODE_"):
             continue
 
         code = getattr(lib, attr)
@@ -68,5 +70,6 @@ def _make_exceptions():
             exceptions_by_code[exc.code] = exc
         else:
             exceptions_by_code[code] = ValueError
+
 
 _make_exceptions()

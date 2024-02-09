@@ -40,12 +40,9 @@ class SourmashSignature(RustObject):
 
         self.minhash = minhash
 
-
     @property
     def minhash(self):
-        return FrozenMinHash._from_objptr(
-            self._methodcall(lib.signature_first_mh)
-        )
+        return FrozenMinHash._from_objptr(self._methodcall(lib.signature_first_mh))
 
     @minhash.setter
     def minhash(self, value):
@@ -62,11 +59,11 @@ class SourmashSignature(RustObject):
         name = self.name
         md5pref = self.md5sum()[:8]
         if name == md5pref:
-            return "SourmashSignature({})".format(md5pref)
-        else: # name != md5pref:
-            return "SourmashSignature('{}', {})".format(name, md5pref)
+            return f"SourmashSignature({md5pref})"
+        else:  # name != md5pref:
+            return f"SourmashSignature('{name}', {md5pref})"
 
-    #def minhashes(self):
+    # def minhashes(self):
     #    size = ffi.new("uintptr_t *")
     #    mhs_ptr = self._methodcall(lib.signature_get_mhs, size)
     #    size = ffi.unpack(size, 1)[0]
@@ -134,40 +131,77 @@ class SourmashSignature(RustObject):
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other signature."
-        return self.minhash.similarity(other.minhash,
-                                       ignore_abundance=ignore_abundance,
-                                       downsample=downsample)
+        return self.minhash.similarity(
+            other.minhash, ignore_abundance=ignore_abundance, downsample=downsample
+        )
 
     def jaccard(self, other):
         "Compute Jaccard similarity with the other MinHash signature."
-        return self.minhash.similarity(other.minhash, ignore_abundance=True,
-                                       downsample=False)
+        return self.minhash.similarity(
+            other.minhash, ignore_abundance=True, downsample=False
+        )
 
-    def jaccard_ani(self, other, *, downsample=False, jaccard=None, prob_threshold=1e-3, err_threshold=1e-4):
+    def jaccard_ani(
+        self,
+        other,
+        *,
+        downsample=False,
+        jaccard=None,
+        prob_threshold=1e-3,
+        err_threshold=1e-4,
+    ):
         "Use jaccard to estimate ANI between two FracMinHash signatures."
-        return self.minhash.jaccard_ani(other.minhash, downsample=downsample,
-                                        jaccard=jaccard, prob_threshold=prob_threshold,
-                                        err_threshold=err_threshold)
+        return self.minhash.jaccard_ani(
+            other.minhash,
+            downsample=downsample,
+            jaccard=jaccard,
+            prob_threshold=prob_threshold,
+            err_threshold=err_threshold,
+        )
 
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample=downsample)
 
-    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci=False):
+    def containment_ani(
+        self,
+        other,
+        *,
+        downsample=False,
+        containment=None,
+        confidence=0.95,
+        estimate_ci=False,
+    ):
         "Use containment to estimate ANI between two FracMinHash signatures."
-        return self.minhash.containment_ani(other.minhash, downsample=downsample,
-                                        containment=containment, confidence=confidence,
-                                        estimate_ci=estimate_ci)
+        return self.minhash.containment_ani(
+            other.minhash,
+            downsample=downsample,
+            containment=containment,
+            confidence=confidence,
+            estimate_ci=estimate_ci,
+        )
 
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
         return self.minhash.max_containment(other.minhash, downsample=downsample)
 
-    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
+    def max_containment_ani(
+        self,
+        other,
+        *,
+        downsample=False,
+        max_containment=None,
+        confidence=0.95,
+        estimate_ci=False,
+    ):
         "Use max containment to estimate ANI between two FracMinHash signatures."
-        return self.minhash.max_containment_ani(other.minhash, downsample=downsample,
-                                                max_containment=max_containment, confidence=confidence,
-                                                estimate_ci=estimate_ci)
+        return self.minhash.max_containment_ani(
+            other.minhash,
+            downsample=downsample,
+            max_containment=max_containment,
+            confidence=confidence,
+            estimate_ci=estimate_ci,
+        )
 
     def avg_containment(self, other, downsample=False):
         """
@@ -218,11 +252,7 @@ class SourmashSignature(RustObject):
     def __reduce__(self):
         return (
             SourmashSignature,
-            (
-                self.minhash,
-                self.name,
-                self.filename
-            ),
+            (self.minhash, self.name, self.filename),
         )
 
     def __copy__(self):
@@ -279,6 +309,7 @@ class FrozenSourmashSignature(SourmashSignature):
 
     def __copy__(self):
         return self
+
     copy = __copy__
 
     def to_frozen(self):
@@ -325,7 +356,9 @@ def _detect_input_type(data):
      - Compressed memory buffers
      - filename
     """
-    if hasattr(data, 'read') or hasattr(data, "fileno") or hasattr(data, "mode"):  # file-like object
+    if (
+        hasattr(data, "read") or hasattr(data, "fileno") or hasattr(data, "mode")
+    ):  # file-like object
         return SigInput.FILE_LIKE
     elif hasattr(data, "find"):  # check if it is uncompressed sig
         try:
@@ -334,7 +367,7 @@ def _detect_input_type(data):
         except TypeError:
             if data.find(b"sourmash_signature") > 0:
                 return SigInput.BUFFER
-            elif data.startswith(b'\x1F\x8B'):  # gzip compressed
+            elif data.startswith(b"\x1F\x8B"):  # gzip compressed
                 return SigInput.BUFFER
 
     try:
@@ -347,7 +380,11 @@ def _detect_input_type(data):
 
 
 def load_signatures(
-    data, ksize=None, select_moltype=None, ignore_md5sum=False, do_raise=False,
+    data,
+    ksize=None,
+    select_moltype=None,
+    ignore_md5sum=False,
+    do_raise=False,
 ):
     """Load a JSON string with signatures into classes.
 
@@ -374,14 +411,18 @@ def load_signatures(
     input_type = _detect_input_type(data)
     if input_type == SigInput.UNKNOWN:
         if do_raise:
-            raise ValueError("Error in parsing signature; quitting. Cannot open file or invalid signature")
+            raise ValueError(
+                "Error in parsing signature; quitting. Cannot open file or invalid signature"
+            )
         return
 
     size = ffi.new("uintptr_t *")
 
     try:
         if input_type == SigInput.FILE_LIKE:
-            if hasattr(data, "mode") and "t" in data.mode:  # need to reopen handler as binary
+            if (
+                hasattr(data, "mode") and "t" in data.mode
+            ):  # need to reopen handler as binary
                 data = data.buffer
 
             buf = data.read()
@@ -423,7 +464,7 @@ def load_signatures(
         for sig in sigs:
             yield sig.to_frozen()
 
-    except Exception as e:
+    except Exception:
         if do_raise:
             raise
 
@@ -461,8 +502,9 @@ def save_signatures(siglist, fp=None, compression=0):
     size = ffi.new("uintptr_t *")
 
     # save signature into a string (potentially compressed)
-    rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected),
-                      compression, size)
+    rawbuf = rustcall(
+        lib.signatures_save_buffer, siglist_c, len(collected), compression, size
+    )
     size = size[0]
 
     # associate a finalizer with rawbuf so that it gets freed
@@ -472,11 +514,11 @@ def save_signatures(siglist, fp=None, compression=0):
     else:
         result = ffi.string(buf, size)
 
-    if fp is None:                        # return string
+    if fp is None:  # return string
         return result
     else:
-        try:                              # write to file
+        try:  # write to file
             fp.write(result)
         except TypeError:
-            fp.write(result.decode('utf-8'))
+            fp.write(result.decode("utf-8"))
         return None

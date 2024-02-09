@@ -50,8 +50,9 @@ authors = [
 ]
 
 maintainers = [
-  { name="Luiz Irber", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
+  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
   { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
+  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu", orcid="0000-0002-2942-5331" },
 ]
 
 classifiers = [
@@ -99,9 +100,11 @@ license = { text = "BSD 3-Clause License" }
 [project.optional-dependencies]
 test = [
   "pytest>=6.2.4,<8.1.0",
-  "pytest-cov>=2.12,<5.0",
-  "pytest-xdist",
+  "pytest-cov>=4,<5.0",
+  "pytest-xdist>=3.1",
   "pyyaml>=6,<7",
+  "diff-cover>=7.3",
+  "covdefaults>=2.2.2",
   "recommonmark",
   "hypothesis",
   "build",
@@ -153,6 +156,12 @@ module-name = "sourmash._lowlevel"
 macos-deployment-target = "10.14"
 [tool.maturin.target.aarch64-apple-darwin]
 macos-deployment-target = "11.0"
+
+[tool.ruff.lint]
+extend-select = [
+  "UP",  # pyupgrade
+]
+ignore = ["F401", "E712", "E402", "F821", "E722", "E741", "F811", "F403", "F822"]
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
@@ -211,3 +220,20 @@ testpaths = [
   "tests",
   "doc",
 ]
+
+[tool.coverage]
+html.show_contexts = true
+html.skip_covered = false
+paths.source = [
+  "src",
+  ".tox*/*/lib/python*/site-packages",
+  ".tox*/pypy*/site-packages",
+  ".tox*\\*\\Lib\\site-packages",
+  "*/src",
+  "*\\src",
+  "*/tests",
+  "*\tests",
+]
+report.fail_under = 88
+run.parallel = true
+run.plugins = ["covdefaults"]
