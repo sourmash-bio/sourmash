@@ -804,7 +804,7 @@ def load_gather_results(
                 raw=gatherRow,
                 keep_full_identifiers=keep_full_identifiers,
                 keep_identifier_versions=keep_identifier_versions,
-                lins=lins, ictv=ictv)
+                lins=lins, ictv=ictv,
             )
             taxres.get_match_lineage(
                 tax_assignments=tax_assignments,

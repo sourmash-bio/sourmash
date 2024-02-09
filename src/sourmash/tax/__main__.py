@@ -19,8 +19,7 @@ from .tax_utils import (
     LINLineageInfo,
     AnnotateTaxResult,
     ICTVRankLineageInfo,
->>>>>>> latest
-
+)
 usage = """
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
 or
