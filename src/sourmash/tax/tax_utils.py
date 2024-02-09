@@ -49,34 +49,35 @@ RANKCODE = {
 }
 
 ICTV_RANKS = (
-        "realm",
-        "subrealm",
-        "kingdom",
-        "subkingdom",
-        "phylum",
-        "subphylum",
-        "class",
-        "subclass",
-        "order",
-        "suborder",
-        "family",
-        "subfamily",
-        "genus",
-        "subgenus",
-        "species",
-        "name",
-    )
+    "realm",
+    "subrealm",
+    "kingdom",
+    "subkingdom",
+    "phylum",
+    "subphylum",
+    "class",
+    "subclass",
+    "order",
+    "suborder",
+    "family",
+    "subfamily",
+    "genus",
+    "subgenus",
+    "species",
+    "name",
+)
 
 NCBI_RANKS = (
-        "superkingdom",
-        "phylum",
-        "class",
-        "order",
-        "family",
-        "genus",
-        "species",
-        "strain",
-    )
+    "superkingdom",
+    "phylum",
+    "class",
+    "order",
+    "family",
+    "genus",
+    "species",
+    "strain",
+)
+
 
 class LineagePair(NamedTuple):
     rank: str
@@ -361,7 +362,7 @@ class RankLineageInfo(BaseLineageInfo):
     and will not be used or compared in any other class methods.
     """
 
-    ranks: tuple = NCBI_RANKS 
+    ranks: tuple = NCBI_RANKS
     lineage_dict: dict = field(default=None, compare=False)  # dict of rank: name
 
     def __post_init__(self):
@@ -457,15 +458,17 @@ class ICTVRankLineageInfo(RankLineageInfo):
 
     # modify init to disallow ranks as input
     def __init__(self, *args, **kwargs):
-        if 'ranks' in kwargs:
+        if "ranks" in kwargs:
             # If 'ranks' is found in the keyword arguments, raise an error
-            raise ValueError("Modifying 'ranks' is not allowed for ICTVRankLineageInfo instances.")
+            raise ValueError(
+                "Modifying 'ranks' is not allowed for ICTVRankLineageInfo instances."
+            )
         # Initialize
         super().__init__(*args, **kwargs)
 
     def __post_init__(self):
         "Initialize according to passed values"
-        object.__setattr__(self, "ranks", ICTV_RANKS) 
+        object.__setattr__(self, "ranks", ICTV_RANKS)
         if self.lineage is not None:
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:
