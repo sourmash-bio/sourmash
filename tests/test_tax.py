@@ -1145,32 +1145,110 @@ def test_metagenome_ictv(runtmp):
         "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
         in c.last_result.out
     )
-    assert "test1,realm,0.204,Riboviria,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,realm,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,kingdom,0.204,Riboviria;;Orthornavirae,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,kingdom,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,phylum,0.204,Riboviria;;Orthornavirae;;Negarnaviricota,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,phylum,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,subphylum,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,subphylum,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,class,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,class,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,order,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,order,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,family,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,family,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,genus,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus,md5,test1.sig,0.131,1024000,0.950,0" in c.last_result.out
-    assert "test1,genus,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,species,0.088,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bundibugyoense,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
-    assert "test1,species,0.078,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus taiense,md5,test1.sig,0.050,390000,0.921,0" in c.last_result.out
-    assert "test1,species,0.028,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bombaliense,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
-    assert "test1,species,0.011,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus restonense,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
-    assert "test1,species,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
-    assert "test1,name,0.088,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bundibugyoense;Bundibugyo virus,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
-    assert "test1,name,0.078,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus taiense;Taï Forest virus,md5,test1.sig,0.050,390000,0.921,0" in c.last_result.out
-    assert "test1,name,0.028,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bombaliense;Bombali virus,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
-    assert "test1,name,0.011,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus restonense;Reston virus,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
-    assert "test1,name,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    assert (
+        "test1,realm,0.204,Riboviria,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,realm,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,kingdom,0.204,Riboviria;;Orthornavirae,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,kingdom,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,phylum,0.204,Riboviria;;Orthornavirae;;Negarnaviricota,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,phylum,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,subphylum,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,subphylum,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,class,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,class,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,order,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,order,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,family,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,family,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,genus,0.204,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus,md5,test1.sig,0.131,1024000,0.950,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,genus,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,species,0.088,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bundibugyoense,md5,test1.sig,0.058,442000,0.925,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,species,0.078,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus taiense,md5,test1.sig,0.050,390000,0.921,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,species,0.028,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bombaliense,md5,test1.sig,0.016,138000,0.891,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,species,0.011,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus restonense,md5,test1.sig,0.007,54000,0.864,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,species,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,name,0.088,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bundibugyoense;Bundibugyo virus,md5,test1.sig,0.058,442000,0.925,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,name,0.078,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus taiense;Taï Forest virus,md5,test1.sig,0.050,390000,0.921,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,name,0.028,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bombaliense;Bombali virus,md5,test1.sig,0.016,138000,0.891,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,name,0.011,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus restonense;Reston virus,md5,test1.sig,0.007,54000,0.864,0"
+        in c.last_result.out
+    )
+    assert (
+        "test1,name,0.796,unclassified,md5,test1.sig,0.869,3990000,,0"
+        in c.last_result.out
+    )
 
 
 def test_genome_no_rank_krona(runtmp):
@@ -2970,9 +3048,12 @@ def test_genome_gather_ictv(runtmp):
     assert c.last_result.status == 0
     print(c.last_result.out)
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
-    assert "47+63,match,name,0.664,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus sudanense;Sudan virus,491c0a81,,0.664,5238000,0.987" in c.last_result.out
+    assert (
+        "47+63,match,name,0.664,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus sudanense;Sudan virus,491c0a81,,0.664,5238000,0.987"
+        in c.last_result.out
+    )
 
- 
+
 def test_genome_gather_ictv_twoqueries(runtmp):
     """
     test genome classification with ictv taxonomy
@@ -3010,8 +3091,14 @@ def test_genome_gather_ictv_twoqueries(runtmp):
     assert c.last_result.status == 0
     print(c.last_result.out)
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
-    assert "q47,match,name,0.664,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus sudanense;Sudan virus,491c0a81,,0.664,5238000,0.987" in c.last_result.out
-    assert "q63,match,name,0.336,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus zairense;Ebola virus,491c0a81,,0.336,2648000,0.965" in c.last_result.out
+    assert (
+        "q47,match,name,0.664,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus sudanense;Sudan virus,491c0a81,,0.664,5238000,0.987"
+        in c.last_result.out
+    )
+    assert (
+        "q63,match,name,0.336,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus zairense;Ebola virus,491c0a81,,0.336,2648000,0.965"
+        in c.last_result.out
+    )
 
 
 def test_genome_rank_duplicated_taxonomy_fail(runtmp):
@@ -4286,7 +4373,15 @@ def test_annotate_0_ictv(runtmp):
     out_dir = os.path.dirname(csvout)
 
     c.run_sourmash(
-        "tax", "annotate", "--gather-csv", g_csv, "--taxonomy-csv", tax, "-o", out_dir, "--ictv"
+        "tax",
+        "annotate",
+        "--gather-csv",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        out_dir,
+        "--ictv",
     )
 
     print(c.last_result.status)
@@ -4301,10 +4396,22 @@ def test_annotate_0_ictv(runtmp):
     assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
     assert "lineage" in gather_results[0]
-    assert "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bundibugyoense;Bundibugyo virus" in gather_results[1]
-    assert "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus taiense;Taï Forest virus" in gather_results[2]
-    assert "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bombaliense;Bombali virus" in gather_results[3]
-    assert "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus restonense;Reston virus" in gather_results[4]
+    assert (
+        "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bundibugyoense;Bundibugyo virus"
+        in gather_results[1]
+    )
+    assert (
+        "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus taiense;Taï Forest virus"
+        in gather_results[2]
+    )
+    assert (
+        "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus bombaliense;Bombali virus"
+        in gather_results[3]
+    )
+    assert (
+        "Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus restonense;Reston virus"
+        in gather_results[4]
+    )
 
 
 def test_annotate_0_LIN(runtmp):
