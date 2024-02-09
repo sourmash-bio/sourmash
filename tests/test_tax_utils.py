@@ -28,6 +28,7 @@ from sourmash.tax.tax_utils import (
     BaseLineageInfo,
     RankLineageInfo,
     LINLineageInfo,
+    ICTVRankLineageInfo,
     aggregate_by_lineage_at_rank,
     format_for_krona,
     write_krona,
@@ -38,6 +39,8 @@ from sourmash.tax.tax_utils import (
     LineageDB_Sqlite,
     MultiLineageDB,
     filter_row,
+    NCBI_RANKS,
+    ICTV_RANKS
 )
 
 
@@ -2016,6 +2019,22 @@ def test_lca_RankLineageInfo_no_lca():
     lca_from_lin1 = lin1.find_lca(lin2)
     lca_from_lin2 = lin2.find_lca(lin1)
     assert lca_from_lin1 == lca_from_lin2 is None
+
+
+def test_ICTVLineageInfo_ranks_input():
+    # check that ranks cannot be changed
+    with pytest.raises(ValueError) as exc:
+        ICTVRankLineageInfo(ranks = ["one", "two"])
+    assert "Modifying 'ranks' is not allowed for ICTVRankLineageInfo instances." in str(exc)
+
+
+def test_ICTVLineageInfo_lineagedict_input():
+    # check that ranks cannot be changed
+    input_lindict = dict(zip(ICTV_RANKS, ["name"]*len(ICTV_RANKS)))
+    taxinfo = ICTVRankLineageInfo(lineage_dict = input_lindict)
+    print(taxinfo.display_lineage())
+    assert taxinfo.display_lineage() == ";".join(["name"]*len(ICTV_RANKS))
+    assert taxinfo.taxlist == ICTV_RANKS
 
 
 def test_incompatibility_LINLineageInfo_RankLineageInfo():

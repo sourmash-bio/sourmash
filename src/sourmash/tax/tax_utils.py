@@ -48,6 +48,35 @@ RANKCODE = {
     "unclassified": "U",
 }
 
+ICTV_RANKS = (
+        "realm",
+        "subrealm",
+        "kingdom",
+        "subkingdom",
+        "phylum",
+        "subphylum",
+        "class",
+        "subclass",
+        "order",
+        "suborder",
+        "family",
+        "subfamily",
+        "genus",
+        "subgenus",
+        "species",
+        "name",
+    )
+
+NCBI_RANKS = (
+        "superkingdom",
+        "phylum",
+        "class",
+        "order",
+        "family",
+        "genus",
+        "species",
+        "strain",
+    )
 
 class LineagePair(NamedTuple):
     rank: str
@@ -332,16 +361,7 @@ class RankLineageInfo(BaseLineageInfo):
     and will not be used or compared in any other class methods.
     """
 
-    ranks: tuple = (
-        "superkingdom",
-        "phylum",
-        "class",
-        "order",
-        "family",
-        "genus",
-        "species",
-        "strain",
-    )
+    ranks: tuple = NCBI_RANKS 
     lineage_dict: dict = field(default=None, compare=False)  # dict of rank: name
 
     def __post_init__(self):
@@ -432,31 +452,20 @@ class ICTVRankLineageInfo(RankLineageInfo):
     and will not be used or compared in any other class methods.
     """
 
-    ranks: tuple = (
-        "realm",
-        "subrealm",
-        "kingdom",
-        "subkingdom",
-        "phylum",
-        "subphylum",
-        "class",
-        "subclass",
-        "order",
-        "suborder",
-        "family",
-        "subfamily",
-        "genus",
-        "subgenus",
-        "species",
-        "name",
-    )
+    ranks: tuple = ICTV_RANKS
     lineage_dict: dict = field(default=None, compare=False)  # dict of rank: name
+
+    # modify init to disallow ranks as input
+    def __init__(self, *args, **kwargs):
+        if 'ranks' in kwargs:
+            # If 'ranks' is found in the keyword arguments, raise an error
+            raise ValueError("Modifying 'ranks' is not allowed for ICTVRankLineageInfo instances.")
+        # Initialize
+        super().__init__(*args, **kwargs)
 
     def __post_init__(self):
         "Initialize according to passed values"
-        # ranks must be tuple for hashability
-        if isinstance(self.ranks, list):
-            object.__setattr__(self, "ranks", tuple(self.ranks))
+        object.__setattr__(self, "ranks", ICTV_RANKS) 
         if self.lineage is not None:
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:

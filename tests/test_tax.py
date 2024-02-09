@@ -3101,6 +3101,44 @@ def test_genome_gather_ictv_twoqueries(runtmp):
     )
 
 
+def test_genome_gather_ictv_fail(runtmp):
+    """
+    test genome classification with ictv taxonomy
+    """
+    c = runtmp
+    taxonomy_csv = utils.get_test_data("tax/test.ictv-taxonomy.csv")
+    tax2_csv = runtmp.output('ictv-taxfail')
+    # copy taxonomy csv to new file, but remove one of the columns
+    with open(taxonomy_csv, 'r') as inF:
+        with open(tax2_csv, 'w') as outF:
+            for line in inF.readlines():
+                line = line.rsplit(',', 1)[0]
+                outF.write(f"{line}\n")
+
+
+    g_res = utils.get_test_data("tax/47+63_x_gtdb-rs202.gather.csv")
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash(
+            "tax",
+            "genome",
+            "-g",
+            g_res,
+            "--taxonomy-csv",
+            tax2_csv,
+            "--containment-threshold",
+            "0",
+            "--ictv",
+        )
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    print(c.last_result.out)
+    assert "Not all taxonomy ranks present" in str(exc.value) 
+
+
 def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
