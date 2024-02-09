@@ -2902,8 +2902,8 @@ def test_genome_gather_ictv(runtmp):
     test genome classification with ictv taxonomy
     """
     c = runtmp
-    taxonomy_csv = utils.get_test_data("tax/px.ictv-lineages.csv")
-    g_res = utils.get_test_data("tax/px.genbank-x-ictv.gather.csv")
+    taxonomy_csv = utils.get_test_data("tax/test.ictv-taxonomy.csv")
+    g_res = utils.get_test_data("tax/47+63_x_gtdb-rs202.gather.csv")
 
     c.run_sourmash(
         "tax",
@@ -2921,6 +2921,7 @@ def test_genome_gather_ictv(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
+    print(c.last_result.out)
     # assert "query_name,status,rank,fraction,lineage" in c.last_result.out
     # assert "q63,match,species,0.336,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica,491c0a81," in c.last_result.out
     # assert "q47,match,species,0.664,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica," in c.last_result.out
