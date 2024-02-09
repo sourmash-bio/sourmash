@@ -37,6 +37,7 @@ from sourmash.tax.tax_utils import (
     LineageDB,
     LineageDB_Sqlite,
     MultiLineageDB,
+    filter_row,
 )
 
 
@@ -93,7 +94,8 @@ def make_GatherRow(gather_dict=None, exclude_cols=[]):
         gatherD.update(gather_dict)
     for col in exclude_cols:
         gatherD.pop(col)
-    gatherRaw = GatherRow(**gatherD)
+    fgatherD = filter_row(gatherD, GatherRow)
+    gatherRaw = GatherRow(**fgatherD)
     return gatherRaw
 
 
@@ -805,6 +807,21 @@ def test_GatherRow_old_gather():
         make_GatherRow(gA, exclude_cols=["query_bp"])
     print(str(exc))
     assert "__init__() missing 1 required positional argument: 'query_bp'" in str(exc)
+
+
+def test_GatherRow_match_name_not_name():
+    # gather contains match_name but not name column
+    gA = {"match_name": "gA.1 name"}
+    grow = make_GatherRow(gA, exclude_cols=["name"])
+    print(grow)
+    assert grow.name == "gA.1 name"
+
+
+def test_GatherRow_extra_cols():
+    # gather contains extra columns
+    gA = {"not-a-col": "nope"}
+    grow = make_GatherRow(gA)
+    assert isinstance(grow, GatherRow)
 
 
 def test_get_ident_default():
