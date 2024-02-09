@@ -20,6 +20,7 @@ from .tax_utils import (
     AnnotateTaxResult,
     ICTVRankLineageInfo,
 )
+
 usage = """
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
 or
@@ -82,7 +83,7 @@ def metagenome(args):
             keep_identifier_versions=args.keep_identifier_versions,
             force=args.force,
             lins=args.lins,
-            ictv=args.ictv
+            ictv=args.ictv,
         )
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
@@ -113,7 +114,8 @@ def metagenome(args):
             fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
             keep_full_identifiers=args.keep_full_identifiers,
             keep_identifier_versions=args.keep_identifier_versions,
-            lins=args.lins, ictv=args.ictv,
+            lins=args.lins,
+            ictv=args.ictv,
         )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -298,7 +300,8 @@ def genome(args):
             fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
             keep_full_identifiers=args.keep_full_identifiers,
             keep_identifier_versions=args.keep_identifier_versions,
-            lins=args.lins, ictv=args.ictv,
+            lins=args.lins,
+            ictv=args.ictv,
         )
 
     except ValueError as exc:
@@ -431,7 +434,9 @@ def annotate(args):
                 # check for empty file
                 if not header:
                     if args.force:
-                        notify(f"WARNING: '{in_csv}' is empty (no gather results). Allowing due to '--force'.")
+                        notify(
+                            f"WARNING: '{in_csv}' is empty (no gather results). Allowing due to '--force'."
+                        )
                         continue
                     raise ValueError(f"Cannot read from '{in_csv}'. Is file empty?")
 

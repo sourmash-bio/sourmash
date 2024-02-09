@@ -125,8 +125,11 @@ def subparser(subparsers):
         help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will restrict classification to these groups.",
     )
     subparser.add_argument(
-        '--ictv', '--ictv-taxonomy', action='store_true', default=False,
-        help="use ICTV taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain ICTV ranks."
+        "--ictv",
+        "--ictv-taxonomy",
+        action="store_true",
+        default=False,
+        help="use ICTV taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain ICTV ranks.",
     )
     add_tax_threshold_arg(subparser, 0.1)
     add_rank_arg(subparser)

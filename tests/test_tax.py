@@ -2898,15 +2898,24 @@ def test_genome_gather_two_queries(runtmp):
 
 
 def test_genome_gather_ictv(runtmp):
-    '''
+    """
     test genome classification with ictv taxonomy
-    '''
+    """
     c = runtmp
-    taxonomy_csv = utils.get_test_data('tax/px.ictv-lineages.csv')
-    g_res = utils.get_test_data('tax/px.genbank-x-ictv.gather.csv')
+    taxonomy_csv = utils.get_test_data("tax/px.ictv-lineages.csv")
+    g_res = utils.get_test_data("tax/px.genbank-x-ictv.gather.csv")
 
-    c.run_sourmash('tax', 'genome', '-g', g_res, '--taxonomy-csv', taxonomy_csv,
-                   '--containment-threshold', '0', '--ictv')
+    c.run_sourmash(
+        "tax",
+        "genome",
+        "-g",
+        g_res,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "--containment-threshold",
+        "0",
+        "--ictv",
+    )
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
