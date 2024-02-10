@@ -477,7 +477,6 @@ class ICTVRankLineageInfo(RankLineageInfo):
         if not isinstance(self.lineage_dict, (dict)):
             raise ValueError(f"{self.lineage_dict} is not dictionary")
         new_lineage = []
-        taxpath = []
         # build empty lineage and taxpath
         for rank in self.ranks:
             new_lineage.append(LineagePair(rank=rank))
@@ -501,6 +500,7 @@ class ICTVRankLineageInfo(RankLineageInfo):
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+
 
 @dataclass(frozen=True, order=True)
 class LINLineageInfo(BaseLineageInfo):
