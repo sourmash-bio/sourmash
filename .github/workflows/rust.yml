@@ -107,7 +107,7 @@ jobs:
         run: cargo tarpaulin --all --all-features --timeout 600 --out xml -- --test-threads 1
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           flags: rust
           fail_ci_if_error: true
