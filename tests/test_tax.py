@@ -3046,7 +3046,6 @@ def test_genome_gather_ictv(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    print(c.last_result.out)
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
     assert (
         "47+63,match,name,0.664,Riboviria;;Orthornavirae;;Negarnaviricota;Haploviricotina;Monjiviricetes;;Mononegavirales;;Filoviridae;;Orthoebolavirus;;Orthoebolavirus sudanense;Sudan virus,491c0a81,,0.664,5238000,0.987"

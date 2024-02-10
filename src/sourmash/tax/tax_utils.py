@@ -456,16 +456,6 @@ class ICTVRankLineageInfo(RankLineageInfo):
     ranks: tuple = ICTV_RANKS
     lineage_dict: dict = field(default=None, compare=False)  # dict of rank: name
 
-    # modify init to disallow ranks as input
-    def __init__(self, *args, **kwargs):
-        if "ranks" in kwargs:
-            # If 'ranks' is found in the keyword arguments, raise an error
-            raise ValueError(
-                "Modifying 'ranks' is not allowed for ICTVRankLineageInfo instances."
-            )
-        # Initialize
-        super().__init__(*args, **kwargs)
-
     def __post_init__(self):
         "Initialize according to passed values"
         object.__setattr__(self, "ranks", ICTV_RANKS)
@@ -478,6 +468,39 @@ class ICTVRankLineageInfo(RankLineageInfo):
         elif self.ranks:
             self._init_empty()
 
+    def _init_from_lineage_dict(self):
+        """
+        Initialize from lineage dict, e.g. from lineages csv.
+        Allows empty ranks/extra columns and reordering if necessary
+        """
+        null_names = set(["[Blank]", "na", "null", "NA", ""])
+        if not isinstance(self.lineage_dict, (dict)):
+            raise ValueError(f"{self.lineage_dict} is not dictionary")
+        new_lineage = []
+        taxpath = []
+        # build empty lineage and taxpath
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+
+        # now add rank information in correct spots. This corrects for order and allows empty ranks and extra dict keys
+        for key, val in self.lineage_dict.items():
+            name = None
+            try:
+                rank, name = key, val
+                rank_idx = self.rank_index(rank)
+            except ValueError:
+                continue  # ignore dictionary entries (columns) that don't match a rank
+
+            # filter null
+            if name is not None and name.strip() in null_names:
+                name = None
+            new_lineage[rank_idx] = LineagePair(rank=rank, name=name)
+
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
 @dataclass(frozen=True, order=True)
 class LINLineageInfo(BaseLineageInfo):

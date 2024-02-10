@@ -2021,21 +2021,19 @@ def test_lca_RankLineageInfo_no_lca():
     assert lca_from_lin1 == lca_from_lin2 is None
 
 
-def test_ICTVLineageInfo_ranks_input():
+def test_ICTVLineageInfo_ranks_input_ignored():
     # check that ranks cannot be changed
-    with pytest.raises(ValueError) as exc:
-        ICTVRankLineageInfo(ranks=["one", "two"])
-    assert "Modifying 'ranks' is not allowed for ICTVRankLineageInfo instances." in str(
-        exc
-    )
+    taxinfo = ICTVRankLineageInfo(ranks=["one", "two"])
+    assert taxinfo.taxlist == ICTV_RANKS
 
 
 def test_ICTVLineageInfo_lineagedict_input():
     # check that ranks cannot be changed
-    input_lindict = dict(zip(ICTV_RANKS, ["name"] * len(ICTV_RANKS)))
+    dummy_names = [f"name{i}" for i in range(1, len(ICTV_RANKS) + 1)]
+    input_lindict = dict(zip(ICTV_RANKS, dummy_names))
     taxinfo = ICTVRankLineageInfo(lineage_dict=input_lindict)
     print(taxinfo.display_lineage())
-    assert taxinfo.display_lineage() == ";".join(["name"] * len(ICTV_RANKS))
+    assert taxinfo.display_lineage() == ";".join(dummy_names)
     assert taxinfo.taxlist == ICTV_RANKS
 
 
