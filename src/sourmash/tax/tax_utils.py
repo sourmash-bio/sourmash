@@ -48,6 +48,36 @@ RANKCODE = {
     "unclassified": "U",
 }
 
+ICTV_RANKS = (
+    "realm",
+    "subrealm",
+    "kingdom",
+    "subkingdom",
+    "phylum",
+    "subphylum",
+    "class",
+    "subclass",
+    "order",
+    "suborder",
+    "family",
+    "subfamily",
+    "genus",
+    "subgenus",
+    "species",
+    "name",
+)
+
+NCBI_RANKS = (
+    "superkingdom",
+    "phylum",
+    "class",
+    "order",
+    "family",
+    "genus",
+    "species",
+    "strain",
+)
+
 
 class LineagePair(NamedTuple):
     rank: str
@@ -314,7 +344,7 @@ class BaseLineageInfo:
 @dataclass(frozen=True, order=True)
 class RankLineageInfo(BaseLineageInfo):
     """
-    This RankLineageInfo class usees the BaseLineageInfo methods for a standard set
+    This RankLineageInfo class uses the BaseLineageInfo methods for a standard set
     of taxonomic ranks.
 
     Inputs:
@@ -332,16 +362,7 @@ class RankLineageInfo(BaseLineageInfo):
     and will not be used or compared in any other class methods.
     """
 
-    ranks: tuple = (
-        "superkingdom",
-        "phylum",
-        "class",
-        "order",
-        "family",
-        "genus",
-        "species",
-        "strain",
-    )
+    ranks: tuple = NCBI_RANKS
     lineage_dict: dict = field(default=None, compare=False)  # dict of rank: name
 
     def __post_init__(self):
@@ -400,6 +421,79 @@ class RankLineageInfo(BaseLineageInfo):
             if name is not None and name.strip() in null_names:
                 name = None
             new_lineage[rank_idx] = LineagePair(rank=rank, name=name, taxid=taxid)
+
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+
+
+@dataclass(frozen=True, order=True)
+class ICTVRankLineageInfo(RankLineageInfo):
+    """
+    This ICTV RankLineageInfo class uses the RankLineageInfo methods but uses
+    the 15-rank ICTV taxonomy. It also allows for a 'name' column in the taxonomy,
+    which reflects that virus name is sometimes used as a sub-species rank.
+
+    Inputs:
+        optional:
+            ranks: tuple or list of hierarchical ranks
+                   default: ('realm','subrealm','kingdom','subkingdom','phylum','subphylum',
+                                'class','subclass','order','suborder','family','subfamily',
+                                'genus','subgenus','species','name')
+            lineage: tuple or list of LineagePair
+            lineage_str: `;`- or `,`-separated string of names
+            lineage_dict: dictionary of {rank: name}
+
+    If no inputs are provided, result will be ICTVRankLineageInfo with
+    default ranks and no lineage names.
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
+
+    ranks: tuple = ICTV_RANKS
+    lineage_dict: dict = field(default=None, compare=False)  # dict of rank: name
+
+    def __post_init__(self):
+        "Initialize according to passed values"
+        object.__setattr__(self, "ranks", ICTV_RANKS)
+        if self.lineage is not None:
+            self._init_from_lineage_tuples()
+        elif self.lineage_str is not None:
+            self._init_from_lineage_str()
+        elif self.lineage_dict is not None:
+            self._init_from_lineage_dict()
+        elif self.ranks:
+            self._init_empty()
+
+    def _init_from_lineage_dict(self):
+        """
+        Initialize from lineage dict, e.g. from lineages csv.
+        Allows empty ranks/extra columns and reordering if necessary
+        """
+        null_names = set(["[Blank]", "na", "null", "NA", ""])
+        if not isinstance(self.lineage_dict, (dict)):
+            raise ValueError(f"{self.lineage_dict} is not dictionary")
+        new_lineage = []
+        # build empty lineage and taxpath
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+
+        # now add rank information in correct spots. This corrects for order and allows empty ranks and extra dict keys
+        for key, val in self.lineage_dict.items():
+            name = None
+            try:
+                rank, name = key, val
+                rank_idx = self.rank_index(rank)
+            except ValueError:
+                continue  # ignore dictionary entries (columns) that don't match a rank
+
+            # filter null
+            if name is not None and name.strip() in null_names:
+                name = None
+            new_lineage[rank_idx] = LineagePair(rank=rank, name=name)
 
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
@@ -557,7 +651,10 @@ class LineageTree:
         self.add_lineages(self.assignments)
 
     def add_lineage(self, lineage):
-        if isinstance(lineage, BaseLineageInfo | RankLineageInfo | LINLineageInfo):
+        if isinstance(
+            lineage,
+            BaseLineageInfo | RankLineageInfo | LINLineageInfo | ICTVRankLineageInfo,
+        ):
             lineage = lineage.filled_lineage
         node = self.tree
         for lineage_tup in lineage:
@@ -724,6 +821,7 @@ def load_gather_results(
     keep_full_identifiers=False,
     keep_identifier_versions=False,
     lins=False,
+    ictv=False,
 ):
     "Load a single gather csv"
     if not seen_queries:
@@ -761,6 +859,7 @@ def load_gather_results(
                 keep_full_identifiers=keep_full_identifiers,
                 keep_identifier_versions=keep_identifier_versions,
                 lins=lins,
+                ictv=ictv,
             )
             taxres.get_match_lineage(
                 tax_assignments=tax_assignments,
@@ -771,7 +870,8 @@ def load_gather_results(
             if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
                 # get existing or initialize new
                 this_querytaxres = gather_results.get(
-                    gatherRow.query_name, QueryTaxResult(taxres.query_info, lins=lins)
+                    gatherRow.query_name,
+                    QueryTaxResult(taxres.query_info, lins=lins, ictv=ictv),
                 )
             this_querytaxres.add_taxresult(taxres)
             gather_results[gatherRow.query_name] = this_querytaxres
@@ -795,6 +895,7 @@ def check_and_load_gather_csvs(
     keep_full_identifiers=False,
     keep_identifier_versions=False,
     lins=False,
+    ictv=False,
 ):
     """
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
@@ -816,6 +917,7 @@ def check_and_load_gather_csvs(
                 keep_identifier_versions=keep_identifier_versions,
                 fail_on_missing_taxonomy=fail_on_missing_taxonomy,
                 lins=lins,
+                ictv=ictv,
             )
         except ValueError as exc:
             if force:
@@ -1134,6 +1236,7 @@ class LineageDB(abc.Mapping):
         keep_full_identifiers=False,
         keep_identifier_versions=True,
         lins=False,
+        ictv=False,
     ):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
@@ -1156,7 +1259,7 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with sourmash_args.FileInputCSV(filename) as r:
+        with sourmash_args.FileInputCSV(filename, delimiter=",") as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f"cannot read taxonomy assignments from {filename}")
@@ -1173,7 +1276,7 @@ class LineageDB(abc.Mapping):
                     header = ["ident" if "accession" == x else x for x in header]
                 elif "name" in header and "lineage" in header:
                     return cls.load_from_gather_with_lineages(
-                        filename, force=force, lins=lins
+                        filename, force=force, lins=lins, ictv=ictv
                     )
                 else:
                     header_str = ",".join([repr(x) for x in header])
@@ -1181,12 +1284,21 @@ class LineageDB(abc.Mapping):
                         f"No taxonomic identifiers found; headers are {header_str}"
                     )
 
-            if lins and "lin" not in header:
-                raise ValueError(
-                    f"'lin' column not found: cannot read LIN taxonomy assignments from {filename}."
-                )
+            if lins:
+                notify("Trying to read LIN taxonomy assignments.")
+                if "lin" not in header:
+                    raise ValueError(
+                        f"'lin' column not found: cannot read LIN taxonomy assignments from {filename}."
+                    )
 
-            if not lins:
+            if ictv:
+                notify("Trying to read ICTV taxonomy assignments.")
+                # check that all ranks are in header
+                ranks = list(ICTVRankLineageInfo().taxlist)
+                if not set(ranks).issubset(header):
+                    raise ValueError("Not all taxonomy ranks present")
+
+            if not lins and not ictv:
                 # is "strain" an available rank?
                 if "strain" in header:
                     include_strain = True
@@ -1217,10 +1329,12 @@ class LineageDB(abc.Mapping):
                                 "For taxonomic summarization, all LIN assignments must use the same number of LIN positions."
                             )
                     else:
-                        n_pos = (
-                            lineageInfo.n_lin_positions
-                        )  # set n_pos with first entry
+                        # set n_pos with first entry
+                        n_pos = lineageInfo.n_lin_positions
                         ranks = lineageInfo.ranks
+                elif ictv:
+                    # read lineage from row dictionary
+                    lineageInfo = ICTVRankLineageInfo(lineage_dict=row)
                 else:
                     # read lineage from row dictionary
                     lineageInfo = RankLineageInfo(lineage_dict=row)
@@ -1247,7 +1361,7 @@ class LineageDB(abc.Mapping):
                     else:
                         assignments[ident] = lineage
 
-                        if not lins:
+                        if not lins and not ictv:
                             if lineage[-1].rank == "species":
                                 n_species += 1
                             elif lineage[-1].rank == "strain":
@@ -1257,7 +1371,9 @@ class LineageDB(abc.Mapping):
         return LineageDB(assignments, ranks)
 
     @classmethod
-    def load_from_gather_with_lineages(cls, filename, *, force=False, lins=False):
+    def load_from_gather_with_lineages(
+        cls, filename, *, force=False, lins=False, ictv=False
+    ):
         """
         Load an annotated gather-with-lineages CSV file produced by
         'tax annotate' into a LineageDB.
@@ -1294,6 +1410,8 @@ class LineageDB(abc.Mapping):
 
                 if lins:
                     lineageInfo = LINLineageInfo(lineage_str=row["lineage"])
+                elif ictv:
+                    lineageInfo = ICTVRankLineageInfo(lineage_str=row["lineage"])
                 else:
                     lineageInfo = RankLineageInfo(lineage_str=row["lineage"])
 
@@ -1772,6 +1890,7 @@ class BaseTaxResult:
     missed_ident: bool = False
     match_lineage_attempted: bool = False
     lins: bool = False
+    ictv: bool = False
 
     def get_ident(self, id_col=None):
         # split identifiers = split on whitespace
@@ -1799,6 +1918,8 @@ class BaseTaxResult:
             if lin:
                 if self.lins:
                     self.lineageInfo = LINLineageInfo(lineage=lin)
+                elif self.ictv:
+                    self.lineageInfo = ICTVRankLineageInfo(lineage=lin)
                 else:
                     self.lineageInfo = RankLineageInfo(lineage=lin)
             else:
@@ -1858,7 +1979,7 @@ class TaxResult(BaseTaxResult):
                 # get match lineage
                 tax_res.get_match_lineage(taxD=taxonomic_assignments)
 
-    Use RankLineageInfo or LINLineageInfo to store lineage information.
+    Use RankLineageInfo, ICTVLineageInfo, or LINLineageInfo to store lineage information.
     """
 
     raw: GatherRow
@@ -1884,6 +2005,8 @@ class TaxResult(BaseTaxResult):
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
         if self.lins:
             self.lineageInfo = LINLineageInfo()
+        elif self.ictv:
+            self.lineageInfo = ICTVRankLineageInfo()
         else:
             self.lineageInfo = RankLineageInfo()
 
@@ -2109,6 +2232,7 @@ class QueryTaxResult:
 
     query_info: QueryInfo  # initialize with QueryInfo dataclass
     lins: bool = False
+    ictv: bool = False
 
     def __post_init__(self):
         self.query_name = self.query_info.query_name  # for convenience
@@ -2147,7 +2271,11 @@ class QueryTaxResult:
         self.krona_header = []
 
     def is_compatible(self, taxresult):
-        return taxresult.query_info == self.query_info and taxresult.lins == self.lins
+        return (
+            taxresult.query_info == self.query_info
+            and taxresult.lins == self.lins
+            and taxresult.ictv == self.ictv
+        )
 
     @property
     def ascending_ranks(self):
@@ -2280,6 +2408,8 @@ class QueryTaxResult:
             # record unclassified
             if self.lins:
                 lineage = LINLineageInfo()
+            elif self.ictv:
+                lineage = ICTVRankLineageInfo()
             else:
                 lineage = RankLineageInfo()
             query_ani = None
