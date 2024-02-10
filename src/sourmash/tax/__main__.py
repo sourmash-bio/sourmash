@@ -18,6 +18,7 @@ from .tax_utils import (
     RankLineageInfo,
     LINLineageInfo,
     AnnotateTaxResult,
+    ICTVRankLineageInfo,
 )
 
 usage = """
@@ -82,6 +83,7 @@ def metagenome(args):
             keep_identifier_versions=args.keep_identifier_versions,
             force=args.force,
             lins=args.lins,
+            ictv=args.ictv,
         )
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
@@ -113,6 +115,7 @@ def metagenome(args):
             keep_full_identifiers=args.keep_full_identifiers,
             keep_identifier_versions=args.keep_identifier_versions,
             lins=args.lins,
+            ictv=args.ictv,
         )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -258,6 +261,7 @@ def genome(args):
             keep_identifier_versions=args.keep_identifier_versions,
             force=args.force,
             lins=args.lins,
+            ictv=args.ictv,
         )
         available_ranks = tax_assign.available_ranks
 
@@ -297,6 +301,7 @@ def genome(args):
             keep_full_identifiers=args.keep_full_identifiers,
             keep_identifier_versions=args.keep_identifier_versions,
             lins=args.lins,
+            ictv=args.ictv,
         )
 
     except ValueError as exc:
@@ -402,6 +407,7 @@ def annotate(args):
             keep_identifier_versions=args.keep_identifier_versions,
             force=args.force,
             lins=args.lins,
+            ictv=args.ictv,
         )
 
     except ValueError as exc:
@@ -466,6 +472,7 @@ def annotate(args):
                             raw=row,
                             id_col=id_col,
                             lins=args.lins,
+                            ictv=args.ictv,
                             keep_full_identifiers=args.keep_full_identifiers,
                             keep_identifier_versions=args.keep_identifier_versions,
                         )
@@ -591,6 +598,7 @@ def summarize(args):
             keep_full_identifiers=args.keep_full_identifiers,
             keep_identifier_versions=args.keep_identifier_versions,
             lins=args.lins,
+            ictv=args.ictv,
         )
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
@@ -637,6 +645,8 @@ def summarize(args):
                 rank = lineage[-1].rank
                 if args.lins:
                     inf = LINLineageInfo(lineage=lineage)
+                elif args.ictv:
+                    inf = ICTVRankLineageInfo(lineage=lineage)
                 else:
                     inf = RankLineageInfo(lineage=lineage)
                 lin = inf.display_lineage()
