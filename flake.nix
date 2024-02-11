@@ -59,14 +59,14 @@
       {
         packages = {
 
-          lib = rustPlatform.buildRustPackage ( commonArgs // {
+          lib = rustPlatform.buildRustPackage (commonArgs // {
             name = "libsourmash";
             copyLibs = true;
             cargoLock.lockFile = ./Cargo.lock;
             nativeBuildInputs = with rustPlatform; [ bindgenHook ];
           });
 
-          sourmash = python.buildPythonPackage ( commonArgs // rec {
+          sourmash = python.buildPythonPackage (commonArgs // rec {
             pname = "sourmash";
             version = "4.8.6";
             format = "pyproject";
@@ -128,14 +128,15 @@
             cargo-outdated
             cargo-udeps
             cargo-deny
-            #cargo-semver-checks
             nixpkgs-fmt
+          ] ++ lib.optionals (!stdenv.isDarwin) [
+            cargo-semver-checks
             cargo-llvm-cov
           ];
 
           shellHook = ''
-              export MACOSX_DEPLOYMENT_TARGET=10.14
-            '';
+            export MACOSX_DEPLOYMENT_TARGET=10.14
+          '';
 
           # Needed for matplotlib
           LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
