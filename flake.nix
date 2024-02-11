@@ -21,7 +21,7 @@
           inherit system overlays;
         };
         rustVersion = pkgs.rust-bin.stable.latest.default.override {
-          #extensions = [ "rust-src" ];
+          extensions = [ "rust-src" "llvm-tools-preview" ];
           #targets = [ "x86_64-unknown-linux-musl" ];
           targets = [ "wasm32-wasi" "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
         };
@@ -130,6 +130,7 @@
             cargo-deny
             #cargo-semver-checks
             nixpkgs-fmt
+            cargo-llvm-cov
           ];
 
           shellHook = ''
