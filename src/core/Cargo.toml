@@ -88,7 +88,7 @@ skip_feature_sets = [
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.wasm-bindgen]
-version = "0.2.89"
+version = "0.2.91"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
