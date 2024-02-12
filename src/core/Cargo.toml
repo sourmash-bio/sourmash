@@ -100,7 +100,7 @@ version = "0.4.33"
 features = ["wasmbind"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.40"
+wasm-bindgen-test = "0.3.41"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
