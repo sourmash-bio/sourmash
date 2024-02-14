@@ -19,6 +19,7 @@ use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
+use crate::ani_utils::{ani_from_containment, ani_from_containment_ci};
 use crate::encodings::Idx;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
@@ -189,19 +190,6 @@ where
     }
 }
 
-/// Streamlined function for ANI from containment.
-/// This will ultimately move to a diff file.
-/// todo: report ANI as % in 5.0?
-pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
-    if containment == 0.0 {
-        1.0
-    } else if containment == 1.0 {
-        0.0
-    } else {
-        1.0 - (1.0 - containment.powf(1.0 / ksize))
-    }
-}
-
 pub fn calculate_gather_stats(
     orig_query: &KmerMinHash,
     query: &KmerMinHash,
@@ -236,20 +224,33 @@ pub fn calculate_gather_stats(
     let f_unique_to_query = match_size as f64 / query.size() as f64;
 
     // // get ANI values
-    let mut query_containment_ani = 0.0;
-    let mut match_containment_ani = 0.0;
-    let mut average_containment_ani = 0.0;
-    let mut max_containment_ani = 0.0;
-    if calc_ani {
-        let ksize = match_mh.ksize() as f64;
-        query_containment_ani = ani_from_containment(f_unique_to_query, ksize);
-        match_containment_ani = ani_from_containment(f_match, ksize);
-        average_containment_ani = (query_containment_ani + match_containment_ani) / 2.0;
-        max_containment_ani = f64::max(query_containment_ani, match_containment_ani);
-        if calc_ani_ci {
-            todo!();
-        }
+    let ksize = match_mh.ksize() as f64;
+    let query_containment_ani = ani_from_containment(f_unique_to_query, ksize);
+    let match_containment_ani = ani_from_containment(f_match, ksize);
+    if calc_ani_ci {
+        // todo = let user pass in these options to maintain cli
+        let confidence = None;
+        let threshold = None;
+        let n_unique_kmers = match_mh.n_unique_kmers();
+        let (query_containment_ani, qani_low, qani_high, p_nc) = ani_from_containment_ci(
+            f_unique_to_query,
+            ksize,
+            match_mh.scaled(),
+            n_unique_kmers,
+            confidence,
+            threshold,
+        )?;
+        let (match_containment_ani, mani_low, mani_high, p_nc) = ani_from_containment_ci(
+            f_match,
+            ksize,
+            match_mh.scaled(),
+            n_unique_kmers,
+            confidence,
+            threshold,
+        )?;
     }
+    let average_containment_ani = (query_containment_ani + match_containment_ani) / 2.0;
+    let max_containment_ani = f64::max(query_containment_ani, match_containment_ani);
 
     // set up non-abundance weighted values
     let mut f_unique_weighted = f_unique_to_query;

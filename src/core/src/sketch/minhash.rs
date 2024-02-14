@@ -747,6 +747,7 @@ impl KmerMinHash {
             self.size() as u64
         }
     }
+
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             self.mins
@@ -771,6 +772,13 @@ impl KmerMinHash {
         }
 
         hll
+    }
+
+    // Approximate total number of kmers
+    // this could be improved by generating an HLL estimate while sketching instead
+    // (for scaled minhashes)
+    pub fn n_unique_kmers(&self) -> u64 {
+        self.size() as u64 * self.scaled() // + (self.ksize - 1) for bp estimation
     }
 
     // create a downsampled copy of self

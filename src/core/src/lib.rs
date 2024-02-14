@@ -27,7 +27,7 @@ pub mod prelude;
 
 pub mod cmd;
 
-pub mod c_ani;
+pub mod ani_utils;
 pub mod collection;
 pub mod encodings;
 pub mod index;
