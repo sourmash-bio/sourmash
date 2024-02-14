@@ -91,7 +91,19 @@ pub struct GatherResult {
     query_containment_ani: f64,
 
     #[getset(get_copy = "pub")]
+    query_containment_ani_ci_low: Option<f64>,
+
+    #[getset(get_copy = "pub")]
+    query_containment_ani_ci_high: Option<f64>,
+
+    #[getset(get_copy = "pub")]
     match_containment_ani: f64,
+
+    #[getset(get_copy = "pub")]
+    match_containment_ani_ci_low: Option<f64>,
+
+    #[getset(get_copy = "pub")]
+    match_containment_ani_ci_high: Option<f64>,
 
     #[getset(get_copy = "pub")]
     average_containment_ani: f64,
@@ -200,7 +212,6 @@ pub fn calculate_gather_stats(
     gather_result_rank: usize,
     // these are likely temporary options, using for testing/benchmarking
     calc_abund_stats: bool,
-    calc_ani: bool,
     calc_ani_ci: bool,
 ) -> Result<GatherResult> {
     // Calculate stats
@@ -227,12 +238,22 @@ pub fn calculate_gather_stats(
     let ksize = match_mh.ksize() as f64;
     let query_containment_ani = ani_from_containment(f_unique_to_query, ksize);
     let match_containment_ani = ani_from_containment(f_match, ksize);
+    let query_containment_ani_ci_low = None;
+    let query_containment_ani_ci_high = None;
+    let match_containment_ani_ci_low = None;
+    let match_containment_ani_ci_high = None;
+
     if calc_ani_ci {
         // todo = let user pass in these options to maintain cli
         let confidence = None;
         let threshold = None;
         let n_unique_kmers = match_mh.n_unique_kmers();
-        let (query_containment_ani, qani_low, qani_high, p_nc) = ani_from_containment_ci(
+        let (
+            query_containment_ani,
+            query_containment_ani_ci_low,
+            query_containment_ani_ci_high,
+            p_nc,
+        ) = ani_from_containment_ci(
             f_unique_to_query,
             ksize,
             match_mh.scaled(),
@@ -240,7 +261,12 @@ pub fn calculate_gather_stats(
             confidence,
             threshold,
         )?;
-        let (match_containment_ani, mani_low, mani_high, p_nc) = ani_from_containment_ci(
+        let (
+            match_containment_ani,
+            match_containment_ani_ci_low,
+            match_containment_ani_ci_high,
+            p_nc,
+        ) = ani_from_containment_ci(
             f_match,
             ksize,
             match_mh.scaled(),
@@ -299,6 +325,10 @@ pub fn calculate_gather_stats(
         .remaining_bp(remaining_bp)
         .n_unique_weighted_found(n_unique_weighted_found as usize)
         .query_containment_ani(query_containment_ani)
+        .query_containment_ani_ci_low(query_containment_ani_ci_low)
+        .query_containment_ani_ci_high(query_containment_ani_ci_high)
+        .match_containment_ani_ci_low(match_containment_ani_ci_low)
+        .match_containment_ani_ci_high(match_containment_ani_ci_high)
         .match_containment_ani(match_containment_ani)
         .average_containment_ani(average_containment_ani)
         .max_containment_ani(max_containment_ani)

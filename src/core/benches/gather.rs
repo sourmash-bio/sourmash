@@ -40,7 +40,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("gather_stats");
     for (calc_abund_stats, calc_ani) in test_cases {
-        let test_name = format!("abund{}_ani{}", calc_abund_stats as u8, calc_ani as u8);
+        let test_name = format!("abund{}_ani{}", calc_abund_stats as u8, calc_ani_ci as u8);
         group.bench_function(&test_name, |b| {
             b.iter(|| {
                 let _result = calculate_gather_stats(
@@ -52,8 +52,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
                     black_box(100), // Example remaining_hashes
                     black_box(1),   // Example gather_result_rank
                     black_box(calc_abund_stats),
-                    black_box(calc_ani),
-                    black_box(false),
+                    black_box(calc_ani_ci),
                 );
             });
         });

@@ -197,6 +197,10 @@ impl LinearIndex {
         let match_containment_ani = 0.0;
         let max_containment_ani = 0.0;
         let average_containment_ani = 0.0;
+        let query_containment_ani_ci_low = None;
+        let query_containment_ani_ci_high = None;
+        let match_containment_ani_ci_low = None;
+        let match_containment_ani_ci_high = None;
 
         Ok(GatherResult {
             intersect_bp,
@@ -218,7 +222,11 @@ impl LinearIndex {
             total_weighted_hashes,
             n_unique_weighted_found,
             query_containment_ani,
+            query_containment_ani_ci_low,
+            query_containment_ani_ci_high,
             match_containment_ani,
+            match_containment_ani_ci_low,
+            match_containment_ani_ci_high,
             max_containment_ani,
             average_containment_ani,
         })

@@ -336,7 +336,6 @@ impl RevIndexOps for RevIndex {
                 remaining_hashes,
                 gather_result_rank,
                 true,
-                true,
                 false,
             )?;
 
