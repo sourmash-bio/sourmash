@@ -34,7 +34,7 @@ pub mod selection;
 pub mod signature;
 pub mod sketch;
 pub mod storage;
-
+pub mod c_ani;
 pub mod encodings;
 
 #[cfg(feature = "from-finch")]
