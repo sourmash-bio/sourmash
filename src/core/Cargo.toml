@@ -58,6 +58,9 @@ thiserror = "1.0"
 twox-hash = "1.6.0"
 typed-builder = "0.18.0"
 vec-collections = "0.4.3"
+statrs = "0.16.0"
+ndarray = "0.15.6"
+roots = "0.0.8"
 
 [dev-dependencies]
 criterion = "0.5.1"
