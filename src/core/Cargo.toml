@@ -45,7 +45,7 @@ memmap2 = "0.9.4"
 murmurhash3 = "0.0.5"
 niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
-num-iter = "0.1.43"
+num-iter = "0.1.44"
 once_cell = "1.18.0"
 ouroboros = "0.18.3"
 piz = "0.5.0"
@@ -59,6 +59,9 @@ thiserror = "1.0"
 twox-hash = "1.6.0"
 typed-builder = "0.18.0"
 vec-collections = "0.4.3"
+statrs = "0.16.0"
+ndarray = "0.15.6"
+roots = "0.0.8"
 streaming-stats = "0.2"
 
 [dev-dependencies]
@@ -98,7 +101,7 @@ version = "0.2.89"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
-version = "0.3.67"
+version = "0.3.68"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
@@ -106,7 +109,7 @@ version = "0.4.32"
 features = ["wasmbind"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.40"
+wasm-bindgen-test = "0.3.41"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
