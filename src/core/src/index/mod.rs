@@ -291,7 +291,7 @@ pub fn calculate_gather_stats(
         .filename(filename)
         .name(name)
         .md5(md5)
-        .match_(match_sig.into())
+        .match_(match_sig)
         .f_match_orig(f_match_orig)
         .unique_intersect_bp(unique_intersect_bp)
         .gather_result_rank(gather_result_rank)
