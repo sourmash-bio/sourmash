@@ -59,6 +59,7 @@ thiserror = "1.0"
 twox-hash = "1.6.0"
 typed-builder = "0.18.0"
 vec-collections = "0.4.3"
+streaming-stats = "0.2"
 
 [dev-dependencies]
 criterion = "0.5.1"

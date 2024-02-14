@@ -299,6 +299,8 @@ impl RevIndexOps for RevIndex {
         let mut matches = vec![];
         // let mut query: KmerMinHashBTree = orig_query.clone().into();
         let mut query: KmerMinHash = orig_query.clone();
+        // let mut sum_weighted_found = 0;
+        let mut total_weighted_hashes = 0;
         // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
@@ -336,7 +338,7 @@ impl RevIndexOps for RevIndex {
                 // .total_orig_query_abund(total_orig_query_abund)
                 .build();
 
-            let gather_result = calculate_gather_stats(result)?;
+            let gather_result = calculate_gather_stats(result, true, false)?;
 
             // Calculate stats
             matches.push(gather_result);

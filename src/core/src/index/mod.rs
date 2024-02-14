@@ -11,6 +11,7 @@ pub mod revindex;
 
 pub mod search;
 
+use stats::{median, stddev};
 use std::path::Path;
 
 use getset::{CopyGetters, Getters, Setters};
@@ -77,6 +78,28 @@ pub struct GatherResult {
 
     #[getset(get_copy = "pub")]
     remaining_bp: usize,
+
+    #[getset(get_copy = "pub")]
+    n_unique_weighted_found: usize,
+
+    // #[getset(get_copy = "pub")]
+    // sum_weighted_found: usize,
+    #[getset(get_copy = "pub")]
+    total_weighted_hashes: usize,
+
+    #[getset(get_copy = "pub")]
+    query_containment_ani: f64,
+
+    #[getset(get_copy = "pub")]
+    match_containment_ani: f64,
+
+    #[getset(get_copy = "pub")]
+    average_containment_ani: f64,
+
+    #[getset(get_copy = "pub")]
+    max_containment_ani: f64,
+    // #[getset(get_copy = "pub")]
+    // potential_false_negative: bool,
 }
 
 impl GatherResult {
@@ -167,6 +190,19 @@ where
     }
 }
 
+/// Streamlined function for ANI from containment.
+/// This will ultimately move to a diff file.
+/// todo: report ANI as % in 5.0?
+pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
+    if containment == 0.0 {
+        1.0
+    } else if containment == 1.0 {
+        0.0
+    } else {
+        1.0 - (1.0 - containment.powf(1.0 / ksize))
+    }
+}
+
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
 pub struct FastGatherResult {
     // #[serde(skip)]
@@ -197,7 +233,11 @@ impl FastGatherResult {
     }
 }
 
-pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
+pub fn calculate_gather_stats(
+    fgres: FastGatherResult,
+    calc_ani: bool,
+    calc_ani_ci: bool,
+) -> Result<GatherResult> {
     // Calculate stats
     let name = fgres.match_.name();
     let md5 = fgres.match_.md5sum();
@@ -208,9 +248,6 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     let remaining_bp = fgres.remaining_hashes * fgres.match_mh.scaled() as usize;
 
     // stats for this match vs original query
-    // downsample here?? this seems like unnecesary work for each round -- how to get around?
-    // let orig_query_ds = &fgres.orig_query.downsample_scaled(fgres.match_mh.scaled())?;
-
     let (intersect_orig, _) = fgres.match_mh.intersection_size(&fgres.orig_query).unwrap(); //?;
     let intersect_bp = (fgres.match_mh.scaled() * intersect_orig) as usize;
     let f_orig_query = intersect_orig as f64 / fgres.orig_query.size() as f64;
@@ -221,35 +258,49 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
     let unique_intersect_bp = fgres.match_mh.scaled() as usize * fgres.match_size;
     let f_unique_to_query = fgres.match_size as f64 / fgres.query.size() as f64;
 
+    // // get ANI values
+    let mut query_containment_ani = 0.0;
+    let mut match_containment_ani = 0.0;
+    let mut average_containment_ani = 0.0;
+    let mut max_containment_ani = 0.0;
+    if calc_ani {
+        let ksize = fgres.match_mh.ksize() as f64;
+        query_containment_ani = ani_from_containment(f_unique_to_query, ksize);
+        match_containment_ani = ani_from_containment(f_match, ksize);
+        average_containment_ani = (query_containment_ani + match_containment_ani) / 2.0;
+        max_containment_ani = f64::max(query_containment_ani, match_containment_ani);
+        if calc_ani_ci {
+            todo!();
+        }
+    }
+
     // set up non-abundance weighted values
     let mut f_unique_weighted = f_unique_to_query;
     let mut average_abund = 1.0;
     let mut median_abund = 1.0;
     let mut std_abund = 0.0;
+    let mut n_unique_weighted_found = 0;
+    // let mut sum_weighted_found = 0;
+    let mut total_weighted_hashes = 0;
 
     // If abundance, calculate abund-related metrics (vs current query)
     if fgres.query.track_abundance() {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, matched_abund) = match fgres.match_mh.inflated_abundances(&fgres.query) {
-            Ok((abunds, matched_abund)) => (abunds, matched_abund),
+        let (abunds, total_weighted) = match fgres.match_mh.inflated_abundances(&fgres.query) {
+            Ok((abunds, total_weighted)) => (abunds, total_weighted),
             Err(e) => {
                 return Err(e);
             }
         };
-        let match_mh_total_abund = fgres.match_mh.sum_abunds();
-        f_unique_weighted = match_mh_total_abund as f64 / matched_abund as f64;
+        total_weighted_hashes = total_weighted as usize;
+        n_unique_weighted_found = fgres.match_mh.sum_abunds();
+        f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
 
-        average_abund = matched_abund as f64 / abunds.len() as f64;
-
-        // todo
-        median_abund = 1.0;
-        std_abund = 0.0;
-        // let median_abund: f64 = median(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>());
-        // let std_abund: f64 = statistics::std_dev(&common_abunds.iter().map(|&x| x as f64).collect::<Vec<f64>>(), None)?;
+        average_abund = total_weighted_hashes as f64 / abunds.len() as f64;
+        // to do: do not clone for these? try 'statistical' crate instead?
+        median_abund = median(abunds.iter().cloned()).unwrap();
+        std_abund = stddev(abunds.iter().cloned());
     }
-
-    // do want the f_weighted / abundance info for the original query?
-    // f_weighted = match_mh_total_abund as f64 / fgres.total_orig_query_abund as f64;
 
     let result = GatherResult::builder()
         .intersect_bp(intersect_bp)
@@ -268,6 +319,13 @@ pub fn calculate_gather_stats(fgres: FastGatherResult) -> Result<GatherResult> {
         .unique_intersect_bp(unique_intersect_bp)
         .gather_result_rank(fgres.gather_result_rank)
         .remaining_bp(remaining_bp)
+        .n_unique_weighted_found(n_unique_weighted_found as usize)
+        .query_containment_ani(query_containment_ani)
+        .match_containment_ani(match_containment_ani)
+        .average_containment_ani(average_containment_ani)
+        .max_containment_ani(max_containment_ani)
+        // .sum_weighted_found(sum_weighted_found)
+        .total_weighted_hashes(total_weighted_hashes)
         .build();
     Ok(result)
 }
@@ -280,6 +338,7 @@ mod test_calculate_gather_stats {
     use crate::signature::Signature;
     use crate::sketch::minhash::KmerMinHash;
     use crate::sketch::Sketch;
+    // use std::f64::EPSILON;
     // TODO: use f64::EPSILON when we bump MSRV
     const EPSILON: f64 = 0.01;
 
@@ -331,7 +390,7 @@ mod test_calculate_gather_stats {
             // .total_orig_query_abund(20) // sum of orig_query abundances
             .build();
 
-        let result = calculate_gather_stats(fgres).unwrap();
+        let result = calculate_gather_stats(fgres, true, false).unwrap();
         // first, print all results
         eprintln!("result: {:?}", result);
         assert_eq!(result.filename(), "match-filename");
@@ -347,12 +406,18 @@ mod test_calculate_gather_stats {
         assert!((result.f_unique_weighted - 0.333).abs() < EPSILON);
         assert_eq!(result.average_abund, 6);
         // todo: implement median and std
-        assert_eq!(result.median_abund, 1);
-        assert_eq!(result.std_abund, 0);
+        assert_eq!(result.median_abund, 6);
+        assert_eq!(result.std_abund, 3);
 
         // results from match vs orig_query
         assert_eq!(result.intersect_bp, 30);
         assert_eq!(result.f_orig_query, 0.6);
         assert_eq!(result.f_match_orig, 0.75);
+
+        // check ANI values. Unfortunately, both f_match and f_unique_to_query are 0.5, so all the same. shrug.
+        assert!((result.average_containment_ani - 0.79).abs() < EPSILON);
+        assert!((result.match_containment_ani - 0.79).abs() < EPSILON);
+        assert!((result.query_containment_ani - 0.79).abs() < EPSILON);
+        assert!((result.max_containment_ani - 0.79).abs() < EPSILON);
     }
 }
