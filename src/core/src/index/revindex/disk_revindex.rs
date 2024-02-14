@@ -11,10 +11,10 @@ use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, prepare_query, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors,
-    RevIndexOps, DB, HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DB,
+    HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
 };
-use crate::index::{GatherResult, SigCounter};
+use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
@@ -297,8 +297,15 @@ impl RevIndexOps for RevIndex {
     ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
-        //let mut query: KmerMinHashBTree = orig_query.clone().into();
-        let selection = selection.unwrap_or_else(|| self.collection.selection());
+        // let mut query: KmerMinHashBTree = orig_query.clone().into();
+        let mut query: KmerMinHash = orig_query.clone();
+        // let mut sum_weighted_found = 0;
+        let mut total_weighted_hashes = 0;
+        // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
+        let _selection = selection.unwrap_or_else(|| self.collection.selection());
+        let mut remaining_hashes = orig_query.size();
+        let mut orig_query_ds = orig_query.clone();
+        // let total_orig_query_abund = orig_query.sum_abunds();
 
         while match_size > threshold && !counter.is_empty() {
             trace!("counter len: {}", counter.len());
@@ -307,57 +314,39 @@ impl RevIndexOps for RevIndex {
             let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
             match_size = if size >= threshold { size } else { break };
 
+            // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
-            // Calculate stats
-            let f_orig_query = match_size as f64 / orig_query.size() as f64;
-            let name = match_sig.name();
+            // get downsampled minhashes for comparison. Better way to handle this???
+            let match_mh = match_sig.minhash().unwrap();
+            query = query.downsample_scaled(match_mh.scaled())?;
+            orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
+
+            // just calculate essentials here
             let gather_result_rank = matches.len();
-            let match_ = match_sig.clone();
-            let md5 = match_sig.md5sum();
+            remaining_hashes = remaining_hashes - match_size;
 
-            let match_mh = prepare_query(match_sig.into(), &selection)
-                .expect("Couldn't find a compatible MinHash");
-            let f_match = match_size as f64 / match_mh.size() as f64;
-            let unique_intersect_bp = match_mh.scaled() as usize * match_size;
-            let (intersect_orig, _) = match_mh.intersection_size(orig_query)?;
-            let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
-            let f_unique_to_query = intersect_orig as f64 / orig_query.size() as f64;
+            // Calculate stats ==> ideally move this out where it can be parallelized
+            let gather_result = calculate_gather_stats(
+                &orig_query_ds,
+                &query,
+                match_sig.clone().into(),
+                &match_mh,
+                match_size,
+                remaining_hashes,
+                gather_result_rank,
+                true,
+                true,
+                false,
+            )?;
 
-            // TODO: all of these
-            let filename = "".into();
-            let f_unique_weighted = 0.;
-            let average_abund = 0;
-            let median_abund = 0;
-            let std_abund = 0;
-            let f_match_orig = 0.;
-            let remaining_bp = 0;
-
-            let result = GatherResult::builder()
-                .intersect_bp(intersect_bp)
-                .f_orig_query(f_orig_query)
-                .f_match(f_match)
-                .f_unique_to_query(f_unique_to_query)
-                .f_unique_weighted(f_unique_weighted)
-                .average_abund(average_abund)
-                .median_abund(median_abund)
-                .std_abund(std_abund)
-                .filename(filename)
-                .name(name)
-                .md5(md5)
-                .match_(match_.into())
-                .f_match_orig(f_match_orig)
-                .unique_intersect_bp(unique_intersect_bp)
-                .gather_result_rank(gather_result_rank)
-                .remaining_bp(remaining_bp)
-                .build();
-            matches.push(result);
+            matches.push(gather_result);
 
             trace!("Preparing counter for next round");
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            //query.remove_many(match_mh.to_vec().as_slice())?;
+            query.remove_many(match_mh.to_vec().as_slice())?; // is there a better way?
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.

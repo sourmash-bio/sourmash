@@ -191,6 +191,12 @@ impl LinearIndex {
         let md5 = "".into();
         let f_match_orig = 0.;
         let remaining_bp = 0;
+        let total_weighted_hashes = 0;
+        let n_unique_weighted_found = 0;
+        let query_containment_ani = 0.0;
+        let match_containment_ani = 0.0;
+        let max_containment_ani = 0.0;
+        let average_containment_ani = 0.0;
 
         Ok(GatherResult {
             intersect_bp,
@@ -209,6 +215,12 @@ impl LinearIndex {
             unique_intersect_bp,
             gather_result_rank,
             remaining_bp,
+            total_weighted_hashes,
+            n_unique_weighted_found,
+            query_containment_ani,
+            match_containment_ani,
+            max_containment_ani,
+            average_containment_ani,
         })
     }
 
