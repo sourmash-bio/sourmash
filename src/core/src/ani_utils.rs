@@ -45,6 +45,15 @@ fn r1_to_q(k: f64, r1: f64) -> f64 {
     1.0 - (1.0 - r1).powi(k as i32)
 }
 
+// prior versions of ani estimation also returned this value by default.
+// BUT, it's not really something we need to calculate for prefetch/gather,
+// since there will always be something in common (or comparison would not be happening)
+// I'm not sure where the right place to put this back in is.. perhaps add minhash.contained_ani()
+// and return this there.
+// Usage:
+// let prob_nothing_in_common =
+//     get_exp_probability_nothing_common(n_unique_kmers, ksize, point_estimate, f_scaled)?;
+#[allow(dead_code)]
 fn get_exp_probability_nothing_common(
     ani_estimate: f64,
     ksize: f64,
@@ -79,18 +88,16 @@ pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
 }
 
 // Calculate containment to ANI with confidence intervals
-pub fn ani_from_containment_ci(
+pub fn ani_ci_from_containment(
     containment: f64,
     ksize: f64,
     scaled: u64,
     n_unique_kmers: u64,
     confidence: Option<f64>,
     // prob_threshold: Option<f64>,
-) -> Result<(f64, f64, f64, f64), Error> {
+) -> Result<(f64, f64), Error> {
     let confidence = confidence.unwrap_or(0.95);
     // let prob_threshold = prob_threshold.unwrap_or(1e-3);
-
-    let point_estimate = ani_from_containment(containment, ksize);
 
     // conversions needed throughout
     let scaled_f64 = scaled as f64;
@@ -126,12 +133,5 @@ pub fn ani_from_containment_ci(
     let sol1 = find_root_brent(0.0000001, 0.9999999, &f1, &mut convergency).unwrap_or_default();
     let sol2 = find_root_brent(0.0000001, 0.9999999, &f2, &mut convergency).unwrap_or_default();
 
-    // Actually, we really only want to calculate this if ANI is 0, since in all other cases
-    // there's already something in common!
-    // .. meaning it's not worth calculating for prefetch or gather results
-    // do we want to create a separate version of this function excluding this, or just keep it?
-    let prob_nothing_in_common =
-        get_exp_probability_nothing_common(n_unique_kmers, ksize, point_estimate, f_scaled)?;
-
-    Ok((point_estimate, sol1, sol2, prob_nothing_in_common))
+    Ok((sol1, sol2))
 }

@@ -19,7 +19,7 @@ use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::ani_utils::{ani_from_containment, ani_from_containment_ci};
+use crate::ani_utils::{ani_ci_from_containment, ani_from_containment};
 use crate::encodings::Idx;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
@@ -110,8 +110,6 @@ pub struct GatherResult {
 
     #[getset(get_copy = "pub")]
     max_containment_ani: f64,
-    // #[getset(get_copy = "pub")]
-    // potential_false_negative: bool,
 }
 
 impl GatherResult {
@@ -242,31 +240,28 @@ pub fn calculate_gather_stats(
     let mut query_containment_ani_ci_high = None;
     let mut match_containment_ani_ci_low = None;
     let mut match_containment_ani_ci_high = None;
-    let mut _prob_nothing_in_common = 0.0;
 
     if calc_ani_ci {
         // todo = let user pass in these options to maintain cli
         let confidence = None;
         let n_unique_kmers = match_mh.n_unique_kmers();
-        let (_, qani_low, qani_high, prob_common_update) = ani_from_containment_ci(
+        let (qani_low, qani_high) = ani_ci_from_containment(
             f_unique_to_query,
             ksize,
             match_mh.scaled(),
             n_unique_kmers,
             confidence,
         )?;
-        _prob_nothing_in_common = prob_common_update;
         query_containment_ani_ci_low = Some(qani_low);
         query_containment_ani_ci_high = Some(qani_high);
 
-        let (_, mani_low, mani_high, prob_common_update) = ani_from_containment_ci(
+        let (mani_low, mani_high) = ani_ci_from_containment(
             f_match,
             ksize,
             match_mh.scaled(),
             n_unique_kmers,
             confidence,
         )?;
-        _prob_nothing_in_common = prob_common_update;
         match_containment_ani_ci_low = Some(mani_low);
         match_containment_ani_ci_high = Some(mani_high);
     }
@@ -386,7 +381,6 @@ mod test_calculate_gather_stats {
         let match_size = 2;
         let gather_result_rank = 5;
         let calc_abund_stats = true;
-        let calc_ani = true;
         let calc_ani_ci = false;
         let result = calculate_gather_stats(
             &orig_query,
@@ -397,7 +391,6 @@ mod test_calculate_gather_stats {
             remaining_hashes,
             gather_result_rank,
             calc_abund_stats,
-            calc_ani,
             calc_ani_ci,
         )
         .unwrap();
