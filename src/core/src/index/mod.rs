@@ -25,7 +25,6 @@ use crate::prelude::*;
 use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
-use crate::storage::SigStore;
 use crate::Result;
 
 // Todo: evaluate get vs get_copy for added fields
@@ -203,60 +202,38 @@ pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
     }
 }
 
-#[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
-pub struct FastGatherResult {
-    // #[serde(skip)]
-    // selection: Selection,
-    #[serde(skip)]
-    orig_query: KmerMinHash, // make static/ref?
-
-    #[serde(skip)]
-    query: KmerMinHash,
-
-    #[serde(skip)]
-    match_: SigStore, // sigstore ok? or signature?
-
-    #[serde(skip)]
-    match_mh: KmerMinHash,
-
-    match_size: usize,
-
-    remaining_hashes: usize,
-
-    gather_result_rank: usize,
-    // total_orig_query_abund: u64,
-}
-
-impl FastGatherResult {
-    pub fn get_match(&self) -> Signature {
-        self.match_.clone().into()
-    }
-}
-
 pub fn calculate_gather_stats(
-    fgres: FastGatherResult,
+    orig_query: &KmerMinHash,
+    query: &KmerMinHash,
+    match_sig: Signature,
+    match_mh: &KmerMinHash,
+    match_size: usize,
+    remaining_hashes: usize,
+    gather_result_rank: usize,
+    // these are likely temporary options, using for testing/benchmarking
+    calc_abund_stats: bool,
     calc_ani: bool,
     calc_ani_ci: bool,
 ) -> Result<GatherResult> {
     // Calculate stats
-    let name = fgres.match_.name();
-    let md5 = fgres.match_.md5sum();
+    let name = match_sig.name();
+    let md5 = match_sig.md5sum();
 
     // basics
-    let filename = fgres.match_.filename();
+    let filename = match_sig.filename();
     //bp remaining in subtracted query
-    let remaining_bp = fgres.remaining_hashes * fgres.match_mh.scaled() as usize;
+    let remaining_bp = remaining_hashes * match_mh.scaled() as usize;
 
     // stats for this match vs original query
-    let (intersect_orig, _) = fgres.match_mh.intersection_size(&fgres.orig_query).unwrap(); //?;
-    let intersect_bp = (fgres.match_mh.scaled() * intersect_orig) as usize;
-    let f_orig_query = intersect_orig as f64 / fgres.orig_query.size() as f64;
-    let f_match_orig = intersect_orig as f64 / fgres.match_mh.size() as f64;
+    let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap(); //?;
+    let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
+    let f_orig_query = intersect_orig as f64 / orig_query.size() as f64;
+    let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
 
     // stats for this match vs current (subtracted) query
-    let f_match = fgres.match_size as f64 / fgres.match_mh.size() as f64;
-    let unique_intersect_bp = fgres.match_mh.scaled() as usize * fgres.match_size;
-    let f_unique_to_query = fgres.match_size as f64 / fgres.query.size() as f64;
+    let f_match = match_size as f64 / match_mh.size() as f64;
+    let unique_intersect_bp = match_mh.scaled() as usize * match_size;
+    let f_unique_to_query = match_size as f64 / query.size() as f64;
 
     // // get ANI values
     let mut query_containment_ani = 0.0;
@@ -264,7 +241,7 @@ pub fn calculate_gather_stats(
     let mut average_containment_ani = 0.0;
     let mut max_containment_ani = 0.0;
     if calc_ani {
-        let ksize = fgres.match_mh.ksize() as f64;
+        let ksize = match_mh.ksize() as f64;
         query_containment_ani = ani_from_containment(f_unique_to_query, ksize);
         match_containment_ani = ani_from_containment(f_match, ksize);
         average_containment_ani = (query_containment_ani + match_containment_ani) / 2.0;
@@ -284,16 +261,16 @@ pub fn calculate_gather_stats(
     let mut total_weighted_hashes = 0;
 
     // If abundance, calculate abund-related metrics (vs current query)
-    if fgres.query.track_abundance() {
+    if calc_abund_stats {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, total_weighted) = match fgres.match_mh.inflated_abundances(&fgres.query) {
+        let (abunds, total_weighted) = match match_mh.inflated_abundances(query) {
             Ok((abunds, total_weighted)) => (abunds, total_weighted),
             Err(e) => {
                 return Err(e);
             }
         };
         total_weighted_hashes = total_weighted as usize;
-        n_unique_weighted_found = fgres.match_mh.sum_abunds();
+        n_unique_weighted_found = match_mh.sum_abunds();
         f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
 
         average_abund = total_weighted_hashes as f64 / abunds.len() as f64;
@@ -314,10 +291,10 @@ pub fn calculate_gather_stats(
         .filename(filename)
         .name(name)
         .md5(md5)
-        .match_(fgres.match_.into())
+        .match_(match_sig.into())
         .f_match_orig(f_match_orig)
         .unique_intersect_bp(unique_intersect_bp)
-        .gather_result_rank(fgres.gather_result_rank)
+        .gather_result_rank(gather_result_rank)
         .remaining_bp(remaining_bp)
         .n_unique_weighted_found(n_unique_weighted_found as usize)
         .query_containment_ani(query_containment_ani)
@@ -378,19 +355,25 @@ mod test_calculate_gather_stats {
         let rm_hashes = vec![1];
         query.remove_many(rm_hashes.as_slice()).unwrap(); // remove hash 1
 
-        // build FastGatherResult
-        let fgres = FastGatherResult::builder()
-            .orig_query(orig_query)
-            .query(query)
-            .match_(match_sig.into())
-            .match_mh(match_mh.clone())
-            .match_size(2) // 2  -- only 2 hashes match, one was previously consumed
-            .remaining_hashes(30) // arbitrary
-            .gather_result_rank(5) // arbitrary
-            // .total_orig_query_abund(20) // sum of orig_query abundances
-            .build();
-
-        let result = calculate_gather_stats(fgres, true, false).unwrap();
+        let remaining_hashes = 30;
+        let match_size = 2;
+        let gather_result_rank = 5;
+        let calc_abund_stats = true;
+        let calc_ani = true;
+        let calc_ani_ci = false;
+        let result = calculate_gather_stats(
+            &orig_query,
+            &query,
+            match_sig,
+            &match_mh,
+            match_size,
+            remaining_hashes,
+            gather_result_rank,
+            calc_abund_stats,
+            calc_ani,
+            calc_ani_ci,
+        )
+        .unwrap();
         // first, print all results
         eprintln!("result: {:?}", result);
         assert_eq!(result.filename(), "match-filename");

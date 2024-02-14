@@ -14,7 +14,7 @@ use crate::index::revindex::{
     self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DB,
     HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
 };
-use crate::index::{calculate_gather_stats, FastGatherResult, GatherResult, SigCounter};
+use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
@@ -322,25 +322,24 @@ impl RevIndexOps for RevIndex {
             query = query.downsample_scaled(match_mh.scaled())?;
             orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
 
-            // just calculate essentials for now
+            // just calculate essentials here
             let gather_result_rank = matches.len();
             remaining_hashes = remaining_hashes - match_size;
 
-            let result = FastGatherResult::builder()
-                // .selection(selection.clone())
-                .orig_query(orig_query_ds.clone()) // this should be reference - what is best way?
-                .query(query.clone())
-                .match_(match_sig.clone())
-                .match_mh(match_mh.clone())
-                .match_size(match_size)
-                .remaining_hashes(remaining_hashes)
-                .gather_result_rank(gather_result_rank)
-                // .total_orig_query_abund(total_orig_query_abund)
-                .build();
+            // Calculate stats ==> ideally move this out where it can be parallelized
+            let gather_result = calculate_gather_stats(
+                &orig_query_ds,
+                &query,
+                match_sig.clone().into(),
+                &match_mh,
+                match_size,
+                remaining_hashes,
+                gather_result_rank,
+                true,
+                true,
+                false,
+            )?;
 
-            let gather_result = calculate_gather_stats(result, true, false)?;
-
-            // Calculate stats
             matches.push(gather_result);
 
             trace!("Preparing counter for next round");

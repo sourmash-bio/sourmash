@@ -80,6 +80,10 @@ harness = false
 name = "minhash"
 harness = false
 
+[[bench]]
+name = "gather"
+harness = false
+
 [package.metadata.cargo-all-features]
 skip_optional_dependencies = true
 denylist = ["maturin"]
