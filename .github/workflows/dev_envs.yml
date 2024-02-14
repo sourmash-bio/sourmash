@@ -5,25 +5,23 @@ on:
     branches: [latest]
 jobs:
   nix:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - uses: cachix/install-nix-action@v25
-      with:
-        extra_nix_config: |
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-    - uses: cachix/cachix-action@v14
-      with:
-        name: sourmash-bio
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@v4
+    - name: Run the Magic Nix Cache
+      uses: DeterminateSystems/magic-nix-cache-action@v1
 
     - run: nix run .# -- --version
 
-    - run: nix-shell --command "tox -e py310"
+    - run: nix develop --command bash -c "tox -e py310"
 
   mamba:
     runs-on: ubuntu-latest

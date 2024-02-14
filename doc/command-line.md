@@ -551,8 +551,8 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  `gather` command (we cannot combine separate `gather` runs for the
  same query). For supported databases (e.g. GTDB, NCBI), we provide
  taxonomy csv files, but they can also be generated for user-generated
- databases. As of v4.8, some sourmash taxonomy commands can also use `LIN`
- lineage information. For more information, see [databases](databases.md).
+ databases. As of v4.8 and 4.8.6, respectively, some sourmash taxonomy
+ commands can also use `LIN` or `ICTV` lineage information.
 
 `tax` commands rely upon the fact that `gather` provides both the total
  fraction of the query matched to each database matched, as well as a
