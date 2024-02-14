@@ -238,43 +238,39 @@ pub fn calculate_gather_stats(
     let ksize = match_mh.ksize() as f64;
     let query_containment_ani = ani_from_containment(f_unique_to_query, ksize);
     let match_containment_ani = ani_from_containment(f_match, ksize);
-    let query_containment_ani_ci_low = None;
-    let query_containment_ani_ci_high = None;
-    let match_containment_ani_ci_low = None;
-    let match_containment_ani_ci_high = None;
+    let mut query_containment_ani_ci_low = None;
+    let mut query_containment_ani_ci_high = None;
+    let mut match_containment_ani_ci_low = None;
+    let mut match_containment_ani_ci_high = None;
+    let mut _prob_nothing_in_common = 0.0;
 
     if calc_ani_ci {
         // todo = let user pass in these options to maintain cli
         let confidence = None;
-        let threshold = None;
         let n_unique_kmers = match_mh.n_unique_kmers();
-        let (
-            query_containment_ani,
-            query_containment_ani_ci_low,
-            query_containment_ani_ci_high,
-            p_nc,
-        ) = ani_from_containment_ci(
+        let (_, qani_low, qani_high, prob_common_update) = ani_from_containment_ci(
             f_unique_to_query,
             ksize,
             match_mh.scaled(),
             n_unique_kmers,
             confidence,
-            threshold,
         )?;
-        let (
-            match_containment_ani,
-            match_containment_ani_ci_low,
-            match_containment_ani_ci_high,
-            p_nc,
-        ) = ani_from_containment_ci(
+        _prob_nothing_in_common = prob_common_update;
+        query_containment_ani_ci_low = Some(qani_low);
+        query_containment_ani_ci_high = Some(qani_high);
+
+        let (_, mani_low, mani_high, prob_common_update) = ani_from_containment_ci(
             f_match,
             ksize,
             match_mh.scaled(),
             n_unique_kmers,
             confidence,
-            threshold,
         )?;
+        _prob_nothing_in_common = prob_common_update;
+        match_containment_ani_ci_low = Some(mani_low);
+        match_containment_ani_ci_high = Some(mani_high);
     }
+
     let average_containment_ani = (query_containment_ani + match_containment_ani) / 2.0;
     let max_containment_ani = f64::max(query_containment_ani, match_containment_ani);
 

@@ -85,10 +85,10 @@ pub fn ani_from_containment_ci(
     scaled: u64,
     n_unique_kmers: u64,
     confidence: Option<f64>,
-    prob_threshold: Option<f64>,
+    // prob_threshold: Option<f64>,
 ) -> Result<(f64, f64, f64, f64), Error> {
     let confidence = confidence.unwrap_or(0.95);
-    let prob_threshold = prob_threshold.unwrap_or(1e-3);
+    // let prob_threshold = prob_threshold.unwrap_or(1e-3);
 
     let point_estimate = ani_from_containment(containment, ksize);
 
@@ -106,8 +106,7 @@ pub fn ani_from_containment_ci(
             - exp_n_mutated_squared(n_unique_kmers, ksize, pest).unwrap_or(0.0)
     };
     let term_3 = |pest: f64| {
-        var_n_mutated(n_unique_kmers, ksize, pest, None).unwrap_or(0.0)
-            / (n_unique_kmers as f64).powi(2)
+        var_n_mutated(n_unique_kmers, ksize, pest, None).unwrap_or(0.0) / (n_unique_kmers).powi(2)
     };
 
     let var_direct = |pest: f64| term_1 * term_2(pest) + term_3(pest);
