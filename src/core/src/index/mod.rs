@@ -82,10 +82,11 @@ pub struct GatherResult {
     #[getset(get_copy = "pub")]
     n_unique_weighted_found: usize,
 
-    // #[getset(get_copy = "pub")]
-    // sum_weighted_found: usize,
     #[getset(get_copy = "pub")]
     total_weighted_hashes: usize,
+
+    #[getset(get_copy = "pub")]
+    sum_weighted_found: usize,
 
     #[getset(get_copy = "pub")]
     query_containment_ani: f64,
@@ -209,6 +210,7 @@ pub fn calculate_gather_stats(
     match_size: usize,
     remaining_hashes: usize,
     gather_result_rank: usize,
+    sum_weighted_found: usize,
     // these are likely temporary options, using for testing/benchmarking
     calc_abund_stats: bool,
     calc_ani_ci: bool,
@@ -275,9 +277,10 @@ pub fn calculate_gather_stats(
     let mut average_abund = 1.0;
     let mut median_abund = 1.0;
     let mut std_abund = 0.0;
+    // should these default to the unweighted numbers?
     let mut n_unique_weighted_found = 0;
-    // let mut sum_weighted_found = 0;
     let mut total_weighted_hashes = 0;
+    let mut sum_total_weighted_found = 0;
 
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
@@ -289,6 +292,7 @@ pub fn calculate_gather_stats(
             }
         };
         total_weighted_hashes = total_weighted as usize;
+        sum_total_weighted_found = sum_weighted_found + total_weighted_hashes;
         n_unique_weighted_found = match_mh.sum_abunds();
         f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
 
@@ -324,7 +328,7 @@ pub fn calculate_gather_stats(
         .match_containment_ani(match_containment_ani)
         .average_containment_ani(average_containment_ani)
         .max_containment_ani(max_containment_ani)
-        // .sum_weighted_found(sum_weighted_found)
+        .sum_weighted_found(sum_total_weighted_found)
         .total_weighted_hashes(total_weighted_hashes)
         .build();
     Ok(result)

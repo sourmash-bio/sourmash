@@ -299,7 +299,7 @@ impl RevIndexOps for RevIndex {
         let mut matches = vec![];
         // let mut query: KmerMinHashBTree = orig_query.clone().into();
         let mut query: KmerMinHash = orig_query.clone();
-        // let mut sum_weighted_found = 0;
+        let mut sum_weighted_found = 0;
         let mut total_weighted_hashes = 0;
         // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
@@ -326,7 +326,7 @@ impl RevIndexOps for RevIndex {
             let gather_result_rank = matches.len();
             remaining_hashes = remaining_hashes - match_size;
 
-            // Calculate stats ==> ideally move this out where it can be parallelized
+            // Calculate stats
             let gather_result = calculate_gather_stats(
                 &orig_query_ds,
                 &query,
@@ -335,10 +335,12 @@ impl RevIndexOps for RevIndex {
                 match_size,
                 remaining_hashes,
                 gather_result_rank,
+                sum_weighted_found,
                 true,
                 false,
             )?;
-
+            // keep track of the sum weighted found
+            sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);
 
             trace!("Preparing counter for next round");

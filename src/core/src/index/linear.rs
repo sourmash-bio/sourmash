@@ -201,6 +201,7 @@ impl LinearIndex {
         let query_containment_ani_ci_high = None;
         let match_containment_ani_ci_low = None;
         let match_containment_ani_ci_high = None;
+        let sum_weighted_found = 0;
 
         Ok(GatherResult {
             intersect_bp,
@@ -219,6 +220,7 @@ impl LinearIndex {
             unique_intersect_bp,
             gather_result_rank,
             remaining_bp,
+            sum_weighted_found,
             total_weighted_hashes,
             n_unique_weighted_found,
             query_containment_ani,
