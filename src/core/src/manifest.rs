@@ -36,7 +36,7 @@ pub struct Record {
     n_hashes: usize,
 
     #[getset(get = "pub", set = "pub")]
-    #[serde(deserialize_with = "to_bool")]
+    #[serde(serialize_with = "to_pybool", deserialize_with = "to_bool")]
     with_abundance: bool,
 
     #[getset(get = "pub", set = "pub")]
@@ -44,6 +44,20 @@ pub struct Record {
 
     filename: String,
 }
+
+
+fn to_pybool<S>(x: &bool, s: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    if *x {
+        s.serialize_str("True")
+    } else {
+        s.serialize_str("False")
+    }
+}
+
+
 
 fn to_bool<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
 where
@@ -53,11 +67,11 @@ where
         .to_ascii_lowercase()
         .as_ref()
     {
-        "0" | "false" => Ok(false),
-        "1" | "true" => Ok(true),
+        "0" | "false" | "False" => Ok(false),
+        "1" | "true" | "True" => Ok(true),
         other => Err(de::Error::invalid_value(
             de::Unexpected::Str(other),
-            &"0/1 or true/false are the only supported values",
+            &"0/1, true/false, True/False are the only supported values",
         )),
     }
 }
