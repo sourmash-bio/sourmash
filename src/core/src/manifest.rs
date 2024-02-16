@@ -45,7 +45,6 @@ pub struct Record {
     filename: String,
 }
 
-
 fn to_pybool<S>(x: &bool, s: S) -> std::result::Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -56,8 +55,6 @@ where
         s.serialize_str("False")
     }
 }
-
-
 
 fn to_bool<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
 where
