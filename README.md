@@ -3,6 +3,7 @@
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fsourmash-bio%2Fsourmash.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fsourmash-bio%2Fsourmash?ref=badge_shield)
 <a href="https://github.com/sourmash-bio/sourmash/blob/latest/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Gitter](https://badges.gitter.im/sourmash-bio/community.svg)](https://gitter.im/sourmash-bio/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
@@ -124,3 +125,7 @@ on getting set up with a development environment.
 
 CTB
 Jan 2024
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fsourmash-bio%2Fsourmash.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fsourmash-bio%2Fsourmash?ref=badge_large)
