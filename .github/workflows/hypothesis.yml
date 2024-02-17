@@ -35,4 +35,4 @@ jobs:
         with:
           flags: hypothesis-py
           fail_ci_if_error: true
-          files: .tox/coverage.xml
+          files: .tox/junit.hypothesis.xml
