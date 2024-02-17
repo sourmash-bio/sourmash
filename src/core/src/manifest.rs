@@ -36,7 +36,7 @@ pub struct Record {
     n_hashes: usize,
 
     #[getset(get = "pub", set = "pub")]
-    #[serde(serialize_with = "to_pybool", deserialize_with = "to_bool")]
+    #[serde(serialize_with = "intbool", deserialize_with = "to_bool")]
     with_abundance: bool,
 
     #[getset(get = "pub", set = "pub")]
@@ -45,14 +45,14 @@ pub struct Record {
     filename: String,
 }
 
-fn to_pybool<S>(x: &bool, s: S) -> std::result::Result<S::Ok, S::Error>
+fn intbool<S>(x: &bool, s: S) -> std::result::Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     if *x {
-        s.serialize_str("True")
+        s.serialize_i32(1)
     } else {
-        s.serialize_str("False")
+        s.serialize_i32(0)
     }
 }
 
@@ -397,5 +397,43 @@ mod test {
 
         // load into manifest
         let _manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+    }
+
+    #[test]
+    fn test_manifest_to_writer_bools() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![
+            PathBuf::from("../../tests/test-data/47.fa.sig"),
+            PathBuf::from("../../tests/test-data/track_abund/63.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+
+        let filename = utf8_output.join("sigs.manifest.csv");
+        let mut wtr = File::create(&filename).expect("Failed to create file");
+
+        manifest.to_writer(&mut wtr).unwrap();
+
+        // check that we can reopen the file as a manifest + properly check abund
+        let infile = File::open(&filename).expect("Failed to open file");
+        let m2 = Manifest::from_reader(&infile).unwrap();
+        for record in m2.iter() {
+            eprintln!("{:?}", record.name());
+            if record.name().contains("OS185") {
+                assert_eq!(record.with_abundance(), &false)
+            } else {
+                assert_eq!(record.with_abundance(), &true)
+            }
+        }
     }
 }
