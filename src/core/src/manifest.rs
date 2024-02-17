@@ -26,7 +26,7 @@ pub struct Record {
 
     md5short: String,
 
-    #[getset(get = "pub", set = "pub")]
+    #[getset(get_copy = "pub", set = "pub")]
     ksize: u32,
 
     moltype: String,
@@ -35,7 +35,7 @@ pub struct Record {
     scaled: u64,
     n_hashes: usize,
 
-    #[getset(get = "pub", set = "pub")]
+    #[getset(get_copy = "pub", set = "pub")]
     #[serde(serialize_with = "intbool", deserialize_with = "to_bool")]
     with_abundance: bool,
 
@@ -203,7 +203,7 @@ impl Select for Manifest {
                 valid
             };
             valid = if let Some(abund) = selection.abund() {
-                valid && *row.with_abundance() == abund
+                valid && row.with_abundance() == abund
             } else {
                 valid
             };
@@ -430,9 +430,9 @@ mod test {
         for record in m2.iter() {
             eprintln!("{:?}", record.name());
             if record.name().contains("OS185") {
-                assert_eq!(record.with_abundance(), &false)
+                assert_eq!(record.with_abundance(), false)
             } else {
-                assert_eq!(record.with_abundance(), &true)
+                assert_eq!(record.with_abundance(), true)
             }
         }
     }
