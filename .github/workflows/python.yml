@@ -81,4 +81,4 @@ jobs:
         with:
           flags: python
           fail_ci_if_error: true
-          files: ./.tox/coverage.xml
+          files: .tox/coverage.xml
