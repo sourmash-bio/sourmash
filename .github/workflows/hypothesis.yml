@@ -30,6 +30,8 @@ jobs:
 
       - name: Upload Python coverage to codecov
         uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           flags: hypothesis-py
           fail_ci_if_error: true
