@@ -71,12 +71,13 @@ pub enum SourmashError {
     #[error(transparent)]
     CsvError(#[from] csv::Error),
 
-    #[error(transparent)]
-    ZipError(#[from] rc_zip::error::Error),
-
     #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error(transparent)]
+    ZipError(#[from] rc_zip::error::Error),
 
     #[cfg(not(target_arch = "wasm32"))]
     #[cfg(feature = "branchwater")]
