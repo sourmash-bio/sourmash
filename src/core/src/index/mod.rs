@@ -208,7 +208,6 @@ pub fn calculate_gather_stats(
     query: KmerMinHash,
     match_sig: SigStore,
     match_size: usize,
-    remaining_hashes: usize,
     gather_result_rank: usize,
     sum_weighted_found: usize,
     calc_abund_stats: bool,
@@ -223,10 +222,10 @@ pub fn calculate_gather_stats(
     // get match_mh
     let match_mh = match_sig.minhash().unwrap();
     //bp remaining in subtracted query
-    let remaining_bp = remaining_hashes * match_mh.scaled() as usize;
+    let remaining_bp = (query.size() - match_size) * query.scaled() as usize;
 
     // stats for this match vs original query
-    let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap(); //?;
+    let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
     let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
     let f_orig_query = intersect_orig as f64 / orig_query.size() as f64;
     let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
@@ -278,26 +277,26 @@ pub fn calculate_gather_stats(
     let mut std_abund = 0.0;
     // should these default to the unweighted numbers?
     let mut n_unique_weighted_found = 0;
-    let mut total_weighted_hashes = 0;
+    let mut matched_weighted_hashes = 0;
     let mut sum_total_weighted_found = 0;
 
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, total_weighted) = match match_mh.inflated_abundances(&query) {
-            Ok((abunds, total_weighted)) => (abunds, total_weighted),
+        let (abunds, matched_weighted) = match match_mh.inflated_abundances(&query) {
+            Ok((abunds, matched_weighted)) => (abunds, matched_weighted),
             Err(e) => {
                 return Err(e);
             }
         };
-        total_weighted_hashes = total_weighted as usize;
-        sum_total_weighted_found = sum_weighted_found + total_weighted_hashes;
+        matched_weighted_hashes = matched_weighted as usize;
+        sum_total_weighted_found = sum_weighted_found + matched_weighted_hashes;
         n_unique_weighted_found = match_mh.sum_abunds();
-        f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
+        f_unique_weighted = n_unique_weighted_found as f64 / matched_weighted as f64;
 
-        average_abund = total_weighted_hashes as f64 / abunds.len() as f64;
+        average_abund = matched_weighted as f64 / abunds.len() as f64;
 
-        // to do: try to avoid clone for these?
+        // todo: try to avoid clone for these?
         median_abund = median(abunds.iter().cloned()).unwrap();
         std_abund = stddev(abunds.iter().cloned());
     }
@@ -329,7 +328,7 @@ pub fn calculate_gather_stats(
         .average_containment_ani(average_containment_ani)
         .max_containment_ani(max_containment_ani)
         .sum_weighted_found(sum_total_weighted_found)
-        .total_weighted_hashes(total_weighted_hashes)
+        .total_weighted_hashes(matched_weighted_hashes)
         .build();
     Ok(result)
 }
@@ -382,7 +381,6 @@ mod test_calculate_gather_stats {
         let rm_hashes = vec![1];
         query.remove_many(rm_hashes.as_slice()).unwrap(); // remove hash 1
 
-        let remaining_hashes = 30;
         let match_size = 2;
         let gather_result_rank = 5;
         let calc_abund_stats = true;
@@ -392,7 +390,6 @@ mod test_calculate_gather_stats {
             query,
             match_sig.into(),
             match_size,
-            remaining_hashes,
             gather_result_rank,
             0,
             calc_abund_stats,
@@ -405,7 +402,7 @@ mod test_calculate_gather_stats {
         assert_eq!(result.name(), "match-name");
         assert_eq!(result.md5(), "d70f195edbc052d647a288e3d46b3b2e");
         assert_eq!(result.gather_result_rank, 5);
-        assert_eq!(result.remaining_bp, 300);
+        assert_eq!(result.remaining_bp, 20);
 
         // results from match vs subtracted query
         assert_eq!(result.f_match, 0.5);
@@ -422,7 +419,8 @@ mod test_calculate_gather_stats {
         assert_eq!(result.f_orig_query, 0.6);
         assert_eq!(result.f_match_orig, 0.75);
 
-        // check ANI values. Unfortunately, both f_match and f_unique_to_query are 0.5, so all the same. shrug.
+        // check ANI values. Unfortunately, both f_match and f_unique_to_query are 0.5, so all the same.
+        dbg!("{}", result.average_containment_ani);
         assert!((result.average_containment_ani - 0.79).abs() < EPSILON);
         assert!((result.match_containment_ani - 0.79).abs() < EPSILON);
         assert!((result.query_containment_ani - 0.79).abs() < EPSILON);

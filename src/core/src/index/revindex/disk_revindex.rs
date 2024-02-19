@@ -300,7 +300,6 @@ impl RevIndexOps for RevIndex {
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
-        let mut remaining_hashes = orig_query.size();
         let mut orig_query_ds = orig_query.clone();
 
         // todo: set this based on query abundance, or is it flattened by default?
@@ -327,7 +326,6 @@ impl RevIndexOps for RevIndex {
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
-            remaining_hashes = remaining_hashes - match_size;
 
             // Calculate stats
             let gather_result = calculate_gather_stats(
@@ -335,7 +333,6 @@ impl RevIndexOps for RevIndex {
                 KmerMinHash::from(query.clone()),
                 match_sig.clone().into(),
                 match_size,
-                remaining_hashes,
                 gather_result_rank,
                 sum_weighted_found,
                 calc_abund_stats,

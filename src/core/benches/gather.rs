@@ -42,9 +42,8 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
                     black_box(&orig_query),
                     black_box(query.clone()),
                     black_box(match_sig.clone()),
-                    black_box(42),  // Example match_size
-                    black_box(100), // Example remaining_hashes
-                    black_box(1),   // Example gather_result_rank
+                    black_box(42), // Example match_size
+                    black_box(1),  // Example gather_result_rank
                     black_box(200),
                     black_box(calc_abund_stats),
                     black_box(calc_ani_ci),
