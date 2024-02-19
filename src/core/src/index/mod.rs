@@ -11,12 +11,11 @@ pub mod revindex;
 
 pub mod search;
 
-use stats::{median, stddev};
 use std::path::Path;
 
 use getset::{CopyGetters, Getters, Setters};
-
 use serde::{Deserialize, Serialize};
+use stats::{median, stddev};
 use typed_builder::TypedBuilder;
 
 use crate::ani_utils::{ani_ci_from_containment, ani_from_containment};
@@ -400,7 +399,7 @@ mod test_calculate_gather_stats {
         )
         .unwrap();
         // first, print all results
-        eprintln!("result: {:?}", result);
+        dbg!(result);
         assert_eq!(result.filename(), "match-filename");
         assert_eq!(result.name(), "match-name");
         assert_eq!(result.md5(), "d70f195edbc052d647a288e3d46b3b2e");

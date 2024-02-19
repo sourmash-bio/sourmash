@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate criterion;
 
 use std::fs::File;
 use std::io::BufReader;
@@ -9,7 +7,7 @@ use sourmash::index::calculate_gather_stats;
 use sourmash::signature::Signature;
 use sourmash::sketch::Sketch;
 
-use criterion::{black_box, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn gather_stats_benchmarks(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -46,7 +44,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
         );
         group.bench_function(&test_name, |b| {
             b.iter(|| {
-                let _result = calculate_gather_stats(
+                calculate_gather_stats(
                     black_box(&orig_query),
                     black_box(&query),
                     black_box(match_sig.clone()),
@@ -57,7 +55,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
                     black_box(200),
                     black_box(calc_abund_stats),
                     black_box(calc_ani_ci),
-                );
+                ).expect("error calculating gather stats");
             });
         });
     }

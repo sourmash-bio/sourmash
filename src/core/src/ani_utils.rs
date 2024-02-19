@@ -2,9 +2,10 @@
 // Equations based off of: https://github.com/KoslickiLab/mutation-rate-ci-calculator
 // Reference: https://doi.org/10.1101/2022.01.11.475870
 
-use crate::Error;
 use roots::{find_root_brent, SimpleConvergency};
 use statrs::distribution::{ContinuousCDF, Normal};
+
+use crate::Error;
 
 fn exp_n_mutated(l: f64, k: f64, r1: f64) -> f64 {
     let q = r1_to_q(k, r1);
