@@ -18,7 +18,7 @@ use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Result;
@@ -297,10 +297,10 @@ impl RevIndexOps for RevIndex {
     ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
-        // let mut query: KmerMinHashBTree = orig_query.clone().into();
-        let mut query: KmerMinHash = orig_query.clone();
+        let mut query = KmerMinHashBTree::from(orig_query.clone());
+        // let mut query: KmerMinHash = orig_query.clone();
         let mut sum_weighted_found = 0;
-        let mut total_weighted_hashes = 0;
+        // let mut total_weighted_hashes = 0;
         // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
@@ -329,7 +329,7 @@ impl RevIndexOps for RevIndex {
             // Calculate stats
             let gather_result = calculate_gather_stats(
                 &orig_query_ds,
-                &query,
+                &KmerMinHash::from(query.clone()),
                 match_sig.clone().into(),
                 &match_mh,
                 match_size,

@@ -244,7 +244,7 @@ pub fn calculate_gather_stats(
     let mut match_containment_ani_ci_high = None;
 
     if calc_ani_ci {
-        // todo = let user pass in these options to maintain cli
+        // todo = let user pass in calc_ani_ci, confidence to maintain cli
         let confidence = None;
         let n_unique_kmers = match_mh.n_unique_kmers();
         let (qani_low, qani_high) = ani_ci_from_containment(

@@ -1,6 +1,6 @@
 [package]
 name = "sourmash"
-version = "0.12.1"
+version = "0.13.0"
 authors = ["Luiz Irber <luiz.irber@gmail.com>"]
 description = "MinHash sketches for genomic data"
 repository = "https://github.com/sourmash-bio/sourmash"

@@ -1524,7 +1524,7 @@ checksum = "bceb57dc07c92cdae60f5b27b3fa92ecaaa42fe36c55e22dbfb0b44893e0b1f7"
 
 [[package]]
 name = "sourmash"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "az",
  "byteorder",
