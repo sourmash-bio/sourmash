@@ -389,17 +389,18 @@ mod test_calculate_gather_stats {
         let calc_ani_ci = false;
         let result = calculate_gather_stats(
             &orig_query,
-            &query,
-            match_sig,
+            query,
+            match_sig.into(),
             match_size,
             remaining_hashes,
             gather_result_rank,
+            0,
             calc_abund_stats,
             calc_ani_ci,
+            None,
         )
         .unwrap();
         // first, print all results
-        dbg!(result);
         assert_eq!(result.filename(), "match-filename");
         assert_eq!(result.name(), "match-name");
         assert_eq!(result.md5(), "d70f195edbc052d647a288e3d46b3b2e");
