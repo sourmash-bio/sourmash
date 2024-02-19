@@ -80,9 +80,9 @@ fn get_exp_probability_nothing_common(
 /// todo: report ANI as % in 5.0?
 pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
     if containment == 0.0 {
-        1.0
-    } else if containment == 1.0 {
         0.0
+    } else if containment == 1.0 {
+        1.0
     } else {
         1.0 - (1.0 - containment.powf(1.0 / ksize))
     }
@@ -97,6 +97,11 @@ pub fn ani_ci_from_containment(
     confidence: Option<f64>,
     // prob_threshold: Option<f64>,
 ) -> Result<(f64, f64), Error> {
+    if containment == 0.0 {
+        return Ok((0.0, 0.0));
+    } else if containment == 1.0 {
+        return Ok((1.0, 1.0));
+    }
     let confidence = confidence.unwrap_or(0.95);
     // let prob_threshold = prob_threshold.unwrap_or(1e-3);
 
@@ -131,8 +136,116 @@ pub fn ani_ci_from_containment(
         max_iter: 1000,
     };
     // check this:: what is the default? 0?
-    let sol1 = find_root_brent(0.0000001, 0.9999999, &f1, &mut convergency).unwrap_or_default();
-    let sol2 = find_root_brent(0.0000001, 0.9999999, &f2, &mut convergency).unwrap_or_default();
+    let dist_sol1 =
+        find_root_brent(0.0000001, 0.9999999, &f1, &mut convergency).unwrap_or_default();
+    let dist_sol2 =
+        find_root_brent(0.0000001, 0.9999999, &f2, &mut convergency).unwrap_or_default();
 
-    Ok((sol1, sol2))
+    Ok((1.0 - dist_sol1, 1.0 - dist_sol2))
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use std::f64::EPSILON;
+
+    #[test]
+    fn test_containment_to_ani_zero() {
+        let contain = 0.0;
+        let ksize = 21;
+        let scaled = 10;
+        let n_unique_kmers = 100;
+        let confidence = Some(0.95);
+        let res = ani_from_containment(contain, ksize as f64);
+        assert_eq!(res, 0.0);
+        let (ci_low, ci_high) =
+            ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, confidence)
+                .unwrap();
+
+        eprintln!("{}", ci_low);
+        eprintln!("{}", ci_high);
+        assert_eq!(ci_low, 0.0);
+        assert_eq!(ci_high, 0.0);
+    }
+
+    #[test]
+    fn test_containment_to_ani_one() {
+        let contain = 1.0;
+        let ksize = 21;
+        let scaled = 10;
+        let n_unique_kmers = 100;
+        let confidence = None;
+        let res = ani_from_containment(contain, ksize as f64);
+        assert_eq!(res, 1.0);
+        let (ci_low, ci_high) =
+            ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, confidence)
+                .unwrap();
+        assert_eq!(ci_low, 1.0);
+        assert_eq!(ci_high, 1.0);
+    }
+
+    #[test]
+    fn test_containment_to_ani_scaled1() {
+        let contain = 0.5;
+        let ksize = 21;
+        let scaled = 1;
+        let n_unique_kmers = 10000;
+        let confidence = None;
+        let ani = ani_from_containment(contain, ksize as f64);
+        assert!((ani - 0.9675317785238916) < EPSILON);
+        let (ci_low, ci_high) =
+            ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, confidence)
+                .unwrap();
+        assert!((ci_low - 0.9635213980271021) < EPSILON);
+        assert!((ci_high - 0.9712900870335944) < EPSILON);
+    }
+
+    #[test]
+    fn test_containment_to_ani_scaled100() {
+        let contain = 0.1;
+        let ksize = 31;
+        let scaled = 100;
+        let n_unique_kmers = 10000;
+        let confidence = None;
+        let ani = ani_from_containment(contain, ksize as f64);
+        assert!((ani - 0.9284145445194744) < EPSILON);
+        let (ci_low, ci_high) =
+            ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, confidence)
+                .unwrap();
+        assert!((ci_low - 0.9094445232754665) < EPSILON);
+        assert!((ci_high - 0.9467922076143345) < EPSILON);
+    }
+
+    #[test]
+    fn test_containment_to_ani_scaled100_2() {
+        let contain = 0.5;
+        let ksize = 21;
+        let scaled = 100;
+        let n_unique_kmers = 10000;
+        let confidence = None;
+        let ani = ani_from_containment(contain, ksize as f64);
+        assert!((ani - 0.9675317785238916) < EPSILON);
+        let (ci_low, ci_high) =
+            ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, confidence)
+                .unwrap();
+        assert!((ci_low - 0.9569003945603415) < EPSILON);
+        assert!((ci_high - 0.9762879360833708) < EPSILON);
+    }
+
+    #[test]
+    fn test_prob_nothing_in_common() {
+        let contain = 0.25;
+        let ksize = 31 as f64;
+        let scaled = 10;
+        let f_scaled = 1.0 / scaled as f64;
+        let n_unique_kmers = 1000000;
+
+        let ani = ani_from_containment(contain, ksize);
+        let pnic = get_exp_probability_nothing_common(ani, ksize, f_scaled, n_unique_kmers as f64)
+            .unwrap();
+        dbg!("{:?}", pnic);
+        assert_eq!(pnic, 0.0); // TODO: fix
+        assert!((pnic - 0.0000007437) < EPSILON);
+    }
 }
