@@ -298,14 +298,17 @@ impl RevIndexOps for RevIndex {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
-        // let mut query: KmerMinHash = orig_query.clone();
         let mut sum_weighted_found = 0;
-        // let mut total_weighted_hashes = 0;
-        // let mut query: KmerMinHash = orig_query.clone().downsample_scaled(selection.scaled())?; // but this wouldn't account for further downsampling...
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut remaining_hashes = orig_query.size();
         let mut orig_query_ds = orig_query.clone();
-        // let total_orig_query_abund = orig_query.sum_abunds();
+
+        // todo: set this based on query abundance, or is it flattened by default?
+        let calc_abund_stats = orig_query.track_abundance();
+
+        // todo: let user pass these options in
+        let calc_ani_ci = false;
+        let ani_confidence_interval_fraction = None;
 
         while match_size > threshold && !counter.is_empty() {
             trace!("counter len: {}", counter.len());
@@ -317,7 +320,7 @@ impl RevIndexOps for RevIndex {
             // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
-            // get downsampled minhashes for comparison. Better way to handle this???
+            // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap();
             query = query.downsample_scaled(match_mh.scaled())?;
             orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
@@ -329,15 +332,15 @@ impl RevIndexOps for RevIndex {
             // Calculate stats
             let gather_result = calculate_gather_stats(
                 &orig_query_ds,
-                &KmerMinHash::from(query.clone()),
+                KmerMinHash::from(query.clone()),
                 match_sig.clone().into(),
-                &match_mh,
                 match_size,
                 remaining_hashes,
                 gather_result_rank,
                 sum_weighted_found,
-                true,
-                false,
+                calc_abund_stats,
+                calc_ani_ci,
+                ani_confidence_interval_fraction,
             )?;
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
