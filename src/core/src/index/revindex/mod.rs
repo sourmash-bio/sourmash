@@ -588,4 +588,31 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn revindex_move() -> Result<()> {
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(outdir.path().join("sigs.zip").into_os_string().into_string().unwrap());
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let output = outdir.path().join("index");
+
+        {
+            let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+            RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+        }
+
+        std::fs::rename(zip_copy, outdir.path().join("new_sigs.zip"))?;
+
+        let index = RevIndex::open(output.as_path(), false)?;
+
+        Ok(())
+    }
 }
