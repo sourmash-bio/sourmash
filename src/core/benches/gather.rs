@@ -11,7 +11,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn gather_stats_benchmarks(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    filename.push("../../tests/test-data/gather-abund/genome-s10.fa.gz.sig");
+    filename.push("../../tests/test-data/track_abund/47.fa.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
     let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
@@ -23,7 +23,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
     let query = orig_query.clone();
 
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    filename.push("../../tests/test-data/gather-abund/genome-s11.fa.gz.sig");
+    filename.push("../../tests/test-data/track_abund/63.fa.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
     let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
