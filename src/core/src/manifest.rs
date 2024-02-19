@@ -26,7 +26,7 @@ pub struct Record {
 
     md5short: String,
 
-    #[getset(get = "pub", set = "pub")]
+    #[getset(get_copy = "pub", set = "pub")]
     ksize: u32,
 
     moltype: String,
@@ -35,14 +35,25 @@ pub struct Record {
     scaled: u64,
     n_hashes: usize,
 
-    #[getset(get = "pub", set = "pub")]
-    #[serde(deserialize_with = "to_bool")]
+    #[getset(get_copy = "pub", set = "pub")]
+    #[serde(serialize_with = "intbool", deserialize_with = "to_bool")]
     with_abundance: bool,
 
     #[getset(get = "pub", set = "pub")]
     name: String,
 
     filename: String,
+}
+
+fn intbool<S>(x: &bool, s: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    if *x {
+        s.serialize_i32(1)
+    } else {
+        s.serialize_i32(0)
+    }
 }
 
 fn to_bool<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
@@ -53,11 +64,11 @@ where
         .to_ascii_lowercase()
         .as_ref()
     {
-        "0" | "false" => Ok(false),
-        "1" | "true" => Ok(true),
+        "0" | "false" | "False" => Ok(false),
+        "1" | "true" | "True" => Ok(true),
         other => Err(de::Error::invalid_value(
             de::Unexpected::Str(other),
-            &"0/1 or true/false are the only supported values",
+            &"0/1, true/false, True/False are the only supported values",
         )),
     }
 }
@@ -192,7 +203,7 @@ impl Select for Manifest {
                 valid
             };
             valid = if let Some(abund) = selection.abund() {
-                valid && *row.with_abundance() == abund
+                valid && row.with_abundance() == abund
             } else {
                 valid
             };
@@ -386,5 +397,43 @@ mod test {
 
         // load into manifest
         let _manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+    }
+
+    #[test]
+    fn test_manifest_to_writer_bools() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![
+            PathBuf::from("../../tests/test-data/47.fa.sig"),
+            PathBuf::from("../../tests/test-data/track_abund/63.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+
+        let filename = utf8_output.join("sigs.manifest.csv");
+        let mut wtr = File::create(&filename).expect("Failed to create file");
+
+        manifest.to_writer(&mut wtr).unwrap();
+
+        // check that we can reopen the file as a manifest + properly check abund
+        let infile = File::open(&filename).expect("Failed to open file");
+        let m2 = Manifest::from_reader(&infile).unwrap();
+        for record in m2.iter() {
+            eprintln!("{:?}", record.name());
+            if record.name().contains("OS185") {
+                assert_eq!(record.with_abundance(), false)
+            } else {
+                assert_eq!(record.with_abundance(), true)
+            }
+        }
     }
 }

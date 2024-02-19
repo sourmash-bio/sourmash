@@ -121,8 +121,8 @@ impl Selection {
 
     pub fn from_record(row: &Record) -> Result<Self> {
         Ok(Self {
-            ksize: Some(*row.ksize()),
-            abund: Some(*row.with_abundance()),
+            ksize: Some(row.ksize()),
+            abund: Some(row.with_abundance()),
             moltype: Some(row.moltype()),
             num: None,
             scaled: None,
