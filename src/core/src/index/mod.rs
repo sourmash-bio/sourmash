@@ -25,6 +25,7 @@ use crate::prelude::*;
 use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
+use crate::storage::SigStore;
 use crate::Result;
 
 // Todo: evaluate get vs get_copy for added fields
@@ -200,26 +201,27 @@ where
     }
 }
 
+// note all mh should be selected/downsampled prior to being passed in here.
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_gather_stats(
     orig_query: &KmerMinHash,
-    query: &KmerMinHash,
-    match_sig: Signature,
-    match_mh: &KmerMinHash,
+    query: KmerMinHash,
+    match_sig: SigStore,
     match_size: usize,
     remaining_hashes: usize,
     gather_result_rank: usize,
     sum_weighted_found: usize,
-    // these are likely temporary options, using for testing/benchmarking
     calc_abund_stats: bool,
     calc_ani_ci: bool,
+    confidence: Option<f64>,
 ) -> Result<GatherResult> {
-    // Calculate stats
+    // basics
     let name = match_sig.name();
     let md5 = match_sig.md5sum();
-
-    // basics
     let filename = match_sig.filename();
+
+    // get match_mh
+    let match_mh = match_sig.minhash().unwrap();
     //bp remaining in subtracted query
     let remaining_bp = remaining_hashes * match_mh.scaled() as usize;
 
@@ -244,8 +246,6 @@ pub fn calculate_gather_stats(
     let mut match_containment_ani_ci_high = None;
 
     if calc_ani_ci {
-        // todo = let user pass in calc_ani_ci, confidence to maintain cli
-        let confidence = None;
         let n_unique_kmers = match_mh.n_unique_kmers();
         let (qani_low, qani_high) = ani_ci_from_containment(
             f_unique_to_query,
@@ -284,7 +284,7 @@ pub fn calculate_gather_stats(
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, total_weighted) = match match_mh.inflated_abundances(query) {
+        let (abunds, total_weighted) = match match_mh.inflated_abundances(&query) {
             Ok((abunds, total_weighted)) => (abunds, total_weighted),
             Err(e) => {
                 return Err(e);
@@ -296,7 +296,8 @@ pub fn calculate_gather_stats(
         f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
 
         average_abund = total_weighted_hashes as f64 / abunds.len() as f64;
-        // to do: do not clone for these? try 'statistical' crate instead?
+
+        // to do: try to avoid clone for these?
         median_abund = median(abunds.iter().cloned()).unwrap();
         std_abund = stddev(abunds.iter().cloned());
     }
@@ -313,7 +314,7 @@ pub fn calculate_gather_stats(
         .filename(filename)
         .name(name)
         .md5(md5)
-        .match_(match_sig)
+        .match_(match_sig.into())
         .f_match_orig(f_match_orig)
         .unique_intersect_bp(unique_intersect_bp)
         .gather_result_rank(gather_result_rank)
@@ -390,7 +391,6 @@ mod test_calculate_gather_stats {
             &orig_query,
             &query,
             match_sig,
-            &match_mh,
             match_size,
             remaining_hashes,
             gather_result_rank,
