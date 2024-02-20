@@ -185,7 +185,7 @@ impl RevIndex {
         }
     }
 
-    pub fn open<P: AsRef<Path>>(index: P, read_only: bool) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
         let opts = Self::db_options();
         let cfs = DB::list_cf(&opts, index.as_ref()).unwrap();
 
@@ -194,7 +194,7 @@ impl RevIndex {
             //       due to pending unmerged colors
             todo!() //color_revindex::ColorRevIndex::open(index, false)
         } else {
-            disk_revindex::RevIndex::open(index, read_only)
+            disk_revindex::RevIndex::open(index, read_only, spec)
         }
     }
 
@@ -528,7 +528,8 @@ mod test {
         let query = query.unwrap();
 
         let new_collection = Collection::from_paths(&new_siglist)?.select(&selection)?;
-        let index = RevIndex::open(output.path(), false)?.update(new_collection.try_into()?)?;
+        let index =
+            RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
         let counter = index.counter_for_query(&query);
         let matches = index.matches_from_counter(counter, 0);
@@ -569,7 +570,7 @@ mod test {
             let _index = RevIndex::create(output.path(), collection.try_into()?, false);
         }
 
-        let index = RevIndex::open(output.path(), true)?;
+        let index = RevIndex::open(output.path(), true, None)?;
 
         let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
 
@@ -585,6 +586,67 @@ mod test {
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].name(), "../genome-s10.fa.gz");
         assert_eq!(matches[0].f_match(), 1.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_move() -> Result<()> {
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output = outdir.path().join("index");
+
+        let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
+
+        {
+            RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+        }
+
+        {
+            let index = RevIndex::open(output.as_path(), false, None)?;
+
+            let counter = index.counter_for_query(&query);
+            let matches = index.matches_from_counter(counter, 0);
+
+            assert!(matches[0].0.starts_with("NC_009665.1"));
+            assert_eq!(matches[0].1, 514);
+        }
+
+        let new_zip = outdir
+            .path()
+            .join("new_sigs.zip")
+            .into_os_string()
+            .into_string()
+            .unwrap();
+        std::fs::rename(zip_copy, &new_zip)?;
+
+        // RevIndex can't know where the new sigs are
+        assert!(RevIndex::open(output.as_path(), false, None).is_err());
+
+        let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
+
+        let counter = index.counter_for_query(&query);
+        let matches = index.matches_from_counter(counter, 0);
+
+        assert!(matches[0].0.starts_with("NC_009665.1"));
+        assert_eq!(matches[0].1, 514);
 
         Ok(())
     }
