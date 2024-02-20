@@ -185,9 +185,9 @@ impl LinearIndex {
 
         // TODO: all of these
         let f_unique_weighted = 0.;
-        let average_abund = 0;
-        let median_abund = 0;
-        let std_abund = 0;
+        let average_abund = 0.;
+        let median_abund = 0.;
+        let std_abund = 0.;
         let md5 = "".into();
         let f_match_orig = 0.;
         let remaining_bp = 0;

@@ -47,13 +47,13 @@ pub struct GatherResult {
     f_unique_weighted: f64,
 
     #[getset(get_copy = "pub")]
-    average_abund: usize,
+    average_abund: f64,
 
     #[getset(get_copy = "pub")]
-    median_abund: usize,
+    median_abund: f64,
 
     #[getset(get_copy = "pub")]
-    std_abund: usize,
+    std_abund: f64,
 
     #[getset(get = "pub")]
     filename: String,
@@ -283,18 +283,18 @@ pub fn calculate_gather_stats(
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, matched_weighted) = match match_mh.inflated_abundances(&query) {
-            Ok((abunds, matched_weighted)) => (abunds, matched_weighted),
+        let (abunds, sum_matched_weighted) = match match_mh.inflated_abundances(&query) {
+            Ok((abunds, sum_matched_weighted)) => (abunds, sum_matched_weighted),
             Err(e) => {
                 return Err(e);
             }
         };
-        matched_weighted_hashes = matched_weighted as usize;
+        matched_weighted_hashes = sum_matched_weighted as usize;
         sum_total_weighted_found = sum_weighted_found + matched_weighted_hashes;
         n_unique_weighted_found = match_mh.sum_abunds();
-        f_unique_weighted = n_unique_weighted_found as f64 / matched_weighted as f64;
+        f_unique_weighted = sum_matched_weighted as f64 / orig_query.sum_abunds() as f64;
 
-        average_abund = matched_weighted as f64 / abunds.len() as f64;
+        average_abund = sum_matched_weighted as f64 / abunds.len() as f64;
 
         // todo: try to avoid clone for these?
         median_abund = median(abunds.iter().cloned()).unwrap();
@@ -307,9 +307,9 @@ pub fn calculate_gather_stats(
         .f_match(f_match)
         .f_unique_to_query(f_unique_to_query)
         .f_unique_weighted(f_unique_weighted)
-        .average_abund(average_abund as usize)
-        .median_abund(median_abund as usize)
-        .std_abund(std_abund as usize)
+        .average_abund(average_abund)
+        .median_abund(median_abund)
+        .std_abund(std_abund)
         .filename(filename)
         .name(name)
         .md5(md5)
@@ -349,17 +349,18 @@ mod test_calculate_gather_stats {
     fn test_calculate_gather_stats() {
         let scaled = 10;
         let params = ComputeParameters::builder()
-            .ksizes(vec![3])
+            .ksizes(vec![31])
             .scaled(scaled)
             .build();
 
         let mut match_sig = Signature::from_params(&params);
         // create two minhash
-        let mut match_mh = KmerMinHash::new(scaled, 3, HashFunctions::Murmur64Dna, 42, true, 0);
-        match_mh.add_hash(1);
-        match_mh.add_hash(2);
-        match_mh.add_hash(3);
-        match_mh.add_hash(5);
+        let mut match_mh = KmerMinHash::new(scaled, 31, HashFunctions::Murmur64Dna, 42, true, 0);
+        match_mh.add_hash_with_abundance(1, 5);
+        match_mh.add_hash_with_abundance(3, 3);
+        match_mh.add_hash_with_abundance(5, 2);
+        match_mh.add_hash_with_abundance(8, 2);
+        match_mh.add_hash_with_abundance(11, 2); // Non-matching hash
 
         match_sig.reset_sketches();
         match_sig.push(Sketch::MinHash(match_mh.clone()));
@@ -370,19 +371,18 @@ mod test_calculate_gather_stats {
         eprintln!("match_md5: {:?}", match_sig.md5sum());
 
         // Setup orig_query minhash with abundances and non-matching hash
-        let mut orig_query = KmerMinHash::new(scaled, 3, HashFunctions::Murmur64Dna, 42, true, 0);
-        orig_query.add_hash_with_abundance(1, 1);
-        orig_query.add_hash_with_abundance(2, 3);
-        orig_query.add_hash_with_abundance(4, 6); // Non-matching hash
-        orig_query.add_hash_with_abundance(5, 9);
-        orig_query.add_hash_with_abundance(6, 1);
+        let mut orig_query = KmerMinHash::new(scaled, 31, HashFunctions::Murmur64Dna, 42, true, 0);
+        orig_query.add_hash_with_abundance(1, 3);
+        orig_query.add_hash_with_abundance(3, 2);
+        orig_query.add_hash_with_abundance(5, 1);
+        orig_query.add_hash_with_abundance(6, 1); // Non-matching hash
+        orig_query.add_hash_with_abundance(8, 1);
+        orig_query.add_hash_with_abundance(10, 1); // Non-matching hash
 
-        let mut query = orig_query.clone();
-        let rm_hashes = vec![1];
-        query.remove_many(rm_hashes.as_slice()).unwrap(); // remove hash 1
+        let query = orig_query.clone();
 
-        let match_size = 2;
-        let gather_result_rank = 5;
+        let match_size = 4;
+        let gather_result_rank = 0;
         let calc_abund_stats = true;
         let calc_ani_ci = false;
         let result = calculate_gather_stats(
@@ -400,30 +400,28 @@ mod test_calculate_gather_stats {
         // first, print all results
         assert_eq!(result.filename(), "match-filename");
         assert_eq!(result.name(), "match-name");
-        assert_eq!(result.md5(), "d70f195edbc052d647a288e3d46b3b2e");
-        assert_eq!(result.gather_result_rank, 5);
+        assert_eq!(result.md5(), "f54b271a62fb7e2856e7b8a33e741b6e");
+        assert_eq!(result.gather_result_rank, 0);
         assert_eq!(result.remaining_bp, 20);
 
-        // results from match vs subtracted query
-        assert_eq!(result.f_match, 0.5);
-        assert_eq!(result.unique_intersect_bp, 20);
-        assert_eq!(result.f_unique_to_query, 0.5);
-        assert!((result.f_unique_weighted - 0.333).abs() < EPSILON);
-        assert_eq!(result.average_abund, 6);
-        // todo: implement median and std
-        assert_eq!(result.median_abund, 6);
-        assert_eq!(result.std_abund, 3);
+        // results from match vs current query
+        assert_eq!(result.f_match, 0.8);
+        assert_eq!(result.unique_intersect_bp, 40);
+        assert_eq!(result.f_unique_to_query, 4.0 / 6.0);
+        eprintln!("{}", result.f_unique_weighted);
+        assert_eq!(result.f_unique_weighted, 7. / 9.);
+        assert_eq!(result.average_abund, 1.75);
+        assert_eq!(result.median_abund, 1.5);
+        assert_eq!(result.std_abund, 0.82915619758885);
 
         // results from match vs orig_query
-        assert_eq!(result.intersect_bp, 30);
-        assert_eq!(result.f_orig_query, 0.6);
-        assert_eq!(result.f_match_orig, 0.75);
+        assert_eq!(result.intersect_bp, 40);
+        assert_eq!(result.f_orig_query, 4.0 / 6.0);
+        assert_eq!(result.f_match_orig, 4.0 / 5.0);
 
-        // check ANI values. Unfortunately, both f_match and f_unique_to_query are 0.5, so all the same.
-        dbg!("{}", result.average_containment_ani);
-        assert!((result.average_containment_ani - 0.79).abs() < EPSILON);
-        assert!((result.match_containment_ani - 0.79).abs() < EPSILON);
-        assert!((result.query_containment_ani - 0.79).abs() < EPSILON);
-        assert!((result.max_containment_ani - 0.79).abs() < EPSILON);
+        assert!((result.average_containment_ani - 0.98991665567826).abs() < EPSILON);
+        assert!((result.match_containment_ani - 0.9928276657672302).abs() < EPSILON);
+        assert!((result.query_containment_ani - 0.9870056455892898).abs() < EPSILON);
+        assert!((result.max_containment_ani - 0.9928276657672302).abs() < EPSILON);
     }
 }
