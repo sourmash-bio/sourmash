@@ -321,7 +321,7 @@ pub fn calculate_gather_stats(
         .unique_intersect_bp(unique_intersect_bp)
         .gather_result_rank(gather_result_rank)
         .remaining_bp(remaining_bp)
-        .n_unique_weighted_found(n_unique_weighted_found as usize)
+        .n_unique_weighted_found(n_unique_weighted_found)
         .query_containment_ani(query_containment_ani)
         .query_containment_ani_ci_low(query_containment_ani_ci_low)
         .query_containment_ani_ci_high(query_containment_ani_ci_high)
