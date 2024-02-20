@@ -11,3 +11,13 @@ The `branchwater` plugin provides fast foo.
 The `branchwater` plugin is available via conda as
 `sourmash_plugin_branchwater` on conda-forge.
 
+https://github.com/sourmash-bio/sourmash_plugin_branchwater
+
+---
+
+To add:
+
+* sourmash_plugin_containment_search
+* mo's commonhash plugin
+* sourmash_plugin_venn
+* sourmash_plugin_abundhist
