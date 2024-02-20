@@ -100,7 +100,11 @@ impl RevIndex {
         Ok(module::RevIndex::Plain(index))
     }
 
-    pub fn open<P: AsRef<Path>>(path: P, read_only: bool) -> Result<module::RevIndex> {
+    pub fn open<P: AsRef<Path>>(
+        path: P,
+        read_only: bool,
+        storage_spec: Option<&str>,
+    ) -> Result<module::RevIndex> {
         let mut opts = module::RevIndex::db_options();
         if !read_only {
             opts.prepare_for_bulk_load();
@@ -120,12 +124,18 @@ impl RevIndex {
             Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)
         };
 
-        let collection = Arc::new(Self::load_collection_from_rocksdb(db.clone())?);
+        let collection = Arc::new(Self::load_collection_from_rocksdb(
+            db.clone(),
+            storage_spec,
+        )?);
 
         Ok(module::RevIndex::Plain(Self { db, collection }))
     }
 
-    fn load_collection_from_rocksdb(db: Arc<DB>) -> Result<CollectionSet> {
+    fn load_collection_from_rocksdb(
+        db: Arc<DB>,
+        storage_spec: Option<&str>,
+    ) -> Result<CollectionSet> {
         let cf_metadata = db.cf_handle(METADATA).unwrap();
 
         let rdr = db.get_cf(&cf_metadata, VERSION)?.unwrap();
@@ -134,8 +144,13 @@ impl RevIndex {
         let rdr = db.get_cf(&cf_metadata, MANIFEST)?.unwrap();
         let manifest = Manifest::from_reader(&rdr[..])?;
 
-        let spec = String::from_utf8(db.get_cf(&cf_metadata, STORAGE_SPEC)?.unwrap())
-            .expect("invalid utf-8");
+        let spec = match storage_spec {
+            Some(spec) => spec.into(),
+            None => {
+                let db_spec = db.get_cf(&cf_metadata, STORAGE_SPEC)?;
+                String::from_utf8(db_spec.unwrap()).map_err(|e| e.utf8_error())?
+            }
+        };
 
         let storage = if spec == "rocksdb://" {
             todo!("init storage from db")
