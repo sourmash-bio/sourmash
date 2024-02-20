@@ -82,7 +82,8 @@ impl Record {
     pub fn from_sig(sig: &Signature, path: &str) -> Vec<Self> {
         sig.iter()
             .map(|sketch| {
-                let (ksize, md5, with_abundance, moltype, n_hashes, num, scaled) = match sketch {
+                let (mut ksize, md5, with_abundance, moltype, n_hashes, num, scaled) = match sketch
+                {
                     Sketch::MinHash(mh) => (
                         mh.ksize() as u32,
                         mh.md5sum(),
@@ -105,6 +106,10 @@ impl Record {
                 };
 
                 let md5short = md5[0..8].into();
+
+                if moltype != HashFunctions::Murmur64Dna {
+                    ksize = ksize / 3;
+                }
 
                 Self {
                     internal_location: path.into(),
