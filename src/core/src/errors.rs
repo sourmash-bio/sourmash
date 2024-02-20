@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum SourmashError {
     /// Raised for internal errors in the libraries.  Should not happen.
     #[error("internal error: {message:?}")]
