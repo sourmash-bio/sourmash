@@ -302,7 +302,7 @@ impl RevIndexOps for RevIndex {
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut orig_query_ds = orig_query.clone();
 
-        // todo: set this based on query abundance, or is it flattened by default?
+        // or set this with user --track-abundance?
         let calc_abund_stats = orig_query.track_abundance();
 
         // todo: let user pass these options in
