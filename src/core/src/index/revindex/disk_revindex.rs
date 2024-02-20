@@ -301,6 +301,7 @@ impl RevIndexOps for RevIndex {
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let mut orig_query_ds = orig_query.clone();
+        let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
         let calc_abund_stats = orig_query.track_abundance();
@@ -335,6 +336,7 @@ impl RevIndexOps for RevIndex {
                 match_size,
                 gather_result_rank,
                 sum_weighted_found,
+                total_weighted_hashes.try_into().unwrap(),
                 calc_abund_stats,
                 calc_ani_ci,
                 ani_confidence_interval_fraction,

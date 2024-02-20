@@ -21,6 +21,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
         unimplemented!()
     };
     let query = orig_query.clone();
+    let total_weighted_hashes = orig_query.sum_abunds();
 
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     filename.push("../../tests/test-data/track_abund/63.fa.sig");
@@ -45,6 +46,7 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
                     black_box(42), // Example match_size
                     black_box(1),  // Example gather_result_rank
                     black_box(200),
+                    black_box(total_weighted_hashes.try_into().unwrap()),
                     black_box(calc_abund_stats),
                     black_box(calc_ani_ci),
                     black_box(None), // don't set custom confidence intervals

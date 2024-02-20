@@ -210,6 +210,7 @@ pub fn calculate_gather_stats(
     match_size: usize,
     gather_result_rank: usize,
     sum_weighted_found: usize,
+    total_weighted_hashes: usize,
     calc_abund_stats: bool,
     calc_ani_ci: bool,
     confidence: Option<f64>,
@@ -277,24 +278,22 @@ pub fn calculate_gather_stats(
     let mut std_abund = 0.0;
     // should these default to the unweighted numbers?
     let mut n_unique_weighted_found = 0;
-    let mut matched_weighted_hashes = 0;
     let mut sum_total_weighted_found = 0;
 
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // need current downsampled query here to get f_unique_weighted
-        let (abunds, sum_matched_weighted) = match match_mh.inflated_abundances(&query) {
-            Ok((abunds, sum_matched_weighted)) => (abunds, sum_matched_weighted),
+        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&query) {
+            Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
             Err(e) => {
                 return Err(e);
             }
         };
-        matched_weighted_hashes = sum_matched_weighted as usize;
-        sum_total_weighted_found = sum_weighted_found + matched_weighted_hashes;
-        n_unique_weighted_found = match_mh.sum_abunds();
-        f_unique_weighted = sum_matched_weighted as f64 / orig_query.sum_abunds() as f64;
+        n_unique_weighted_found = unique_weighted_found as usize;
+        sum_total_weighted_found = sum_weighted_found + n_unique_weighted_found;
+        f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
 
-        average_abund = sum_matched_weighted as f64 / abunds.len() as f64;
+        average_abund = n_unique_weighted_found as f64 / abunds.len() as f64;
 
         // todo: try to avoid clone for these?
         median_abund = median(abunds.iter().cloned()).unwrap();
@@ -328,7 +327,7 @@ pub fn calculate_gather_stats(
         .average_containment_ani(average_containment_ani)
         .max_containment_ani(max_containment_ani)
         .sum_weighted_found(sum_total_weighted_found)
-        .total_weighted_hashes(matched_weighted_hashes)
+        .total_weighted_hashes(total_weighted_hashes)
         .build();
     Ok(result)
 }
@@ -380,6 +379,7 @@ mod test_calculate_gather_stats {
         orig_query.add_hash_with_abundance(10, 1); // Non-matching hash
 
         let query = orig_query.clone();
+        let total_weighted_hashes = orig_query.sum_abunds();
 
         let match_size = 4;
         let gather_result_rank = 0;
@@ -392,6 +392,7 @@ mod test_calculate_gather_stats {
             match_size,
             gather_result_rank,
             0,
+            total_weighted_hashes.try_into().unwrap(),
             calc_abund_stats,
             calc_ani_ci,
             None,
@@ -423,5 +424,9 @@ mod test_calculate_gather_stats {
         assert!((result.match_containment_ani - 0.9928276657672302).abs() < EPSILON);
         assert!((result.query_containment_ani - 0.9870056455892898).abs() < EPSILON);
         assert!((result.max_containment_ani - 0.9928276657672302).abs() < EPSILON);
+
+        assert_eq!(result.total_weighted_hashes, 9);
+        assert_eq!(result.n_unique_weighted_found, 7);
+        assert_eq!(result.sum_weighted_found, 7);
     }
 }
