@@ -92,18 +92,22 @@ pub struct GatherResult {
     query_containment_ani: f64,
 
     #[getset(get_copy = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     query_containment_ani_ci_low: Option<f64>,
 
     #[getset(get_copy = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     query_containment_ani_ci_high: Option<f64>,
 
     #[getset(get_copy = "pub")]
     match_containment_ani: f64,
 
     #[getset(get_copy = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     match_containment_ani_ci_low: Option<f64>,
 
     #[getset(get_copy = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     match_containment_ani_ci_high: Option<f64>,
 
     #[getset(get_copy = "pub")]
