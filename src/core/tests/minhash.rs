@@ -204,10 +204,10 @@ fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
     }
 
     c.add_from(&a).unwrap();
-    c.remove_many(&to_remove).unwrap();
+    c.remove_many(to_remove.iter().copied()).unwrap();
 
     d.add_from(&b).unwrap();
-    d.remove_many(&to_remove).unwrap();
+    d.remove_many(to_remove.iter().copied()).unwrap();
 
     assert_eq!(a.mins(), b.mins());
     assert_eq!(c.mins(), d.mins());
@@ -245,8 +245,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     c.add_many(&hashes).unwrap();
     d.add_many(&hashes).unwrap();
 
-    c.remove_many(&to_remove).unwrap();
-    d.remove_many(&to_remove).unwrap();
+    c.remove_many(to_remove.iter().copied()).unwrap();
+    d.remove_many(to_remove.iter().copied()).unwrap();
 
     a.remove_hash(hashes[0]);
     b.remove_hash(hashes[0]);

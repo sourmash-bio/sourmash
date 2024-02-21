@@ -17,7 +17,6 @@ use crate::index::revindex::{
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
-use crate::signature::SigsTrait;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
@@ -336,7 +335,7 @@ impl RevIndexOps for RevIndex {
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
             // get downsampled minhashes for comparison.
-            let match_mh = match_sig.minhash().unwrap();
+            let match_mh = match_sig.minhash().unwrap().clone();
             query = query.downsample_scaled(match_mh.scaled())?;
             orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
 
@@ -347,7 +346,7 @@ impl RevIndexOps for RevIndex {
             let gather_result = calculate_gather_stats(
                 &orig_query_ds,
                 KmerMinHash::from(query.clone()),
-                match_sig.clone().into(),
+                match_sig,
                 match_size,
                 gather_result_rank,
                 sum_weighted_found,
@@ -364,7 +363,7 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            query.remove_many(match_mh.to_vec().as_slice())?; // is there a better way?
+            query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.

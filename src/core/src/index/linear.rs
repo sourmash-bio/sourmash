@@ -11,7 +11,7 @@ use crate::collection::CollectionSet;
 use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::selection::Select;
-use crate::signature::{Signature, SigsTrait};
+use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::storage::SigStore;
@@ -150,13 +150,13 @@ impl LinearIndex {
             .internal_location()
             .into();
         let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-        let result = self.stats_for_match(&match_sig, query, match_size, match_path, round)?;
+        let result = self.stats_for_match(match_sig, query, match_size, match_path, round)?;
         Ok(result)
     }
 
     fn stats_for_match(
         &self,
-        match_sig: &Signature,
+        match_sig: SigStore,
         query: &KmerMinHash,
         match_size: usize,
         match_path: PathBuf,
@@ -181,7 +181,7 @@ impl LinearIndex {
         let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
 
         let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
-        let match_ = match_sig.clone();
+        let match_ = match_sig;
 
         // TODO: all of these
         let f_unique_weighted = 0.;

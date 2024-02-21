@@ -422,9 +422,9 @@ impl KmerMinHash {
         Ok(())
     }
 
-    pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn remove_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.remove_hash(*min);
+            self.remove_hash(min);
         }
         Ok(())
     }
@@ -1347,9 +1347,9 @@ impl KmerMinHashBTree {
         }
     }
 
-    pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn remove_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.remove_hash(*min);
+            self.remove_hash(min);
         }
         Ok(())
     }

@@ -65,7 +65,7 @@ pub struct GatherResult {
     md5: String,
 
     #[serde(skip)]
-    match_: Signature,
+    match_: SigStore,
 
     #[getset(get_copy = "pub")]
     f_match_orig: f64,
@@ -119,7 +119,7 @@ pub struct GatherResult {
 
 impl GatherResult {
     pub fn get_match(&self) -> Signature {
-        self.match_.clone()
+        self.match_.clone().into()
     }
 }
 
