@@ -108,7 +108,7 @@ impl Record {
                 let md5short = md5[0..8].into();
 
                 if moltype != HashFunctions::Murmur64Dna {
-                    ksize = ksize / 3;
+                    ksize /= 3;
                 }
 
                 Self {
