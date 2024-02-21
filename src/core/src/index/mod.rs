@@ -28,7 +28,6 @@ use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
 use crate::Result;
 
-// Todo: evaluate get vs get_copy for added fields
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
     #[getset(get_copy = "pub")]
