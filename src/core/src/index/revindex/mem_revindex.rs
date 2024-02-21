@@ -92,7 +92,7 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let collection = Collection::from_paths(search_sigs)?.select(&selection)?;
+        let collection = Collection::from_paths(search_sigs)?.select(selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
         Ok(linear.index(threshold, merged_query, queries))
@@ -108,7 +108,7 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let collection = Collection::from_zipfile(zipfile)?.select(&selection)?;
+        let collection = Collection::from_zipfile(zipfile)?.select(selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
         Ok(linear.index(threshold, merged_query, queries))

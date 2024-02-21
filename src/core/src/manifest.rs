@@ -16,7 +16,7 @@ use crate::signature::{Signature, SigsTrait};
 use crate::sketch::Sketch;
 use crate::Result;
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -374,7 +374,7 @@ mod test {
         filename = PathBuf::from(filename);
 
         let mut pathfile = File::create(&filename).unwrap();
-        write!(pathfile, "Valid line\n").unwrap();
+        writeln!(pathfile, "Valid line").unwrap();
         pathfile.write_all(&[0xED, 0xA0, 0x80]).unwrap(); // invalid UTF-8
 
         // load into manifest

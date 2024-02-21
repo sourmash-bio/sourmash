@@ -166,7 +166,7 @@ impl RevIndex {
         // save DB version
         // TODO: probably should go together with a more general
         //       saving procedure used in create/update
-        self.db.put_cf(&cf_metadata, VERSION, &[DB_VERSION])?;
+        self.db.put_cf(&cf_metadata, VERSION, [DB_VERSION])?;
 
         // write manifest
         let mut wtr = vec![];

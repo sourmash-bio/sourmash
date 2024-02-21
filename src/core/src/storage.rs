@@ -352,7 +352,7 @@ impl Storage for ZipStorage {
     }
 
     fn spec(&self) -> String {
-        format!("zip://{}", self.path().unwrap_or("".into()))
+        format!("zip://{}", self.path().unwrap_or_else(|| "".into()))
     }
 }
 

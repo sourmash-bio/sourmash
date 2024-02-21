@@ -234,7 +234,7 @@ pub fn prepare_query(search_sig: Signature, selection: &Selection) -> Option<Kme
     })
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum Datasets {
     #[default]
     Empty,
