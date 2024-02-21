@@ -77,6 +77,15 @@ pub struct SigStore {
     data: OnceCell<Signature>,
 }
 
+impl PartialEq for SigStore {
+    fn eq(&self, other: &Self) -> bool {
+        self.filename == other.filename
+            && self.name == other.name
+            && self.metadata == other.metadata
+            && self.data == other.data
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct StorageInfo {
     pub backend: String,
@@ -343,7 +352,7 @@ impl Storage for ZipStorage {
     }
 
     fn spec(&self) -> String {
-        format!("zip://{}", self.path().unwrap_or("".into()))
+        format!("zip://{}", self.path().unwrap_or_else(|| "".into()))
     }
 }
 

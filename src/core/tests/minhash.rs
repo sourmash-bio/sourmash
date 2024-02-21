@@ -204,10 +204,10 @@ fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
     }
 
     c.add_from(&a).unwrap();
-    c.remove_many(&to_remove).unwrap();
+    c.remove_many(to_remove.iter().copied()).unwrap();
 
     d.add_from(&b).unwrap();
-    d.remove_many(&to_remove).unwrap();
+    d.remove_many(to_remove.iter().copied()).unwrap();
 
     assert_eq!(a.mins(), b.mins());
     assert_eq!(c.mins(), d.mins());
@@ -245,8 +245,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     c.add_many(&hashes).unwrap();
     d.add_many(&hashes).unwrap();
 
-    c.remove_many(&to_remove).unwrap();
-    d.remove_many(&to_remove).unwrap();
+    c.remove_many(to_remove.iter().copied()).unwrap();
+    d.remove_many(to_remove.iter().copied()).unwrap();
 
     a.remove_hash(hashes[0]);
     b.remove_hash(hashes[0]);
@@ -788,4 +788,104 @@ fn seq_to_hashes_2(seq in "QRMTHINK") {
 
 }
 
+}
+
+#[test]
+fn test_inflate() {
+    // Setup minhash_a with some mins but no abundances
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Hp, 42, true, 0);
+    a.add_hash(10);
+    a.add_hash(20);
+    a.add_hash(30);
+
+    // Setup minhash_b with mins, some of which match a, and with abundances
+    let mut b = KmerMinHash::new(5, 3, HashFunctions::Murmur64Hp, 42, true, 0);
+    b.add_hash_with_abundance(10, 2);
+    b.add_hash_with_abundance(20, 4);
+    b.add_hash_with_abundance(40, 6); // Non-matching hash
+
+    // Attempt to inflate minhash_a using minhash_b's abundances
+    assert!(a.inflate(&b).is_ok());
+
+    a.inflate(&b).unwrap();
+    eprintln!("{:?}", a.to_vec_abunds());
+    assert_eq!(a.to_vec_abunds(), vec![(10, 2), (20, 4)]);
+}
+
+#[test]
+fn test_inflated_abundances() {
+    // Setup minhash_a with some mins but no abundances
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Hp, 42, false, 0);
+    a.add_hash(10);
+    a.add_hash(20);
+    a.add_hash(30);
+
+    // Setup minhash_b with mins, some of which match a, and with abundances
+    let mut b = KmerMinHash::new(5, 3, HashFunctions::Murmur64Hp, 42, true, 0);
+    b.add_hash_with_abundance(10, 2);
+    b.add_hash_with_abundance(20, 4);
+    b.add_hash_with_abundance(40, 9); // Non-matching hash
+
+    // Attempt to inflate minhash_a using minhash_b's abundances
+    assert!(a.inflate(&b).is_ok());
+
+    let (abunds, total_abund) = a.inflated_abundances(&b).unwrap();
+    assert_eq!(abunds, vec![2, 4]);
+    assert_eq!(total_abund, 6);
+}
+
+#[test]
+fn test_inflate_noabund() {
+    // Setup minhash a with some mins but no abundances
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Dna, 42, false, 0);
+    a.add_hash(10);
+    a.add_hash(20);
+    a.add_hash(30);
+    let b = a.clone();
+    let result = a.inflate(&b);
+    assert!(matches!(
+        result,
+        Err(sourmash::Error::NeedsAbundanceTracking)
+    ));
+}
+
+#[test]
+fn test_inflated_abunds_noabund() {
+    // Setup minhash a with some mins but no abundances
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Dna, 42, false, 0);
+    a.add_hash(10);
+    a.add_hash(20);
+    a.add_hash(30);
+    let result = a.inflated_abundances(&a);
+    assert!(matches!(
+        result,
+        Err(sourmash::Error::NeedsAbundanceTracking)
+    ));
+}
+
+#[test]
+fn test_sum_abunds() {
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Dna, 42, true, 0);
+    a.add_hash_with_abundance(10, 2);
+    a.add_hash_with_abundance(20, 4);
+    a.add_hash_with_abundance(40, 9);
+    assert_eq!(a.sum_abunds(), 15);
+}
+
+#[test]
+fn test_sum_abunds_noabund() {
+    let mut a = KmerMinHash::new(5, 3, HashFunctions::Murmur64Dna, 42, false, 0);
+    a.add_hash(10);
+    a.add_hash(20);
+    a.add_hash(30);
+    assert_eq!(a.sum_abunds(), 3);
+}
+
+#[test]
+fn test_n_unique_kmers() {
+    let mut mh = KmerMinHash::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+    mh.add_hash(10);
+    mh.add_hash(20);
+    mh.add_hash(30);
+    assert_eq!(mh.n_unique_kmers(), 30)
 }

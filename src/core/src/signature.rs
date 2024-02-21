@@ -1033,9 +1033,8 @@ mod test {
             sig.add_sequence(&record.seq(), false).unwrap();
         }
 
-        let sketches = sig.sketches();
-        assert_eq!(sketches.len(), 12);
-        for sk in sketches {
+        assert_eq!(sig.size(), 12);
+        for sk in sig.iter() {
             assert_eq!(sk.size(), 500);
         }
     }
@@ -1144,7 +1143,7 @@ mod test {
         // iterate and check scaled
         for sig in &sigs {
             let modified_sig = sig.clone().select(&selection).unwrap();
-            for sketch in modified_sig.sketches() {
+            for sketch in modified_sig.iter() {
                 if let Sketch::MinHash(mh) = sketch {
                     dbg!("scaled: {:?}", mh.scaled());
                     assert_eq!(mh.scaled(), 2000);

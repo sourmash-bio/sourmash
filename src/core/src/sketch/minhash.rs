@@ -6,6 +6,7 @@ use std::iter::{Iterator, Peekable};
 use std::str;
 use std::sync::Mutex;
 
+use itertools::Itertools;
 use serde::de::Deserializer;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
@@ -421,9 +422,9 @@ impl KmerMinHash {
         Ok(())
     }
 
-    pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn remove_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.remove_hash(*min);
+            self.remove_hash(min);
         }
         Ok(())
     }
@@ -739,6 +740,14 @@ impl KmerMinHash {
         Ok(new_mh)
     }
 
+    pub fn sum_abunds(&self) -> u64 {
+        if let Some(abunds) = &self.abunds {
+            abunds.iter().sum()
+        } else {
+            self.size() as u64
+        }
+    }
+
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             self.mins
@@ -765,10 +774,77 @@ impl KmerMinHash {
         hll
     }
 
+    // Approximate total number of kmers
+    // this could be improved by generating an HLL estimate while sketching instead
+    // (for scaled minhashes)
+    pub fn n_unique_kmers(&self) -> u64 {
+        self.size() as u64 * self.scaled() // + (self.ksize - 1) for bp estimation
+    }
+
     // create a downsampled copy of self
     pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
         let max_hash = max_hash_for_scaled(scaled);
         self.downsample_max_hash(max_hash)
+    }
+
+    pub fn inflate(&mut self, abunds_from: &KmerMinHash) -> Result<(), Error> {
+        self.check_compatible(abunds_from)?;
+
+        // check that abunds_from has abundances
+        if abunds_from.abunds.is_none() {
+            return Err(Error::NeedsAbundanceTracking);
+        }
+
+        let self_iter = self.mins.iter();
+        let abunds_iter = abunds_from.abunds.as_ref().unwrap().iter();
+        let abunds_from_iter = abunds_from.mins.iter().zip(abunds_iter);
+
+        let (mins, abunds): (Vec<u64>, Vec<u64>) = self_iter
+            .merge_join_by(abunds_from_iter, |&self_val, &(other_val, _)| {
+                self_val.cmp(other_val)
+            })
+            .filter_map(|either| match either {
+                itertools::EitherOrBoth::Both(self_val, (_other_val, &other_abund)) => {
+                    Some((self_val, other_abund))
+                }
+                _ => None,
+            })
+            .unzip();
+
+        self.mins = mins;
+        self.abunds = Some(abunds);
+
+        self.reset_md5sum();
+        Ok(())
+    }
+
+    pub fn inflated_abundances(&self, abunds_from: &KmerMinHash) -> Result<(Vec<u64>, u64), Error> {
+        self.check_compatible(abunds_from)?;
+        // check that abunds_from has abundances
+        if abunds_from.abunds.is_none() {
+            return Err(Error::NeedsAbundanceTracking);
+        }
+
+        let self_iter = self.mins.iter();
+        let abunds_iter = abunds_from.abunds.as_ref().unwrap().iter();
+        let abunds_from_iter = abunds_from.mins.iter().zip(abunds_iter);
+
+        let (abundances, total_abundance): (Vec<u64>, u64) = self_iter
+            .merge_join_by(abunds_from_iter, |&self_val, &(other_val, _)| {
+                self_val.cmp(other_val)
+            })
+            .filter_map(|either| match either {
+                itertools::EitherOrBoth::Both(_self_val, (_other_val, other_abund)) => {
+                    Some(*other_abund)
+                }
+                _ => None,
+            })
+            .fold((Vec::new(), 0u64), |(mut acc_vec, acc_sum), abund| {
+                acc_vec.push(abund);
+                (acc_vec, acc_sum + abund)
+            });
+
+        Ok((abundances, total_abundance))
     }
 }
 
@@ -1271,9 +1347,9 @@ impl KmerMinHashBTree {
         }
     }
 
-    pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn remove_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.remove_hash(*min);
+            self.remove_hash(min);
         }
         Ok(())
     }
@@ -1537,6 +1613,14 @@ impl KmerMinHashBTree {
                 .cloned()
                 .zip(std::iter::repeat(1))
                 .collect()
+        }
+    }
+
+    pub fn sum_abunds(&self) -> u64 {
+        if let Some(abunds) = &self.abunds {
+            abunds.values().sum()
+        } else {
+            self.size() as u64
         }
     }
 }

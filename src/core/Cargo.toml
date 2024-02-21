@@ -38,6 +38,7 @@ fixedbitset = "0.4.0"
 getrandom = { version = "0.2", features = ["js"] }
 getset = "0.1.1"
 histogram = "0.9.1"
+itertools = "0.12.0"
 log = "0.4.20"
 md5 = "0.7.0"
 memmap2 = "0.9.4"
@@ -49,11 +50,14 @@ once_cell = "1.18.0"
 ouroboros = "0.18.3"
 piz = "0.5.0"
 primal-check = "0.3.1"
+rayon = { version = "1.8.1", optional = true }
 rkyv = { version = "0.7.44", optional = true }
 roaring = "0.10.3"
-rayon = { version = "1.8.1", optional = true }
+roots = "0.0.8"
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
+statrs = "0.16.0"
+streaming-stats = "0.2.3"
 thiserror = "1.0"
 twox-hash = "1.6.0"
 typed-builder = "0.18.0"
@@ -78,6 +82,10 @@ harness = false
 name = "minhash"
 harness = false
 
+[[bench]]
+name = "gather"
+harness = false
+
 [package.metadata.cargo-all-features]
 skip_optional_dependencies = true
 denylist = ["maturin"]
@@ -96,7 +104,7 @@ version = "0.3.68"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
-version = "0.4.34"
+version = "0.4.32"
 features = ["wasmbind"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]

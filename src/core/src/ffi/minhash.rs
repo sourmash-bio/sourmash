@@ -199,7 +199,8 @@ pub unsafe extern "C" fn kmerminhash_remove_many(
     };
 
     // FIXME: proper exception here
-    mh.remove_many(hashes).expect("Hash removal error");
+    mh.remove_many(hashes.iter().copied())
+        .expect("Hash removal error");
 }
 
 ffi_fn! {
