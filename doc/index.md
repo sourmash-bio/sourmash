@@ -17,6 +17,10 @@ You might try sourmash if you want to -
 * taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
 * search thousands of metagenomes with a query genome or sequence;
 
+<span style="color:red"><b>New!</b></span> The sourmash project also supports
+[querying all 1 million publicly available metagenomes in the Sequence Read
+Archive](https://branchwater.sourmash.bio/). Give it a try!
+
 Our **vision**: sourmash strives to support biologists in analyzing
 modern sequencing data at high resolution and with full context,
 including all public reference genomes and metagenomes.
