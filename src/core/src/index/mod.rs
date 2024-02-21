@@ -218,11 +218,6 @@ pub fn calculate_gather_stats(
     calc_ani_ci: bool,
     confidence: Option<f64>,
 ) -> Result<GatherResult> {
-    // basics
-    let name = match_sig.name();
-    let md5 = match_sig.md5sum();
-    let filename = match_sig.filename();
-
     // get match_mh
     let match_mh = match_sig.minhash().unwrap();
     //bp remaining in subtracted query
@@ -312,9 +307,9 @@ pub fn calculate_gather_stats(
         .average_abund(average_abund)
         .median_abund(median_abund)
         .std_abund(std_abund)
-        .filename(filename)
-        .name(name)
-        .md5(md5)
+        .filename(match_sig.filename())
+        .name(match_sig.name())
+        .md5(match_sig.md5sum())
         .match_(match_sig)
         .f_match_orig(f_match_orig)
         .unique_intersect_bp(unique_intersect_bp)

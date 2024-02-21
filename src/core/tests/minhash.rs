@@ -880,3 +880,12 @@ fn test_sum_abunds_noabund() {
     a.add_hash(30);
     assert_eq!(a.sum_abunds(), 3);
 }
+
+#[test]
+fn test_n_unique_kmers() {
+    let mut mh = KmerMinHash::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+    mh.add_hash(10);
+    mh.add_hash(20);
+    mh.add_hash(30);
+    assert_eq!(mh.n_unique_kmers(), 30)
+}

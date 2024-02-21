@@ -14,7 +14,9 @@ fn gather_stats_benchmarks(c: &mut Criterion) {
     filename.push("../../tests/test-data/track_abund/47.fa.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let sig = Signature::from_reader(reader).expect("Loading error").swap_remove(0);                                                                                                  
+    let sig = Signature::from_reader(reader)
+        .expect("Loading error")
+        .swap_remove(0);
     let orig_query = sig.minhash().unwrap();
     let query = orig_query.clone();
     let total_weighted_hashes = orig_query.sum_abunds();
