@@ -248,4 +248,41 @@ mod tests {
         assert_eq!(pnic, 0.0); // TODO: fix
         assert!((pnic - 0.0000007437) < EPSILON);
     }
+
+    #[test]
+    fn test_var_n_mutated_zero() {
+        let r = 0.0;
+        let ksize = 31;
+        let nkmers = 200;
+        let var_n_mut = var_n_mutated(nkmers as f64, ksize as f64, r, None).unwrap(); // Assuming the function returns a Result
+        assert_eq!(var_n_mut, 0.0, "Expected variance to be 0 for r=0");
+    }
+
+    #[test]
+    fn test_var_n_mutated_value_error() {
+        let r = 10.0;
+        let ksize = 31;
+        let nkmers = 200;
+        match var_n_mutated(nkmers as f64, ksize as f64, r, None) {
+            Err(e) => assert_eq!(
+                e.to_string(),
+                "error while calculating ANI confidence intervals: varN is less than 0.0",
+                "Unexpected error message"
+            ),
+            Ok(_) => panic!("Expected an error, but got Ok"),
+        }
+    }
+
+    #[test]
+    fn test_var_n_mutated_success() {
+        let r = 0.4;
+        let ksize = 31;
+        let nkmers = 200_000;
+        let var_n_mut = var_n_mutated(nkmers as f64, ksize as f64, r, None).unwrap(); // Assuming the function returns a Result
+        let expected = 0.10611425440741508;
+        assert!(
+            (var_n_mut - expected).abs() < f64::EPSILON,
+            "Variance did not match expected value"
+        );
+    }
 }
