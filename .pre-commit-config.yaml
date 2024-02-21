@@ -24,3 +24,8 @@ repos:
     hooks:
       - id: check-hooks-apply
       - id: check-useless-excludes
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: 97a46d97aea9f027a3a8714244f5c93a74d742de
+    hooks:
+    - id: pretty-format-rust
+      args: [--autofix]
