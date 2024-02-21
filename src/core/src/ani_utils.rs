@@ -54,6 +54,7 @@ fn r1_to_q(k: f64, r1: f64) -> f64 {
 // Usage:
 // let prob_nothing_in_common =
 //     get_exp_probability_nothing_common(n_unique_kmers, ksize, point_estimate, f_scaled)?;
+// let prob_threshold = prob_threshold.unwrap_or(1e-3);
 #[allow(dead_code)]
 fn get_exp_probability_nothing_common(
     ani_estimate: f64,
@@ -95,7 +96,6 @@ pub fn ani_ci_from_containment(
     scaled: u64,
     n_unique_kmers: u64,
     confidence: Option<f64>,
-    // prob_threshold: Option<f64>,
 ) -> Result<(f64, f64), Error> {
     if containment == 0.0 {
         return Ok((0.0, 0.0));
@@ -103,7 +103,6 @@ pub fn ani_ci_from_containment(
         return Ok((1.0, 1.0));
     }
     let confidence = confidence.unwrap_or(0.95);
-    // let prob_threshold = prob_threshold.unwrap_or(1e-3);
 
     // conversions needed throughout
     let scaled_f64 = scaled as f64;
@@ -135,7 +134,7 @@ pub fn ani_ci_from_containment(
         eps: 1e-15,
         max_iter: 1000,
     };
-    // check this:: what is the default? 0?
+
     let dist_sol1 =
         find_root_brent(0.0000001, 0.9999999, &f1, &mut convergency).unwrap_or_default();
     let dist_sol2 =
@@ -234,22 +233,6 @@ mod tests {
     }
 
     #[test]
-    fn test_prob_nothing_in_common() {
-        let contain = 0.25;
-        let ksize = 31 as f64;
-        let scaled = 10;
-        let f_scaled = 1.0 / scaled as f64;
-        let n_unique_kmers = 1000000;
-
-        let ani = ani_from_containment(contain, ksize);
-        let pnic = get_exp_probability_nothing_common(ani, ksize, f_scaled, n_unique_kmers as f64)
-            .unwrap();
-        dbg!("{:?}", pnic);
-        assert_eq!(pnic, 0.0); // TODO: fix
-        assert!((pnic - 0.0000007437) < EPSILON);
-    }
-
-    #[test]
     fn test_var_n_mutated_zero() {
         let r = 0.0;
         let ksize = 31;
@@ -284,5 +267,96 @@ mod tests {
             (var_n_mut - expected).abs() < f64::EPSILON,
             "Variance did not match expected value"
         );
+    }
+
+    #[test]
+    fn test_r1_to_q() {
+        let k = 2.0;
+        let r1 = 0.5;
+        let result = r1_to_q(k, r1);
+        let expected = 0.75;
+
+        assert!(
+            (result - expected).abs() < EPSILON,
+            "The result of r1_to_q({}, {}) was {}, but {} was expected",
+            k,
+            r1,
+            result,
+            expected
+        );
+    }
+
+    #[test]
+    fn test_exp_n_mutated() {
+        let l = 100.0;
+        let k = 2.0;
+        let r1 = 0.5;
+
+        // Calculate the expected result based on the inputs
+        let expected_q = r1_to_q(k, r1);
+        let expected_result = l * expected_q;
+
+        let result = exp_n_mutated(l, k, r1);
+
+        assert!(
+            (result - expected_result).abs() < EPSILON,
+            "The result of exp_n_mutated({}, {}, {}) was {}, but {} was expected",
+            l,
+            k,
+            r1,
+            result,
+            expected_result
+        );
+    }
+
+    #[test]
+    fn test_get_exp_probability_nothing_common_ani_zero() {
+        let ani_estimate = 0.0;
+        let ksize = 31.0;
+        let f_scaled = 0.1;
+        let n_unique_kmers = 1000.0;
+
+        let result =
+            get_exp_probability_nothing_common(ani_estimate, ksize, f_scaled, n_unique_kmers)
+                .unwrap();
+        assert_eq!(
+            result, 1.0,
+            "Expected probability for ani_estimate of 0 to be 1.0"
+        );
+    }
+
+    #[test]
+    fn test_get_exp_probability_nothing_common_ani_one() {
+        let ani_estimate = 1.0;
+        let ksize = 31.0;
+        let f_scaled = 0.1;
+        let n_unique_kmers = 1000.0;
+
+        let result =
+            get_exp_probability_nothing_common(ani_estimate, ksize, f_scaled, n_unique_kmers)
+                .unwrap();
+        assert_eq!(
+            result, 0.0,
+            "Expected probability for ani_estimate of 1 to be 0.0"
+        );
+    }
+
+    #[test]
+    fn test_get_exp_probability_nothing_common() {
+        let contain = 0.1;
+        let ksize = 31 as f64;
+        let scaled = 10;
+        let f_scaled = 1.0 / scaled as f64;
+        let n_unique_kmers = 1000;
+
+        let ani = ani_from_containment(contain, ksize);
+        let result =
+            get_exp_probability_nothing_common(ani, ksize, f_scaled, n_unique_kmers as f64)
+                .unwrap();
+        assert!(
+            result >= 0.0 && result <= 1.0,
+            "The result should be a valid probability"
+        );
+        assert!((result - 0.000026561398887587855) < EPSILON);
     }
 }
