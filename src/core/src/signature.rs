@@ -908,7 +908,7 @@ mod test {
     use crate::sketch::Sketch;
 
     #[test]
-    fn load_sig() {
+    fn test_load_sig() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
@@ -925,7 +925,7 @@ mod test {
     }
 
     #[test]
-    fn load_signature() {
+    fn test_load_signature() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/genome-s10+s11.sig");
 
@@ -949,7 +949,7 @@ mod test {
     }
 
     #[test]
-    fn signature_from_computeparams() {
+    fn test_signature_from_computeparams() {
         let params = ComputeParameters::builder()
             .ksizes(vec![2, 3, 4])
             .num_hashes(3u32)
@@ -966,7 +966,7 @@ mod test {
     }
 
     #[test]
-    fn signature_slow_path() {
+    fn test_signature_slow_path() {
         let params = ComputeParameters::builder()
             .ksizes(vec![2, 3, 4, 5])
             .num_hashes(3u32)
@@ -984,7 +984,7 @@ mod test {
     }
 
     #[test]
-    fn signature_add_sequence_protein() {
+    fn test_signature_add_sequence_protein() {
         let params = ComputeParameters::builder()
             .ksizes(vec![3, 6])
             .num_hashes(3u32)
@@ -1002,7 +1002,7 @@ mod test {
     }
 
     #[test]
-    fn signature_add_protein() {
+    fn test_signature_add_protein() {
         let params = ComputeParameters::builder()
             .ksizes(vec![3, 6])
             .num_hashes(3u32)
@@ -1020,7 +1020,7 @@ mod test {
     }
 
     #[test]
-    fn signature_add_sequence_cp() {
+    fn test_signature_add_sequence_cp() {
         let mut cp = ComputeParameters::default();
         cp.set_dayhoff(true);
         cp.set_protein(true);
@@ -1046,7 +1046,7 @@ mod test {
     }
 
     #[test]
-    fn load_minhash_from_signature() {
+    fn test_load_minhash_from_signature() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1062,7 +1062,7 @@ mod test {
     }
 
     #[test]
-    fn load_single_sketch_from_signature() {
+    fn test_load_single_sketch_from_signature() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1086,7 +1086,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn get_sketch_multisketch_panic() {
+    fn test_get_sketch_multisketch_panic() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1111,7 +1111,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn load_minhash_multisketch_panic() {
+    fn test_load_minhash_multisketch_panic() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1135,7 +1135,7 @@ mod test {
     }
 
     #[test]
-    fn selection_with_downsample() {
+    fn test_selection_with_downsample() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47+63-multisig.sig");
 
@@ -1159,7 +1159,88 @@ mod test {
     }
 
     #[test]
-    fn selection_scaled_too_low() {
+    fn test_selection_protein() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn test_selection_dayhoff() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        selection.set_moltype(crate::encodings::HashFunctions::Murmur64Dayhoff);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn test_selection_hp() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename
+            .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        selection.set_moltype(crate::encodings::HashFunctions::Murmur64Hp);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn test_selection_protein2() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize * 3);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash();
+        assert!(mh.is_none());
+    }
+
+    #[test]
+    fn test_selection_scaled_too_low() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47+63-multisig.sig");
 
