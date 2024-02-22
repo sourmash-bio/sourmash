@@ -337,7 +337,7 @@ mod test {
     use crate::selection::{Select, Selection};
 
     #[test]
-    fn manifest_from_pathlist() {
+    fn test_manifest_from_pathlist() {
         let temp_dir = TempDir::new().unwrap();
         let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
             .expect("Path should be valid UTF-8");
@@ -369,14 +369,14 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Failed to open \"no-exist\"")]
-    fn manifest_from_pathlist_nonexistent_file() {
+    fn test_manifest_from_pathlist_nonexistent_file() {
         let filename = PathBuf::from("no-exist");
         let _manifest = Manifest::from(&filename);
     }
 
     #[test]
     #[should_panic]
-    fn manifest_from_pathlist_badfile() {
+    fn test_manifest_from_pathlist_badfile() {
         let temp_dir = TempDir::new().unwrap();
         let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
             .expect("Path should be valid UTF-8");
@@ -394,7 +394,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn manifest_from_paths_badpath() {
+    fn test_manifest_from_paths_badpath() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let test_sigs = vec![
             PathBuf::from("no-exist"),
