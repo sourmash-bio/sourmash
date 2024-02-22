@@ -1179,6 +1179,47 @@ mod test {
     }
 
     #[test]
+    fn test_selection_dayhoff() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        selection.set_moltype(crate::encodings::HashFunctions::Murmur64Dayhoff);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn test_selection_hp() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename
+            .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        selection.set_moltype(crate::encodings::HashFunctions::Murmur64Hp);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
     fn test_selection_protein2() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push(
