@@ -54,18 +54,18 @@ Both SBTs and LCA databases can only store homogenous collections of signature t
 
 We recommend SBT and LCA databases for use only in specific situations - e.g. SBTs are great for single-genome "best match" search for SBTs, and `sourmash lca` commands require LCA databases.
 
-### Manifests
+### Standalone manifests
 
 Manifests are catalogs of signature metadata - name, molecule type, k-mer size, and other information - that can be used to select specific signatures for searching or processing. Typically when using manifests the actual signatures themselves are not loaded until they are needed, although the efficiency of this depends on the signature storage mechanism; for example, JSON-format containers (`.sig` and `.lca.json` files) must be entirely loaded before any signature in the file them can be used, unlike zip containers.
 
-As of sourmash 4.4 manifests can be *directly* loaded from the command line as standalone collections. This lets manifests serve as a catalog of signatures stored in many different locations.
+As of sourmash 4.4 manifests can be *directly* loaded from the command line as standalone collections. This lets manifests serve as a catalog of signatures stored in many different locations. Sketches can be selected by name, k-mer size, molecule type, and other features without loading the actual sketch data.
 
-Standalone manifests are preferable to both directory storage and pathlists (below), because they support fast selection and direct lazy loading. They are the most effective solution for managing custom collections of thousands to millions of signatures.
+Standalone manifests are preferable to both directory storage and pathlists (below), because they support fast selection and direct lazy loading. They are the most effective solution for managing custom collections of thousands to millions of signatures, as well as working with multiple large sketches.
 
 Standalone manifests can be created with `sourmash sig collect`
 (sourmash v4.4 and later).
 
-Sourmash supports two manifest file formats - CSV and SQLite. SQLite manifests are much faster and lower-memory than CSV manifests in exchange for consuming some extra disk space.
+Sourmash supports two manifest file formats - CSV and SQLite. SQLite manifests are much faster and lower-memory than CSV manifests.
 
 ### Directories
 
@@ -75,7 +75,7 @@ To read from a directory, specify the directory name on the sourmash command lin
 
 When directories are specified as outputs, the signatures will be saved by their complete md5sum underneath the directory.
 
-We don't particularly recommend storing signatures in directory hierarchies, since most of their use cases are now covered by other approaches.
+We don't recommend storing signatures in directory hierarchies, since most of their use cases are now covered by other approaches.
 
 ### Pathlists
 
@@ -83,7 +83,7 @@ Pathlists are text files containing paths to one or more sourmash databases; any
 
 The paths in pathlists can be relative or absolute within the file system. If they are relative, they must resolve with respect to the current working directory of the sourmash command.
 
-We don't recommend using pathlists any more, since the original use cases are now supported with picklists, but they are still supported!
+We don't recommend using pathlists, since the original use cases are now supported with picklists and standalone manifests, but they are still supported.
 
 Pathlists are not output by any sourmash commands.
 

@@ -1869,7 +1869,9 @@ will continue processing input sequences.
 
 ### `sourmash signature manifest` - output a manifest for a file
 
-Output a manifest for a file, database, or collection.
+Output a manifest for a file, database, or collection.  Note that these
+manifests are not always suitable for use as standalone manifests;
+the `sourmash sig collect` command produces standalone manifests.
 
 For example,
 ```
@@ -1917,7 +1919,12 @@ collections of signatures and identifiers.
 ### `sourmash signature collect` - collect manifests across databases
 
 Collect manifests from across (many) files and merge into a single
-standalone manifest.
+standalone manifest. Standalone manifests can be used directly as a
+sourmash database; they support efficient searching and selection of
+sketches, as well as lazy loading of individual sketches from large
+collections.  See
+[advanced usage information on sourmash databases](databases-advanced.md)
+for more information.
 
 For example,
 ```
@@ -1931,6 +1938,9 @@ This manifest file can be loaded directly from the command line by sourmash.
 `sourmash sig collect` defaults to outputting SQLite manifests. It is
 particularly useful when working with large collections of signatures and
 identifiers, and has command line options for merging and updating manifests.
+
+Standalone manifests produced by `sig collect` work most efficiently when
+constructed from many small zip file collections.
 
 ## Advanced command-line usage
 
@@ -2028,7 +2038,7 @@ The following `coltype`s are currently supported for picklists:
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
 * `search` - use the CSV output of `sourmash prefetch` as a picklist
-* `manifest` - use the CSV output of `sourmash sig manifest` as a picklist
+* `manifest` - use CSV manifests as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
@@ -2037,7 +2047,7 @@ One way to build a picklist is to use `sourmash sig grep <pattern>
 <collection> --csv out.csv` to construct a CSV file containing a list
 of all sketches that match the pattern (which can be a string or
 regexp). The `out.csv` file can be used as a picklist via the picklist
-manifest format with `--picklist out.csv::manifest`.
+manifest CSV format with `--picklist out.csv::manifest`.
 
 You can also use `sourmash sig describe --csv out.csv <signatures>` or
 `sourmash sig manifest -o out.csv <filename_or_db>` to construct an
@@ -2216,7 +2226,8 @@ sourmash sig fileinfo manifest.sqlmf
 ```
 This manifest contains _references_ to the signatures (but not the
 signatures themselves) and can then be used as a database target for most
-sourmash operations - search, gather, etc.
+sourmash operations - search, gather, etc. Manifests support
+fast selection and lazy loading of sketches in many situations.
 
 Note that `sig collect` will generate manifests containing the
 pathnames given to it - so if you use relative paths, the references
@@ -2225,12 +2236,16 @@ run.  You can use `sig collect --abspath` to rewrite the paths
 into absolute paths.
 
 **Our advice:** We suggest using zip file collections for most
-situations; we primarily recommend using explicit manifests for
-situations where you have a **very large** collection of signatures
-(1000s or more), and don't want to make multiple copies of signatures
-in the collection (as you would have to, with a zipfile). This can be
-useful if you want to refer to different subsets of the collection
-without making multiple copies in a zip file.
+situations; we stronlgy recommend using standalone manifests for
+situations where you have **very large** sketches or a **very large**
+collection of sketches (1000s or more), and don't want to make
+multiple copies of signatures in the collection (as you would have to,
+with a zipfile). This is particularly useful if you want to refer to different
+subsets of the collection without making multiple copies in a zip
+file.
+
+You can read more about the details of zip files and manifests in
+[the advanced usage information for databases](databases-advanced.md).
 
 ### Using sourmash plugins
 
