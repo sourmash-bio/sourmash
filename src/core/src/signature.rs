@@ -801,7 +801,13 @@ impl Select for Signature {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
                 let k = s.ksize() as u32;
-                k == ksize || k == ksize * 3
+                let adjusted_ksize = match s.hash_function() {
+                    HashFunctions::Murmur64Protein
+                    | HashFunctions::Murmur64Dayhoff
+                    | HashFunctions::Murmur64Hp => ksize * 3,
+                    _ => ksize,
+                };
+                k == adjusted_ksize
             } else {
                 valid
             };
