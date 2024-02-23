@@ -337,7 +337,7 @@ mod test {
     use crate::selection::{Select, Selection};
 
     #[test]
-    fn test_manifest_from_pathlist() {
+    fn manifest_from_pathlist() {
         let temp_dir = TempDir::new().unwrap();
         let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
             .expect("Path should be valid UTF-8");
@@ -376,7 +376,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_manifest_from_pathlist_badfile() {
+    fn manifest_from_pathlist_badfile() {
         let temp_dir = TempDir::new().unwrap();
         let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
             .expect("Path should be valid UTF-8");
@@ -394,7 +394,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_manifest_from_paths_badpath() {
+    fn manifest_from_paths_badpath() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let test_sigs = vec![
             PathBuf::from("no-exist"),
@@ -411,7 +411,7 @@ mod test {
     }
 
     #[test]
-    fn test_manifest_to_writer_bools() {
+    fn manifest_to_writer_bools() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let test_sigs = vec![
@@ -449,7 +449,7 @@ mod test {
     }
 
     #[test]
-    fn test_manifest_selection() {
+    fn manifest_selection() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
