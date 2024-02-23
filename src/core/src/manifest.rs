@@ -369,7 +369,7 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Failed to open \"no-exist\"")]
-    fn test_manifest_from_pathlist_nonexistent_file() {
+    fn manifest_from_pathlist_nonexistent_file() {
         let filename = PathBuf::from("no-exist");
         let _manifest = Manifest::from(&filename);
     }
