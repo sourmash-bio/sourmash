@@ -1624,6 +1624,7 @@ dependencies = [
  "getset",
  "histogram",
  "itertools 0.12.1",
+ "js-sys",
  "log",
  "md5",
  "memmap2",
