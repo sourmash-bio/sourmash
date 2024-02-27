@@ -40,7 +40,7 @@ jobs:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
 
     - name: setup conda
-      uses: conda-incubator/setup-miniconda@11b562958363ec5770fef326fe8ef0366f8cbf8a
+      uses: conda-incubator/setup-miniconda@392cf345b1784333caa1a1185081c71e6ffd61bc
       with:
         auto-update-conda: true
         python-version: "3.10"
