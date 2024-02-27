@@ -37,13 +37,13 @@ impl KmerMinHash {
         // TODO: at most one of (prot, dayhoff, hp) should be true
 
         let hash_function = if dayhoff {
-            HashFunctions::murmur64_dayhoff
+            HashFunctions::Murmur64Dayhoff
         } else if hp {
-            HashFunctions::murmur64_hp
+            HashFunctions::Murmur64Hp
         } else if is_protein {
-            HashFunctions::murmur64_protein
+            HashFunctions::Murmur64Protein
         } else {
-            HashFunctions::murmur64_DNA
+            HashFunctions::Murmur64Dna
         };
 
         KmerMinHash(_KmerMinHash::new(

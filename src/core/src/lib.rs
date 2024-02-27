@@ -21,16 +21,21 @@
 
 pub mod errors;
 pub use errors::SourmashError as Error;
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude;
 
 pub mod cmd;
 
+pub mod ani_utils;
+pub mod collection;
+pub mod encodings;
+pub mod index;
+pub mod manifest;
+pub mod selection;
 pub mod signature;
 pub mod sketch;
 pub mod storage;
-
-pub mod encodings;
 
 #[cfg(feature = "from-finch")]
 pub mod from;
@@ -44,7 +49,6 @@ cfg_if! {
         pub mod wasm;
     } else {
         pub mod ffi;
-        pub mod index;
     }
 }
 

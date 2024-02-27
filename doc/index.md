@@ -17,6 +17,10 @@ You might try sourmash if you want to -
 * taxonomically classify genomes or metagenomes against NCBI and/or GTDB;
 * search thousands of metagenomes with a query genome or sequence;
 
+<span style="color:red"><b>New!</b></span> The sourmash project also supports
+[querying all 1 million publicly available metagenomes in the Sequence Read
+Archive](https://branchwater.sourmash.bio/). Give it a try!
+
 Our **vision**: sourmash strives to support biologists in analyzing
 modern sequencing data at high resolution and with full context,
 including all public reference genomes and metagenomes.
@@ -58,6 +62,8 @@ sourmash is inspired by [mash](https://mash.readthedocs.io), and
 supports most mash analyses. sourmash also implements an expanded set
 of functionality for metagenome and taxonomic analysis.
 
+While sourmash is currently single-threaded, the [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater) provides faster and lower-memory multithreaded implementations of several important sourmash features - sketching, searching, and gather (metagenome decomposition). It does so by implementing higher-level functions in Rust on top of the core Rust library of sourmash. As a result it provides some of the same functionality as sourmash, but 10-100x faster and in 10x lower memory. Note that this code is functional and tested, but does not have all of the features of sourmash. Code and features will be integrated back into sourmash as they mature.
+
 sourmash development was initiated with a grant from the Moore
 Foundation under the Data Driven Discovery program, and has been
 supported by further funding from the NIH and NSF. Please see
@@ -72,6 +78,8 @@ supported by further funding from the NIH and NSF. Please see
 These tutorials are command line tutorials that should work on Mac OS
 X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
+* [Installing sourmash with conda](tutorial-install.md)
+
 * [The first sourmash tutorial - making signatures, comparing, and searching](tutorial-basic.md)
 
 * [Using sourmash LCA to do taxonomic classification](tutorials-lca.md)
@@ -82,9 +90,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ### How-To Guides
 
-* Installing sourmash
-
-* [Classifying genome sketches](classifying-signatures.md)
+* [Classifying genome and metagenome sketches](classifying-signatures.md)
 
 * [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
@@ -93,6 +99,10 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 * [Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
 * [A short guide to using sourmash output with R](other-languages.md).
+
+## Frequently Asked Questions
+
+* [Frequently asked questions](faq.md)
 
 ### How sourmash works under the hood
 
@@ -128,6 +138,6 @@ hidden: true
 
 sidebar
 command-line
-api-example
 databases
+api-example
 ```

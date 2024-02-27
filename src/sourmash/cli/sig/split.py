@@ -1,6 +1,6 @@
 """split signature files"""
 
-usage="""
+usage = """
 
 ### `sourmash signature split` - split signatures into individual files
 
@@ -36,32 +36,33 @@ Note: `split` only saves files in the JSON `.sig` format.
 
 """
 
-from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+from sourmash.cli.utils import add_moltype_args, add_ksize_arg, add_picklist_args
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('split', description=__doc__, usage=usage)
-    subparser.add_argument('signatures', nargs='*')
+    subparser = subparsers.add_parser("split", description=__doc__, usage=usage)
+    subparser.add_argument("signatures", nargs="*")
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '--output-dir', '--outdir',
-        help='output signatures to this directory',
+        "--output-dir",
+        "--outdir",
+        help="output signatures to this directory",
     )
     subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='try to load all files as signatures'
+        "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     subparser.add_argument(
-        '--from-file',
-        help='a text file containing a list of files to load signatures from'
+        "--from-file",
+        help="a text file containing a list of files to load signatures from",
     )
     subparser.add_argument(
-        '-E', '--extension', type=str, default='.sig',
-        help="write files with this extension ('.sig' by default)"
+        "-E",
+        "--extension",
+        type=str,
+        default=".sig",
+        help="write files with this extension ('.sig' by default)",
     )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
@@ -70,4 +71,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.sig.__main__.split(args)

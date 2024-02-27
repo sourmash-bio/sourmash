@@ -1,47 +1,55 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
-__all__ = ["cat",
-           "split",
-           "describe",
-           "manifest",
-           "overlap",
-           "merge",
-           "intersect",
-           "inflate",
-           "subtract",
-           "rename",
-           "extract",
-           "filter",
-           "flatten",
-           "downsample",
-           "ingest",
-           "export",
-           "kmers",
-           "fileinfo",
-           "check",
-           "collect"]
+__all__ = [
+    "cat",
+    "split",
+    "describe",
+    "manifest",
+    "overlap",
+    "merge",
+    "intersect",
+    "inflate",
+    "subtract",
+    "rename",
+    "extract",
+    "filter",
+    "flatten",
+    "downsample",
+    "ingest",
+    "export",
+    "kmers",
+    "fileinfo",
+    "check",
+    "collect",
+]
 
 import sys
 import csv
 import json
 import os
 from collections import defaultdict, namedtuple, Counter
-import json
 import re
 
 import screed
 import sourmash
 from sourmash.sourmash_args import FileOutput
 
-from sourmash.logging import (set_quiet, error, notify, print_results, debug,
-                              debug_literal, _debug)
+from sourmash.logging import (
+    set_quiet,
+    error,
+    notify,
+    print_results,
+    debug,
+    debug_literal,
+    _debug,
+)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
 
 
-usage='''
+usage = """
 sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
@@ -67,15 +75,19 @@ collect <locations> -o manifest.sqlmf     - collect sigs metadata into manifest
 ** Use '-h' to get subcommand-specific help, e.g.
 
 sourmash signature merge -h
-'''
+"""
 
 
 def _check_abundance_compatibility(sig1, sig2):
     if sig1.minhash.track_abundance != sig2.minhash.track_abundance:
-        raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
+        raise ValueError(
+            "incompatible signatures: track_abundance is {} in first sig, {} in second".format(
+                sig1.minhash.track_abundance, sig2.minhash.track_abundance
+            )
+        )
 
 
-def _extend_signatures_with_from_file(args, *, target_attr='signatures'):
+def _extend_signatures_with_from_file(args, *, target_attr="signatures"):
     # extend input signatures with --from-file
     if args.from_file:
         more_files = sourmash_args.load_pathlist_from_file(args.from_file)
@@ -109,7 +121,7 @@ def cat(args):
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
-    encountered_md5sums = defaultdict(int)   # used by --unique
+    encountered_md5sums = defaultdict(int)  # used by --unique
 
     # open output for saving sigs
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -119,14 +131,16 @@ def cat(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force,
-                                                pattern=pattern_search)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+        pattern=pattern_search,
+    )
     for ss, sigloc in loader:
         md5 = ss.md5sum()
         encountered_md5sums[md5] += 1
@@ -135,19 +149,19 @@ def cat(args):
 
         save_sigs.add(ss)
 
-    notify(f'loaded {len(save_sigs)} signatures total.')
+    notify(f"loaded {len(save_sigs)} signatures total.")
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
     save_sigs.close()
 
-    notify(f'output {len(save_sigs)} signatures')
+    notify(f"output {len(save_sigs)} signatures")
 
-    multiple_md5 = [ 1 for cnt in encountered_md5sums.values() if cnt > 1 ]
+    multiple_md5 = [1 for cnt in encountered_md5sums.values() if cnt > 1]
     if multiple_md5:
-        notify(f'encountered {sum(multiple_md5)} MinHashes multiple times')
+        notify(f"encountered {sum(multiple_md5)} MinHashes multiple times")
         if args.unique:
-            notify('...and removed the duplicates, because --unique was specified.')
+            notify("...and removed the duplicates, because --unique was specified.")
 
 
 def split(args):
@@ -160,50 +174,59 @@ def split(args):
     _extend_signatures_with_from_file(args)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}' + args.extension
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}' + args.extension
+    output_scaled_template = (
+        "{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}"
+        + args.extension
+    )
+    output_num_template = (
+        "{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}" + args.extension
+    )
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
-            notify(f'Creating --output-dir {args.output_dir}')
+            notify(f"Creating --output-dir {args.output_dir}")
             os.mkdir(args.output_dir)
 
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
 
     for sig, sigloc in loader:
         # save each file individually --
         md5sum = sig.md5sum()[:8]
         minhash = sig.minhash
         basename = os.path.basename(sig.filename)
-        if not basename or basename == '-':
-            basename = 'none'
+        if not basename or basename == "-":
+            basename = "none"
 
-        params = dict(basename=basename,
-                      md5sum=md5sum,
-                      scaled=minhash.scaled,
-                      ksize=minhash.ksize,
-                      num=minhash.num,
-                      moltype=minhash.moltype)
+        params = dict(
+            basename=basename,
+            md5sum=md5sum,
+            scaled=minhash.scaled,
+            ksize=minhash.ksize,
+            num=minhash.num,
+            moltype=minhash.moltype,
+        )
 
         if minhash.scaled:
             output_template = output_scaled_template
-        else: # num
+        else:  # num
             assert minhash.num
             output_template = output_num_template
 
         # figure out if this is duplicate, build unique filename
         n = 0
-        params['dup'] = n
+        params["dup"] = n
         output_name = output_template.format(**params)
         while output_name in output_names:
-            params['dup'] = n
+            params["dup"] = n
             output_name = output_template.format(**params)
             n += 1
 
@@ -218,9 +241,9 @@ def split(args):
         # save!
         with sourmash_args.SaveSignaturesToLocation(output_name) as save_sigs:
             save_sigs.add(sig)
-            notify(f'writing sig to {output_name}')
+            notify(f"writing sig to {output_name}")
 
-    notify(f'loaded and split {len(progress)} signatures total.')
+    notify(f"loaded and split {len(progress)} signatures total.")
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
@@ -242,24 +265,39 @@ def describe(args):
         csv_obj = sourmash_args.FileOutputCSV(args.csv)
         csv_fp = csv_obj.open()
 
-        w = csv.DictWriter(csv_fp,
-                           ['signature_file', 'md5', 'ksize', 'moltype',
-                            'num', 'scaled', 'n_hashes', 'seed',
-                            'with_abundance', 'name', 'filename', 'license',
-                            'sum_hashes'],
-                           extrasaction='ignore')
+        w = csv.DictWriter(
+            csv_fp,
+            [
+                "signature_file",
+                "md5",
+                "ksize",
+                "moltype",
+                "num",
+                "scaled",
+                "n_hashes",
+                "seed",
+                "with_abundance",
+                "name",
+                "filename",
+                "license",
+                "sum_hashes",
+            ],
+            extrasaction="ignore",
+        )
         w.writeheader()
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force,
-                                                pattern=pattern_search)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+        pattern=pattern_search,
+    )
 
     for sig, location in loader:
         # extract info, write as appropriate.
@@ -285,7 +323,8 @@ def describe(args):
         if w:
             w.writerow(locals())
 
-        print_results('''\
+        print_results(
+            """\
 ---
 signature filename: {location}
 signature: {p_name}
@@ -295,7 +334,9 @@ k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundan
 size: {n_hashes}
 sum hashes: {sum_hashes}
 signature license: {license}
-''', **locals())
+""",
+            **locals(),
+        )
 
     if csv_obj:
         csv_obj.close()
@@ -311,9 +352,10 @@ def manifest(args):
     set_quiet(args.quiet, args.debug)
 
     try:
-        loader = sourmash_args.load_file_as_index(args.location,
-                                                  yield_all_files=args.force)
-    except ValueError as exc:
+        loader = sourmash_args.load_file_as_index(
+            args.location, yield_all_files=args.force
+        )
+    except ValueError:
         error(f"Cannot open '{args.location}' as a sourmash signature collection.")
         error("Use -d/--debug for details.")
         sys.exit(-1)
@@ -325,12 +367,11 @@ def manifest(args):
     else:
         debug("sig manifest: forcing rebuild.")
 
-    manifest = sourmash_args.get_manifest(loader, require=True,
-                                          rebuild=rebuild)
+    manifest = sourmash_args.get_manifest(loader, require=True, rebuild=rebuild)
 
-    manifest.write_to_filename(args.output,
-                               database_format=args.manifest_format,
-                               ok_if_exists=args.force)
+    manifest.write_to_filename(
+        args.output, database_format=args.manifest_format, ok_if_exists=args.force
+    )
     notify(f"manifest contains {len(manifest)} signatures total.")
     notify(f"wrote manifest to '{args.output}' ({args.manifest_format})")
 
@@ -343,12 +384,14 @@ def overlap(args):
 
     moltype = sourmash_args.calculate_moltype(args)
 
-    sig1 = sourmash.load_one_signature(args.signature1, ksize=args.ksize,
-                                       select_moltype=moltype)
-    sig2 = sourmash.load_one_signature(args.signature2, ksize=args.ksize,
-                                       select_moltype=moltype)
+    sig1 = sourmash.load_one_signature(
+        args.signature1, ksize=args.ksize, select_moltype=moltype
+    )
+    sig2 = sourmash.load_one_signature(
+        args.signature2, ksize=args.ksize, select_moltype=moltype
+    )
 
-    notify(f'loaded one signature each from {args.signature1} and {args.signature2}')
+    notify(f"loaded one signature each from {args.signature1} and {args.signature2}")
 
     try:
         similarity = sig1.similarity(sig2)
@@ -384,7 +427,8 @@ def overlap(args):
     disjoint_2 = len(hashes_2 - hashes_1)
     num_union = len(hashes_1.union(hashes_2))
 
-    print('''\
+    print(
+        """\
 first signature:
   signature filename: {sig1_file}
   signature: {name1}
@@ -408,7 +452,8 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
-'''.format(**locals()))
+""".format(**locals())
+    )
 
 
 def merge(args):
@@ -425,13 +470,15 @@ def merge(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
 
     for sigobj, sigloc in loader:
         # first signature? initialize a bunch of stuff
@@ -452,8 +499,12 @@ def merge(args):
 
             mh.merge(sigobj_mh)
         except (TypeError, ValueError) as exc:
-            error("ERROR when merging signature '{}' ({}) from file {}",
-                  sigobj, sigobj.md5sum()[:8], sigloc)
+            error(
+                "ERROR when merging signature '{}' ({}) from file {}",
+                sigobj,
+                sigobj.md5sum()[:8],
+                sigloc,
+            )
             error(str(exc))
             sys.exit(-1)
 
@@ -466,7 +517,7 @@ def merge(args):
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(merged_sigobj)
 
-    notify(f'loaded and merged {len(progress)} signatures')
+    notify(f"loaded and merged {len(progress)} signatures")
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -488,13 +539,15 @@ def intersect(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
 
     for sigobj, sigloc in loader:
         if first_sig is None:
@@ -519,10 +572,10 @@ def intersect(args):
 
     # borrow abundances from a signature?
     if args.abundances_from:
-        notify(f'loading signature from {args.abundances_from}, keeping abundances')
-        abund_sig = sourmash.load_one_signature(args.abundances_from,
-                                                ksize=args.ksize,
-                                                select_moltype=moltype)
+        notify(f"loading signature from {args.abundances_from}, keeping abundances")
+        abund_sig = sourmash.load_one_signature(
+            args.abundances_from, ksize=args.ksize, select_moltype=moltype
+        )
         if not abund_sig.minhash.track_abundance:
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
@@ -533,7 +586,7 @@ def intersect(args):
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(intersect_sigobj)
 
-    notify(f'loaded and intersected {len(progress)} signatures')
+    notify(f"loaded and intersected {len(progress)} signatures")
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
@@ -546,9 +599,9 @@ def inflate(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
-    inflate_sig = sourmash_args.load_query_signature(args.signature_from,
-                                                     ksize=args.ksize,
-                                                     select_moltype=moltype)
+    inflate_sig = sourmash_args.load_query_signature(
+        args.signature_from, ksize=args.ksize, select_moltype=moltype
+    )
     inflate_from_mh = inflate_sig.minhash
     ksize = inflate_from_mh.ksize
     moltype = inflate_from_mh.moltype
@@ -560,19 +613,20 @@ def inflate(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.other_sigs,
-                                                ksize=ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.other_sigs,
+        ksize=ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
 
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         for sigobj, sigloc in loader:
             inflated_mh = sigobj.minhash.inflate(inflate_from_mh)
-            inflated_sigobj = sourmash.SourmashSignature(inflated_mh,
-                                                         name=sigobj.name)
+            inflated_sigobj = sourmash.SourmashSignature(inflated_mh, name=sigobj.name)
 
             save_sigs.add(inflated_sigobj)
 
@@ -580,7 +634,7 @@ def inflate(args):
         error("no signatures to inflate!?")
         sys.exit(-1)
 
-    notify(f'loaded and intersected {len(save_sigs)} signatures')
+    notify(f"loaded and intersected {len(save_sigs)} signatures")
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
@@ -593,38 +647,41 @@ def subtract(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     from_sigfile = args.signature_from
-    from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
+    from_sigobj = sourmash.load_one_signature(
+        from_sigfile, ksize=args.ksize, select_moltype=moltype
+    )
 
-    if args.abundances_from:    # it's ok to work with abund signatures if -A.
+    if args.abundances_from:  # it's ok to work with abund signatures if -A.
         args.flatten = True
 
     from_mh = from_sigobj.minhash
     if from_mh.track_abundance and not args.flatten:
-        error('Cannot use subtract on signatures with abundance tracking, sorry!')
+        error("Cannot use subtract on signatures with abundance tracking, sorry!")
         sys.exit(1)
 
     subtract_mins = set(from_mh.hashes)
 
-    notify(f'loaded signature from {from_sigfile}...', end='\r')
+    notify(f"loaded signature from {from_sigfile}...", end="\r")
 
     progress = sourmash_args.SignatureLoadingProgress()
 
     for sigfile in args.subtraction_sigs:
-        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
-                                                        ksize=args.ksize,
-                                                        select_moltype=moltype,
-                                                        progress=progress):
+        for sigobj in sourmash_args.load_file_as_signatures(
+            sigfile, ksize=args.ksize, select_moltype=moltype, progress=progress
+        ):
             if not sigobj.minhash.is_compatible(from_mh):
                 error("incompatible minhashes; specify -k and/or molecule type.")
                 sys.exit(-1)
 
             if sigobj.minhash.track_abundance and not args.flatten:
-                error('Cannot use subtract on signatures with abundance tracking, sorry!')
+                error(
+                    "Cannot use subtract on signatures with abundance tracking, sorry!"
+                )
                 sys.exit(1)
 
             subtract_mins -= set(sigobj.minhash.hashes)
 
-            notify(f'loaded and subtracted signatures from {sigfile}...', end='\r')
+            notify(f"loaded and subtracted signatures from {sigfile}...", end="\r")
 
     if not len(progress):
         error("no signatures to subtract!?")
@@ -636,10 +693,10 @@ def subtract(args):
 
     # borrow abundances from somewhere?
     if args.abundances_from:
-        notify(f'loading signature from {args.abundances_from}, keeping abundances')
-        abund_sig = sourmash.load_one_signature(args.abundances_from,
-                                                ksize=args.ksize,
-                                                select_moltype=moltype)
+        notify(f"loading signature from {args.abundances_from}, keeping abundances")
+        abund_sig = sourmash.load_one_signature(
+            args.abundances_from, ksize=args.ksize, select_moltype=moltype
+        )
         if not abund_sig.minhash.track_abundance:
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
@@ -651,7 +708,7 @@ def subtract(args):
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(subtract_sigobj)
 
-    notify(f'loaded and subtracted {len(progress)} signatures')
+    notify(f"loaded and subtracted {len(progress)} signatures")
 
 
 def rename(args):
@@ -669,14 +726,16 @@ def rename(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force,
-                                                pattern=pattern_search)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+        pattern=pattern_search,
+    )
 
     for sigobj, sigloc in loader:
         sigobj = sigobj.to_mutable()
@@ -703,14 +762,15 @@ def extract(args):
     # further filtering on md5 or name?
     filter_fn = None
     if args.md5 is not None or args.name is not None:
+
         def filter_fn(row):
             # match?
             keep = False
             if args.name:
-                name = row['name'] or row['filename']
+                name = row["name"] or row["filename"]
                 if args.name in name:
                     keep = True
-            if args.md5 and args.md5 in row['md5']:
+            if args.md5 and args.md5 in row["md5"]:
                 keep = True
 
             return keep
@@ -722,13 +782,11 @@ def extract(args):
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
-        idx = sourmash_args.load_file_as_index(filename,
-                                               yield_all_files=args.force)
+        idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
 
-        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist,
-                                                       pattern_search)
+        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist, pattern_search)
 
         manifest = sourmash_args.get_manifest(idx)
         total_rows_examined += len(manifest)
@@ -743,7 +801,9 @@ def extract(args):
             try:
                 idx = idx.select(picklist=sub_picklist)
             except ValueError:
-                error("** This input collection doesn't support 'extract' with picklists or patterns.")
+                error(
+                    "** This input collection doesn't support 'extract' with picklists or patterns."
+                )
                 error("** EXITING.")
                 error("**")
                 error("** You can use 'sourmash sig cat' with a picklist or pattern,")
@@ -779,31 +839,29 @@ def filter(args):
     save_sigs.open()
 
     for filename in args.signatures:
-        siglist = sourmash_args.load_file_as_signatures(filename,
-                                                        ksize=args.ksize,
-                                                        select_moltype=moltype,
-                                                        progress=progress)
+        siglist = sourmash_args.load_file_as_signatures(
+            filename, ksize=args.ksize, select_moltype=moltype, progress=progress
+        )
         siglist = list(siglist)
 
         # select!
         if args.md5 is not None:
-            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
+            siglist = [ss for ss in siglist if args.md5 in ss.md5sum()]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in str(ss) ]
+            siglist = [ss for ss in siglist if args.name in str(ss)]
 
         for ss in siglist:
             mh = ss.minhash
             if not mh.track_abundance:
-                notify(f'ignoring signature {ss} - track_abundance not set.')
+                notify(f"ignoring signature {ss} - track_abundance not set.")
                 continue
 
             abunds = mh.hashes
             abunds2 = {}
             for k, v in abunds.items():
                 if v >= args.min_abundance:
-                    if args.max_abundance is None or \
-                       v <= args.max_abundance:
-                       abunds2[k] = v
+                    if args.max_abundance is None or v <= args.max_abundance:
+                        abunds2[k] = v
 
             filtered_mh = mh.copy_and_clear()
             filtered_mh.set_abundances(abunds2)
@@ -833,22 +891,24 @@ def flatten(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
     for ss, sigloc in loader:
         # select!
         if args.md5 is not None:
             if args.md5 not in ss.md5sum():
-                continue        #  skip
+                continue  #  skip
 
         if args.name is not None:
             if args.name not in ss.name:
-                continue        # skip
+                continue  # skip
 
         ss = ss.to_mutable()
         ss.minhash = ss.minhash.flatten()
@@ -872,11 +932,11 @@ def downsample(args):
     _extend_signatures_with_from_file(args)
 
     if not args.num_hashes and not args.scaled:
-        error('ERROR: must specify either --num or --scaled value')
+        error("ERROR: must specify either --num or --scaled value")
         sys.exit(-1)
 
     if args.num_hashes and args.scaled:
-        error('ERROR: cannot specify both --num and --scaled')
+        error("ERROR: cannot specify both --num and --scaled")
         sys.exit(-1)
 
     # open output for saving sigs
@@ -885,13 +945,15 @@ def downsample(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
     for ss, sigloc in loader:
         sigobj = ss.to_mutable()
         mh = sigobj.minhash
@@ -906,7 +968,9 @@ def downsample(args):
                 max_hash = _get_max_hash_for_scaled(args.scaled)
                 mins = mh.hashes
                 if max(mins) < max_hash:
-                    raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
+                    raise ValueError(
+                        "this num MinHash does not have enough hashes to convert it into a scaled MinHash."
+                    )
 
                 mh_new = mh.copy()
                 _set_num_scaled(mh_new, 0, args.scaled)
@@ -922,7 +986,6 @@ def downsample(args):
 
                 mh_new = mh.copy()
                 _set_num_scaled(mh_new, args.num_hashes, 0)
-
 
         sigobj.minhash = mh_new
         save_sigs.add(sigobj)
@@ -944,7 +1007,7 @@ def ingest(args):
     siglist = []
     if args.csv:
         for filename in args.filenames:
-            with open(filename, newline='') as csv_fp:
+            with open(filename, newline="") as csv_fp:
                 reader = csv.reader(csv_fp)
                 siglist = []
                 for row in reader:
@@ -952,34 +1015,34 @@ def ingest(args):
                     hashseed = int(row[1])
 
                     # only support a limited import type, for now ;)
-                    assert hashfn == 'murmur64'
+                    assert hashfn == "murmur64"
                     assert hashseed == 42
 
                     _, _, ksize, name, hashes = row
                     ksize = int(ksize)
 
                     hashes = hashes.strip()
-                    hashes = list(map(int, hashes.split(' ' )))
+                    hashes = list(map(int, hashes.split(" ")))
 
                     e = sourmash.MinHash(len(hashes), ksize)
                     e.add_many(hashes)
                     s = sourmash.SourmashSignature(e, filename=name)
                     siglist.append(s)
-                    notify(f'loaded signature: {name} {s.md5sum()[:8]}')
+                    notify(f"loaded signature: {name} {s.md5sum()[:8]}")
     else:
         for filename in args.filenames:
             with open(filename) as fp:
                 x = json.loads(fp.read())
 
-            ksize = x['kmer']
-            num = x['sketchSize']
+            ksize = x["kmer"]
+            num = x["sketchSize"]
 
-            assert x['hashType'] == "MurmurHash3_x64_128"
-            assert x['hashBits'] == 64
-            assert x['hashSeed'] == 42
+            assert x["hashType"] == "MurmurHash3_x64_128"
+            assert x["hashBits"] == 64
+            assert x["hashSeed"] == 42
 
-            xx = x['sketches'][0]
-            hashes = xx['hashes']
+            xx = x["sketches"][0]
+            hashes = xx["hashes"]
 
             mh = sourmash.MinHash(ksize=ksize, n=num, is_protein=False)
             mh.add_many(hashes)
@@ -987,7 +1050,7 @@ def ingest(args):
             s = sourmash.SourmashSignature(mh, filename=filename)
             siglist.append(s)
 
-    notify(f'saving {len(siglist)} signatures to JSON')
+    notify(f"saving {len(siglist)} signatures to JSON")
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add_many(siglist)
 
@@ -999,24 +1062,23 @@ def export(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    query = sourmash_args.load_query_signature(args.filename,
-                                               ksize=args.ksize,
-                                               select_moltype=moltype,
-                                               select_md5=args.md5)
+    query = sourmash_args.load_query_signature(
+        args.filename, ksize=args.ksize, select_moltype=moltype, select_md5=args.md5
+    )
     mh = query.minhash
 
     x = {}
-    x['kmer'] = mh.ksize
-    x['sketchSize'] = len(mh)
+    x["kmer"] = mh.ksize
+    x["sketchSize"] = len(mh)
 
-    x['hashType'] = "MurmurHash3_x64_128"
-    x['hashBits'] = 64
-    x['hashSeed'] = mh.seed
+    x["hashType"] = "MurmurHash3_x64_128"
+    x["hashBits"] = 64
+    x["hashSeed"] = mh.seed
 
     ll = list(mh.hashes)
-    x['sketches'] = [{ 'hashes': ll }]
+    x["sketches"] = [{"hashes": ll}]
 
-    with FileOutput(args.output, 'wt') as fp:
+    with FileOutput(args.output, "wt") as fp:
         print(json.dumps(x), file=fp)
     notify(f"exported signature {query} ({query.md5sum()[:8]})")
 
@@ -1035,16 +1097,17 @@ def kmers(args):
     first_sig = None
     query_mh = None
 
-
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
+    loader = sourmash_args.load_many_signatures(
+        args.signatures,
+        ksize=args.ksize,
+        moltype=moltype,
+        picklist=picklist,
+        progress=progress,
+        yield_all_files=args.force,
+        force=args.force,
+    )
 
     for sigobj, sigloc in loader:
         # first signature? initialize a bunch of stuff
@@ -1061,8 +1124,12 @@ def kmers(args):
 
             query_mh.merge(sigobj_mh)
         except (TypeError, ValueError) as exc:
-            error("ERROR when merging signature '{}' ({}) from file {}",
-                  sigobj, sigobj.md5sum()[:8], sigloc)
+            error(
+                "ERROR when merging signature '{}' ({}) from file {}",
+                sigobj,
+                sigobj.md5sum()[:8],
+                sigloc,
+            )
             error(str(exc))
             sys.exit(-1)
 
@@ -1075,13 +1142,13 @@ def kmers(args):
         sourmash_args.report_picklist(args, picklist)
 
     is_protein = False
-    if query_mh.moltype == 'DNA':
+    if query_mh.moltype == "DNA":
         if args.translate:
             error("ERROR: cannot use --translate with DNA sketches.")
             sys.exit(-1)
     else:
         is_protein = True
-        if args.translate:      # input sequence is DNA
+        if args.translate:  # input sequence is DNA
             is_protein = False
 
     if not query_mh:
@@ -1089,8 +1156,10 @@ def kmers(args):
         sys.exit(-1)
 
     notify("")
-    notify(f"merged signature has the following properties:")
-    notify(f"k={query_mh.ksize} molecule={query_mh.moltype} num={query_mh.num} scaled={query_mh.scaled} seed={query_mh.seed}")
+    notify("merged signature has the following properties:")
+    notify(
+        f"k={query_mh.ksize} molecule={query_mh.moltype} num={query_mh.num} scaled={query_mh.scaled} seed={query_mh.seed}"
+    )
     notify(f"total hashes in merged signature: {len(query_mh)}")
     notify("")
     notify("now processing sequence files for matches!")
@@ -1103,11 +1172,10 @@ def kmers(args):
     if args.save_kmers:
         save_kmers = sourmash_args.FileOutputCSV(args.save_kmers)
         save_kmers.open()
-        kmer_w = csv.DictWriter(save_kmers.fp,
-                                fieldnames=['sequence_file',
-                                            'sequence_name',
-                                            'kmer',
-                                            'hashval'])
+        kmer_w = csv.DictWriter(
+            save_kmers.fp,
+            fieldnames=["sequence_file", "sequence_name", "kmer", "hashval"],
+        )
         kmer_w.writeheader()
 
     save_seqs = None
@@ -1117,7 +1185,7 @@ def kmers(args):
 
     # figure out protein vs dna
     is_protein = False
-    if query_mh.moltype != 'DNA':
+    if query_mh.moltype != "DNA":
         if not args.translate:
             is_protein = True
 
@@ -1134,62 +1202,68 @@ def kmers(args):
         notify(f"opening sequence file '{filename}'")
         n_files_searched += 1
 
-        for record in screed.open(filename):
-            seq_mh = query_mh.copy_and_clear()
+        with screed.open(filename) as f:
+            for record in f:
+                seq_mh = query_mh.copy_and_clear()
 
-            # protein? dna?
-            if is_protein:
-                seq_mh.add_protein(record.sequence)
-            else:
-                try:
-                    seq_mh.add_sequence(record.sequence,
-                                        not args.check_sequence)
-                except ValueError as exc:
-                    seqname = record.name
-                    if len(seqname) > 40:
-                        seqname = seqname[:37] + '...'
-                    notify(f"ERROR in sequence '{seqname}', file '{filename}'")
-                    notify(str(exc))
-                    if args.force:
-                        notify("(continuing)")
-                        continue
-                    else:
-                        sys.exit(-1)
+                # protein? dna?
+                if is_protein:
+                    seq_mh.add_protein(record.sequence)
+                else:
+                    try:
+                        seq_mh.add_sequence(record.sequence, not args.check_sequence)
+                    except ValueError as exc:
+                        seqname = record.name
+                        if len(seqname) > 40:
+                            seqname = seqname[:37] + "..."
+                        notify(f"ERROR in sequence '{seqname}', file '{filename}'")
+                        notify(str(exc))
+                        if args.force:
+                            notify("(continuing)")
+                            continue
+                        else:
+                            sys.exit(-1)
 
-            if seq_mh.intersection(query_mh):
-                # match!
+                if seq_mh.intersection(query_mh):
+                    # match!
 
-                # output matching sequences:
-                if save_seqs:
-                    save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
-                    n_sequences_found += 1
-                    n_bp_saved += len(record.sequence)
+                    # output matching sequences:
+                    if save_seqs:
+                        save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
+                        n_sequences_found += 1
+                        n_bp_saved += len(record.sequence)
 
-                # output matching k-mers:
-                if kmer_w:
-                    seq = record.sequence
-                    kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
-                                                      is_protein=is_protein)
-                    for kmer, hashval in kh_iter:
-                        if hashval in query_mh.hashes:
-                            found_mh.add_hash(hashval)
-                            n_kmers_found += 1
-                            d = dict(sequence_file=filename,
-                                     sequence_name=record.name,
-                                     kmer=kmer, hashval=hashval)
-                            kmer_w.writerow(d)
+                    # output matching k-mers:
+                    if kmer_w:
+                        seq = record.sequence
+                        kh_iter = seq_mh.kmers_and_hashes(
+                            seq, force=False, is_protein=is_protein
+                        )
+                        for kmer, hashval in kh_iter:
+                            if hashval in query_mh.hashes:
+                                found_mh.add_hash(hashval)
+                                n_kmers_found += 1
+                                d = dict(
+                                    sequence_file=filename,
+                                    sequence_name=record.name,
+                                    kmer=kmer,
+                                    hashval=hashval,
+                                )
+                                kmer_w.writerow(d)
 
-                # add seq_mh to found_mh
-                found_mh += seq_mh.intersection(query_mh)
+                    # add seq_mh to found_mh
+                    found_mh += seq_mh.intersection(query_mh)
 
-            # provide progress indicator based on bp...
-            n_sequences_searched += 1
-            n_bp_searched += len(record.sequence)
+                # provide progress indicator based on bp...
+                n_sequences_searched += 1
+                n_bp_searched += len(record.sequence)
 
-            if n_bp_searched >= progress_threshold:
-                notify(f"... searched {n_bp_searched} from {n_files_searched} files so far")
-                while n_bp_searched >= progress_threshold:
-                    progress_threshold += progress_interval
+                if n_bp_searched >= progress_threshold:
+                    notify(
+                        f"... searched {n_bp_searched} from {n_files_searched} files so far"
+                    )
+                    while n_bp_searched >= progress_threshold:
+                        progress_threshold += progress_interval
 
     # END major for loop. Now, clean up!
     if save_kmers:
@@ -1204,10 +1278,14 @@ def kmers(args):
 
     # ...and report!
     notify("DONE.")
-    notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {format_bp(n_bp_searched)}.")
+    notify(
+        f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {format_bp(n_bp_searched)}."
+    )
 
     if save_seqs:
-        notify(f"matched and saved a total of {n_sequences_found} sequences with {format_bp(n_bp_saved)}.")
+        notify(
+            f"matched and saved a total of {n_sequences_found} sequences with {format_bp(n_bp_saved)}."
+        )
 
     if kmer_w:
         notify(f"matched and saved a total of {n_kmers_found} k-mers.")
@@ -1225,7 +1303,7 @@ def kmers(args):
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
 
 
-_SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
+_SketchInfo = namedtuple("_SketchInfo", "ksize, moltype, scaled, num, abund")
 
 
 def _summarize_manifest(manifest):
@@ -1236,22 +1314,26 @@ def _summarize_manifest(manifest):
     counter = Counter()
     hashcounts = Counter()
     for row in manifest.rows:
-        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
-                          scaled=row['scaled'], num=row['num'],
-                          abund=row['with_abundance'])
+        ski = _SketchInfo(
+            ksize=row["ksize"],
+            moltype=row["moltype"],
+            scaled=row["scaled"],
+            num=row["num"],
+            abund=row["with_abundance"],
+        )
         counter[ski] += 1
-        hashcounts[ski] += row['n_hashes']
-        total_size += row['n_hashes']
+        hashcounts[ski] += row["n_hashes"]
+        total_size += row["n_hashes"]
 
     # store in info_d
-    info_d['total_hashes'] = total_size
+    info_d["total_hashes"] = total_size
     sketch_info = []
     for ski, count in counter.items():
         sketch_d = dict(ski._asdict())
-        sketch_d['count'] = count
-        sketch_d['n_hashes'] = hashcounts[ski]
+        sketch_d["count"] = count
+        sketch_d["n_hashes"] = hashcounts[ski]
         sketch_info.append(sketch_d)
-    info_d['sketch_info'] = sketch_info
+    info_d["sketch_info"] = sketch_info
 
     return info_d
 
@@ -1270,22 +1352,21 @@ def fileinfo(args):
     # load as index!
     try:
         notify(f"** loading from '{args.path}'")
-        idx = sourmash_args.load_file_as_index(args.path,
-                                               yield_all_files=args.force)
+        idx = sourmash_args.load_file_as_index(args.path, yield_all_files=args.force)
     except ValueError:
         error(f"Cannot open '{args.path}' as a sourmash signature collection.")
         error("Use -d/--debug for details.")
         sys.exit(-1)
 
-    print_bool = lambda x: "yes" if x else "no"
-    print_none = lambda x: "n/a" if x is None else x
+    def print_bool(x):
+        return "yes" if x else "no"
 
     info_d = {}
-    info_d['path_filetype'] = type(idx).__name__
-    info_d['location'] = "" if not idx.location else idx.location
-    info_d['is_database'] = bool(idx.is_database)
-    info_d['has_manifest'] = bool(idx.manifest)
-    info_d['num_sketches'] = len(idx)
+    info_d["path_filetype"] = type(idx).__name__
+    info_d["location"] = "" if not idx.location else idx.location
+    info_d["is_database"] = bool(idx.is_database)
+    info_d["has_manifest"] = bool(idx.manifest)
+    info_d["num_sketches"] = len(idx)
 
     if text_out:
         print_results(f"path filetype: {info_d['path_filetype']}")
@@ -1297,8 +1378,9 @@ def fileinfo(args):
     # also have arg to fileinfo to force recalculation
     notify("** examining manifest...")
 
-    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest,
-                                          require=False)
+    manifest = sourmash_args.get_manifest(
+        idx, rebuild=args.rebuild_manifest, require=False
+    )
 
     if manifest is None:
         # actually can't find any file type to trigger this, but leaving it
@@ -1312,9 +1394,9 @@ def fileinfo(args):
         print_results(f"total hashes: {info_d['total_hashes']}")
         print_results("summary of sketches:")
 
-        for ski in info_d['sketch_info']:
-            mh_type = f"num={ski['num']}" if ski['num'] else f"scaled={ski['scaled']}"
-            mh_abund = ", abund" if ski['abund'] else ""
+        for ski in info_d["sketch_info"]:
+            mh_type = f"num={ski['num']}" if ski["num"] else f"scaled={ski['scaled']}"
+            mh_abund = ", abund" if ski["abund"] else ""
 
             sketch_str = f"{ski['count']} sketches with {ski['moltype']}, k={ski['ksize']}, {mh_type}{mh_abund}"
 
@@ -1330,10 +1412,11 @@ def check(args):
     check signature db(s) against a picklist.
     """
     from sourmash.picklist import PickStyle
+
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    sourmash_args.load_include_exclude_db_patterns(args)
     _extend_signatures_with_from_file(args)
 
     if not picklist:
@@ -1357,8 +1440,7 @@ def check(args):
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
-        idx = sourmash_args.load_file_as_index(filename,
-                                               yield_all_files=args.force)
+        idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
 
@@ -1375,14 +1457,15 @@ def check(args):
 
         # rewrite locations so that each signature can be found by filename
         # of its container; this follows `sig collect` logic.
-        rows = []
         for row in sub_manifest.rows:
-            row['internal_location'] = filename
+            row["internal_location"] = filename
             total_manifest_rows.add_row(row)
 
         # the len(sub_manifest) here should only be run when needed :)
         if _debug:
-            debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
+            debug_literal(
+                f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows"
+            )
 
     notify(f"loaded {total_rows_examined} signatures.")
 
@@ -1398,7 +1481,7 @@ def check(args):
         n_output = 0
 
         with sourmash_args.FileInputCSV(pickfile) as r:
-            with open(args.output_missing, "w", newline='') as outfp:
+            with open(args.output_missing, "w", newline="") as outfp:
                 w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
                 w.writeheader()
 
@@ -1407,18 +1490,27 @@ def check(args):
                     if not picklist.matched_csv_row(row):
                         n_output += 1
                         w.writerow(row)
-        notify(f"saved {n_output} non-matching rows of {n_input} picklist rows to '{args.output_missing}'")
+        notify(
+            f"saved {n_output} non-matching rows of {n_input} picklist rows to '{args.output_missing}'"
+        )
     elif args.output_missing:
-        notify(f"(no remaining picklist entries; not saving to '{args.output_missing}')")
+        notify(
+            f"(no remaining picklist entries; not saving to '{args.output_missing}')"
+        )
 
     # save manifest of matching!
     if args.save_manifest_matching and total_manifest_rows:
         mf = total_manifest_rows
-        mf.write_to_filename(args.save_manifest_matching,
-                             database_format=args.manifest_format)
-        notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
+        mf.write_to_filename(
+            args.save_manifest_matching, database_format=args.manifest_format
+        )
+        notify(
+            f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'"
+        )
     elif args.save_manifest_matching:
-        notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")
+        notify(
+            f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)"
+        )
 
     if args.fail_if_missing and n_missing:
         error("** ERROR: missing values, and --fail-if-missing requested. Exiting.")
@@ -1436,15 +1528,17 @@ def collect(args):
             pass
         else:
             error(f"ERROR: '{args.output}' already exists!")
-            error(f"ERROR: please remove it, or use --merge-previous to merge")
+            error("ERROR: please remove it, or use --merge-previous to merge")
             sys.exit(-1)
     elif args.merge_previous:
-        notify(f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?")
+        notify(
+            f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?"
+        )
 
     # load previous manifest for --merge-previous. This gets tricky with
     # mismatched manifest types, which we forbid.
     try:
-        if args.manifest_format == 'sql':
+        if args.manifest_format == "sql":
             # create on-disk manifest
             from sourmash.index.sqlite_index import SqliteCollectionManifest
 
@@ -1454,7 +1548,7 @@ def collect(args):
                 collected_mf = SqliteCollectionManifest.create(args.output)
         else:
             # create in-memory manifest that will be saved as CSV
-            assert args.manifest_format == 'csv'
+            assert args.manifest_format == "csv"
 
             if args.merge_previous and os.path.exists(args.output):
                 collected_mf = CollectionManifest.load_from_filename(args.output)
@@ -1464,7 +1558,9 @@ def collect(args):
             if not isinstance(collected_mf, CollectionManifest):
                 raise Exception
     except:
-        error(f"ERROR loading '{args.output}' with --merge-previous. Is it of type {args.manifest_format}?")
+        error(
+            f"ERROR loading '{args.output}' with --merge-previous. Is it of type {args.manifest_format}?"
+        )
         sys.exit(-1)
 
     if args.merge_previous:
@@ -1481,35 +1577,37 @@ def collect(args):
     n_files = 0
 
     # load from_file
-    _extend_signatures_with_from_file(args, target_attr='locations')
+    _extend_signatures_with_from_file(args, target_attr="locations")
 
     # convert to abspath
     if args.abspath:
-        args.locations = [ os.path.abspath(iloc) for iloc in args.locations ]
+        args.locations = [os.path.abspath(iloc) for iloc in args.locations]
 
     # iterate through, loading all the manifests from all the locations.
     for n_files, loc in enumerate(args.locations):
         notify(f"Loading signature information from {loc}.")
 
         if n_files % 100 == 0:
-            notify(f'... loaded {len(collected_mf)} sigs from {n_files} files')
+            notify(f"... loaded {len(collected_mf)} sigs from {n_files} files")
         idx = sourmash.load_file_as_index(loc)
         if idx.manifest is None and require_manifest:
             error(f"ERROR on location '{loc}'")
-            error(f"sig collect requires a manifest by default, but no manifest present.")
+            error(
+                "sig collect requires a manifest by default, but no manifest present."
+            )
             error("specify --no-require-manifest to dynamically generate one.")
             sys.exit(-1)
 
         mf = sourmash_args.get_manifest(idx)
 
-        rows = []
         for row in mf.rows:
-            row['internal_location'] = loc
+            row["internal_location"] = loc
             collected_mf.add_row(row)
 
-    if args.manifest_format == 'csv':
-        collected_mf.write_to_filename(args.output, database_format='csv',
-                                       ok_if_exists=args.merge_previous)
+    if args.manifest_format == "csv":
+        collected_mf.write_to_filename(
+            args.output, database_format="csv", ok_if_exists=args.merge_previous
+        )
     else:
         collected_mf.close()
 
@@ -1521,9 +1619,9 @@ def collect(args):
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, 'main')
+    mainmethod = getattr(submod, "main")
     return mainmethod(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)

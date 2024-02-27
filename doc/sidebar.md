@@ -3,6 +3,8 @@
 These tutorials are command line tutorials that should work on Mac OS
 X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
+* [Installing sourmash with conda](tutorial-install.md)
+
 * [The first sourmash tutorial - making signatures, comparing, and searching](tutorial-basic.md)
 
 * [Using sourmash LCA to do taxonomic classification](tutorials-lca.md)
@@ -13,9 +15,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## How-To Guides
 
-* Installing sourmash
-
-* [Classifying genome sketches](classifying-signatures.md)
+* [Classifying genome and metagenome sketches](classifying-signatures.md)
 
 * [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
@@ -24,6 +24,10 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 * [Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
 * [A short guide to using sourmash output with R](other-languages.md).
+
+## Frequently Asked Questions
+
+* [Frequently asked questions](faq.md)
 
 ## How sourmash works under the hood
 
@@ -41,6 +45,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## Developing and extending sourmash
 
+* [Getting started with sourmash development](developer.md)
 * [Releasing a new version of sourmash](release.md)
 
 ## [Full table of contents for all docs](toc.md)

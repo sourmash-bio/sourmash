@@ -2,6 +2,8 @@
 //!
 //! A signature is a collection of sketches for a genomic dataset.
 
+use core::iter::FusedIterator;
+
 use std::fs::File;
 use std::io;
 use std::iter::Iterator;
@@ -16,10 +18,14 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::prelude::*;
+use crate::selection::{Select, Selection};
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
+// TODO: this is the behavior expected from Sketch, but that name is already
+// used. Sketchable?
 pub trait SigsTrait {
     fn size(&self) -> usize;
     fn to_vec(&self) -> Vec<u64>;
@@ -366,11 +372,11 @@ impl Iterator for SeqToHashes {
                     Some(Ok(hash))
                 } else {
                     if !self.prot_configured {
-                        self.aa_seq = match self.hash_function {
-                            HashFunctions::murmur64_dayhoff => {
+                        self.aa_seq = match &self.hash_function {
+                            HashFunctions::Murmur64Dayhoff => {
                                 self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
                             }
-                            HashFunctions::murmur64_hp => {
+                            HashFunctions::Murmur64Hp => {
                                 self.sequence.iter().cloned().map(aa_to_hp).collect()
                             }
                             invalid => {
@@ -395,6 +401,10 @@ impl Iterator for SeqToHashes {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Signature {
     #[serde(default = "default_class")]
     #[builder(default = default_class())]
@@ -525,6 +535,39 @@ impl Signature {
         None
     }
 
+    // return single corresponding sketch
+    pub fn get_sketch(&self) -> Option<&Sketch> {
+        if self.signatures.len() != 1 {
+            if self.signatures.len() > 1 {
+                todo!("Multiple sketches found! Please run select first.");
+            }
+            return None;
+        }
+        self.signatures.iter().find(|sk| {
+            matches!(
+                sk,
+                Sketch::MinHash(_) | Sketch::LargeMinHash(_) | Sketch::HyperLogLog(_)
+            )
+        })
+    }
+
+    // return minhash directly
+    pub fn minhash(&self) -> Option<&KmerMinHash> {
+        if self.signatures.len() != 1 {
+            if self.signatures.len() > 1 {
+                todo!("Multiple sketches found! Please run select first.");
+            }
+            return None;
+        }
+        self.signatures.iter().find_map(|sk| {
+            if let Sketch::MinHash(mh) = sk {
+                Some(mh)
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Signature::from_reader(&mut reader)
@@ -575,9 +618,9 @@ impl Signature {
                                 }
                             };
 
-                            match moltype {
+                            match &moltype {
                                 Some(x) => {
-                                    if mh.hash_function() == x {
+                                    if mh.hash_function() == *x {
                                         return true;
                                     }
                                 }
@@ -591,9 +634,9 @@ impl Signature {
                                 }
                             };
 
-                            match moltype {
+                            match &moltype {
                                 Some(x) => {
-                                    if mh.hash_function() == x {
+                                    if mh.hash_function() == *x {
                                         return true;
                                     }
                                 }
@@ -654,6 +697,92 @@ impl Signature {
 
         Ok(())
     }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_> {
+        let length = self.signatures.len();
+        IterMut {
+            iter: self.signatures.iter_mut(),
+            length,
+        }
+    }
+
+    pub fn iter(&self) -> Iter<'_> {
+        let length = self.signatures.len();
+        Iter {
+            iter: self.signatures.iter(),
+            length,
+        }
+    }
+}
+
+pub struct IterMut<'a> {
+    iter: std::slice::IterMut<'a, Sketch>,
+    length: usize,
+}
+
+impl<'a> IntoIterator for &'a mut Signature {
+    type Item = &'a mut Sketch;
+    type IntoIter = IterMut<'a>;
+
+    fn into_iter(self) -> IterMut<'a> {
+        self.iter_mut()
+    }
+}
+
+impl<'a> Iterator for IterMut<'a> {
+    type Item = &'a mut Sketch;
+
+    fn next(&mut self) -> Option<&'a mut Sketch> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            self.iter.next()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.length, Some(self.length))
+    }
+}
+
+pub struct Iter<'a> {
+    iter: std::slice::Iter<'a, Sketch>,
+    length: usize,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Sketch;
+
+    fn next(&mut self) -> Option<&'a Sketch> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            self.iter.next()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.length, Some(self.length))
+    }
+}
+
+impl FusedIterator for Iter<'_> {}
+
+impl ExactSizeIterator for Iter<'_> {
+    fn len(&self) -> usize {
+        self.length
+    }
+}
+
+impl Clone for Iter<'_> {
+    fn clone(&self) -> Self {
+        Iter {
+            iter: self.iter.clone(),
+            length: self.length,
+        }
+    }
 }
 
 impl ToWriter for Signature {
@@ -663,6 +792,64 @@ impl ToWriter for Signature {
     {
         serde_json::to_writer(writer, &vec![&self])?;
         Ok(())
+    }
+}
+
+impl Select for Signature {
+    fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+        self.signatures.retain(|s| {
+            let mut valid = true;
+            valid = if let Some(ksize) = selection.ksize() {
+                let k = s.ksize() as u32;
+                let adjusted_ksize = match s.hash_function() {
+                    HashFunctions::Murmur64Protein
+                    | HashFunctions::Murmur64Dayhoff
+                    | HashFunctions::Murmur64Hp => ksize * 3,
+                    _ => ksize,
+                };
+                k == adjusted_ksize
+            } else {
+                valid
+            };
+            // keep compatible scaled if applicable
+            valid = if let Some(sel_scaled) = selection.scaled() {
+                match s {
+                    Sketch::MinHash(mh) => valid && mh.scaled() <= sel_scaled as u64,
+                    // TODO: test LargeMinHash
+                    // Sketch::LargeMinHash(lmh) => valid && lmh.scaled() <= sel_scaled as u64,
+                    _ => valid, // other sketch types or invalid cases
+                }
+            } else {
+                valid // if selection.scaled() is None, keep prior valid
+            };
+            /*
+            valid = if let Some(abund) = selection.abund() {
+                valid && *s.with_abundance() == abund
+            } else {
+                valid
+            };
+            valid = if let Some(moltype) = selection.moltype() {
+                valid && s.moltype() == moltype
+            } else {
+                valid
+            };
+            */
+
+            valid
+        });
+
+        // downsample the retained sketches if needed.
+        if let Some(sel_scaled) = selection.scaled() {
+            for sketch in self.signatures.iter_mut() {
+                // TODO: also account for LargeMinHash
+                if let Sketch::MinHash(mh) = sketch {
+                    if (mh.scaled() as u32) < sel_scaled {
+                        *sketch = Sketch::MinHash(mh.downsample_scaled(sel_scaled as u64)?);
+                    }
+                }
+            }
+        }
+        Ok(self)
     }
 }
 
@@ -715,6 +902,10 @@ mod test {
     use crate::signature::SigsTrait;
 
     use super::Signature;
+
+    use crate::prelude::Select;
+    use crate::selection::Selection;
+    use crate::sketch::Sketch;
 
     #[test]
     fn load_sig() {
@@ -848,10 +1039,222 @@ mod test {
             sig.add_sequence(&record.seq(), false).unwrap();
         }
 
-        let sketches = sig.sketches();
-        assert_eq!(sketches.len(), 12);
-        for sk in sketches {
+        assert_eq!(sig.size(), 12);
+        for sk in sig.iter() {
             assert_eq!(sk.size(), 500);
+        }
+    }
+
+    #[test]
+    fn load_minhash_from_signature() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mh = sig.minhash().unwrap();
+        assert_eq!(mh.scaled(), 1000);
+    }
+
+    #[test]
+    fn load_single_sketch_from_signature() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mhdirect = sig.minhash().unwrap();
+        let sketch = sig.get_sketch().unwrap();
+        if let Sketch::MinHash(mh) = sketch {
+            assert_eq!(mh.scaled(), 1000);
+            assert_eq!(mhdirect, mh); // should be the same
+        } else {
+            // error
+            assert!(false);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_sketch_multisketch_panic() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mut mhdirect = sig.minhash().unwrap().clone();
+        // change slightly and push into new_sig
+        mhdirect.add_sequence(b"ATGGA", false).unwrap();
+        let new_sketch = Sketch::MinHash(mhdirect.clone());
+        let mut new_sig = sig.clone();
+        new_sig.push(new_sketch);
+        // check there are now two sketches in new_sig
+        assert_eq!(new_sig.signatures.len(), 2);
+
+        let _ = new_sig.get_sketch();
+    }
+
+    #[test]
+    #[should_panic]
+    fn load_minhash_multisketch_panic() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47.fa.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        let mut mhdirect = sig.minhash().unwrap().clone();
+        // change slightly and push into new_sig
+        mhdirect.add_sequence(b"ATGGA", false).unwrap();
+        let new_sketch = Sketch::MinHash(mhdirect.clone());
+        let mut new_sig = sig.clone();
+        new_sig.push(new_sketch);
+        // check there are now two sketches in new_sig
+        assert_eq!(new_sig.signatures.len(), 2);
+
+        let _ = new_sig.minhash();
+    }
+
+    #[test]
+    fn selection_with_downsample() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(2000);
+        // iterate and check scaled
+        for sig in &sigs {
+            let modified_sig = sig.clone().select(&selection).unwrap();
+            for sketch in modified_sig.iter() {
+                if let Sketch::MinHash(mh) = sketch {
+                    dbg!("scaled: {:?}", mh.scaled());
+                    assert_eq!(mh.scaled(), 2000);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn selection_protein() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn selection_dayhoff() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        selection.set_moltype(crate::encodings::HashFunctions::Murmur64Dayhoff);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn selection_hp() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename
+            .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize);
+        selection.set_moltype(crate::encodings::HashFunctions::Murmur64Hp);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash().unwrap();
+        assert_eq!(mh.ksize(), prot_ksize as usize * 3);
+    }
+
+    #[test]
+    fn selection_protein2() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push(
+            "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        );
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        let prot_ksize = 19;
+        selection.set_ksize(prot_ksize * 3);
+        let selected_sig = sigs[0].clone().select(&selection).unwrap();
+        let mh = selected_sig.minhash();
+        assert!(mh.is_none());
+    }
+
+    #[test]
+    fn selection_scaled_too_low() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        // create Selection object
+        let mut selection = Selection::default();
+        selection.set_scaled(100);
+        // iterate and check no sigs are returned (original scaled is 1000)
+        for sig in &sigs {
+            let modified_sig = sig.clone().select(&selection).unwrap();
+            assert_eq!(modified_sig.size(), 0);
         }
     }
 }

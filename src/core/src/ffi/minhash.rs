@@ -2,8 +2,9 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
+use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::ffi::HashFunctions;
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
@@ -23,7 +24,7 @@ pub unsafe extern "C" fn kmerminhash_new(
     track_abundance: bool,
     n: u32,
 ) -> *mut SourmashKmerMinHash {
-    let mh = KmerMinHash::new(scaled, k, hash_function, seed, track_abundance, n);
+    let mh = KmerMinHash::new(scaled, k, hash_function.into(), seed, track_abundance, n);
 
     SourmashKmerMinHash::from_rust(mh)
 }
@@ -198,7 +199,8 @@ pub unsafe extern "C" fn kmerminhash_remove_many(
     };
 
     // FIXME: proper exception here
-    mh.remove_many(hashes).expect("Hash removal error");
+    mh.remove_many(hashes.iter().copied())
+        .expect("Hash removal error");
 }
 
 ffi_fn! {
@@ -367,13 +369,13 @@ pub unsafe extern "C" fn kmerminhash_hash_function(
     ptr: *const SourmashKmerMinHash,
 ) -> HashFunctions {
     let mh = SourmashKmerMinHash::as_rust(ptr);
-    mh.hash_function()
+    mh.hash_function().into()
 }
 
 ffi_fn! {
 unsafe fn kmerminhash_hash_function_set(ptr: *mut SourmashKmerMinHash, hash_function: HashFunctions) -> Result<()> {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
-    mh.set_hash_function(hash_function)
+    mh.set_hash_function(hash_function.into())
 }
 }
 

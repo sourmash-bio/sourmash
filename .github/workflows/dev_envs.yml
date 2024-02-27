@@ -5,25 +5,23 @@ on:
     branches: [latest]
 jobs:
   nix:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - uses: cachix/install-nix-action@v23
-      with:
-        extra_nix_config: |
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-    - uses: cachix/cachix-action@v12
-      with:
-        name: sourmash-bio
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@v9
+    - name: Run the Magic Nix Cache
+      uses: DeterminateSystems/magic-nix-cache-action@v3
 
     - run: nix run .# -- --version
 
-    - run: nix-shell --command "tox -e py310"
+    - run: nix develop --command bash -c "tox -e py310"
 
   mamba:
     runs-on: ubuntu-latest
@@ -33,7 +31,7 @@ jobs:
         fetch-depth: 0
 
     - name: cache conda
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       env:
         CACHE_NUMBER: 0
       with:
@@ -42,10 +40,10 @@ jobs:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
 
     - name: setup conda
-      uses: conda-incubator/setup-miniconda@3b0f2504dd76ef23b6d31f291f4913fb60ab5ff3
+      uses: conda-incubator/setup-miniconda@392cf345b1784333caa1a1185081c71e6ffd61bc
       with:
         auto-update-conda: true
-        python-version: 3.9
+        python-version: "3.10"
         channels: conda-forge,bioconda
         miniforge-variant: Mambaforge
         miniforge-version: latest
@@ -57,8 +55,8 @@ jobs:
 
     - name: install dependencies
       shell: bash -l {0}
-      run: mamba install 'tox>=3.27,<4' tox-conda rust git compilers pandoc
+      run: mamba install 'tox>=3.27,<4' tox-conda rust git compilers pandoc libstdcxx-ng
 
-    - name: run tests for 3.9
+    - name: run tests for 3.10
       shell: bash -l {0}
-      run: tox -e py39
+      run: tox -e py310

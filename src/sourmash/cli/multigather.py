@@ -1,6 +1,6 @@
 "'sourmash multigather' - gather many signatures against multiple databases."
 
-usage="""
+usage = """
 
 The `multigather` subcommand runs 'gather' for multiple query sequences
 against the same collection of sequences.  The main use for multigather
@@ -40,33 +40,44 @@ from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_scaled_arg
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('multigather')
+    subparser = subparsers.add_parser("multigather")
     subparser.add_argument(
-        '--query', nargs='*', default=[], action='append',
-        help='query signature'
+        "--query", nargs="*", default=[], action="append", help="query signature"
     )
     subparser.add_argument(
-        '--query-from-file',
-        help='file containing list of signature files to query'
+        "--query-from-file", help="file containing list of signature files to query"
     )
     subparser.add_argument(
-        '--db', nargs='+', action='append',
-        help='signatures/SBTs to search',
+        "--db",
+        nargs="+",
+        action="append",
+        help="signatures/SBTs to search",
     )
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
+    )
+    subparser.add_argument("-d", "--debug", action="store_true")
+    subparser.add_argument(
+        "--threshold-bp",
+        metavar="REAL",
+        type=float,
+        default=5e4,
+        help="threshold (in bp) for reporting results (default=50,000)",
     )
     subparser.add_argument(
-        '-d', '--debug', action='store_true'
+        "--ignore-abundance",
+        action="store_true",
+        help="do NOT use k-mer abundances if present",
     )
     subparser.add_argument(
-        '--threshold-bp', metavar='REAL', type=float, default=5e4,
-        help='threshold (in bp) for reporting results (default=50,000)'
+        "--estimate-ani-ci",
+        action="store_true",
+        help="also output confidence intervals for ANI estimates",
     )
     subparser.add_argument(
-        '--ignore-abundance',  action='store_true',
-        help='do NOT use k-mer abundances if present'
+        "--fail-on-empty-database",
+        action="store_true",
+        help="stop at databases that contain no compatible signatures",
     )
     subparser.add_argument(
         '--estimate-ani-ci', action='store_true',
@@ -88,8 +99,9 @@ def subparser(subparsers):
     subparser.set_defaults(fail_on_empty_database=True)
 
     subparser.add_argument(
-        '--output-dir', '--outdir',
-        help='output CSV results to this directory',
+        "--output-dir",
+        "--outdir",
+        help="output CSV results to this directory",
     )
     subparser.add_argument(
         '-U', '--output-add-query-md5sum', action='store_true',
@@ -107,4 +119,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.commands.multigather(args)

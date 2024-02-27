@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum SourmashError {
     /// Raised for internal errors in the libraries.  Should not happen.
     #[error("internal error: {message:?}")]
@@ -45,6 +46,9 @@ pub enum SourmashError {
     #[error("Set error rate to a value smaller than 0.367696 and larger than 0.00203125")]
     HLLPrecisionBounds,
 
+    #[error("error while calculating ANI confidence intervals: {message}")]
+    ANIEstimationError { message: String },
+
     #[error(transparent)]
     ReadDataError(#[from] ReadDataError),
 
@@ -63,9 +67,17 @@ pub enum SourmashError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
+    #[error(transparent)]
+    CsvError(#[from] csv::Error),
+
     #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "branchwater")]
+    #[error(transparent)]
+    RocksDBError(#[from] rocksdb::Error),
 }
 
 #[derive(Debug, Error)]
@@ -102,12 +114,16 @@ pub enum SourmashErrorCode {
     Storage = 12_02,
     // HLL errors
     HLLPrecisionBounds = 13_01,
+    // ANI errors
+    ANIEstimationError = 14_01,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
     ParseInt = 100_003,
     SerdeError = 100_004,
     NifflerError = 100_005,
+    CsvError = 100_006,
+    RocksDBError = 100_007,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
@@ -133,10 +149,16 @@ impl SourmashErrorCode {
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
             SourmashError::HLLPrecisionBounds { .. } => SourmashErrorCode::HLLPrecisionBounds,
+            SourmashError::ANIEstimationError { .. } => SourmashErrorCode::ANIEstimationError,
             SourmashError::SerdeError { .. } => SourmashErrorCode::SerdeError,
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
+            SourmashError::CsvError { .. } => SourmashErrorCode::CsvError,
+
+            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "branchwater")]
+            SourmashError::RocksDBError { .. } => SourmashErrorCode::RocksDBError,
         }
     }
 }
