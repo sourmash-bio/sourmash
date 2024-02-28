@@ -1254,27 +1254,17 @@ def multigather(args):
 
             output_base_tracking.add(output_base)
 
+            output_matches = output_base + '.matches.sig'
+            save_sig_obj = SaveSignaturesToLocation(output_matches)
+            save_sig = save_sig_obj.__enter__()
+            notify(f"saving all matching signatures to '{output_matches}'")
+
             # write out basic CSV file
             output_csv = output_base + '.csv'
             notify(f'saving all CSV matches to "{output_csv}"')
             csv_out_obj = FileOutputCSV(output_csv)
             csv_outfp = csv_out_obj.__enter__()
             csv_writer = None
-
-
-            ### save matching sketches!
-            output_matches = output_base + f'.matches{args.extension}'
-            with SaveSignaturesToLocation(output_matches) as save_sig:
-                notify(f"saving all matching signatures to '{output_matches}'")
-                save_sig.add_many([ r.match for r in found ])
-
-            ### save unassigned hashes!
-            output_unassigned = output_base + f'.unassigned{args.extension}'
-            remaining_query = gather_iter.query
-            if noident_mh:      # add hashes with no match in database
-                remaining_mh = remaining_query.minhash.to_mutable()
-                remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
-                remaining_query.minhash = remaining_mh
 
             for result in gather_iter:
                 found += 1
@@ -1358,36 +1348,26 @@ def multigather(args):
                 notify("nothing found... skipping.")
                 continue
 
-            output_unassigned = output_base + ".unassigned.sig"
-            with open(output_unassigned, "w"):
-                remaining_query = gather_iter.query
-                if noident_mh:
-                    remaining_mh = remaining_query.minhash.to_mutable()
-                    remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
-                    remaining_query.minhash = remaining_mh
+            output_unassigned = output_base + f'.unassigned{args.extension}'
+            remaining_query = gather_iter.query
+            if noident_mh:
+                remaining_mh = remaining_query.minhash.to_mutable()
+                remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
+                remaining_query.minhash = remaining_mh
 
             if is_abundance:
                 abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
                 remaining_query.minhash = abund_query_mh
 
-            # only save if we found matches and there are things to save!
-            if found and remaining_query:
-                notify(f'saving unassigned hashes to "{output_unassigned}"')
-                if found == 0:
-                    notify("nothing found - entire query signature unassigned.")
-                elif not remaining_query:
-                    notify("no unassigned hashes! not saving.")
-                else:
-                    notify(f'saving unassigned hashes to "{output_unassigned}"')
-
-                with SaveSignaturesToLocation(output_unassigned) as save_sig:
-                    save_sig.add(remaining_query)
-            elif not found:
-                notify('nothing found - entire query signature unassigned.')
+            if found == 0:
+                notify("nothing found - entire query signature unassigned.")
             elif not remaining_query:
-                notify('no unassigned hashes! not saving.')
+                notify("no unassigned hashes! not saving.")
             else:
-                assert 0, "should be unreachable"
+                notify(f'saving unassigned hashes to "{output_unassigned}"')
+
+            with SaveSignaturesToLocation(output_unassigned) as save_sig:
+                save_sig.add(remaining_query)
 
             n += 1
 
