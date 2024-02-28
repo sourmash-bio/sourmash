@@ -5046,6 +5046,7 @@ def test_multigather_metagenome_query_on_lca_db(runtmp):
 
 
 def test_multigather_metagenome_query_with_sbt_addl_query(runtmp):
+    # throw in an additional (duplicate) query
     c = runtmp
 
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
@@ -5054,10 +5055,6 @@ def test_multigather_metagenome_query_with_sbt_addl_query(runtmp):
         "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
     )
 
-    testdata_sigs.remove(another_query)
-
-    utils.get_test_data("gather/combined.sig")
-
     cmd = ["index", "gcf_all.sbt.zip"]
     cmd.extend(testdata_sigs)
     cmd.extend(["-k", "21"])
@@ -5065,11 +5062,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(runtmp):
 
     assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
-    another_query = utils.get_test_data(
-        "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
-    )
-
-    cmd = "multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0".format(
+    cmd = "multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output".format(
         another_query
     )
     cmd = cmd.split(" ")
@@ -5206,8 +5199,6 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
 
     testdata_sigs.remove(another_query)
 
-    utils.get_test_data("gather/combined.sig")
-
     cmd = ["index", "gcf_all.sbt.zip"]
     cmd.extend(testdata_sigs)
     cmd.extend(["-k", "21"])
@@ -5220,10 +5211,6 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
     with open(query_list, "w") as fp:
         print("gcf_all.sbt.zip", file=fp)
 
-    another_query = utils.get_test_data(
-        "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
-    )
-
     cmd = "multigather --query {} --query-from-file {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0".format(
         another_query, query_list
     )
@@ -5235,7 +5222,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
     err = c.last_result.err
     print(err)
 
-    assert "conducted gather searches on 13 signatures" in err
+    assert "conducted gather searches on 12 signatures" in err
     assert "the recovered matches hit 100.0% of the query" in out
     # check for matches to some of the sbt signatures
     assert all(
