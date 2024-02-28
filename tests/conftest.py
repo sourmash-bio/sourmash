@@ -84,7 +84,7 @@ def sig_save_extension(request):
     return request.param
 
 
-@pytest.fixture(params=['sig', 'sig.gz', 'zip', '.d/'])
+@pytest.fixture(params=["sig", "sig.gz", "zip", ".d/"])
 def sig_save_extension_abund(request):
     return request.param
 

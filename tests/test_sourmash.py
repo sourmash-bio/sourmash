@@ -4889,7 +4889,7 @@ def test_multigather_metagenome_output(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    output_csv = runtmp.output('b92dbf45dd57867cbec2321ccfa55af8.csv')
+    output_csv = runtmp.output("b92dbf45dd57867cbec2321ccfa55af8.csv")
     assert os.path.exists(output_csv)
     with open(output_csv, newline="") as fp:
         x = fp.readlines()
@@ -4919,7 +4919,7 @@ def test_multigather_metagenome_output_outdir(runtmp):
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 
-    output_csv = runtmp.output('savehere/b92dbf45dd57867cbec2321ccfa55af8.csv')
+    output_csv = runtmp.output("savehere/b92dbf45dd57867cbec2321ccfa55af8.csv")
     assert os.path.exists(output_csv)
     with open(output_csv, newline="") as fp:
         x = fp.readlines()
@@ -4930,7 +4930,7 @@ def test_multigather_metagenome_query_with_sbt(runtmp):
     # multigather should work with an SBT as a query
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     utils.get_test_data("gather/combined.sig")
@@ -4983,7 +4983,7 @@ def test_multigather_metagenome_query_with_lca(runtmp):
     # make sure that LCA databases can be used as queries
     c = runtmp
 
-    testdata_glob = utils.get_test_data('47*.fa.sig')
+    testdata_glob = utils.get_test_data("47*.fa.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     lca_db = utils.get_test_data("lca/47+63.lca.json")
@@ -5048,9 +5048,11 @@ def test_multigather_metagenome_query_on_lca_db(runtmp):
 def test_multigather_metagenome_query_with_sbt_addl_query(runtmp):
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
-    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+    another_query = utils.get_test_data(
+        "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
+    )
 
     testdata_sigs.remove(another_query)
 
@@ -5119,24 +5121,29 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite(runtmp)
     # provide multiple identical queries - fails
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
-    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+    another_query = utils.get_test_data(
+        "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
+    )
 
-    query_sig = utils.get_test_data('gather/combined.sig')
+    utils.get_test_data("gather/combined.sig")
 
-    cmd = ['index', 'gcf_all.sbt.zip']
+    cmd = ["index", "gcf_all.sbt.zip"]
     cmd.extend(testdata_sigs)
-    cmd.extend(['-k', '21'])
+    cmd.extend(["-k", "21"])
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+    assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
-    cmd = 'multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query, another_query)
-    cmd = cmd.split(' ')
+    cmd = (
+        "multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0".format(
+            another_query, another_query
+        )
+    )
+    cmd = cmd.split(" ")
 
-
-    with pytest.raises(SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash(*cmd)
 
     out = c.last_result.out
@@ -5144,29 +5151,35 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite(runtmp)
     err = c.last_result.err
     print(err)
 
-    assert "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing." in err
+    assert (
+        "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing."
+        in err
+    )
 
 
 def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite_force(runtmp):
     # provide multiple identical queries - fails -> overwrite with --force
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
-    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+    another_query = utils.get_test_data(
+        "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
+    )
 
-    query_sig = utils.get_test_data('gather/combined.sig')
+    utils.get_test_data("gather/combined.sig")
 
-    cmd = ['index', 'gcf_all.sbt.zip']
+    cmd = ["index", "gcf_all.sbt.zip"]
     cmd.extend(testdata_sigs)
-    cmd.extend(['-k', '21'])
+    cmd.extend(["-k", "21"])
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+    assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
-    cmd = 'multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output'.format(another_query, another_query)
-    cmd = cmd.split(' ')
-
+    cmd = "multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output".format(
+        another_query, another_query
+    )
+    cmd = cmd.split(" ")
 
     c.run_sourmash(*cmd)
 
@@ -5175,16 +5188,21 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite_force(r
     err = c.last_result.err
     print(err)
 
-    assert "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing." in err
+    assert (
+        "ERROR: detected overwritten outputs! 'GCF_000195995.1_ASM19599v1_genomic.fna.gz' has already been used. Failing."
+        in err
+    )
     assert "continuing because --force-allow-overwrite was specified" in err
 
 
 def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
-    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+    another_query = utils.get_test_data(
+        "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
+    )
 
     testdata_sigs.remove(another_query)
 
@@ -5258,7 +5276,7 @@ def test_multigather_metagenome_sbt_query_from_file_incorrect(runtmp):
     # use the wrong type of file with --query-from-file
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     utils.get_test_data("gather/combined.sig")
@@ -5285,7 +5303,7 @@ def test_multigather_metagenome_lca_query_from_file(runtmp):
     # putting an LCA database in a file for a query should work
     c = runtmp
 
-    testdata_glob = utils.get_test_data('47*.fa.sig')
+    testdata_glob = utils.get_test_data("47*.fa.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     lca_db = utils.get_test_data("lca/47+63.lca.json")
@@ -5323,7 +5341,7 @@ def test_multigather_metagenome_query_from_file_with_addl_query(runtmp):
     # test multigather --query-from-file and --query too
     c = runtmp
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
@@ -6555,13 +6573,13 @@ def test_gather_empty_db_nofail(runtmp, prefetch_gather, linear_gather):
     assert "loaded 50 total signatures from 2 locations" in err
     assert "after selecting signatures compatible with search, 0 remain." in err
 
-def test_multigather_output_unassigned_with_abundance(runtmp, sig_save_extension_abund):
 
+def test_multigather_output_unassigned_with_abundance(runtmp, sig_save_extension_abund):
     c = runtmp
     query = utils.get_test_data("gather-abund/reads-s10x10-s11.sig")
     against = utils.get_test_data("gather-abund/genome-s10.fa.gz.sig")
 
-    cmd = 'multigather --query {} --db {} -E {}'.format(query, against, sig_save_extension_abund).split()
+    cmd = f"multigather --query {query} --db {against} -E {sig_save_extension_abund}".split()
     c.run_sourmash(*cmd)
 
     print(c.last_result.out)
@@ -6571,9 +6589,11 @@ def test_multigather_output_unassigned_with_abundance(runtmp, sig_save_extension
     assert "the recovered matches hit 91.0% of the abundance-weighted query." in out
     assert "the recovered matches hit 57.2% of the query k-mers (unweighted)." in out
 
-    assert os.path.exists(c.output(f'r3.fa.unassigned{sig_save_extension_abund}'))
+    assert os.path.exists(c.output(f"r3.fa.unassigned{sig_save_extension_abund}"))
 
-    nomatch = sourmash.load_file_as_signatures(c.output(f'r3.fa.unassigned{sig_save_extension_abund}'))
+    nomatch = sourmash.load_file_as_signatures(
+        c.output(f"r3.fa.unassigned{sig_save_extension_abund}")
+    )
     nomatch = list(nomatch)[0]
     assert nomatch.minhash.track_abundance
 

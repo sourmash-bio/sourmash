@@ -1162,7 +1162,7 @@ def multigather(args):
     # run gather on all the queries.
     n = 0
     size_may_be_inaccurate = False
-    output_base_tracking = set() # make sure we are not reusing 'output_base'
+    output_base_tracking = set()  # make sure we are not reusing 'output_base'
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(
@@ -1229,7 +1229,7 @@ def multigather(args):
             result = None
 
             query_filename = query.filename
-            if not query_filename or query_filename == '-':
+            if not query_filename or query_filename == "-":
                 # use md5sum if query.filename not properly set
                 output_base = query.md5sum()
             elif args.output_add_query_md5sum:
@@ -1244,23 +1244,27 @@ def multigather(args):
 
             # track overwrites of output files!
             if output_base in output_base_tracking:
-                error(f"ERROR: detected overwritten outputs! '{output_base}' has already been used. Failing.")
+                error(
+                    f"ERROR: detected overwritten outputs! '{output_base}' has already been used. Failing."
+                )
                 if args.force_allow_overwrite_output:
-                    error(f"continuing because --force-allow-overwrite was specified")
+                    error("continuing because --force-allow-overwrite was specified")
                 else:
-                    error("Consider using '-U/--output-add-query-md5sum' to build unique outputs")
+                    error(
+                        "Consider using '-U/--output-add-query-md5sum' to build unique outputs"
+                    )
                     error("and/or '--force-allow-overwrite-output'")
                     sys.exit(-1)
 
             output_base_tracking.add(output_base)
 
-            output_matches = output_base + '.matches.sig'
+            output_matches = output_base + ".matches.sig"
             save_sig_obj = SaveSignaturesToLocation(output_matches)
             save_sig = save_sig_obj.__enter__()
             notify(f"saving all matching signatures to '{output_matches}'")
 
             # write out basic CSV file
-            output_csv = output_base + '.csv'
+            output_csv = output_base + ".csv"
             notify(f'saving all CSV matches to "{output_csv}"')
             csv_out_obj = FileOutputCSV(output_csv)
             csv_outfp = csv_out_obj.__enter__()
@@ -1348,7 +1352,7 @@ def multigather(args):
                 notify("nothing found... skipping.")
                 continue
 
-            output_unassigned = output_base + f'.unassigned{args.extension}'
+            output_unassigned = output_base + f".unassigned{args.extension}"
             remaining_query = gather_iter.query
             if noident_mh:
                 remaining_mh = remaining_query.minhash.to_mutable()
@@ -1374,7 +1378,7 @@ def multigather(args):
         # fini, next query!
 
     # done! report at end.
-    notify(f'\nconducted gather searches on {n} signatures')
+    notify(f"\nconducted gather searches on {n} signatures")
     if size_may_be_inaccurate:
         notify(
             "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons."

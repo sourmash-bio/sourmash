@@ -80,13 +80,15 @@ def subparser(subparsers):
         help="stop at databases that contain no compatible signatures",
     )
     subparser.add_argument(
-        '--force-allow-overwrite-output', action='store_true',
-        help='allow output files to be overwritten'
+        "--force-allow-overwrite-output",
+        action="store_true",
+        help="allow output files to be overwritten",
     )
     subparser.add_argument(
-        '--no-fail-on-empty-database', action='store_false',
-        dest='fail_on_empty_database',
-        help='continue past databases that contain no compatible signatures'
+        "--no-fail-on-empty-database",
+        action="store_false",
+        dest="fail_on_empty_database",
+        help="continue past databases that contain no compatible signatures",
     )
     subparser.set_defaults(fail_on_empty_database=True)
 
@@ -96,12 +98,17 @@ def subparser(subparsers):
         help="output CSV results to this directory",
     )
     subparser.add_argument(
-        '-U', '--output-add-query-md5sum', action='store_true',
-        help='add md5sum of each query to ensure unique output file names'
+        "-U",
+        "--output-add-query-md5sum",
+        action="store_true",
+        help="add md5sum of each query to ensure unique output file names",
     )
     subparser.add_argument(
-        '-E', '--extension', type=str, default='.sig',
-        help="write signature files with this extension ('.sig' by default)"
+        "-E",
+        "--extension",
+        type=str,
+        default=".sig",
+        help="write signature files with this extension ('.sig' by default)",
     )
 
     add_ksize_arg(subparser)
