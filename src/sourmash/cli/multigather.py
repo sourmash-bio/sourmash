@@ -80,14 +80,6 @@ def subparser(subparsers):
         help="stop at databases that contain no compatible signatures",
     )
     subparser.add_argument(
-        '--estimate-ani-ci', action='store_true',
-        help='also output confidence intervals for ANI estimates'
-    )
-    subparser.add_argument(
-        '--fail-on-empty-database', action='store_true',
-        help='stop at databases that contain no compatible signatures'
-    )
-    subparser.add_argument(
         '--force-allow-overwrite-output', action='store_true',
         help='allow output files to be overwritten'
     )
