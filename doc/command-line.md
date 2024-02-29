@@ -566,7 +566,7 @@ query:
 * `<output_base>.unassigned.sig` - all remaining unassigned hashes
 
 As of sourmash v4.8.7, `<output_base>` is set as follows:
-* the query filename, if it is not empty or `-`; (@CTB is this --query filename or sketch filename?)
+* the filename attribute of the query sketch, if it is not empty or `-`;
 * the query sketch md5sum, if the query filename is empty or `-`;
 * the query filename + the query sketch md5sum
   (`<query_file>.<md5sum>`), if `-U/--output-add-query-md5sum` is
