@@ -5189,6 +5189,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite_force(r
 
 
 def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
+    # test what happens when we use SBT in a from-file.
     c = runtmp
 
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
@@ -5211,8 +5212,8 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
     with open(query_list, "w") as fp:
         print("gcf_all.sbt.zip", file=fp)
 
-    cmd = "multigather --query {} --query-from-file {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0".format(
-        another_query, query_list
+    cmd = "multigather --query {} --query-from-file {} --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0".format(
+        another_query, query_list, another_query
     )
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
