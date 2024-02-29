@@ -5383,6 +5383,62 @@ def test_multigather_metagenome_query_from_file_with_addl_query(runtmp):
     assert "the recovered matches hit 100.0% of the query" in out
 
 
+def test_multigather_metagenome_output_unique_empty_filename(runtmp):
+    # test multigather CSV output with -U/--output-add-query-md5sum
+    # NOTE: source file of 'combined.sig' is '-'
+    c = runtmp
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+    testdata_sigs_arg = " ".join(testdata_sigs)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    cmd = f"multigather --query {query_sig} --db {testdata_sigs_arg} -k 21 --threshold-bp=0 -U"
+    cmd = cmd.split(" ")
+    c.run_sourmash(*cmd)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    output_csv = runtmp.output("b92dbf45dd57867cbec2321ccfa55af8.csv")
+    assert os.path.exists(output_csv)
+    with open(output_csv, newline="") as fp:
+        x = fp.readlines()
+        assert len(x) == 13
+
+
+def test_multigather_metagenome_output_unique(runtmp):
+    # test multigather CSV output with -U/--output-add-query-md5sum
+    # with a file that has a filename ;)
+    c = runtmp
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+    testdata_sigs_arg = " ".join(testdata_sigs)
+
+    # change 'filename' on 'combined.sig' to something else
+    orig_query_sig = utils.get_test_data("gather/combined.sig")
+    sketch = sourmash.load_one_signature(orig_query_sig)
+    ss = signature.SourmashSignature(sketch.minhash, filename='named_query')
+
+    query_sig = runtmp.output('the_query.sig')
+    with open(query_sig, "w") as f:
+        signature.save_signatures([ss], f)
+
+    cmd = f"multigather --query {query_sig} --db {testdata_sigs_arg} -k 21 --threshold-bp=0 -U"
+    cmd = cmd.split(" ")
+    c.run_sourmash(*cmd)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # check that output filename has 'named_query' and md5sum in it:
+    output_csv = runtmp.output("named_query.b92dbf45dd57867cbec2321ccfa55af8.csv")
+    assert os.path.exists(output_csv)
+    with open(output_csv, newline="") as fp:
+        x = fp.readlines()
+        assert len(x) == 13
+
+
 def test_gather_metagenome_traverse(runtmp, linear_gather, prefetch_gather):
     # set up a directory $location/gather that contains
     # everything in the 'tests/test-data/gather' directory
