@@ -280,7 +280,7 @@ pub fn calculate_gather_stats(
 
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
-        // take abunds from orig_query b/c match_mh may have hashes that have already been removed from query
+        // take abunds from subtracted query
         let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&query) {
             Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
             Err(e) => {
