@@ -280,13 +280,14 @@ pub fn calculate_gather_stats(
 
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
-        // need current downsampled query here to get f_unique_weighted
+        // take abunds from subtracted query
         let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&query) {
             Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
             Err(e) => {
                 return Err(e);
             }
         };
+
         n_unique_weighted_found = unique_weighted_found as usize;
         sum_total_weighted_found = sum_weighted_found + n_unique_weighted_found;
         f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
