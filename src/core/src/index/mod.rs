@@ -280,13 +280,13 @@ pub fn calculate_gather_stats(
 
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
-        // need current downsampled query here to get f_unique_weighted
-        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&query) {
+        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(orig_query) {
             Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
             Err(e) => {
                 return Err(e);
             }
         };
+        // if !abunds.is_empty() {
         n_unique_weighted_found = unique_weighted_found as usize;
         sum_total_weighted_found = sum_weighted_found + n_unique_weighted_found;
         f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
@@ -294,8 +294,10 @@ pub fn calculate_gather_stats(
         average_abund = n_unique_weighted_found as f64 / abunds.len() as f64;
 
         // todo: try to avoid clone for these?
+        // median_abund = median(abunds.iter().cloned()).unwrap_or(1.0);
         median_abund = median(abunds.iter().cloned()).unwrap();
         std_abund = stddev(abunds.iter().cloned());
+        // }
     }
 
     let result = GatherResult::builder()
