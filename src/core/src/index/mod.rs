@@ -286,7 +286,9 @@ pub fn calculate_gather_stats(
                 return Err(e);
             }
         };
-        // if !abunds.is_empty() {
+        if abunds.is_empty() {
+            eprintln!("match: {}, match_size: {}, query_size: {}, query_trackabund: {}, empty abund vector!", match_sig.name(), match_size, query.size(), query.track_abundance());
+        }
         n_unique_weighted_found = unique_weighted_found as usize;
         sum_total_weighted_found = sum_weighted_found + n_unique_weighted_found;
         f_unique_weighted = n_unique_weighted_found as f64 / total_weighted_hashes as f64;
