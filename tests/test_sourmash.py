@@ -5418,9 +5418,9 @@ def test_multigather_metagenome_output_unique(runtmp):
     # change 'filename' on 'combined.sig' to something else
     orig_query_sig = utils.get_test_data("gather/combined.sig")
     sketch = sourmash.load_one_signature(orig_query_sig)
-    ss = signature.SourmashSignature(sketch.minhash, filename='named_query')
+    ss = signature.SourmashSignature(sketch.minhash, filename="named_query")
 
-    query_sig = runtmp.output('the_query.sig')
+    query_sig = runtmp.output("the_query.sig")
     with open(query_sig, "w") as f:
         signature.save_signatures([ss], f)
 

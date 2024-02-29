@@ -1234,7 +1234,7 @@ def multigather(args):
                 output_base = query.md5sum()
             elif args.output_add_query_md5sum:
                 # Uniquify the output file if all signatures were made from the same file (e.g. with --singleton)
-                assert query_filename and query_filename != '-' # first branch
+                assert query_filename and query_filename != "-"  # first branch
                 output_base = os.path.basename(query_filename) + "." + query.md5sum()
             else:
                 output_base = os.path.basename(query_filename)
