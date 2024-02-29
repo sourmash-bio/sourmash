@@ -349,7 +349,7 @@ information on the different approaches that can be used here.)
 
 `sourmash gather` takes exactly one query and one or more
 [collections of signatures](#storing-and-searching-signatures). Please see
-`sourmash multigather` (@CTB link) if you have multiple queries!
+[`sourmash multigather`](#sourmash-multigather-do-gather-with-many-queries) if you have multiple queries!
 
 If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
@@ -564,9 +564,8 @@ query:
 * `<output_base>.csv` - gather CSV output
 * `<output_base>.matches.sig` - all matching outputs
 * `<output_base>.unassigned.sig` - all remaining unassigned hashes
-```
 
-As of sourmash v4.8.4, `<output_base>` is set as follows:
+As of sourmash v4.8.7, `<output_base>` is set as follows:
 * the query filename, if it is not empty or `-`; (@CTB is this --query filename or sketch filename?)
 * the query sketch md5sum, if the query filename is empty or `-`;
 * the query filename + the query sketch md5sum
@@ -577,8 +576,8 @@ By default, `multigather` will complain and exit with an error if
 the same `<output_base>` is used repeatedly and an output file is
 going to be overwritten.  With `-U/--output-add-query-md5sum` this
 should only happen when identical sketches are present in a query
-database. Please use `--force-allow-overwrite-output`
-to allow overwriting of output files in this case.
+database. Use `--force-allow-overwrite-output`
+to allow overwriting of output files without an error.
 
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
