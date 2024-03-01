@@ -80,6 +80,14 @@ To update rust to the latest version, use `rustup update`.
 
 To update your Python dependencies to the latest required for sourmash, you can run `pip install -r requirements.txt`.
 
+## Installing sourmash in the editable mode
+
+In order to use sourmash in the command line interface or the API while developing, you will need to install it in your environment in editable mode by running
+
+```
+pip install -e .
+```
+
 ## Running tests and checks
 
 We use [`tox`](https://tox.readthedocs.io) for managing dependencies and
@@ -113,6 +121,28 @@ Code coverage can be viewed interactively at [codecov.io][1].
 
 Please see [the docs README](README.md) for information on how we
 write and build the sourmash docs.
+
+## Building docs
+
+We are using [Sphinx](https://www.sphinx-doc.org/en/master/) for sourmash main docs hosted on [readthedocs](https://sourmash.bio). For Rust, we use [rustdoc](https://doc.rust-lang.org/rustdoc/what-is-rustdoc.html).
+
+To build the sourmash docs run the following command. Then, inside the `html_docs` docs you will find an `index.html` file for the docs homepage.
+
+```
+sphinx-build -b html doc html_docs
+```
+
+For building Rust docs you will need to change the current working directory to `sourmash/src/core` then run the following command. The docs will be generated in `sourmash/target/docs/sourmash`
+
+```
+cargo doc --no-deps # --no-deps for excluding the 3rd party libs' docs from being built.
+``` 
+
+For interactive docs building we use [`cargo-watch`](https://crates.io/crates/cargo-watch). Open a terminal and run `cargo watch -x  "doc --no-deps"`, you will need to keep this command running while changing the docs. Refresh the browser for rendering the changes.
+
+.. warning::
+    Although Rust is the backbone of sourmash, it does not have all the functionalities that are provided in the Python [sourmash API](https://sourmash.bio).
+
 
 ## Code organization
 
@@ -172,7 +202,7 @@ A short description of the high-level files and dirs in the sourmash repo:
 src/sourmash
 ├── cli/                | Command-line parsing, help messages and overall infrastucture
 ├── command_compute.py  | compute command implementation
-├── command_compute.py  | sketch command implementation
+├── command_sketch.py   | sketch command implementation
 ├── commands.py         | implementation for other CLI commands
 ├── compare.py          | Signature comparison functions
 ├── _compat.py          | Py2/3 compatibility functions
