@@ -1155,7 +1155,16 @@ class StandaloneManifestIndex(Index):
         m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
-            prefix = os.path.dirname(location)
+            # @CTB hmm, good or bad idea?
+            if location.startswith('/'):
+                prefix = os.path.dirname(location)
+            else:
+                prefix = os.path.dirname(location)
+                print('XXX prefix is', (prefix,))
+                relpath = os.path.relpath(os.curdir, prefix)
+                print('YYY relpath is', (relpath,))
+                prefix = os.path.join(prefix, relpath)
+                print('ZZZ prefix is now', (prefix,))
 
         return cls(m, location, prefix=prefix)
 
