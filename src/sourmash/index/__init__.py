@@ -1156,15 +1156,15 @@ class StandaloneManifestIndex(Index):
 
         if prefix is None:
             # @CTB hmm, good or bad idea?
-            if location.startswith('/'):
+            if location.startswith("/"):
                 prefix = os.path.dirname(location)
             else:
                 prefix = os.path.dirname(location)
-                print('XXX prefix is', (prefix,))
+                print("XXX prefix is", (prefix,))
                 relpath = os.path.relpath(os.curdir, prefix)
-                print('YYY relpath is', (relpath,))
+                print("YYY relpath is", (relpath,))
                 prefix = os.path.join(prefix, relpath)
-                print('ZZZ prefix is now', (prefix,))
+                print("ZZZ prefix is now", (prefix,))
 
         return cls(m, location, prefix=prefix)
 
