@@ -5352,81 +5352,103 @@ def test_sig_check_3_no_manifest_ok(runtmp):
 
 def test_sig_check_4_manifest_cwd_cwd(runtmp):
     # check: manifest and sigs in cwd
-    prot_zip = utils.get_test_data('prot/all.zip')
+    prot_zip = utils.get_test_data("prot/all.zip")
 
-    shutil.copyfile(prot_zip, runtmp.output('prot.zip'))
+    shutil.copyfile(prot_zip, runtmp.output("prot.zip"))
 
     # generate a picklist, whatever
-    runtmp.sourmash('sig', 'manifest', 'prot.zip', '-o', 'picklist.csv')
-    assert os.path.exists(runtmp.output('picklist.csv'))
+    runtmp.sourmash("sig", "manifest", "prot.zip", "-o", "picklist.csv")
+    assert os.path.exists(runtmp.output("picklist.csv"))
 
     # use picklist with sig check to generate a manifest
-    runtmp.sourmash('sig', 'check', '-m', 'mf.csv',
-                    '--picklist', 'picklist.csv::manifest',
-                    'prot.zip')
+    runtmp.sourmash(
+        "sig",
+        "check",
+        "-m",
+        "mf.csv",
+        "--picklist",
+        "picklist.csv::manifest",
+        "prot.zip",
+    )
 
     # check that it all works
-    runtmp.sourmash('sig', 'cat', 'mf.csv')
+    runtmp.sourmash("sig", "cat", "mf.csv")
 
 
 def test_sig_check_4_manifest_subdir_cwd(runtmp):
     # check: manifest in subdir and sigs in cwd
-    prot_zip = utils.get_test_data('prot/all.zip')
+    prot_zip = utils.get_test_data("prot/all.zip")
 
-    shutil.copyfile(prot_zip, runtmp.output('prot.zip'))
-    os.mkdir(runtmp.output('mf_dir'))
+    shutil.copyfile(prot_zip, runtmp.output("prot.zip"))
+    os.mkdir(runtmp.output("mf_dir"))
 
     # generate a picklist, whatever
-    runtmp.sourmash('sig', 'manifest', 'prot.zip', '-o', 'picklist.csv')
-    assert os.path.exists(runtmp.output('picklist.csv'))
+    runtmp.sourmash("sig", "manifest", "prot.zip", "-o", "picklist.csv")
+    assert os.path.exists(runtmp.output("picklist.csv"))
 
     # use picklist with sig check to generate a manifest
-    runtmp.sourmash('sig', 'check', '-m', 'mf_dir/mf.csv',
-                    '--picklist', 'picklist.csv::manifest',
-                    'prot.zip')
+    runtmp.sourmash(
+        "sig",
+        "check",
+        "-m",
+        "mf_dir/mf.csv",
+        "--picklist",
+        "picklist.csv::manifest",
+        "prot.zip",
+    )
 
     # check that it all works
-    runtmp.sourmash('sig', 'cat', 'mf_dir/mf.csv')
+    runtmp.sourmash("sig", "cat", "mf_dir/mf.csv")
 
 
 def test_sig_check_4_manifest_cwd_subdir(runtmp):
     # check: manifest in cwd and sigs in subdir
-    prot_zip = utils.get_test_data('prot/all.zip')
+    prot_zip = utils.get_test_data("prot/all.zip")
 
-    os.mkdir(runtmp.output('zip_dir'))
-    shutil.copyfile(prot_zip, runtmp.output('zip_dir/prot.zip'))
+    os.mkdir(runtmp.output("zip_dir"))
+    shutil.copyfile(prot_zip, runtmp.output("zip_dir/prot.zip"))
 
     # generate a picklist, whatever
-    runtmp.sourmash('sig', 'manifest', 'zip_dir/prot.zip',
-                    '-o', 'picklist.csv')
-    assert os.path.exists(runtmp.output('picklist.csv'))
+    runtmp.sourmash("sig", "manifest", "zip_dir/prot.zip", "-o", "picklist.csv")
+    assert os.path.exists(runtmp.output("picklist.csv"))
 
     # use picklist with sig check to generate a manifest
-    runtmp.sourmash('sig', 'check', '-m', 'mf.csv',
-                    '--picklist', 'picklist.csv::manifest',
-                    'zip_dir/prot.zip')
+    runtmp.sourmash(
+        "sig",
+        "check",
+        "-m",
+        "mf.csv",
+        "--picklist",
+        "picklist.csv::manifest",
+        "zip_dir/prot.zip",
+    )
 
     # check that it all works
-    runtmp.sourmash('sig', 'cat', 'mf.csv')
+    runtmp.sourmash("sig", "cat", "mf.csv")
 
 
 def test_sig_check_4_manifest_subdir_subdir(runtmp):
     # check: manifest and sigs in subdir
-    prot_zip = utils.get_test_data('prot/all.zip')
+    prot_zip = utils.get_test_data("prot/all.zip")
 
-    os.mkdir(runtmp.output('zip_dir'))
-    shutil.copyfile(prot_zip, runtmp.output('zip_dir/prot.zip'))
-    os.mkdir(runtmp.output('mf_dir'))
+    os.mkdir(runtmp.output("zip_dir"))
+    shutil.copyfile(prot_zip, runtmp.output("zip_dir/prot.zip"))
+    os.mkdir(runtmp.output("mf_dir"))
 
     # generate a picklist, whatever
-    runtmp.sourmash('sig', 'manifest', 'zip_dir/prot.zip',
-                    '-o', 'picklist.csv')
-    assert os.path.exists(runtmp.output('picklist.csv'))
+    runtmp.sourmash("sig", "manifest", "zip_dir/prot.zip", "-o", "picklist.csv")
+    assert os.path.exists(runtmp.output("picklist.csv"))
 
     # use picklist with sig check to generate a manifest
-    runtmp.sourmash('sig', 'check', '-m', 'mf_dir/mf.csv',
-                    '--picklist', 'picklist.csv::manifest',
-                    'zip_dir/prot.zip')
+    runtmp.sourmash(
+        "sig",
+        "check",
+        "-m",
+        "mf_dir/mf.csv",
+        "--picklist",
+        "picklist.csv::manifest",
+        "zip_dir/prot.zip",
+    )
 
     # check that it all works
-    runtmp.sourmash('sig', 'cat', 'mf_dir/mf.csv')
+    runtmp.sourmash("sig", "cat", "mf_dir/mf.csv")
