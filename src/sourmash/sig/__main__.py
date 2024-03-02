@@ -1435,22 +1435,30 @@ def check(args):
     else:
         debug("sig check: manifest required")
 
-    total_manifest_rows = CollectionManifest([])
+    # abspath/relpath checks
+    if args.abspath and args.relpath:
+        error("** Cannot specify both --abspath and --relpath; pick one!")
+        sys.exit(-1)
 
-    output_manifest_dir = os.curdir # CTB cleanup / test
-    if args.save_manifest_matching:
+    if args.relpath or args.abspath and not args.save_manifest_matching:
+        notify("** WARNING: --abspath and --relpath only have effects when saving a manifest")
+
+    relpath = "."
+    if args.relpath and args.save_manifest_matching:
         output_manifest_dir = os.path.dirname(args.save_manifest_matching)
         relpath = os.path.relpath(os.curdir, output_manifest_dir)
+
+    total_manifest_rows = CollectionManifest([])
 
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
+        # if saving a manifest, think about how to rewrite locations.
         if args.abspath:
             # convert to abspath
             new_iloc = os.path.abspath(filename)
         elif args.relpath:
             # interpret paths relative to manifest directory
-            prefix = os.path.dirname(filename)
             new_iloc = os.path.join(relpath, filename)
         else:
             # default: paths are relative to cwd
