@@ -56,6 +56,15 @@ def subparser(subparsers):
     subparser.add_argument(
         "--abspath", help="convert all locations to absolute paths", action="store_true"
     )
+    subparser.add_argument(
+        "--no-abspath", help="do not convert all locations to absolute paths", action="store_false", dest='abspath'
+    )
+    subparser.add_argument(
+        "--relpath", help="convert all locations to paths relative to the output manifest", action="store_true"
+    )
+    subparser.add_argument(
+        "--no-relpath", help="do not convert all locations to paths relative to the output manifest", action="store_false", dest='relpath'
+    )
 
     add_ksize_arg(subparser)
     add_moltype_args(subparser)

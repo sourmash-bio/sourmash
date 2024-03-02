@@ -1625,6 +1625,17 @@ def collect(args):
 
         mf = sourmash_args.get_manifest(idx)
 
+        # decide how to rewrite locations to container:
+        if args.abspath:
+            # convert to abspath
+            new_iloc = os.path.abspath(loc)
+        elif args.relpath:
+            # interpret paths relative to manifest directory
+            new_iloc = os.path.join(relpath, loc)
+        else:
+            # default: paths are relative to cwd
+            new_iloc = loc
+
         for row in mf.rows:
             row["internal_location"] = loc
             collected_mf.add_row(row)
