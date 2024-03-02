@@ -1437,9 +1437,25 @@ def check(args):
 
     total_manifest_rows = CollectionManifest([])
 
+    output_manifest_dir = os.curdir # CTB cleanup / test
+    if args.save_manifest_matching:
+        output_manifest_dir = os.path.dirname(args.save_manifest_matching)
+        relpath = os.path.relpath(os.curdir, output_manifest_dir)
+
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
+        if args.abspath:
+            # convert to abspath
+            new_iloc = os.path.abspath(filename)
+        elif args.relpath:
+            # interpret paths relative to manifest directory
+            prefix = os.path.dirname(filename)
+            new_iloc = os.path.join(relpath, filename)
+        else:
+            # default: paths are relative to cwd
+            new_iloc = filename
+
         idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
@@ -1457,8 +1473,9 @@ def check(args):
 
         # rewrite locations so that each signature can be found by filename
         # of its container; this follows `sig collect` logic.
+        # CTB: note that this is relative to cwd, not manifest location.
         for row in sub_manifest.rows:
-            row["internal_location"] = filename
+            row["internal_location"] = new_iloc
             total_manifest_rows.add_row(row)
 
         # the len(sub_manifest) here should only be run when needed :)

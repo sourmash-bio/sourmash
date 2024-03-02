@@ -1155,15 +1155,8 @@ class StandaloneManifestIndex(Index):
         m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
-            # @CTB hmm, good or bad idea?
-            # if we disable, tests break. maybe change tests?
-            if location.startswith("/"):
-                prefix = os.path.dirname(location)
-            else:
-                # calculate paths relative to cwd; @CTB more/better docs.
-                prefix = os.path.dirname(location)
-                relpath = os.path.relpath(os.curdir, prefix)
-                prefix = os.path.join(prefix, relpath)
+            # by default, calculate paths relative to manifest location.
+            prefix = os.path.dirname(location)
 
         return cls(m, location, prefix=prefix)
 
