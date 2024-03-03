@@ -1956,6 +1956,10 @@ picklist CSV. With `--save-manifest-matching`, `sig check` will save all
 of the _matched_ elements to a manifest file, which can then be used as a
 sourmash database.
 
+When saving manifests with matched elements, sourmash will by default
+not rewrite paths to the containers for the matched elements. This will
+create buggy manifests ... @CTB.
+
 `sourmash sig check` is particularly useful when working with large
 collections of signatures and identifiers.
 

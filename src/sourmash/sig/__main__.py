@@ -1604,9 +1604,10 @@ def collect(args):
     # load from_file
     _extend_signatures_with_from_file(args, target_attr="locations")
 
-    # convert to abspath
-    if args.abspath:
-        args.locations = [os.path.abspath(iloc) for iloc in args.locations]
+    relpath = None
+    if args.relpath:
+        output_manifest_dir = os.path.dirname(args.output)
+        relpath = os.path.relpath(os.curdir, output_manifest_dir)
 
     # iterate through, loading all the manifests from all the locations.
     for n_files, loc in enumerate(args.locations):
@@ -1637,7 +1638,7 @@ def collect(args):
             new_iloc = loc
 
         for row in mf.rows:
-            row["internal_location"] = loc
+            row["internal_location"] = new_iloc
             collected_mf.add_row(row)
 
     if args.manifest_format == "csv":
