@@ -940,6 +940,15 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
             }
         }
     }
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let min = match (self.iter.size_hint().1, self.other.size_hint().1) {
+            (Some(a), Some(b)) => Some(std::cmp::min(a, b)),
+            (Some(a), None) | (None, Some(a)) => Some(a),
+            (None, None) => None,
+        };
+        (0, min)
+    }
 }
 
 //#############
