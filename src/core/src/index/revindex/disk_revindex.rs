@@ -330,6 +330,10 @@ impl RevIndexOps for RevIndex {
 
             let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
             match_size = if size >= threshold { size } else { break };
+            // handle special case where threshold was set to 0
+            if match_size == 0 {
+                break;
+            }
 
             // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;

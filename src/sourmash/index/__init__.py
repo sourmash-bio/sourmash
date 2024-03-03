@@ -1155,6 +1155,7 @@ class StandaloneManifestIndex(Index):
         m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
+            # by default, calculate paths relative to manifest location.
             prefix = os.path.dirname(location)
 
         return cls(m, location, prefix=prefix)
