@@ -445,6 +445,94 @@ def test_sig_collect_4_multiple_no_abspath(runtmp, manifest_db_format):
     assert "47.fa.sig" in locations
     assert "63.fa.sig" in locations
 
+    runtmp.sourmash("sig", "cat", f"mf.{ext}")
+
+
+def test_sig_collect_4_multiple_subdir_subdir_no_abspath(runtmp, manifest_db_format):
+    # collect a manifest from sig files, no abspath; use a subdir for sketches
+    # this should work with default behavior.
+    sig43 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    # copy files to tmp, where they will not have full paths
+    os.mkdir(runtmp.output('sigs_dir'))
+    shutil.copyfile(sig43, runtmp.output("sigs_dir/47.fa.sig"))
+    shutil.copyfile(sig63, runtmp.output("sigs_dir/63.fa.sig"))
+
+    # put manifest in subdir too.
+    os.mkdir(runtmp.output('mf_dir'))
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        "sigs_dir/47.fa.sig",
+        "sigs_dir/63.fa.sig",
+        "-o",
+        f"mf_dir/mf.{ext}",
+        "-F",
+        manifest_db_format,
+        "--relpath"
+    )
+
+    manifest_fn = runtmp.output(f"mf_dir/mf.{ext}")
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [row["md5"] for row in manifest.rows]
+    assert "09a08691ce52952152f0e866a59f6261" in md5_list
+    assert "38729c6374925585db28916b82a6f513" in md5_list
+
+    locations = set([row["internal_location"] for row in manifest.rows])
+    print(locations)
+    assert len(locations) == 2, locations
+    assert "../sigs_dir/47.fa.sig" in locations
+    assert "../sigs_dir/63.fa.sig" in locations
+
+    runtmp.sourmash("sig", "cat", f"mf_dir/mf.{ext}")
+
+
+def test_sig_collect_4_multiple_cwd_subdir_no_abspath(runtmp, manifest_db_format):
+    # collect a manifest from sig files, no abspath; use a subdir for sketches
+    # this should work with default behavior.
+    sig43 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    # copy files to tmp, where they will not have full paths
+    os.mkdir(runtmp.output('sigs_dir'))
+    shutil.copyfile(sig43, runtmp.output("sigs_dir/47.fa.sig"))
+    shutil.copyfile(sig63, runtmp.output("sigs_dir/63.fa.sig"))
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        "sigs_dir/47.fa.sig",
+        "sigs_dir/63.fa.sig",
+        "-o",
+        f"mf.{ext}",
+        "-F",
+        manifest_db_format,
+    )
+
+    manifest_fn = runtmp.output(f"mf.{ext}")
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [row["md5"] for row in manifest.rows]
+    assert "09a08691ce52952152f0e866a59f6261" in md5_list
+    assert "38729c6374925585db28916b82a6f513" in md5_list
+
+    locations = set([row["internal_location"] for row in manifest.rows])
+    print(locations)
+    assert len(locations) == 2, locations
+    assert "sigs_dir/47.fa.sig" in locations
+    assert "sigs_dir/63.fa.sig" in locations
+
+    runtmp.sourmash("sig", "cat", f"mf.{ext}")
+
 
 def test_sig_collect_5_no_manifest_sbt_fail(runtmp, manifest_db_format):
     # collect a manifest from files that don't have one
