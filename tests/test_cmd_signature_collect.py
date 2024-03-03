@@ -499,7 +499,14 @@ def test_sig_collect_6_path_cwd_cwd(runtmp, manifest_db_format, abspath_relpath_
     mf_path = f"mf.{ext}"
 
     runtmp.sourmash(
-        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_relpath_v4
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
     )
 
     runtmp.sourmash("sig", "cat", mf_path)
@@ -518,7 +525,14 @@ def test_sig_collect_6_path_cwd_subdir(runtmp, manifest_db_format, abspath_relpa
     mf_path = f"mf.{ext}"
 
     runtmp.sourmash(
-        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_relpath_v4
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
     )
 
     runtmp.sourmash("sig", "cat", mf_path)
@@ -538,13 +552,22 @@ def test_sig_collect_6_path_subdir_cwd(runtmp, manifest_db_format, abspath_or_re
     mf_path = f"mf_dir/mf.{ext}"
 
     runtmp.sourmash(
-        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_or_relpath,
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_or_relpath,
     )
 
     runtmp.sourmash("sig", "cat", mf_path)
 
 
-def test_sig_collect_6_path_subdir_subdir(runtmp, manifest_db_format, abspath_or_relpath):
+def test_sig_collect_6_path_subdir_subdir(
+    runtmp, manifest_db_format, abspath_or_relpath
+):
     # check: manifest and sigs in subdir.  note, fails with default v4
     # behavior. see #3008.
     protzip = utils.get_test_data("prot/protein.zip")
@@ -559,7 +582,14 @@ def test_sig_collect_6_path_subdir_subdir(runtmp, manifest_db_format, abspath_or
     mf_path = f"mf_dir/mf.{ext}"
 
     runtmp.sourmash(
-        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_or_relpath,
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_or_relpath,
     )
 
     runtmp.sourmash("sig", "cat", mf_path)
