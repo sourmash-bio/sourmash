@@ -13,13 +13,13 @@ import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 
 
-def test_sig_collect_0_nothing(runtmp, manifest_db_format):
+def test_sig_collect_0_nothing(runtmp, manifest_db_format, abspath_relpath_v4):
     # run with just output
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
     if manifest_db_format != "sql":
         return
 
-    runtmp.sourmash("sig", "collect", "-o", f"mf.{ext}", "-F", manifest_db_format)
+    runtmp.sourmash("sig", "collect", "-o", f"mf.{ext}", "-F", manifest_db_format, abspath_relpath_v4)
 
     manifest_fn = runtmp.output(f"mf.{ext}")
     manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
@@ -27,14 +27,14 @@ def test_sig_collect_0_nothing(runtmp, manifest_db_format):
     assert len(manifest) == 0
 
 
-def test_sig_collect_1_zipfile(runtmp, manifest_db_format):
+def test_sig_collect_1_zipfile(runtmp, manifest_db_format, abspath_relpath_v4):
     # collect a manifest from a .zip file
     protzip = utils.get_test_data("prot/protein.zip")
 
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
 
     runtmp.sourmash(
-        "sig", "collect", protzip, "-o", f"mf.{ext}", "-F", manifest_db_format
+        "sig", "collect", protzip, "-o", f"mf.{ext}", "-F", manifest_db_format, abspath_relpath_v4
     )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
@@ -46,11 +46,11 @@ def test_sig_collect_1_zipfile(runtmp, manifest_db_format):
     assert "120d311cc785cc9d0df9dc0646b2b857" in md5_list
 
 
-def test_sig_collect_1_zipfile_csv_gz(runtmp):
+def test_sig_collect_1_zipfile_csv_gz(runtmp, abspath_relpath_v4):
     # collect a manifest from a .zip file, save to csv.gz
     protzip = utils.get_test_data("prot/protein.zip")
 
-    runtmp.sourmash("sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv")
+    runtmp.sourmash("sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv", abspath_relpath_v4)
 
     manifest_fn = runtmp.output("mf.csv.gz")
 
@@ -67,11 +67,11 @@ def test_sig_collect_1_zipfile_csv_gz(runtmp):
     assert "120d311cc785cc9d0df9dc0646b2b857" in md5_list
 
 
-def test_sig_collect_1_zipfile_csv_gz_roundtrip(runtmp):
+def test_sig_collect_1_zipfile_csv_gz_roundtrip(runtmp, abspath_relpath_v4):
     # collect a manifest from a .zip file, save to csv.gz; then load again
     protzip = utils.get_test_data("prot/protein.zip")
 
-    runtmp.sourmash("sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv")
+    runtmp.sourmash("sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv", abspath_relpath_v4)
 
     manifest_fn = runtmp.output("mf.csv.gz")
 
@@ -125,7 +125,7 @@ def test_sig_collect_2_exists_fail(runtmp, manifest_db_format):
         )
 
 
-def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
+def test_sig_collect_2_exists_merge(runtmp, manifest_db_format, abspath_relpath_v4):
     # collect a manifest from two .zip files
     protzip = utils.get_test_data("prot/protein.zip")
     allzip = utils.get_test_data("prot/all.zip")
@@ -133,7 +133,7 @@ def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
 
     runtmp.sourmash(
-        "sig", "collect", protzip, "-o", f"mf.{ext}", "-F", manifest_db_format
+        "sig", "collect", protzip, "-o", f"mf.{ext}", "-F", manifest_db_format, abspath_relpath_v4,
     )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
@@ -205,7 +205,7 @@ def test_sig_collect_2_exists_csv_merge_sql(runtmp):
     assert "ERROR loading" in runtmp.last_result.err
 
 
-def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format):
+def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format, abspath_relpath_v4):
     # test 'merge' when args.output doesn't already exist => warning
     utils.get_test_data("prot/protein.zip")
     allzip = utils.get_test_data("prot/all.zip")
@@ -215,7 +215,7 @@ def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format):
 
     # run with --merge but no previous:
     runtmp.sourmash(
-        "sig", "collect", allzip, "-o", manifest_fn, "-F", manifest_db_format, "--merge"
+        "sig", "collect", allzip, "-o", manifest_fn, "-F", manifest_db_format, "--merge", abspath_relpath_v4,
     )
 
     manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
@@ -424,7 +424,7 @@ def test_sig_collect_5_no_manifest_sbt_fail(runtmp, manifest_db_format):
         )
 
 
-def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format):
+def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format, abspath_relpath_v4):
     # generate a manifest from files that don't have one when --no-require
     sbt_zip = utils.get_test_data("v6.sbt.zip")
 
@@ -439,6 +439,7 @@ def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format):
         f"mf.{ext}",
         "-F",
         manifest_db_format,
+        abspath_relpath_v4
     )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
