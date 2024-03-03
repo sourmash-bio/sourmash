@@ -389,90 +389,90 @@ fn load_save_minhash_sketches() {
     let mh = sig.minhash().unwrap();
     let mut buffer = vec![];
 
-        let bmh: KmerMinHashBTree = mh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
-        }
+    let bmh: KmerMinHashBTree = mh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &bmh).unwrap();
+    }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
 
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
 
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
+    assert_eq!(mh.mins(), new_mh.mins());
+    assert_eq!(bmh.mins(), new_bmh.mins());
+    assert_eq!(bmh.mins(), new_mh.mins());
+    assert_eq!(mh.mins(), new_bmh.mins());
 
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
 
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 
-        buffer.clear();
-        let imh: KmerMinHash = bmh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
-        }
+    buffer.clear();
+    let imh: KmerMinHash = bmh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &imh).unwrap();
+    }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
 
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
 
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
+    assert_eq!(mh.mins(), new_mh.mins());
+    assert_eq!(bmh.mins(), new_bmh.mins());
+    assert_eq!(bmh.mins(), new_mh.mins());
+    assert_eq!(mh.mins(), new_bmh.mins());
 
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
 
-        assert_eq!(mh.to_vec(), new_mh.to_vec());
-        assert_eq!(bmh.to_vec(), new_bmh.to_vec());
-        assert_eq!(bmh.to_vec(), new_mh.to_vec());
-        assert_eq!(mh.to_vec(), new_bmh.to_vec());
+    assert_eq!(mh.to_vec(), new_mh.to_vec());
+    assert_eq!(bmh.to_vec(), new_bmh.to_vec());
+    assert_eq!(bmh.to_vec(), new_mh.to_vec());
+    assert_eq!(mh.to_vec(), new_bmh.to_vec());
 
-        assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
+    assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
 
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 }
 
 #[test]
@@ -488,90 +488,90 @@ fn load_save_minhash_sketches_abund() {
     let mh = sig.minhash().unwrap();
     let mut buffer = vec![];
 
-        let bmh: KmerMinHashBTree = mh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
-        }
+    let bmh: KmerMinHashBTree = mh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &bmh).unwrap();
+    }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
 
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
 
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
+    assert_eq!(mh.mins(), new_mh.mins());
+    assert_eq!(bmh.mins(), new_bmh.mins());
+    assert_eq!(bmh.mins(), new_mh.mins());
+    assert_eq!(mh.mins(), new_bmh.mins());
 
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
 
-        assert_eq!(mh.to_vec(), new_mh.to_vec());
-        assert_eq!(bmh.to_vec(), new_bmh.to_vec());
-        assert_eq!(bmh.to_vec(), new_mh.to_vec());
-        assert_eq!(mh.to_vec(), new_bmh.to_vec());
+    assert_eq!(mh.to_vec(), new_mh.to_vec());
+    assert_eq!(bmh.to_vec(), new_bmh.to_vec());
+    assert_eq!(bmh.to_vec(), new_mh.to_vec());
+    assert_eq!(mh.to_vec(), new_bmh.to_vec());
 
-        assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
+    assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
 
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 
-        buffer.clear();
-        let imh: KmerMinHash = bmh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
-        }
+    buffer.clear();
+    let imh: KmerMinHash = bmh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &imh).unwrap();
+    }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
 
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
 
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
+    assert_eq!(mh.mins(), new_mh.mins());
+    assert_eq!(bmh.mins(), new_bmh.mins());
+    assert_eq!(bmh.mins(), new_mh.mins());
+    assert_eq!(mh.mins(), new_bmh.mins());
 
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
 
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 }
 
 #[test]
