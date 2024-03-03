@@ -51,6 +51,8 @@ fn zipstorage_list_sbts() -> Result<(), Box<dyn std::error::Error>> {
 fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
     use rayon::prelude::*;
 
+    use sourmash::signature::SigsTrait;
+
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     filename.push("../../tests/test-data/v6.sbt.zip");
 
