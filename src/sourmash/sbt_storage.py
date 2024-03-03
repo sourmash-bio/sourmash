@@ -15,7 +15,6 @@ from .minhash import to_bytes
 
 
 class Storage(ABC):
-
     @abc.abstractmethod
     def save(self, path, content, *, overwrite=False):
         pass
@@ -44,7 +43,6 @@ class Storage(ABC):
 
 
 class FSStorage(Storage):
-
     def __init__(self, location, subdir, make_dirs=True):
         self.location = location
         self.subdir = subdir
@@ -55,7 +53,7 @@ class FSStorage(Storage):
                 os.makedirs(fullpath)
 
     def init_args(self):
-        return {'path': self.subdir}
+        return {"path": self.subdir}
 
     def save(self, path, content, overwrite=False):
         "Save a node/leaf."
@@ -64,27 +62,27 @@ class FSStorage(Storage):
 
         if os.path.exists(fullpath):
             # check for content, if same return path,
-            with open(fullpath, 'rb') as f:
+            with open(fullpath, "rb") as f:
                 old_content = f.read()
                 if old_content == content:
                     return path
 
             if overwrite:
-                pass            #  fine to overwrite file!
+                pass  #  fine to overwrite file!
             else:
                 # different content, need to find new path to save
                 newpath = None
                 n = 0
                 while newpath is None:
-                    testpath = "{}_{}".format(fullpath, n)
+                    testpath = f"{fullpath}_{n}"
                     if os.path.exists(testpath):
                         n += 1
                     else:
                         # testpath is available, use it as newpath
-                        newpath = "{}_{}".format(path, n)
+                        newpath = f"{path}_{n}"
 
         fullpath = os.path.join(self.location, self.subdir, newpath)
-        with open(fullpath, 'wb') as f:
+        with open(fullpath, "wb") as f:
             f.write(content)
 
         return newpath
@@ -95,7 +93,6 @@ class FSStorage(Storage):
 
 
 class ZipStorage(RustObject, Storage):
-
     __dealloc_func__ = lib.zipstorage_free
 
     def __init__(self, path, *, mode="r"):
@@ -146,7 +143,9 @@ class ZipStorage(RustObject, Storage):
 
     def save(self, path, content, *, overwrite=False, compress=False):
         if self.__inner:
-            return self.__inner.save(path, content, overwrite=overwrite, compress=compress)
+            return self.__inner.save(
+                path, content, overwrite=overwrite, compress=compress
+            )
         raise NotImplementedError()
 
     def load(self, path):
@@ -155,7 +154,9 @@ class ZipStorage(RustObject, Storage):
 
         try:
             size = ffi.new("uintptr_t *")
-            rawbuf = self._methodcall(lib.zipstorage_load, to_bytes(path), len(path), size)
+            rawbuf = self._methodcall(
+                lib.zipstorage_load, to_bytes(path), len(path), size
+            )
             size = size[0]
 
             rawbuf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
@@ -182,7 +183,7 @@ class ZipStorage(RustObject, Storage):
         return paths
 
     def init_args(self):
-        return {'path': self.path}
+        return {"path": self.path}
 
     def flush(self):
         if self.__inner:
@@ -198,7 +199,6 @@ class ZipStorage(RustObject, Storage):
 
 
 class _RwZipStorage(Storage):
-
     def __init__(self, path):
         self.path = os.path.abspath(path)
 
@@ -212,14 +212,15 @@ class _RwZipStorage(Storage):
         # so we need to check some things:
         if not os.path.exists(self.path):
             # If the file doesn't exist open it in write mode.
-            self.zipfile = zipfile.ZipFile(path, mode='w',
-                                           compression=zipfile.ZIP_STORED)
+            self.zipfile = zipfile.ZipFile(
+                path, mode="w", compression=zipfile.ZIP_STORED
+            )
         else:
             # If it exists, open it in read mode and prepare a buffer for
             # new/duplicated items. During close() there are checks to see
             # how the original file needs to be updated (append new items,
             # deal with duplicates, and so on)
-            self.zipfile = zipfile.ZipFile(path, 'r')
+            self.zipfile = zipfile.ZipFile(path, "r")
             self.bufferzip = zipfile.ZipFile(BytesIO(), mode="w")
 
         self.subdir = ""
@@ -250,7 +251,7 @@ class _RwZipStorage(Storage):
         newpath = None
         n = 0
         while newpath is None:
-            testpath = "{}_{}".format(path, n)
+            testpath = f"{path}_{n}"
             try:
                 matches = self._content_matches(zf, testpath, content)
                 if matches:
@@ -260,7 +261,7 @@ class _RwZipStorage(Storage):
             except KeyError:
                 return testpath, True
 
-        assert 0 # should never get here!
+        assert 0  # should never get here!
 
     def _write_to_zf(self, zf, path, content, *, compress=False):
         compress_type = zipfile.ZIP_STORED
@@ -272,9 +273,9 @@ class _RwZipStorage(Storage):
 
         # set permissions
         zi = zf.getinfo(path)
-        perms = 0o444 << 16     # give a+r access
-        if path.endswith('/'):
-            perms = 0o755 << 16 # directories get u+rwx, a+rx
+        perms = 0o444 << 16  # give a+r access
+        if path.endswith("/"):
+            perms = 0o755 << 16  # directories get u+rwx, a+rx
         zi.external_attr = perms
 
     def save(self, path, content, *, overwrite=False, compress=False):
@@ -287,15 +288,15 @@ class _RwZipStorage(Storage):
             newpath, do_write = self._generate_filename(self.zipfile, path, content)
         if do_write:
             try:
-                self._write_to_zf(self.zipfile, newpath, content,
-                                  compress=compress)
+                self._write_to_zf(self.zipfile, newpath, content, compress=compress)
             except (ValueError, RuntimeError):
                 # Can't write in the zipfile, write in buffer instead
                 # CTB: do we need to generate a new filename wrt to the
                 # bufferzip, too? Not sure this code is working as intended...
                 if self.bufferzip:
-                    self._write_to_zf(self.bufferzip, newpath, content,
-                                      compress=compress)
+                    self._write_to_zf(
+                        self.bufferzip, newpath, content, compress=compress
+                    )
                 else:
                     # Throw error, can't write the data
                     raise ValueError("can't write data")
@@ -326,7 +327,7 @@ class _RwZipStorage(Storage):
 
         # might not have self.zipfile if was invalid zipfile and __init__
         # failed.
-        if hasattr(self, 'zipfile'):
+        if hasattr(self, "zipfile"):
             if self.zipfile is not None or self.bufferzip is not None:
                 self.flush(keep_closed=True)
                 self.zipfile.close()
@@ -341,8 +342,9 @@ class _RwZipStorage(Storage):
             if self.zipfile is not None:
                 self.zipfile.close()
                 if not keep_closed:
-                    self.zipfile = zipfile.ZipFile(self.path, mode='a',
-                                                   compression=zipfile.ZIP_STORED)
+                    self.zipfile = zipfile.ZipFile(
+                        self.path, mode="a", compression=zipfile.ZIP_STORED
+                    )
         else:
             # The complicated one. Need to consider:
             # - Is there data in the buffer?
@@ -367,7 +369,9 @@ class _RwZipStorage(Storage):
                         if item in duplicated or item in buffer_names:
                             # we prioritize writing data from the buffer to the
                             # final file
-                            self._write_to_zf(final_file, item, self.bufferzip.read(item))
+                            self._write_to_zf(
+                                final_file, item, self.bufferzip.read(item)
+                            )
                         else:
                             # it is only in the zipfile, so write from it
                             self._write_to_zf(final_file, item, self.zipfile.read(item))
@@ -379,8 +383,9 @@ class _RwZipStorage(Storage):
                     os.unlink(self.path)
                     shutil.move(tempfile.name, self.path)
                     if not keep_closed:
-                        self.zipfile = zipfile.ZipFile(self.path, mode='a',
-                                                       compression=zipfile.ZIP_STORED)
+                        self.zipfile = zipfile.ZipFile(
+                            self.path, mode="a", compression=zipfile.ZIP_STORED
+                        )
                 elif new_data:
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
@@ -388,8 +393,9 @@ class _RwZipStorage(Storage):
                     if keep_closed:
                         raise Exception("unexpected error")
                     else:
-                        zf = zipfile.ZipFile(self.path, mode='a',
-                                             compression=zipfile.ZIP_STORED)
+                        zf = zipfile.ZipFile(
+                            self.path, mode="a", compression=zipfile.ZIP_STORED
+                        )
                     for item in new_data:
                         self._write_to_zf(zf, item, self.bufferzip.read(item))
                     self.zipfile = zf
@@ -405,9 +411,9 @@ class _RwZipStorage(Storage):
 
 
 class IPFSStorage(Storage):
-
     def __init__(self, pin_on_add=True, **kwargs):
         import ipfshttpclient
+
         self.ipfs_args = kwargs
         self.pin_on_add = pin_on_add
         self.api = ipfshttpclient.connect(**self.ipfs_args)
@@ -444,9 +450,9 @@ class IPFSStorage(Storage):
 
 
 class RedisStorage(Storage):
-
     def __init__(self, **kwargs):
         import redis
+
         self.redis_args = kwargs
         self.conn = redis.Redis(**self.redis_args)
 

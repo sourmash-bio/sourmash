@@ -1,6 +1,6 @@
 """rename signature"""
 
-usage="""
+usage = """
 
 ### `sourmash signature rename` - rename a signature
 
@@ -17,34 +17,37 @@ to the same name.
 
 """
 
-from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args, add_pattern_args)
+from sourmash.cli.utils import (
+    add_moltype_args,
+    add_ksize_arg,
+    add_picklist_args,
+    add_pattern_args,
+)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('rename', description=__doc__, usage=usage)
-    subparser.add_argument('signatures', nargs='*')
-    subparser.add_argument('name')
+    subparser = subparsers.add_parser("rename", description=__doc__, usage=usage)
+    subparser.add_argument("signatures", nargs="*")
+    subparser.add_argument("name")
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '-d', '--debug', action='store_true',
-        help='print debugging output'
+        "-d", "--debug", action="store_true", help="print debugging output"
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', 
-        help='output renamed signature to this file (default stdout)',
-        default='-'
+        "-o",
+        "--output",
+        metavar="FILE",
+        help="output renamed signature to this file (default stdout)",
+        default="-",
     )
     subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='try to load all files as signatures'
+        "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     subparser.add_argument(
-        '--from-file',
-        help='a text file containing a list of files to load signatures from'
+        "--from-file",
+        help="a text file containing a list of files to load signatures from",
     )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
@@ -54,4 +57,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.sig.__main__.rename(args)

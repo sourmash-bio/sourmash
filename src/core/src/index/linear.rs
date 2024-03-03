@@ -11,7 +11,7 @@ use crate::collection::CollectionSet;
 use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::selection::Select;
-use crate::signature::{Signature, SigsTrait};
+use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::storage::SigStore;
@@ -150,13 +150,13 @@ impl LinearIndex {
             .internal_location()
             .into();
         let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-        let result = self.stats_for_match(&match_sig, query, match_size, match_path, round)?;
+        let result = self.stats_for_match(match_sig, query, match_size, match_path, round)?;
         Ok(result)
     }
 
     fn stats_for_match(
         &self,
-        match_sig: &Signature,
+        match_sig: SigStore,
         query: &KmerMinHash,
         match_size: usize,
         match_path: PathBuf,
@@ -181,16 +181,27 @@ impl LinearIndex {
         let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
 
         let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
-        let match_ = match_sig.clone();
+        let match_ = match_sig;
 
         // TODO: all of these
         let f_unique_weighted = 0.;
-        let average_abund = 0;
-        let median_abund = 0;
-        let std_abund = 0;
+        let average_abund = 0.;
+        let median_abund = 0.;
+        let std_abund = 0.;
         let md5 = "".into();
         let f_match_orig = 0.;
         let remaining_bp = 0;
+        let total_weighted_hashes = 0;
+        let n_unique_weighted_found = 0;
+        let query_containment_ani = 0.0;
+        let match_containment_ani = 0.0;
+        let max_containment_ani = 0.0;
+        let average_containment_ani = 0.0;
+        let query_containment_ani_ci_low = None;
+        let query_containment_ani_ci_high = None;
+        let match_containment_ani_ci_low = None;
+        let match_containment_ani_ci_high = None;
+        let sum_weighted_found = 0;
 
         Ok(GatherResult {
             intersect_bp,
@@ -209,6 +220,17 @@ impl LinearIndex {
             unique_intersect_bp,
             gather_result_rank,
             remaining_bp,
+            sum_weighted_found,
+            total_weighted_hashes,
+            n_unique_weighted_found,
+            query_containment_ani,
+            query_containment_ani_ci_low,
+            query_containment_ani_ci_high,
+            match_containment_ani,
+            match_containment_ani_ci_low,
+            match_containment_ani_ci_high,
+            max_containment_ani,
+            average_containment_ani,
         })
     }
 

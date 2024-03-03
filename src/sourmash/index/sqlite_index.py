@@ -95,9 +95,15 @@ from sourmash.manifest import BaseCollectionManifest
 # converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
 # convert to signed int.
 
-MAX_SQLITE_INT = 2 ** 63 - 1
-convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
-convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
+MAX_SQLITE_INT = 2**63 - 1
+
+
+def convert_hash_to(x):
+    return BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
+
+
+def convert_hash_from(x):
+    return BitArray(int=x, length=64).uint if x < 0 else x
 
 
 def load_sqlite_index(filename, *, request_manifest=False):
@@ -126,27 +132,29 @@ def load_sqlite_index(filename, *, request_manifest=False):
     is_manifest = False
     is_lca_db = False
 
-    if 'SqliteIndex' in internal_d:
-        v = internal_d['SqliteIndex']
-        if v != '1.0':
+    if "SqliteIndex" in internal_d:
+        v = internal_d["SqliteIndex"]
+        if v != "1.0":
             raise IndexNotSupported
         is_index = True
         debug_literal("load_sqlite_index: it's an index!")
 
-    if is_index and 'SqliteLineage' in internal_d:
-        v = internal_d['SqliteLineage']
-        if v != '1.0':
+    if is_index and "SqliteLineage" in internal_d:
+        v = internal_d["SqliteLineage"]
+        if v != "1.0":
             raise IndexNotSupported
 
         is_lca_db = True
         debug_literal("load_sqlite_index: it's got a lineage table!")
 
-    if 'SqliteManifest' in internal_d:
-        v = internal_d['SqliteManifest']
-        if v != '1.0':
+    if "SqliteManifest" in internal_d:
+        v = internal_d["SqliteManifest"]
+        if v != "1.0":
             raise IndexNotSupported
         is_manifest = True
-        debug_literal(f"load_sqlite_index: it's a manifest! request_manifest: {request_manifest}")
+        debug_literal(
+            f"load_sqlite_index: it's a manifest! request_manifest: {request_manifest}"
+        )
 
     # every Index is a Manifest!
     if is_index or is_lca_db:
@@ -163,10 +171,10 @@ def load_sqlite_index(filename, *, request_manifest=False):
             debug_literal("load_sqlite_index: returning SqliteIndex")
             idx = SqliteIndex(filename)
     elif is_manifest:
-        managed_by_index=False
+        managed_by_index = False
         if is_index:
             assert request_manifest
-            managed_by_index=True
+            managed_by_index = True
 
         prefix = os.path.dirname(filename)
         mf = SqliteCollectionManifest(conn, managed_by_index=managed_by_index)
@@ -178,7 +186,7 @@ def load_sqlite_index(filename, *, request_manifest=False):
 
 class SqliteIndex(Index):
     is_database = True
-    
+
     # NOTE: we do not need _signatures_with_internal for this class
     # because it supplies a manifest directly :tada:.
 
@@ -192,8 +200,7 @@ class SqliteIndex(Index):
 
         # build me a SQLite manifest class to use for selection.
         if sqlite_manifest is None:
-            sqlite_manifest = SqliteCollectionManifest(conn,
-                                                       managed_by_index=True)
+            sqlite_manifest = SqliteCollectionManifest(conn, managed_by_index=True)
         self.manifest = sqlite_manifest
         self.conn = conn
 
@@ -202,7 +209,9 @@ class SqliteIndex(Index):
         c.execute("SELECT DISTINCT scaled FROM sourmash_sketches")
         scaled_vals = c.fetchall()
         if len(scaled_vals) > 1:
-            raise ValueError("this database has multiple scaled values, which is not currently allowed")
+            raise ValueError(
+                "this database has multiple scaled values, which is not currently allowed"
+            )
 
         if scaled_vals:
             self.scaled = scaled_vals[0][0]
@@ -247,28 +256,35 @@ class SqliteIndex(Index):
     def _create_tables(cls, c, *, ignore_exists=False):
         "Create sqlite tables for SqliteIndex"
         try:
-            sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '1.0')
+            sqlite_utils.add_sourmash_internal(c, "SqliteIndex", "1.0")
             SqliteCollectionManifest._create_tables(c)
 
-            c.execute("""
+            c.execute(
+                """
             CREATE TABLE IF NOT EXISTS sourmash_hashes (
                hashval INTEGER NOT NULL,
                sketch_id INTEGER NOT NULL,
                FOREIGN KEY (sketch_id) REFERENCES sourmash_sketches (id)
             )
-            """)
-            c.execute("""
+            """
+            )
+            c.execute(
+                """
             CREATE INDEX IF NOT EXISTS sourmash_hashval_idx ON sourmash_hashes (
                hashval,
                sketch_id
             )
-            """)
-            c.execute("""
+            """
+            )
+            c.execute(
+                """
             CREATE INDEX IF NOT EXISTS sourmash_hashval_idx2 ON sourmash_hashes (
                hashval
             )
-            """)
-            c.execute("""
+            """
+            )
+            c.execute(
+                """
             CREATE INDEX IF NOT EXISTS sourmash_sketch_idx ON sourmash_hashes (
                sketch_id
             )
@@ -312,18 +328,21 @@ class SqliteIndex(Index):
             raise ValueError("cannot store signatures with abundance in SqliteIndex")
 
         if self.scaled is not None and self.scaled != ss.minhash.scaled:
-            raise ValueError(f"this database can only store scaled values={self.scaled}")
+            raise ValueError(
+                f"this database can only store scaled values={self.scaled}"
+            )
         elif self.scaled is None:
             self.scaled = ss.minhash.scaled
 
         # ok, first create and insert a manifest row
-        row = BaseCollectionManifest.make_manifest_row(ss, None,
-                                                       include_signature=False)
+        row = BaseCollectionManifest.make_manifest_row(
+            ss, None, include_signature=False
+        )
         self.manifest._insert_row(c, row, call_is_from_index=True)
 
         # retrieve ID of row for retrieving hashes:
         c.execute("SELECT last_insert_rowid()")
-        sketch_id, = c.fetchone()
+        (sketch_id,) = c.fetchone()
 
         # insert all the hashes
         hashes_to_sketch = []
@@ -331,8 +350,10 @@ class SqliteIndex(Index):
             hh = convert_hash_to(h)
             hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO sourmash_hashes (hashval, sketch_id) VALUES (?, ?)",
-                      hashes_to_sketch)
+        c.executemany(
+            "INSERT INTO sourmash_hashes (hashval, sketch_id) VALUES (?, ?)",
+            hashes_to_sketch,
+        )
 
         if commit:
             self.conn.commit()
@@ -366,30 +387,31 @@ class SqliteIndex(Index):
 
         picklist = None
         if self.manifest.selection_dict:
-            picklist = self.manifest.selection_dict.get('picklist')
+            picklist = self.manifest.selection_dict.get("picklist")
 
         c1 = self.conn.cursor()
         c2 = self.conn.cursor()
 
-        debug_literal('running _get_matching_sketches...')
+        debug_literal("running _get_matching_sketches...")
         t0 = time.time()
-        xx = self._get_matching_sketches(c1, query_mh.hashes,
-                                         query_mh._max_hash)
+        xx = self._get_matching_sketches(c1, query_mh.hashes, query_mh._max_hash)
         for sketch_id, n_matching_hashes in xx:
-            debug_literal(f"...got sketch {sketch_id}, with {n_matching_hashes} matching hashes in {time.time() - t0:.2f}")
+            debug_literal(
+                f"...got sketch {sketch_id}, with {n_matching_hashes} matching hashes in {time.time() - t0:.2f}"
+            )
             #
             # first, estimate sketch size using sql results.
             #
             query_size = len(query_mh)
-            subj_size = self._load_sketch_size(c2, sketch_id,
-                                               query_mh._max_hash)
+            subj_size = self._load_sketch_size(c2, sketch_id, query_mh._max_hash)
             total_size = query_size + subj_size - n_matching_hashes
             shared_size = n_matching_hashes
 
-            score = search_fn.score_fn(query_size, shared_size, subj_size,
-                                       total_size)
+            score = search_fn.score_fn(query_size, shared_size, subj_size, total_size)
 
-            debug_literal(f"APPROX RESULT: score={score} qsize={query_size}, ssize={subj_size} total={total_size} overlap={shared_size}")
+            debug_literal(
+                f"APPROX RESULT: score={score} qsize={query_size}, ssize={subj_size} total={total_size} overlap={shared_size}"
+            )
 
             # do we pass?
             if not search_fn.passes(score):
@@ -415,8 +437,7 @@ class SqliteIndex(Index):
         # create manifest if needed
         manifest = self.manifest
         if manifest is None:
-            manifest = SqliteCollectionManifest(self.conn,
-                                                managed_by_index=True)
+            manifest = SqliteCollectionManifest(self.conn, managed_by_index=True)
 
         # modify manifest
         manifest = manifest.select_to_manifest(**kwargs)
@@ -427,9 +448,7 @@ class SqliteIndex(Index):
         sqlite_manifest = self._select(*args, **kwargs)
 
         # return a new SqliteIndex with a new manifest, but same old conn.
-        return SqliteIndex(self.dbfile,
-                           sqlite_manifest=sqlite_manifest,
-                           conn=self.conn)
+        return SqliteIndex(self.dbfile, sqlite_manifest=sqlite_manifest, conn=self.conn)
 
     #
     # Actual SQL queries, etc.
@@ -438,53 +457,77 @@ class SqliteIndex(Index):
     def _load_sketch_size(self, c1, sketch_id, max_hash):
         "Get sketch size for given sketch, downsampled by max_hash."
         if max_hash <= MAX_SQLITE_INT:
-            c1.execute("""
+            c1.execute(
+                """
             SELECT COUNT(hashval) FROM sourmash_hashes
             WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?""",
-                       (sketch_id, max_hash))
+                (sketch_id, max_hash),
+            )
         else:
-            c1.execute('SELECT COUNT(hashval) FROM sourmash_hashes WHERE sketch_id=?',
-                       (sketch_id,))
+            c1.execute(
+                "SELECT COUNT(hashval) FROM sourmash_hashes WHERE sketch_id=?",
+                (sketch_id,),
+            )
 
-        n_hashes, = c1.fetchone()
+        (n_hashes,) = c1.fetchone()
         return n_hashes
 
     def _load_sketch(self, c, sketch_id, *, match_scaled=None):
         "Load an individual sketch. If match_scaled is set, downsample."
 
         start = time.time()
-        c.execute("""
+        c.execute(
+            """
         SELECT id, name, scaled, ksize, filename, moltype, seed
-        FROM sourmash_sketches WHERE id=?""", (sketch_id,))
-        debug_literal(f"load sketch {sketch_id}: got sketch info in {time.time() - start:.2f}")
+        FROM sourmash_sketches WHERE id=?""",
+            (sketch_id,),
+        )
+        debug_literal(
+            f"load sketch {sketch_id}: got sketch info in {time.time() - start:.2f}"
+        )
 
         sketch_id, name, scaled, ksize, filename, moltype, seed = c.fetchone()
         if match_scaled is not None:
             scaled = max(scaled, match_scaled)
 
-        is_protein = 1 if moltype=='protein' else 0
-        is_dayhoff = 1 if moltype=='dayhoff' else 0
-        is_hp = 1 if moltype=='hp' else 0
+        is_protein = 1 if moltype == "protein" else 0
+        is_dayhoff = 1 if moltype == "dayhoff" else 0
+        is_hp = 1 if moltype == "hp" else 0
 
-        mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
-                     is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
-
+        mh = MinHash(
+            n=0,
+            ksize=ksize,
+            scaled=scaled,
+            seed=seed,
+            is_protein=is_protein,
+            dayhoff=is_dayhoff,
+            hp=is_hp,
+        )
 
         template_values = [sketch_id]
 
         hash_constraint_str = ""
         max_hash = mh._max_hash
         if max_hash <= MAX_SQLITE_INT:
-            hash_constraint_str = "sourmash_hashes.hashval >= 0 AND sourmash_hashes.hashval <= ? AND"
+            hash_constraint_str = (
+                "sourmash_hashes.hashval >= 0 AND sourmash_hashes.hashval <= ? AND"
+            )
             template_values.insert(0, max_hash)
         else:
-            debug_literal('NOT EMPLOYING hash_constraint_str')
+            debug_literal("NOT EMPLOYING hash_constraint_str")
 
-        debug_literal(f"finding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        c.execute(f"SELECT hashval FROM sourmash_hashes WHERE {hash_constraint_str} sourmash_hashes.sketch_id=?", template_values)
+        debug_literal(
+            f"finding hashes for sketch {sketch_id} in {time.time() - start:.2f}"
+        )
+        c.execute(
+            f"SELECT hashval FROM sourmash_hashes WHERE {hash_constraint_str} sourmash_hashes.sketch_id=?",
+            template_values,
+        )
 
-        debug_literal(f"loading hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        for hashval, in c:
+        debug_literal(
+            f"loading hashes for sketch {sketch_id} in {time.time() - start:.2f}"
+        )
+        for (hashval,) in c:
             hh = convert_hash_from(hashval)
             mh.add_hash(hh)
 
@@ -495,29 +538,36 @@ class SqliteIndex(Index):
     def _load_sketches(self, c):
         "Load sketches based on manifest _id column."
         for row in self.manifest.rows:
-            sketch_id = row['_id']
-            assert row['num'] == 0
+            sketch_id = row["_id"]
+            assert row["num"] == 0
 
-            moltype = row['moltype']
-            is_protein = 1 if moltype=='protein' else 0
-            is_dayhoff = 1 if moltype=='dayhoff' else 0
-            is_hp = 1 if moltype=='hp' else 0
+            moltype = row["moltype"]
+            is_protein = 1 if moltype == "protein" else 0
+            is_dayhoff = 1 if moltype == "dayhoff" else 0
+            is_hp = 1 if moltype == "hp" else 0
 
-            ksize = row['ksize']
-            scaled = row['scaled']
-            seed = row['seed']
+            ksize = row["ksize"]
+            scaled = row["scaled"]
+            seed = row["seed"]
 
-            mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
-                         is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
+            mh = MinHash(
+                n=0,
+                ksize=ksize,
+                scaled=scaled,
+                seed=seed,
+                is_protein=is_protein,
+                dayhoff=is_dayhoff,
+                hp=is_hp,
+            )
 
-            c.execute("SELECT hashval FROM sourmash_hashes WHERE sketch_id=?",
-                       (sketch_id,))
+            c.execute(
+                "SELECT hashval FROM sourmash_hashes WHERE sketch_id=?", (sketch_id,)
+            )
 
-            for hashval, in c:
+            for (hashval,) in c:
                 mh.add_hash(convert_hash_from(hashval))
 
-            ss = SourmashSignature(mh, name=row['name'],
-                                   filename=row['filename'])
+            ss = SourmashSignature(mh, name=row["name"], filename=row["filename"])
             yield ss, self.dbfile, sketch_id
 
     def _get_matching_sketches(self, c, hashes, max_hash):
@@ -529,11 +579,14 @@ class SqliteIndex(Index):
         because it slows things down in practice.
         """
         c.execute("DROP TABLE IF EXISTS sourmash_hash_query")
-        c.execute("CREATE TEMPORARY TABLE sourmash_hash_query (hashval INTEGER PRIMARY KEY)")
+        c.execute(
+            "CREATE TEMPORARY TABLE sourmash_hash_query (hashval INTEGER PRIMARY KEY)"
+        )
 
-        hashvals = [ (convert_hash_to(h),) for h in hashes ]
-        c.executemany("INSERT OR IGNORE INTO sourmash_hash_query (hashval) VALUES (?)",
-                      hashvals)
+        hashvals = [(convert_hash_to(h),) for h in hashes]
+        c.executemany(
+            "INSERT OR IGNORE INTO sourmash_hash_query (hashval) VALUES (?)", hashvals
+        )
 
         #
         # set up SELECT conditions
@@ -550,15 +603,18 @@ class SqliteIndex(Index):
             template_values.append(max_hash)
 
         # format conditions
-        conditions.append('sourmash_hashes.hashval=sourmash_hash_query.hashval')
+        conditions.append("sourmash_hashes.hashval=sourmash_hash_query.hashval")
         conditions = " AND ".join(conditions)
 
-        c.execute(f"""
+        c.execute(
+            f"""
         SELECT DISTINCT sourmash_hashes.sketch_id,COUNT(sourmash_hashes.hashval) as CNT
         FROM sourmash_hashes, sourmash_hash_query
         WHERE {conditions}
         GROUP BY sourmash_hashes.sketch_id ORDER BY CNT DESC
-        """, template_values)
+        """,
+            template_values,
+        )
 
         return c
 
@@ -578,6 +634,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     In the latter case, the SqliteCollectionManifest is created with
     managed_by_index set to True.
     """
+
     def __init__(self, conn, *, selection_dict=None, managed_by_index=False):
         """
         Here, 'conn' should already be connected and configured.
@@ -617,8 +674,9 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     @classmethod
     def load_from_manifest(cls, manifest, *, dbfile=":memory:", append=False):
         "Create a new sqlite manifest from an existing manifest object."
-        return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
-                                              append=append)
+        return cls._create_manifest_from_rows(
+            manifest.rows, location=dbfile, append=append
+        )
 
     @classmethod
     def create_manifest(cls, locations_iter, *, include_signature=False):
@@ -629,10 +687,10 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         Note: do NOT catch exceptions here, so this passes through load excs.
         Note: this method ignores 'include_signature'.
         """
+
         def rows_iter():
             for ss, location in locations_iter:
-                row = cls.make_manifest_row(ss, location,
-                                            include_signature=False)
+                row = cls.make_manifest_row(ss, location, include_signature=False)
                 yield row
 
         return cls._create_manifest_from_rows(rows_iter())
@@ -643,8 +701,9 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         # this is a class method so that it can be used by SqliteIndex to
         # create manifest-compatible tables.
 
-        sqlite_utils.add_sourmash_internal(cursor, 'SqliteManifest', '1.0')
-        cursor.execute("""
+        sqlite_utils.add_sourmash_internal(cursor, "SqliteManifest", "1.0")
+        cursor.execute(
+            """
         CREATE TABLE sourmash_sketches
           (id INTEGER PRIMARY KEY,
            name TEXT,
@@ -660,7 +719,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
            internal_location TEXT,
         UNIQUE(internal_location, md5sum)
         )
-        """)
+        """
+        )
 
     def add_row(self, row):
         c = self.conn.cursor()
@@ -674,18 +734,21 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             raise Exception("must use SqliteIndex.insert to add to this manifest")
 
         row = dict(row)
-        if 'seed' not in row:
-            row['seed'] = 42
+        if "seed" not in row:
+            row["seed"] = 42
 
-        cursor.execute("""
+        cursor.execute(
+            """
         INSERT OR IGNORE INTO sourmash_sketches
           (name, num, scaled, ksize, filename, md5sum, moltype,
            seed, n_hashes, with_abundance, internal_location)
         VALUES (:name, :num, :scaled, :ksize, :filename, :md5,
                 :moltype, :seed, :n_hashes, :with_abundance,
-                :internal_location)""", row)
+                :internal_location)""",
+            row,
+        )
 
-        self._num_rows = None   # reset cache
+        self._num_rows = None  # reset cache
 
     def __bool__(self):
         "Is this manifest empty?"
@@ -700,7 +763,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def __eq__(self, other):
         "Check equality on a row-by-row basis. May fail on out-of-order rows."
-        for (a, b) in itertools.zip_longest(self.rows, other.rows):
+        for a, b in itertools.zip_longest(self.rows, other.rows):
             # ignore non-required keys.
             for k in self.required_keys:
                 if a[k] != b[k]:
@@ -749,21 +812,21 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         picklist = None
         if self.selection_dict:
             select_d = self.selection_dict
-            if 'ksize' in select_d and select_d['ksize']:
+            if "ksize" in select_d and select_d["ksize"]:
                 conditions.append("sourmash_sketches.ksize = ?")
-                values.append(select_d['ksize'])
-            if 'num' in select_d and select_d['num'] > 0:
+                values.append(select_d["ksize"])
+            if "num" in select_d and select_d["num"] > 0:
                 conditions.append("sourmash_sketches.num > 0")
-            if 'scaled' in select_d and select_d['scaled'] > 0:
+            if "scaled" in select_d and select_d["scaled"] > 0:
                 conditions.append("sourmash_sketches.scaled > 0")
-            if 'containment' in select_d and select_d['containment']:
+            if "containment" in select_d and select_d["containment"]:
                 conditions.append("sourmash_sketches.scaled > 0")
-            if 'moltype' in select_d and select_d['moltype'] is not None:
-                moltype = select_d['moltype']
-                assert moltype in ('DNA', 'protein', 'dayhoff', 'hp'), moltype
+            if "moltype" in select_d and select_d["moltype"] is not None:
+                moltype = select_d["moltype"]
+                assert moltype in ("DNA", "protein", "dayhoff", "hp"), moltype
                 conditions.append(f"sourmash_sketches.moltype = '{moltype}'")
 
-            picklist = select_d.get('picklist')
+            picklist = select_d.get("picklist")
 
         return conditions, values, picklist
 
@@ -784,10 +847,10 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         new_mf = SqliteCollectionManifest(self.conn, selection_dict=kwargs)
 
         # if picklist, make sure we fill in 'found'.
-        picklist = kwargs.get('picklist')
+        picklist = kwargs.get("picklist")
         if picklist is not None:
             debug_literal("sqlite manifest: iterating through picklist")
-            _ = len(self)       # this forces iteration through rows.
+            _ = len(self)  # this forces iteration through rows.
 
         return new_mf
 
@@ -803,19 +866,43 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             conditions = ""
 
         debug_literal(f"sqlite manifest rows: executing select with '{conditions}'")
-        c1.execute(f"""
+        c1.execute(
+            f"""
         SELECT id, name, md5sum, num, scaled, ksize, filename, moltype,
         seed, n_hashes, internal_location FROM sourmash_sketches {conditions}
-        """, values)
+        """,
+            values,
+        )
 
         debug_literal("sqlite manifest: entering row yield loop")
-        for (_id, name, md5sum, num, scaled, ksize, filename, moltype,
-             seed, n_hashes, iloc) in c1:
-            row = dict(num=num, scaled=scaled, name=name, filename=filename,
-                       n_hashes=n_hashes, with_abundance=0, ksize=ksize,
-                       md5=md5sum, internal_location=iloc,
-                       moltype=moltype, md5short=md5sum[:8],
-                       seed=seed, _id=_id)
+        for (
+            _id,
+            name,
+            md5sum,
+            num,
+            scaled,
+            ksize,
+            filename,
+            moltype,
+            seed,
+            n_hashes,
+            iloc,
+        ) in c1:
+            row = dict(
+                num=num,
+                scaled=scaled,
+                name=name,
+                filename=filename,
+                n_hashes=n_hashes,
+                with_abundance=0,
+                ksize=ksize,
+                md5=md5sum,
+                internal_location=iloc,
+                moltype=moltype,
+                md5short=md5sum[:8],
+                seed=seed,
+                _id=_id,
+            )
             if picklist is None or picklist.matches_manifest_row(row):
                 yield row
 
@@ -824,6 +911,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         This is done in memory, inserting each row one at a time.
         """
+
         def rows_iter():
             for row in self.rows:
                 if row_filter_fn(row):
@@ -833,9 +921,11 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def filter_on_columns(self, col_filter_fn, col_names):
         "Create a new manifest based on column matches."
+
         def row_filter_fn(row):
-            x = [ row[col] for col in col_names if row[col] is not None ]
+            x = [row[col] for col in col_names if row[col] is not None]
             return col_filter_fn(x)
+
         return self.filter_rows(row_filter_fn)
 
     def locations(self):
@@ -856,20 +946,22 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         else:
             conditions = ""
 
-        c1.execute(f"""
+        c1.execute(
+            f"""
         SELECT DISTINCT internal_location FROM sourmash_sketches {conditions}
-        """, values)
+        """,
+            values,
+        )
 
-        return ( iloc for iloc, in c1 )
+        return (iloc for (iloc,) in c1)
 
     def __contains__(self, ss):
         "Check to see if signature 'ss' is in this manifest."
         md5 = ss.md5sum()
 
         c = self.conn.cursor()
-        c.execute('SELECT COUNT(*) FROM sourmash_sketches WHERE md5sum=?',
-                  (md5,))
-        val, = c.fetchone()
+        c.execute("SELECT COUNT(*) FROM sourmash_sketches WHERE md5sum=?", (md5,))
+        (val,) = c.fetchone()
 
         if bool(val):
             picklist = self.picklist
@@ -880,18 +972,19 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     def picklist(self):
         "Return the picklist, if any."
         if self.selection_dict:
-            return self.selection_dict.get('picklist')
+            return self.selection_dict.get("picklist")
         return None
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        pl = SignaturePicklist('manifest')
-        pl.pickset = { pl._get_value_for_manifest_row(row) for row in self.rows }
+        pl = SignaturePicklist("manifest")
+        pl.pickset = {pl._get_value_for_manifest_row(row) for row in self.rows}
         return pl
 
     @classmethod
-    def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:",
-                                   append=False):
+    def _create_manifest_from_rows(
+        cls, rows_iter, *, location=":memory:", append=False
+    ):
         """Create a SqliteCollectionManifest from a rows iterator.
 
         Internal utility function.
@@ -903,7 +996,9 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             mf = cls.create(location)
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
             if not append:
-                raise Exception(f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}")
+                raise Exception(
+                    f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}"
+                )
             db = load_sqlite_index(location, request_manifest=True)
             mf = db.manifest
 
@@ -920,6 +1015,7 @@ class LCA_SqliteDatabase(SqliteIndex):
     """
     A wrapper class for SqliteIndex + lineage db => LCA_Database functionality.
     """
+
     is_database = True
 
     def __init__(self, dbfile, *, lineage_db=None, sqlite_manifest=None):
@@ -929,10 +1025,12 @@ class LCA_SqliteDatabase(SqliteIndex):
 
         c = self.conn.cursor()
 
-        c.execute('SELECT DISTINCT ksize, moltype FROM sourmash_sketches')
+        c.execute("SELECT DISTINCT ksize, moltype FROM sourmash_sketches")
         res = list(c)
         if len(res) > 1:
-            raise TypeError("can only have one ksize & moltype in an LCA_SqliteDatabase")
+            raise TypeError(
+                "can only have one ksize & moltype in an LCA_SqliteDatabase"
+            )
         if len(res) == 0:
             raise ValueError("cannot load an LCA_SqliteDatabase")
 
@@ -996,20 +1094,20 @@ class LCA_SqliteDatabase(SqliteIndex):
         lid_to_lineage = {}
 
         for row in mf.rows:
-            name = row['name']
+            name = row["name"]
             if name:
                 # this is a bit of a hack. we try identifiers _with_ and
                 # _without_ versions, and take whichever works. There is
                 # definitely a better way to do this, but I can't think
                 # of one right now.
-                ident = name.split(' ')[0]
+                ident = name.split(" ")[0]
 
-                lineage = lineage_db.get(ident) # try with identifier version
-                if lineage is None:             # nope - remove version.x
-                    ident = name.split('.')[0]
+                lineage = lineage_db.get(ident)  # try with identifier version
+                if lineage is None:  # nope - remove version.x
+                    ident = name.split(".")[0]
                     lineage = lineage_db.get(ident)
 
-                idx = row['_id'] # this is only present in sqlite manifests.
+                idx = row["_id"]  # this is only present in sqlite manifests.
                 ident_to_idx[ident] = idx
 
                 if lineage:
@@ -1038,16 +1136,16 @@ class LCA_SqliteDatabase(SqliteIndex):
     def select(self, *args, **kwargs):
         sqlite_manifest = self._select(*args, **kwargs)
 
-        return LCA_SqliteDatabase(self.dbfile,
-                                  sqlite_manifest=sqlite_manifest,
-                                  lineage_db=self.lineage_db)
+        return LCA_SqliteDatabase(
+            self.dbfile, sqlite_manifest=sqlite_manifest, lineage_db=self.lineage_db
+        )
 
     ### LCA_Database API/protocol.
 
     def downsample_scaled(self, scaled):
         "Downsample the scaled for querying."
         if scaled < self.scaled:
-            raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
+            raise ValueError(f"cannot decrease scaled from {self.scaled} to {scaled}")
 
         # CTB: maybe return a new LCA_Database? Right now this isn't how
         # the lca_db protocol works tho.
@@ -1097,17 +1195,18 @@ class LCA_SqliteDatabase(SqliteIndex):
 
 class _SqliteIndexHashvalToIndex:
     """
-    Internal wrapper class to retrieve keys and key/value pairs for 
+    Internal wrapper class to retrieve keys and key/value pairs for
     hashval -> [ list of idx ].
     """
+
     def __init__(self, sqlidx):
         self.sqlidx = sqlidx
 
     def __iter__(self):
         "Get all hashvals."
         c = self.sqlidx.conn.cursor()
-        c.execute('SELECT DISTINCT hashval FROM sourmash_hashes')
-        for hashval, in c:
+        c.execute("SELECT DISTINCT hashval FROM sourmash_hashes")
+        for (hashval,) in c:
             yield hashval
 
     def get(self, key, dv=None):
@@ -1117,10 +1216,9 @@ class _SqliteIndexHashvalToIndex:
 
         hh = convert_hash_to(key)
 
-        c.execute('SELECT sketch_id FROM sourmash_hashes WHERE hashval=?',
-                  (hh,))
+        c.execute("SELECT sketch_id FROM sourmash_hashes WHERE hashval=?", (hh,))
 
-        x = [ convert_hash_from(h) for h, in c ]
+        x = [convert_hash_from(h) for (h,) in c]
         return x or dv
 
     def __getitem__(self, key):

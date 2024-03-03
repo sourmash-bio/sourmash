@@ -5,12 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.13.0] - 2024-02-23
 
-Fixed:
+MSRV: 1.65
 
-- Deps: update typed-builder and histogram, bump MSRV to 1.65 (#2858)
-- CI: Fix wheel building and semver checks post r0.12.0 (#2857)
+Changes/additions:
+
+* Calculate all gather stats in rust; use for rocksdb gather (#2943)
+* adjust protein ksize for record/manifest (#3019)
+* Allow changing storage location for a collection in RevIndex (#3015)
+* make core Manifest booleans python compatible (core) (#3007)
+
+Updates:
+* Bump roaring from 0.10.2 to 0.10.3 (#3014)
+* Bump histogram from 0.9.0 to 0.9.1 (#3002)
+* Bump chrono from 0.4.33 to 0.4.34 (#3000)
+* Bump web-sys from 0.3.67 to 0.3.68 (#2998)
+* Bump num-iter from 0.1.43 to 0.1.44 (#2997)
+* Bump wasm-bindgen-test from 0.3.40 to 0.3.41 (#2996)
+
+## [0.12.1] - 2024-02-10
+
+MSRV: 1.65
+
+Changes/additions:
+
+* bump rust core version to r0.12.1 (#2988)
+* Clean up and refactor `KmerMinHash::merge` in core (#2973)
+* core: add scaled selection to manifest; add helper functions for collection and sig/sketch usage (#2948)
+* core: enable downsample within select (#2931)
+
+Updates:
+
+* Deps: update typed-builder and histogram, bump MSRV to 1.65 (#2858)
+* Bump tempfile from 3.9.0 to 3.10.0 (#2979)
+* Bump rkyv from 0.7.43 to 0.7.44 (#2978)
+* Bump memmap2 from 0.9.3 to 0.9.4 (#2958)
+* Bump chrono from 0.4.31 to 0.4.33 (#2957)
+* Bump serde from 1.0.195 to 1.0.196 (#2956)
+* Bump serde_json from 1.0.111 to 1.0.113 (#2955)
+* Bump web-sys from 0.3.66 to 0.3.67 (#2939)
+* Bump wasm-bindgen-test from 0.3.39 to 0.3.40 (#2938)
+* Bump rayon from 1.8.0 to 1.8.1 (#2937)
+* Bump ouroboros from 0.18.2 to 0.18.3 (#2936)
+* Bump histogram from 0.8.4 to 0.9.0 (#2935)
+* Bump wasm-bindgen from 0.2.89 to 0.2.90 (#2925)
+* Bump histogram from 0.8.3 to 0.8.4 (#2923)
+* Bump serde_json from 1.0.110 to 1.0.111 (#2902)
+* Bump serde from 1.0.194 to 1.0.195 (#2901)
+* Bump serde_json from 1.0.108 to 1.0.110 (#2896)
+* Bump ouroboros from 0.18.1 to 0.18.2 (#2894)
+* Bump tempfile from 3.8.1 to 3.9.0 (#2893)
+* Bump memmap2 from 0.9.2 to 0.9.3 (#2889)
+* Bump memmap2 from 0.9.0 to 0.9.2 (#2882)
+* Bump rkyv from 0.7.42 to 0.7.43 (#2880)
+* Bump ouroboros from 0.18.0 to 0.18.1 (#2875)
+* Bump once_cell from 1.18.0 to 1.19.0 (#2874)
+* Bump rkyv from 0.7.40 to 0.7.42 (#2863)
+* Bump csv from 1.2.0 to 1.3.0 (#2862)
+* Bump roaring from 0.10.1 to 0.10.2 (#2865)
+* Bump web-sys from 0.3.65 to 0.3.66 (#2864)
+* Bump byteorder from 1.4.3 to 1.5.0 (#2866)
+* Bump proptest from 1.3.1 to 1.4.0 (#2837)
 
 ## [0.12.0] - 2023-11-26
 

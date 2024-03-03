@@ -15,7 +15,7 @@ use crate::errors::SourmashErrorCode;
 use crate::Error;
 
 thread_local! {
-    pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
+    pub static LAST_ERROR: RefCell<Option<Error>> = const { RefCell::new(None) };
 }
 
 #[allow(clippy::wrong_self_convention)]

@@ -18,7 +18,7 @@ DEFAULT_SAVE_TO_PRIORITY = 99
 import itertools
 import argparse
 
-from .logging import (debug_literal, error, notify, set_quiet)
+from .logging import debug_literal, error, notify, set_quiet
 
 # cover for older versions of Python that don't support selection on load
 # (the 'group=' below).
@@ -26,19 +26,21 @@ from importlib.metadata import entry_points
 
 # load 'load_from' entry points. NOTE: this executes on import of this module.
 try:
-    _plugin_load_from = entry_points(group='sourmash.load_from')
+    _plugin_load_from = entry_points(group="sourmash.load_from")
 except TypeError:
     from importlib_metadata import entry_points
-    _plugin_load_from = entry_points(group='sourmash.load_from')
+
+    _plugin_load_from = entry_points(group="sourmash.load_from")
 
 # load 'save_to' entry points as well.
-_plugin_save_to = entry_points(group='sourmash.save_to')
+_plugin_save_to = entry_points(group="sourmash.save_to")
 
 # aaaaand CLI entry points:
-_plugin_cli = entry_points(group='sourmash.cli_script')
+_plugin_cli = entry_points(group="sourmash.cli_script")
 _plugin_cli_once = False
 
 ###
+
 
 def get_load_from_functions():
     "Load the 'load_from' plugins and yield tuples (priority, name, fn)."
@@ -49,11 +51,13 @@ def get_load_from_functions():
         try:
             loader_fn = plugin.load()
         except (ModuleNotFoundError, AttributeError) as e:
-            debug_literal(f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}")
+            debug_literal(
+                f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}"
+            )
             continue
 
         # get 'priority' if it is available
-        priority = getattr(loader_fn, 'priority', DEFAULT_LOAD_FROM_PRIORITY)
+        priority = getattr(loader_fn, "priority", DEFAULT_LOAD_FROM_PRIORITY)
 
         # retrieve name (which is specified by plugin?)
         name = plugin.name
@@ -70,11 +74,13 @@ def get_save_to_functions():
         try:
             save_cls = plugin.load()
         except (ModuleNotFoundError, AttributeError) as e:
-            debug_literal(f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}")
+            debug_literal(
+                f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}"
+            )
             continue
 
         # get 'priority' if it is available
-        priority = getattr(save_cls, 'priority', DEFAULT_SAVE_TO_PRIORITY)
+        priority = getattr(save_cls, "priority", DEFAULT_SAVE_TO_PRIORITY)
 
         # retrieve name (which is specified by plugin?)
         name = plugin.name
@@ -88,17 +94,16 @@ class CommandLinePlugin:
 
     Subclasses should call super().__init__(parser) and super().main(args).
     """
+
     command = None
     description = None
 
     def __init__(self, parser):
         parser.add_argument(
-            '-q', '--quiet', action='store_true',
-            help='suppress non-error output'
+            "-q", "--quiet", action="store_true", help="suppress non-error output"
         )
         parser.add_argument(
-            '-d', '--debug', action='store_true',
-            help='provide debugging output'
+            "-d", "--debug", action="store_true", help="provide debugging output"
         )
 
     def main(self, args):
@@ -116,14 +121,18 @@ def get_cli_script_plugins():
             script_cls = plugin.load()
         except (ModuleNotFoundError, AttributeError):
             if _plugin_cli_once is False:
-                error(f"ERROR: cannot find or load module for cli_script plugin '{name}'")
+                error(
+                    f"ERROR: cannot find or load module for cli_script plugin '{name}'"
+                )
             continue
 
-        command = getattr(script_cls, 'command', None)
+        command = getattr(script_cls, "command", None)
         if command is None:
             # print error message only once...
             if _plugin_cli_once is False:
-                error(f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping")
+                error(
+                    f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping"
+                )
         else:
             x.append(plugin)
 
@@ -137,8 +146,8 @@ def get_cli_scripts_descriptions():
         name = plugin.name
         script_cls = plugin.load()
 
-        command = getattr(script_cls, 'command')
-        description = getattr(script_cls, 'description', "")
+        command = getattr(script_cls, "command")
+        description = getattr(script_cls, "description", "")
         if description:
             description = description.splitlines()[0]
         if not description:
@@ -155,18 +164,21 @@ def add_cli_scripts(parser):
         name = plugin.name
         script_cls = plugin.load()
 
-        usage = getattr(script_cls, 'usage', None)
-        description = getattr(script_cls, 'description', None)
-        epilog = getattr(script_cls, 'epilog', None)
-        formatter_class = getattr(script_cls, 'formatter_class',
-                                  argparse.HelpFormatter)
+        usage = getattr(script_cls, "usage", None)
+        description = getattr(script_cls, "description", None)
+        epilog = getattr(script_cls, "epilog", None)
+        formatter_class = getattr(script_cls, "formatter_class", argparse.HelpFormatter)
 
-        subparser = parser.add_parser(script_cls.command,
-                                      usage=usage,
-                                      description=description,
-                                      epilog=epilog,
-                                      formatter_class=formatter_class)
-        debug_literal(f"cls_script plugin '{name}' adding command '{script_cls.command}'")
+        subparser = parser.add_parser(
+            script_cls.command,
+            usage=usage,
+            description=description,
+            epilog=epilog,
+            formatter_class=formatter_class,
+        )
+        debug_literal(
+            f"cls_script plugin '{name}' adding command '{script_cls.command}'"
+        )
         obj = script_cls(subparser)
         d[script_cls.command] = obj
 
@@ -174,9 +186,7 @@ def add_cli_scripts(parser):
 
 
 def list_all_plugins():
-    plugins = itertools.chain(_plugin_load_from,
-                              _plugin_save_to,
-                              _plugin_cli)
+    plugins = itertools.chain(_plugin_load_from, _plugin_save_to, _plugin_cli)
     plugins = list(plugins)
 
     if not plugins:
@@ -185,7 +195,9 @@ def list_all_plugins():
     notify("")
     notify("the following plugins are installed:")
     notify("")
-    notify(f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}")
+    notify(
+        f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}"
+    )
     notify(f"{'-'*20} {'-'*30} {'-'*5} {'-'*20}")
 
     for plugin in plugins:

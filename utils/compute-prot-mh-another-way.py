@@ -7,25 +7,77 @@ external check on our C++ implementation.
 The output of this is used in test_sourmash.py to verify our C++ code.
 """
 
-dna_to_aa={'TTT':'F','TTC':'F', 'TTA':'L','TTG':'L',
-                'TCT':'S','TCC':'S','TCA':'S','TCG':'S',
-                'TAT':'Y','TAC':'Y', 'TAA':'*','TAG':'*','TGA':'*',
-                'TGT':'C','TGC':'C', 'TGG':'W',
-                'CTT':'L','CTC':'L','CTA':'L','CTG':'L',
-                'CCT':'P','CCC':'P','CCA':'P','CCG':'P',
-                'CAT':'H','CAC':'H', 'CAA':'Q','CAG':'Q',
-                'CGT':'R','CGC':'R','CGA':'R','CGG':'R',
-                'ATT':'I','ATC':'I','ATA':'I', 'ATG':'M',
-                'ACT':'T','ACC':'T','ACA':'T','ACG':'T',
-                'AAT':'N','AAC':'N', 'AAA':'K','AAG':'K',
-                'AGT':'S','AGC':'S', 'AGA':'R','AGG':'R',
-                'GTT':'V','GTC':'V','GTA':'V','GTG':'V',
-                'GCT':'A','GCC':'A','GCA':'A','GCG':'A',
-                'GAT':'D','GAC':'D', 'GAA':'E','GAG':'E',
-                'GGT':'G','GGC':'G','GGA':'G','GGG':'G'}
+dna_to_aa = {
+    "TTT": "F",
+    "TTC": "F",
+    "TTA": "L",
+    "TTG": "L",
+    "TCT": "S",
+    "TCC": "S",
+    "TCA": "S",
+    "TCG": "S",
+    "TAT": "Y",
+    "TAC": "Y",
+    "TAA": "*",
+    "TAG": "*",
+    "TGA": "*",
+    "TGT": "C",
+    "TGC": "C",
+    "TGG": "W",
+    "CTT": "L",
+    "CTC": "L",
+    "CTA": "L",
+    "CTG": "L",
+    "CCT": "P",
+    "CCC": "P",
+    "CCA": "P",
+    "CCG": "P",
+    "CAT": "H",
+    "CAC": "H",
+    "CAA": "Q",
+    "CAG": "Q",
+    "CGT": "R",
+    "CGC": "R",
+    "CGA": "R",
+    "CGG": "R",
+    "ATT": "I",
+    "ATC": "I",
+    "ATA": "I",
+    "ATG": "M",
+    "ACT": "T",
+    "ACC": "T",
+    "ACA": "T",
+    "ACG": "T",
+    "AAT": "N",
+    "AAC": "N",
+    "AAA": "K",
+    "AAG": "K",
+    "AGT": "S",
+    "AGC": "S",
+    "AGA": "R",
+    "AGG": "R",
+    "GTT": "V",
+    "GTC": "V",
+    "GTA": "V",
+    "GTG": "V",
+    "GCT": "A",
+    "GCC": "A",
+    "GCA": "A",
+    "GCG": "A",
+    "GAT": "D",
+    "GAC": "D",
+    "GAA": "E",
+    "GAG": "E",
+    "GGT": "G",
+    "GGC": "G",
+    "GGA": "G",
+    "GGG": "G",
+}
 
 
-__complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
+__complementTranslation = {"A": "T", "C": "G", "G": "C", "T": "A", "N": "N"}
+
+
 def complement(s):
     """
     Return complement of 's'.
@@ -44,7 +96,7 @@ def reverse(s):
 
 def peptides(seq, start):
     for i in range(start, len(seq), 3):
-        yield dna_to_aa.get(seq[i:i+3], "X")
+        yield dna_to_aa.get(seq[i : i + 3], "X")
 
 
 def translate(seq):
@@ -52,27 +104,31 @@ def translate(seq):
         pep = peptides(seq, i)
         yield "".join(pep)
 
-    revcomp = reverse(complement((seq)))
+    revcomp = reverse(complement(seq))
     for i in range(3):
         pep = peptides(revcomp, i)
         yield "".join(pep)
 
+
 def kmers(seq, k):
     for start in range(len(seq) - k + 1):
-        yield seq[start:start + k]
+        yield seq[start : start + k]
+
 
 ###
 
 K = 21
 
-import sys, screed
+import sys
+import screed
 import mmh3
 import sourmash
-print('imported sourmash:', sourmash, file=sys.stderr)
+
+print("imported sourmash:", sourmash, file=sys.stderr)
 import sourmash.signature
 
 record = next(iter(screed.open(sys.argv[1])))
-print('loaded', record.name, file=sys.stderr)
+print("loaded", record.name, file=sys.stderr)
 
 mh = sourmash.MinHash(ksize=K, n=500, is_protein=True)
 prot_ksize = int(K / 3)
@@ -87,5 +143,5 @@ for trans in translate(record.sequence):
 
         mh.add_hash(hash)
 
-s = sourmash.signature.SourmashSignature('', mh, name=record.name)
+s = sourmash.signature.SourmashSignature("", mh, name=record.name)
 print(sourmash.signature.save_signatures([s]))

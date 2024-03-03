@@ -2,15 +2,19 @@ from tempfile import NamedTemporaryFile
 
 import pytest
 
-from sourmash.nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
+from sourmash.nodegraph import (
+    Nodegraph,
+    extract_nodegraph_info,
+    calc_expected_collisions,
+)
 
 import sourmash_tst_utils as utils
 
 
 def test_nodegraph_to_khmer_basic():
-    pytest.importorskip('khmer')
+    pytest.importorskip("khmer")
 
-    ng_file = utils.get_test_data('.sbt.v3/internal.0')
+    ng_file = utils.get_test_data(".sbt.v3/internal.0")
 
     sourmash_ng = Nodegraph.load(ng_file)
     khmer_sm_ng = sourmash_ng.to_khmer_nodegraph()
@@ -19,7 +23,7 @@ def test_nodegraph_to_khmer_basic():
 
 
 def test_nodegraph_khmer_compare():
-    khmer = pytest.importorskip('khmer')
+    khmer = pytest.importorskip("khmer")
 
     khmer_ng = khmer.Nodegraph(3, 23, 6)
     khmer_ng.count("ACG")
@@ -43,14 +47,14 @@ def test_nodegraph_khmer_compare():
 
 
 def test_nodegraph_same_file():
-    khmer = pytest.importorskip('khmer')
+    khmer = pytest.importorskip("khmer")
     try:
         load_nodegraph = khmer.load_nodegraph
     except AttributeError:
         load_nodegraph = khmer.Nodegraph.load
 
-    ng_file = utils.get_test_data('.sbt.v3/internal.0')
-    with open(ng_file, 'rb') as f:
+    ng_file = utils.get_test_data(".sbt.v3/internal.0")
+    with open(ng_file, "rb") as f:
         ng_data = f.read()
 
     sourmash_ng = Nodegraph.load(ng_file)
@@ -85,7 +89,7 @@ def test_nodegraph_same_file():
 
 
 def test_nodegraph_expected_collisions():
-    ng_file = utils.get_test_data('.sbt.v3/internal.0')
+    ng_file = utils.get_test_data(".sbt.v3/internal.0")
 
     sourmash_ng = Nodegraph.load(ng_file)
 
@@ -93,7 +97,7 @@ def test_nodegraph_expected_collisions():
 
 
 def test_nodegraph_expected_collisions_error():
-    ng_file = utils.get_test_data('.sbt.v3/internal.0')
+    ng_file = utils.get_test_data(".sbt.v3/internal.0")
 
     sourmash_ng = Nodegraph.load(ng_file)
 

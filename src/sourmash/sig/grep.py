@@ -28,9 +28,13 @@ def main(args):
         pattern = re.compile(pattern)
 
     if args.invert_match:
-        search_pattern = lambda vals: all(not pattern.search(val) for val in vals)
+
+        def search_pattern(vals):
+            return all(not pattern.search(val) for val in vals)
     else:
-        search_pattern = lambda vals: any(pattern.search(val) for val in vals)
+
+        def search_pattern(vals):
+            return any(pattern.search(val) for val in vals)
 
     # require manifests?
     require_manifest = True
@@ -63,28 +67,27 @@ def main(args):
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
-        idx = sourmash_args.load_file_as_index(filename,
-                                               yield_all_files=args.force)
+        idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
-        idx = idx.select(ksize=args.ksize,
-                         moltype=moltype,
-                         picklist=picklist)
+        idx = idx.select(ksize=args.ksize, moltype=moltype, picklist=picklist)
 
         # get (and maybe generate) the manifest.
         manifest = idx.manifest
         if manifest is None:
             if require_manifest:
                 error(f"ERROR on filename '{filename}'.")
-                error("sig grep requires a manifest by default, but no manifest present.")
+                error(
+                    "sig grep requires a manifest by default, but no manifest present."
+                )
                 error("specify --no-require-manifest to dynamically generate one.")
                 sys.exit(-1)
             else:
-                manifest = sourmash_args.get_manifest(idx,
-                                                      require=False)
+                manifest = sourmash_args.get_manifest(idx, require=False)
 
         # find all matching rows.
-        sub_manifest = manifest.filter_on_columns(search_pattern,
-                                                  ["name", "filename", "md5"])
+        sub_manifest = manifest.filter_on_columns(
+            search_pattern, ["name", "filename", "md5"]
+        )
         total_rows_examined += len(manifest)
 
         # write out to CSV, if desired.
@@ -119,7 +122,9 @@ def main(args):
         notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
 
         if save_sigs:
-            notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
+            notify(
+                f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)"
+            )
             save_sigs.close()
         else:
             error("no matching signatures found!")

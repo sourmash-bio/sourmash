@@ -179,7 +179,7 @@ jobs:
         working-directory: pkg
         run: npm pack
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: 'pkg/sourmash*.tgz'
 

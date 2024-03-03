@@ -22,23 +22,12 @@ source ~/.bash_profile
 ```
 otherwise, follow the instructions [here](https://github.com/conda-forge/miniforge#install).
 
-## Add bioconda
-
-sourmash is installed from the [bioconda software channel](https://bioconda.github.io/), so you'll need to add that to your config:
-
-```
-conda config --add channels defaults
-conda config --add channels bioconda
-conda config --add channels conda-forge
-conda config --set channel_priority strict
-```
-
 ## Install sourmash
 
 To install sourmash, create a new environment named `smash` and install sourmash:
 
 ```
-mamba create -y -n smash sourmash
+mamba create -y -n smash sourmash-minimal
 ```
 
 and then activate:

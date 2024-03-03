@@ -1,6 +1,6 @@
 """downsample one or more signatures"""
 
-usage="""
+usage = """
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -26,33 +26,36 @@ will try to convert a scaled MinHash to a num MinHash.
 
 """
 
-from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args, add_num_arg)
+from sourmash.cli.utils import (
+    add_moltype_args,
+    add_ksize_arg,
+    add_picklist_args,
+    add_num_arg,
+)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('downsample', description=__doc__, usage=usage)
-    subparser.add_argument('signatures', nargs="*")
+    subparser = subparsers.add_parser("downsample", description=__doc__, usage=usage)
+    subparser.add_argument("signatures", nargs="*")
     subparser.add_argument(
-        '--scaled', type=int, default=0,
-        help='scaled value to downsample to'
+        "--scaled", type=int, default=0, help="scaled value to downsample to"
     )
     subparser.add_argument(
-        '--from-file',
-        help='a text file containing a list of files to load signatures from'
+        "--from-file",
+        help="a text file containing a list of files to load signatures from",
     )
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
-        help='output signature to this file (default stdout)',
-        default='-',
+        "-o",
+        "--output",
+        metavar="FILE",
+        help="output signature to this file (default stdout)",
+        default="-",
     )
     subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='try to load all files as signatures'
+        "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
@@ -62,4 +65,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.sig.__main__.downsample(args)

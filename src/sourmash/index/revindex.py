@@ -123,9 +123,9 @@ class RevIndex(RustObject, Index):
         for sig in sigs:
             yield sig
 
-        #if self._signatures:
+        # if self._signatures:
         #    yield from self._signatures
-        #else:
+        # else:
         #    raise NotImplementedError("Call into Rust and retrieve sigs")
 
     def __len__(self):
@@ -156,81 +156,81 @@ class RevIndex(RustObject, Index):
             # TODO: deal with None/default values
             self.template = MinHash(ksize=ksize, moltype=moltype)
 
-#    def search(self, query, *args, **kwargs):
-#        """Return set of matches with similarity above 'threshold'.
-#
-#        Results will be sorted by similarity, highest to lowest.
-#
-#        Optional arguments:
-#          * do_containment: default False. If True, use Jaccard containment.
-#          * ignore_abundance: default False. If True, and query signature
-#            and database support k-mer abundances, ignore those abundances.
-#
-#        Note, the "best only" hint is ignored by LCA_Database
-#        """
-#        if not query.minhash:
-#            return []
-#
-#        # check arguments
-#        if "threshold" not in kwargs:
-#            raise TypeError("'search' requires 'threshold'")
-#        threshold = kwargs["threshold"]
-#        do_containment = kwargs.get("do_containment", False)
-#        ignore_abundance = kwargs.get("ignore_abundance", False)
-#
-#        self._init_inner()
-#
-#        size = ffi.new("uintptr_t *")
-#        results_ptr = self._methodcall(
-#            lib.revindex_search,
-#            query._get_objptr(),
-#            threshold,
-#            do_containment,
-#            ignore_abundance,
-#            size,
-#        )
-#
-#        size = size[0]
-#        if size == 0:
-#            return []
-#
-#        results = []
-#        for i in range(size):
-#            match = SearchResult._from_objptr(results_ptr[i])
-#            if match.score >= threshold:
-#                results.append(IndexSearchResult(match.score, match.signature, match.filename))
-#
-#        return results
-#
-#    def gather(self, query, *args, **kwargs):
-#        "Return the match with the best Jaccard containment in the database."
-#        if not query.minhash:
-#            return []
-#
-#        self._init_inner()
-#
-#        threshold_bp = kwargs.get("threshold_bp", 0.0)
-#        threshold = threshold_bp / (len(query.minhash) * self.scaled)
-#
-#        results = []
-#        size = ffi.new("uintptr_t *")
-#        results_ptr = self._methodcall(
-#            lib.revindex_gather, query._get_objptr(), threshold, True, True, size
-#        )
-#        size = size[0]
-#        if size == 0:
-#            return []
-#
-#        results = []
-#        for i in range(size):
-#            match = SearchResult._from_objptr(results_ptr[i])
-#            if match.score >= threshold:
-#                results.append(IndexSearchResult(match.score, match.signature, match.filename))
-#
-#        results.sort(reverse=True,
-#                     key=lambda x: (x.score, x.signature.md5sum()))
-#
-#        return results[:1]
+    #    def search(self, query, *args, **kwargs):
+    #        """Return set of matches with similarity above 'threshold'.
+    #
+    #        Results will be sorted by similarity, highest to lowest.
+    #
+    #        Optional arguments:
+    #          * do_containment: default False. If True, use Jaccard containment.
+    #          * ignore_abundance: default False. If True, and query signature
+    #            and database support k-mer abundances, ignore those abundances.
+    #
+    #        Note, the "best only" hint is ignored by LCA_Database
+    #        """
+    #        if not query.minhash:
+    #            return []
+    #
+    #        # check arguments
+    #        if "threshold" not in kwargs:
+    #            raise TypeError("'search' requires 'threshold'")
+    #        threshold = kwargs["threshold"]
+    #        do_containment = kwargs.get("do_containment", False)
+    #        ignore_abundance = kwargs.get("ignore_abundance", False)
+    #
+    #        self._init_inner()
+    #
+    #        size = ffi.new("uintptr_t *")
+    #        results_ptr = self._methodcall(
+    #            lib.revindex_search,
+    #            query._get_objptr(),
+    #            threshold,
+    #            do_containment,
+    #            ignore_abundance,
+    #            size,
+    #        )
+    #
+    #        size = size[0]
+    #        if size == 0:
+    #            return []
+    #
+    #        results = []
+    #        for i in range(size):
+    #            match = SearchResult._from_objptr(results_ptr[i])
+    #            if match.score >= threshold:
+    #                results.append(IndexSearchResult(match.score, match.signature, match.filename))
+    #
+    #        return results
+    #
+    #    def gather(self, query, *args, **kwargs):
+    #        "Return the match with the best Jaccard containment in the database."
+    #        if not query.minhash:
+    #            return []
+    #
+    #        self._init_inner()
+    #
+    #        threshold_bp = kwargs.get("threshold_bp", 0.0)
+    #        threshold = threshold_bp / (len(query.minhash) * self.scaled)
+    #
+    #        results = []
+    #        size = ffi.new("uintptr_t *")
+    #        results_ptr = self._methodcall(
+    #            lib.revindex_gather, query._get_objptr(), threshold, True, True, size
+    #        )
+    #        size = size[0]
+    #        if size == 0:
+    #            return []
+    #
+    #        results = []
+    #        for i in range(size):
+    #            match = SearchResult._from_objptr(results_ptr[i])
+    #            if match.score >= threshold:
+    #                results.append(IndexSearchResult(match.score, match.signature, match.filename))
+    #
+    #        results.sort(reverse=True,
+    #                     key=lambda x: (x.score, x.signature.md5sum()))
+    #
+    #        return results[:1]
 
     @property
     def scaled(self):

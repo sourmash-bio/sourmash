@@ -1,6 +1,6 @@
 """concatenate signature files"""
 
-usage="""
+usage = """
 
 ### `sourmash signature cat` - concatenate multiple signatures together
 
@@ -15,37 +15,43 @@ in the file `all.sig`.
 
 """
 
-from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args, add_pattern_args)
+from sourmash.cli.utils import (
+    add_moltype_args,
+    add_ksize_arg,
+    add_picklist_args,
+    add_pattern_args,
+)
 
 
 def subparser(subparsers):
     # working on this
-    subparser = subparsers.add_parser('cat', description=__doc__, usage=usage)
-    subparser.add_argument('signatures', nargs='*')
+    subparser = subparsers.add_parser("cat", description=__doc__, usage=usage)
+    subparser.add_argument("signatures", nargs="*")
     subparser.add_argument(
-        '--from-file',
-        help='a text file containing a list of files to load signatures from'
+        "--from-file",
+        help="a text file containing a list of files to load signatures from",
     )
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '-d', '--debug', action='store_true',
-        help='provide debugging output'
+        "-d", "--debug", action="store_true", help="provide debugging output"
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', default='-',
-        help='output signature to this file (default stdout)'
+        "-o",
+        "--output",
+        metavar="FILE",
+        default="-",
+        help="output signature to this file (default stdout)",
     )
     subparser.add_argument(
-        '-u', '--unique', action='store_true',
-        help='keep only distinct signatures, removing duplicates (based on md5sum)'
+        "-u",
+        "--unique",
+        action="store_true",
+        help="keep only distinct signatures, removing duplicates (based on md5sum)",
     )
     subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='try to load all files as signatures'
+        "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
@@ -55,4 +61,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.sig.__main__.cat(args)

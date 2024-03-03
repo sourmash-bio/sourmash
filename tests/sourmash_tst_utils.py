@@ -7,7 +7,6 @@ import subprocess
 import collections
 import pprint
 import traceback
-from io import open  # pylint: disable=redefined-builtin
 from io import StringIO
 from pathlib import Path
 
@@ -15,13 +14,21 @@ from importlib import resources
 from importlib.metadata import entry_points
 
 
-SIG_FILES = [os.path.join('demo', f) for f in (
-  "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
-  "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
+SIG_FILES = [
+    os.path.join("demo", f)
+    for f in (
+        "SRR2060939_1.sig",
+        "SRR2060939_2.sig",
+        "SRR2241509_1.sig",
+        "SRR2255622_1.sig",
+        "SRR453566_1.sig",
+        "SRR453569_1.sig",
+        "SRR453570_1.sig",
+    )
 ]
 
 
-def scriptpath(scriptname='sourmash'):
+def scriptpath(scriptname="sourmash"):
     """Return the path to the scripts, in both dev and install situations."""
     # note - it doesn't matter what the scriptname is here, as long as
     # it's some script present in this version of sourmash.
@@ -34,7 +41,7 @@ def scriptpath(scriptname='sourmash'):
     if os.path.exists(os.path.join(path, scriptname)):
         return path
 
-    for path in os.environ['PATH'].split(':'):
+    for path in os.environ["PATH"].split(":"):
         if os.path.exists(os.path.join(path, scriptname)):
             return path
 
@@ -42,7 +49,7 @@ def scriptpath(scriptname='sourmash'):
 def _runscript(scriptname):
     """Find & run a script with exec (i.e. not via os.system or subprocess)."""
     namespace = {"__name__": "__main__"}
-    namespace['sys'] = globals()['sys']
+    namespace["sys"] = globals()["sys"]
 
     try:
         (script,) = entry_points(name=scriptname, group="console_scripts")
@@ -57,15 +64,15 @@ def _runscript(scriptname):
     if os.path.isfile(scriptfile):
         if os.path.isfile(scriptfile):
             exec(  # pylint: disable=exec-used
-                compile(Path(scriptfile).read_text(), scriptfile, 'exec'),
-                namespace)
+                compile(Path(scriptfile).read_text(), scriptfile, "exec"), namespace
+            )
             return 0
 
     return -1
 
 
-ScriptResults = collections.namedtuple('ScriptResults',
-                                       ['status', 'out', 'err'])
+ScriptResults = collections.namedtuple("ScriptResults", ["status", "out", "err"])
+
 
 def runscript(scriptname, args, **kwargs):
     """Run a Python script using exec().
@@ -81,8 +88,8 @@ def runscript(scriptname, args, **kwargs):
     sysargs.extend(args)
 
     cwd = os.getcwd()
-    in_directory = kwargs.get('in_directory', cwd)
-    fail_ok = kwargs.get('fail_ok', False)
+    in_directory = kwargs.get("in_directory", cwd)
+    fail_ok = kwargs.get("fail_ok", False)
 
     try:
         status = -1
@@ -90,8 +97,8 @@ def runscript(scriptname, args, **kwargs):
         sys.argv = sysargs
 
         oldin = None
-        if 'stdin_data' in kwargs:
-            oldin, sys.stdin = sys.stdin, StringIO(kwargs['stdin_data'])
+        if "stdin_data" in kwargs:
+            oldin, sys.stdin = sys.stdin, StringIO(kwargs["stdin_data"])
 
         oldout, olderr = sys.stdout, sys.stderr
         sys.stdout = StringIO()
@@ -101,13 +108,13 @@ def runscript(scriptname, args, **kwargs):
         os.chdir(in_directory)
 
         try:
-            print('running:', scriptname, 'in:', in_directory, file=oldout)
-            print('arguments', sysargs, file=oldout)
+            print("running:", scriptname, "in:", in_directory, file=oldout)
+            print("arguments", sysargs, file=oldout)
 
             status = _runscript(scriptname)
         except SystemExit as err:
             status = err.code
-            if status == None:
+            if status is None:
                 status = 0
         except:  # pylint: disable=bare-except
             traceback.print_exc(file=sys.stderr)
@@ -133,14 +140,13 @@ def runscript(scriptname, args, **kwargs):
 def get_test_data(filename):
     filepath = resources.files("sourmash") / "tests" / "test-data" / filename
     if not filepath.exists() or not os.path.isfile(filepath):
-        filepath = os.path.join(os.path.dirname(__file__), 'test-data',
-                                filename)
+        filepath = os.path.join(os.path.dirname(__file__), "test-data", filename)
     return filepath
 
 
-class TempDirectory(object):
+class TempDirectory:
     def __init__(self):
-        self.tempdir = tempfile.mkdtemp(prefix='sourmashtest_')
+        self.tempdir = tempfile.mkdtemp(prefix="sourmashtest_")
 
     def __enter__(self):
         return self.tempdir
@@ -158,10 +164,10 @@ class TempDirectory(object):
 class SourmashCommandFailed(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)
-        self.message = msg 
+        self.message = msg
 
 
-class RunnerContext(object):
+class RunnerContext:
     """
     I am a RunnerContext object from sourmash_tst_utils.
 
@@ -171,6 +177,7 @@ class RunnerContext(object):
 
     You can use the 'output' method to build filenames in my temp directory.
     """
+
     def __init__(self, location):
         self.location = location
         self.last_command = None
@@ -178,25 +185,26 @@ class RunnerContext(object):
 
     def run_sourmash(self, *args, **kwargs):
         "Run the sourmash script with the given arguments."
-        kwargs['fail_ok'] = True
-        if 'in_directory' not in kwargs:
-            kwargs['in_directory'] = self.location
+        kwargs["fail_ok"] = True
+        if "in_directory" not in kwargs:
+            kwargs["in_directory"] = self.location
 
-        cmdlist = ['sourmash']
-        cmdlist.extend(( str(x) for x in args))
+        cmdlist = ["sourmash"]
+        cmdlist.extend(str(x) for x in args)
         self.last_command = " ".join(cmdlist)
-        self.last_result = runscript('sourmash', args, **kwargs)
+        self.last_result = runscript("sourmash", args, **kwargs)
 
         if self.last_result.status:
             raise SourmashCommandFailed(self.last_result.err)
 
         return self.last_result
+
     sourmash = run_sourmash
 
     def run(self, scriptname, *args, **kwargs):
         "Run a script with the given arguments."
-        if 'in_directory' not in kwargs:
-            kwargs['in_directory'] = self.location
+        if "in_directory" not in kwargs:
+            kwargs["in_directory"] = self.location
         self.last_command = " ".join(args)
         self.last_result = runscript(scriptname, args, **kwargs)
         return self.last_result
@@ -207,18 +215,18 @@ class RunnerContext(object):
     def __str__(self):
         s = ""
         if self.last_command:
-            s += "Last command run:\n{}\n".format(repr(self.last_command))
+            s += f"Last command run:\n{repr(self.last_command)}\n"
             if self.last_result:
                 s += "\nLAST RESULT:\n"
-                s += "- exit code: {}\n\n".format(self.last_result.status)
+                s += f"- exit code: {self.last_result.status}\n\n"
                 if self.last_result.out:
-                    s += "- stdout:\n---\n{}---\n".format(self.last_result.out)
+                    s += f"- stdout:\n---\n{self.last_result.out}---\n"
                 else:
-                    s += '(no stdout)\n\n'
+                    s += "(no stdout)\n\n"
                 if self.last_result.err:
-                    s += "- stderr:\n---\n{}---\n".format(self.last_result.err)
+                    s += f"- stderr:\n---\n{self.last_result.err}---\n"
                 else:
-                    s += '(no stderr)\n'
+                    s += "(no stderr)\n"
 
         return s
 

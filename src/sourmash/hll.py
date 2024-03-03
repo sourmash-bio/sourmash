@@ -32,7 +32,7 @@ class HLL(RustObject):
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         if len(kmer) != self.ksize:
-            raise ValueError("kmer to add is not {} in length".format(self.ksize))
+            raise ValueError(f"kmer to add is not {self.ksize} in length")
         self.add_sequence(kmer)
 
     def add(self, h):

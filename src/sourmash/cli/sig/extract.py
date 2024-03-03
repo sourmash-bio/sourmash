@@ -1,6 +1,6 @@
 """extract one or more signatures"""
 
-usage="""
+usage = """
 
 ### `sourmash signature extract` - extract signatures from a collection
 
@@ -37,37 +37,43 @@ which you can select signatures based on values in a CSV file. See
 
 """
 
-from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args, add_pattern_args)
+from sourmash.cli.utils import (
+    add_moltype_args,
+    add_ksize_arg,
+    add_picklist_args,
+    add_pattern_args,
+)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('extract', description=__doc__, usage=usage)
-    subparser.add_argument('signatures', nargs='*')
+    subparser = subparsers.add_parser("extract", description=__doc__, usage=usage)
+    subparser.add_argument("signatures", nargs="*")
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
-        help='output signature to this file (default stdout)',
-        default='-',
+        "-o",
+        "--output",
+        metavar="FILE",
+        help="output signature to this file (default stdout)",
+        default="-",
     )
     subparser.add_argument(
-        '--md5', default=None,
-        help='select signatures whose md5 contains this substring'
+        "--md5",
+        default=None,
+        help="select signatures whose md5 contains this substring",
     )
     subparser.add_argument(
-        '--name', default=None,
-        help='select signatures whose name contains this substring'
+        "--name",
+        default=None,
+        help="select signatures whose name contains this substring",
     )
     subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='try to load all files as signatures'
+        "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     subparser.add_argument(
-        '--from-file',
-        help='a text file containing a list of files to load signatures from'
+        "--from-file",
+        help="a text file containing a list of files to load signatures from",
     )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
@@ -77,4 +83,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.sig.__main__.extract(args)

@@ -1,6 +1,6 @@
 """search a signature against other signatures"""
 
-usage="""
+usage = """
 
 The `search` subcommand searches a collection of signatures or SBTs
 for matches to the query signature.  It can search for matches with
@@ -35,80 +35,101 @@ similarity   match
 
 [1] https://en.wikipedia.org/wiki/Jaccard_index
 
+When `--containment` is provided, the containment of the query in each
+of the search signatures or databases is reported.
+
 ---
 """
 
-from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_scaled_arg,
-                                add_pattern_args)
+from sourmash.cli.utils import (
+    add_ksize_arg,
+    add_moltype_args,
+    add_picklist_args,
+    add_scaled_arg,
+    add_pattern_args,
+)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('search', description=__doc__, usage=usage)
+    subparser = subparsers.add_parser("search", description=__doc__, usage=usage)
+    subparser.add_argument("query", help="query signature")
     subparser.add_argument(
-        'query', help='query signature'
+        "databases",
+        nargs="+",
+        help="signatures/SBTs to search",
     )
     subparser.add_argument(
-        'databases', nargs='+',
-        help='signatures/SBTs to search',
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        "-d", "--debug", action="store_true", help="output debug information"
     )
     subparser.add_argument(
-        '-d', '--debug', action='store_true',
-        help='output debug information'
+        "-t",
+        "--threshold",
+        metavar="T",
+        default=0.08,
+        type=float,
+        help="minimum threshold for reporting matches; default=0.08",
     )
     subparser.add_argument(
-        '-t', '--threshold', metavar='T', default=0.08, type=float,
-        help='minimum threshold for reporting matches; default=0.08'
+        "--save-matches",
+        metavar="FILE",
+        help="output matching signatures to the specified file",
     )
     subparser.add_argument(
-        '--save-matches', metavar='FILE',
-        help='output matching signatures to the specified file'
+        "--best-only",
+        action="store_true",
+        help="report only the best match (with greater speed)",
     )
     subparser.add_argument(
-        '--best-only', action='store_true',
-        help='report only the best match (with greater speed)'
+        "-n",
+        "--num-results",
+        default=3,
+        type=int,
+        metavar="N",
+        help="number of results to display to user; 0 to report all",
     )
     subparser.add_argument(
-        '-n', '--num-results', default=3, type=int, metavar='N',
-        help='number of results to display to user; 0 to report all'
+        "--containment",
+        action="store_true",
+        help="score based on containment rather than similarity",
     )
     subparser.add_argument(
-        '--containment', action='store_true',
-        help='score based on containment rather than similarity'
+        "--max-containment",
+        action="store_true",
+        help="score based on max containment rather than similarity",
     )
     subparser.add_argument(
-        '--max-containment', action='store_true',
-        help='score based on max containment rather than similarity'
+        "--estimate-ani-ci",
+        action="store_true",
+        help="for containment searches, also output confidence intervals for ANI estimates",
     )
     subparser.add_argument(
-        '--estimate-ani-ci', action='store_true',
-        help='for containment searches, also output confidence intervals for ANI estimates'
+        "--ignore-abundance",
+        action="store_true",
+        help="do NOT use k-mer abundances if present; note: has no effect if "
+        "--containment or --max-containment is specified",
     )
     subparser.add_argument(
-        '--ignore-abundance', action='store_true',
-        help='do NOT use k-mer abundances if present; note: has no effect if '
-        '--containment or --max-containment is specified'
+        "-o",
+        "--output",
+        metavar="FILE",
+        help="output CSV containing matches to this file",
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
-        help='output CSV containing matches to this file'
+        "--md5", default=None, help="select the signature with this md5 as query"
     )
     subparser.add_argument(
-        '--md5', default=None,
-        help='select the signature with this md5 as query'
+        "--fail-on-empty-database",
+        action="store_true",
+        help="stop at databases that contain no compatible signatures",
     )
     subparser.add_argument(
-        '--fail-on-empty-database', action='store_true',
-        help='stop at databases that contain no compatible signatures'
-    )
-    subparser.add_argument(
-        '--no-fail-on-empty-database', action='store_false',
-        dest='fail_on_empty_database',
-        help='continue past databases that contain no compatible signatures'
+        "--no-fail-on-empty-database",
+        action="store_false",
+        dest="fail_on_empty_database",
+        help="continue past databases that contain no compatible signatures",
     )
     subparser.set_defaults(fail_on_empty_database=True)
 
@@ -121,4 +142,5 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+
     return sourmash.commands.search(args)

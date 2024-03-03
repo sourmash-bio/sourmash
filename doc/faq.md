@@ -1,4 +1,4 @@
-# Frequently Asked Questions
+# Frequently Asked Questions (FAQ)
 
 ```{contents} Contents
 :depth: 3
@@ -98,21 +98,67 @@ across all of the bacterial genomes in GTDB, we find that 99% (or
 more) of 31-mers are _genome_, _species_, or _genus_ specific.
 
 If you go lower (say, k=21), then you get a few percent of k-mers
-that match above the genus level - family or above.
+that match above the genus level - family or above. This is useful for
+fuzzier matching, e.g. if you have a metagenome with a high fraction of
+unknown k-mers.
 
 If you go higher (k=51), a higher percentage of k-mers are genome-specific.
+This can be valuable in situations where you have highly specific reference
+genomes (e.g. isolates, single-cell genomes, or MAGs) that should match
+very closely to this metagenome.
 
 For the core sourmash operations - search, gather, and compare - we
 believe (with evidence!) that (a) the differences between k=21, k=31,
 and k=51 are negligible; and that (b) k=31 works fine for most
-day-to-day use of sourmash.
+day-to-day use of sourmash. 
 
 We also provide [Genbank and GTDB databases](databases.md) for k=21,
-k=31, and k=51.
+k=31, and k=51, so choosing from those k-mer sizes for your own sketches
+will allow you to directly use those databases.
 
 For some background on k-mer specificity, we recommend this paper:
 [MetaPalette: a k-mer Painting Approach for Metagenomic Taxonomic Profiling and Quantification of Novel Strain Variation](https://journals.asm.org/doi/10.1128/msystems.00020-16),
 Koslicki & Falush, 2016.
+
+## What scaled values should I use with sourmash?
+
+We recommend scaled=1000 or scaled=10000 when working with bacterial
+and archaeal sketches and DNA. We have quite a bit of experience with
+this, and even some
+[published benchmarks](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-022-05103-0)
+showing that this works very well.  You may need to use lower scaled
+values with smaller query and target sequences, such as viral genomes
+or genes, but we do not have systematic advice on this.
+
+That having been said, you can always use a lower scaled value - the only
+consequence is that memory and compute requirements increase.
+
+Also, sourmash will automatically use the larger of two scaled values
+when comparing two sketches with different scaled values. So if, for example,
+you use [the precomputed databases](databases.md), you will always end up
+using your query sketches at a minimum scaled of 1000, even if you created
+them with a lower scaled value.
+
+Please also see [What resolution should my signatures be?](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them).
+
+## What threshold-bp value should I use with `sourmash prefetch` and `sourmash gather`?
+
+The parameter `--threshold-bp` sets the minimum estimated overlap for reporting
+a match, in both the `gather` and `prefetch` commands. The default is 50kb, and
+this works well for microbial-genome-scale work, where the genomes are often
+quite large (one or more megabases).
+
+In case you need more sensitivity, setting `--threshold-bp=0` will return any
+match that shares at least one hash. This will also increase potential
+false positives, however.
+
+We have found a good intermediate threshold is 3 times the `scaled` value, e.g.
+`--threshold-bp=3000` for a scaled value of 1000. This requires at least three
+overlapping hashes before a match is reported. If you are using a lower scaled
+value (a higher density sketch) because you are looking for matches between
+shorter sequences, then setting threshold-bp to 3 times that scaled value will
+take advantage of the increased sensitivity to short matches without introducing
+more false positives.
 
 ## How do k-mer-based analyses compare with read mapping?
 
@@ -245,3 +291,17 @@ read mapping between the metagenome and the relevant reference genome
 or, if you are interested in retrieving accessory elements, you can
 try out
 [spacegraphcats](https://spacegraphcats.github.io/spacegraphcats/02-spacegraphcats-use-cases/).
+
+## How does memory usage for sourmash change with k-mer size?
+
+sourmash hashes k-mers into 64-bit numbers, so the size of what is
+stored is independent of the k-mer size. The only impact of k-mer size
+on sourmash behavior is then more on the biology side - how many
+matches do you gain (or lose) with that k-mer size? And do you have a
+lot of new k-mers that pop up with a longer k-mer size (e.g. because
+of included variation)? These questions must be answered by experimentation
+and may be data-set specific.
+
+## Can sourmash run with multiple theads?
+
+sourmash is currently single-threaded, but the [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater) provides faster and lower-memory  multithreaded implementations of several important sourmash features - sketching, searching, and gather (metagenome decomposition). It does so by implementing higher-level functions in Rust on top of the core Rust library of sourmash. As a result it provides some of the same functionality as sourmash, but 10-100x faster and in 10x lower memory. Note that this code is functional and tested, but does not have all of the features of sourmash. Code and features will be integrated back into sourmash as they mature.

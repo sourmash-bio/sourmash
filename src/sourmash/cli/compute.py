@@ -1,6 +1,6 @@
 """compute sequence signatures for inputs"""
 
-usage="""
+usage = """
 
 ** WARNING: the sourmash compute command is DEPRECATED as of 4.0 and
 ** will be removed in 5.0. Please see the 'sourmash sketch' command instead.
@@ -35,8 +35,8 @@ from sourmash.cli.utils import add_construct_moltype_args, add_num_arg
 
 def ksize_parser(ksizes):
     # get list of k-mer sizes for which to compute sketches
-    if ',' in ksizes:
-        ksizes = ksizes.split(',')
+    if "," in ksizes:
+        ksizes = ksizes.split(",")
         ksizes = list(map(int, ksizes))
     else:
         ksizes = [int(ksizes)]
@@ -45,81 +45,98 @@ def ksize_parser(ksizes):
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('compute', description=__doc__, usage=usage)
+    subparser = subparsers.add_parser("compute", description=__doc__, usage=usage)
 
-    sketch_args = subparser.add_argument_group('Sketching options')
+    sketch_args = subparser.add_argument_group("Sketching options")
     sketch_args.add_argument(
-        '-k', '--ksizes', default='21,31,51',
+        "-k",
+        "--ksizes",
+        default="21,31,51",
         type=ksize_parser,
-        help='comma-separated list of k-mer sizes; default=%(default)s'
+        help="comma-separated list of k-mer sizes; default=%(default)s",
     )
     sketch_args.add_argument(
-        '--track-abundance', action='store_true',
-        help='track k-mer abundances in the generated signature'
+        "--track-abundance",
+        action="store_true",
+        help="track k-mer abundances in the generated signature",
     )
     sketch_args.add_argument(
-        '--scaled', type=float, default=0,
-        help='choose number of hashes as 1 in FRACTION of input k-mers'
+        "--scaled",
+        type=float,
+        default=0,
+        help="choose number of hashes as 1 in FRACTION of input k-mers",
     )
     add_construct_moltype_args(sketch_args)
     sketch_args.add_argument(
-        '--input-is-protein', action='store_true',
-        help='Consume protein sequences - no translation needed.'
+        "--input-is-protein",
+        action="store_true",
+        help="Consume protein sequences - no translation needed.",
     )
     sketch_args.add_argument(
-        '--seed', type=int, default=get_minhash_default_seed(),
-        help='seed used by MurmurHash; default=%(default)i'
+        "--seed",
+        type=int,
+        default=get_minhash_default_seed(),
+        help="seed used by MurmurHash; default=%(default)i",
     )
 
-    file_args = subparser.add_argument_group('File handling options')
+    file_args = subparser.add_argument_group("File handling options")
     file_args.add_argument(
-        '-f', '--force', action='store_true',
-        help='recompute signatures even if the file exists'
-    )
-    file_args.add_argument(
-        '-o', '--output',
-        help='output computed signatures to this file'
+        "-f",
+        "--force",
+        action="store_true",
+        help="recompute signatures even if the file exists",
     )
     file_args.add_argument(
-        '--output-dir', '--outdir',
-        help='output computed signatures to this directory',
+        "-o", "--output", help="output computed signatures to this file"
     )
     file_args.add_argument(
-        '--singleton', action='store_true',
-        help='compute a signature for each sequence record individually'
+        "--output-dir",
+        "--outdir",
+        help="output computed signatures to this directory",
     )
     file_args.add_argument(
-        '--merge', '--name', type=str, default='', metavar="FILE",
-        help='merge all input files into one signature file with the '
-        'specified name'
+        "--singleton",
+        action="store_true",
+        help="compute a signature for each sequence record individually",
     )
     file_args.add_argument(
-        '--name-from-first', action='store_true',
-        help='name the signature generated from each file after the first '
-        'record in the file'
+        "--merge",
+        "--name",
+        type=str,
+        default="",
+        metavar="FILE",
+        help="merge all input files into one signature file with the " "specified name",
     )
     file_args.add_argument(
-        '--randomize', action='store_true',
-        help='shuffle the list of input filenames randomly'
+        "--name-from-first",
+        action="store_true",
+        help="name the signature generated from each file after the first "
+        "record in the file",
     )
-
-    subparser.add_argument(
-        '-q', '--quiet', action='store_true', help='suppress non-error output'
-    )
-    subparser.add_argument(
-        '--check-sequence', action='store_true',
-        help='complain if input sequence is invalid'
-    )
-    subparser.add_argument(
-        '--license', default='CC0', type=str,
-        help='signature license. Currently only CC0 is supported.'
+    file_args.add_argument(
+        "--randomize",
+        action="store_true",
+        help="shuffle the list of input filenames randomly",
     )
 
     subparser.add_argument(
-        'filenames', nargs='+', help='file(s) of sequences'
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
     )
-    subparser._positionals.title = 'Required arguments'
-    subparser._optionals.title = 'Miscellaneous options'
+    subparser.add_argument(
+        "--check-sequence",
+        action="store_true",
+        help="complain if input sequence is invalid",
+    )
+    subparser.add_argument(
+        "--license",
+        default="CC0",
+        type=str,
+        help="signature license. Currently only CC0 is supported.",
+    )
+
+    subparser.add_argument("filenames", nargs="+", help="file(s) of sequences")
+    subparser._positionals.title = "Required arguments"
+    subparser._optionals.title = "Miscellaneous options"
     add_num_arg(sketch_args, 500)
 
 
@@ -127,8 +144,10 @@ def main(args):
     from sourmash.command_compute import compute
     from sourmash.logging import notify
 
-    notify("""\
+    notify(
+        """\
 ** WARNING: the sourmash compute command is DEPRECATED as of 4.0 and
 ** will be removed in 5.0. Please see the 'sourmash sketch' command instead.
-""")
+"""
+    )
     return compute(args)

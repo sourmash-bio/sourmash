@@ -39,18 +39,23 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 
-from sourmash.search import (make_jaccard_search_query,
-                             make_containment_query,
-                             calc_threshold_from_bp)
+from sourmash.search import (
+    make_jaccard_search_query,
+    make_containment_query,
+    calc_threshold_from_bp,
+)
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 from sourmash.signature import load_signatures, save_signatures
-from sourmash.minhash import (flatten_and_downsample_scaled,
-                              flatten_and_downsample_num,
-                              flatten_and_intersect_scaled)
+from sourmash.minhash import (
+    flatten_and_downsample_scaled,
+    flatten_and_downsample_num,
+    flatten_and_intersect_scaled,
+)
 
 # generic return tuple for Index.search and Index.gather
-IndexSearchResult = namedtuple('Result', 'score, signature, location')
+IndexSearchResult = namedtuple("Result", "score, signature, location")
+
 
 class Index(ABC):
     # this will be removed soon; see sourmash#1894.
@@ -103,8 +108,7 @@ class Index(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls, location, leaf_loader=None, storage=None,
-             print_version_warning=True):
+    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """ """
 
     def find(self, search_fn, query, **kwargs):
@@ -133,7 +137,7 @@ class Index(ABC):
             def prepare_query(query_mh, subj_mh):
                 return flatten_and_downsample_scaled(query_mh, subj_mh.scaled)
 
-        else:                   # num
+        else:  # num
             query_num = query_mh.num
 
             def prepare_subject(subj_mh):
@@ -156,10 +160,7 @@ class Index(ABC):
             query_size = len(query_mh)
             subj_size = len(subj_mh)
 
-            score = search_fn.score_fn(query_size,
-                                       shared_size,
-                                       subj_size,
-                                       total_size)
+            score = search_fn.score_fn(query_size, shared_size, subj_size, total_size)
 
             if search_fn.passes(score):
                 # note: here we yield the original signature, not the
@@ -173,7 +174,9 @@ class Index(ABC):
         Results will be sorted by similarity, highest to lowest.
         """
         if not query.minhash.track_abundance:
-            raise TypeError("'search_abund' requires query signature with abundance information")
+            raise TypeError(
+                "'search_abund' requires query signature with abundance information"
+            )
 
         # check arguments
         if threshold is None:
@@ -184,7 +187,9 @@ class Index(ABC):
         matches = []
         for subj, loc in self.signatures_with_location():
             if not subj.minhash.track_abundance:
-                raise TypeError("'search_abund' requires subject signatures with abundance information")
+                raise TypeError(
+                    "'search_abund' requires subject signatures with abundance information"
+                )
             score = query.similarity(subj, downsample=True)
             if score >= threshold:
                 matches.append(IndexSearchResult(score, subj, loc))
@@ -193,9 +198,16 @@ class Index(ABC):
         matches.sort(key=lambda x: -x.score)
         return matches
 
-    def search(self, query, *, threshold=None,
-               do_containment=False, do_max_containment=False,
-               best_only=False, **kwargs):
+    def search(
+        self,
+        query,
+        *,
+        threshold=None,
+        do_containment=False,
+        do_max_containment=False,
+        best_only=False,
+        **kwargs,
+    ):
         """Return list of IndexSearchResult with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -211,10 +223,12 @@ class Index(ABC):
             raise TypeError("'search' requires 'threshold'")
         threshold = float(threshold)
 
-        search_obj = make_jaccard_search_query(do_containment=do_containment,
-                                        do_max_containment=do_max_containment,
-                                               best_only=best_only,
-                                               threshold=threshold)
+        search_obj = make_jaccard_search_query(
+            do_containment=do_containment,
+            do_max_containment=do_max_containment,
+            best_only=best_only,
+            threshold=threshold,
+        )
 
         # do the actual search:
         matches = list(self.find(search_obj, query, **kwargs))
@@ -228,17 +242,17 @@ class Index(ABC):
 
         Generator. Returns 0 or more IndexSearchResult namedtuples.
         """
-        if not self:            # empty database? quit.
+        if not self:  # empty database? quit.
             raise ValueError("no signatures to search")
 
         # default best_only to False
-        best_only = kwargs.get('best_only', False)
+        best_only = kwargs.get("best_only", False)
 
-        search_fn = make_containment_query(query.minhash, threshold_bp,
-                                           best_only=best_only)
+        search_fn = make_containment_query(
+            query.minhash, threshold_bp, best_only=best_only
+        )
 
-        for sr in self.find(search_fn, query, **kwargs):
-            yield sr
+        yield from self.find(search_fn, query, **kwargs)
 
     def best_containment(self, query, threshold_bp=None, **kwargs):
         """Return the match with the best Jaccard containment in the Index.
@@ -247,8 +261,7 @@ class Index(ABC):
         """
 
         results = self.prefetch(query, threshold_bp, best_only=True, **kwargs)
-        results = sorted(results,
-                         key=lambda x: (-x.score, x.signature.md5sum()))
+        results = sorted(results, key=lambda x: (-x.score, x.signature.md5sum()))
 
         try:
             return next(iter(results))
@@ -277,8 +290,7 @@ class Index(ABC):
             return []
 
         # if matches, calculate intersection & return.
-        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash,
-                                                    query_mh)
+        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash, query_mh)
 
         return [result, intersect_mh]
 
@@ -307,8 +319,15 @@ class Index(ABC):
         return counter
 
     @abstractmethod
-    def select(self, ksize=None, moltype=None, scaled=None, num=None,
-               abund=None, containment=None):
+    def select(
+        self,
+        ksize=None,
+        moltype=None,
+        scaled=None,
+        num=None,
+        abund=None,
+        containment=None,
+    ):
         """Return Index containing only signatures that match requirements.
 
         Current arguments can be any or all of:
@@ -326,8 +345,17 @@ class Index(ABC):
         """
 
 
-def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
-                     containment=False, abund=None, picklist=None):
+def select_signature(
+    ss,
+    *,
+    ksize=None,
+    moltype=None,
+    scaled=0,
+    num=0,
+    containment=False,
+    abund=None,
+    picklist=None,
+):
     "Check that the given signature matches the specified requirements."
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
@@ -372,6 +400,7 @@ class LinearIndex(Index):
 
     Concrete class; signatures held in memory; does not use manifests.
     """
+
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -395,7 +424,7 @@ class LinearIndex(Index):
         self._signatures.append(node)
 
     def save(self, path):
-        with open(path, 'wt') as fp:
+        with open(path, "w") as fp:
             save_signatures(self.signatures(), fp)
 
     @classmethod
@@ -404,7 +433,7 @@ class LinearIndex(Index):
         si = load_signatures(location, do_raise=True)
 
         if filename is None:
-            filename=location
+            filename = location
         lidx = LinearIndex(si, filename=filename)
         return lidx
 
@@ -449,14 +478,12 @@ class LazyLinearIndex(Index):
     def signatures(self):
         "Return the selected signatures."
         db = self.db.select(**self.selection_dict)
-        for ss in db.signatures():
-            yield ss
+        yield from db.signatures()
 
     def signatures_with_location(self):
         "Return the selected signatures, with a location."
         db = self.db.select(**self.selection_dict)
-        for tup in db.signatures_with_location():
-            yield tup
+        yield from db.signatures_with_location()
 
     def __bool__(self):
         try:
@@ -502,10 +529,18 @@ class ZipFileLinearIndex(Index):
 
     Concrete class; signatures dynamically loaded from disk; uses manifests.
     """
+
     is_database = True
 
-    def __init__(self, storage, *, selection_dict=None,
-                 traverse_yield_all=False, manifest=None, use_manifest=True):
+    def __init__(
+        self,
+        storage,
+        *,
+        selection_dict=None,
+        traverse_yield_all=False,
+        manifest=None,
+        use_manifest=True,
+    ):
         self.storage = storage
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
@@ -514,7 +549,7 @@ class ZipFileLinearIndex(Index):
         # do we have a manifest already? if not, try loading.
         if use_manifest:
             if manifest is not None:
-                debug_literal('ZipFileLinearIndex using passed-in manifest')
+                debug_literal("ZipFileLinearIndex using passed-in manifest")
                 self.manifest = manifest
             else:
                 self._load_manifest()
@@ -529,15 +564,16 @@ class ZipFileLinearIndex(Index):
     def _load_manifest(self):
         "Load a manifest if one exists"
         try:
-            manifest_data = self.storage.load('SOURMASH-MANIFEST.csv')
+            manifest_data = self.storage.load("SOURMASH-MANIFEST.csv")
         except (KeyError, FileNotFoundError):
             self.manifest = None
         else:
-            debug_literal(f'found manifest on load for {self.storage.path}')
+            debug_literal(f"found manifest on load for {self.storage.path}")
 
             # load manifest!
             from io import StringIO
-            manifest_data = manifest_data.decode('utf-8')
+
+            manifest_data = manifest_data.decode("utf-8")
             manifest_fp = StringIO(manifest_data)
             self.manifest = CollectionManifest.load_from_csv(manifest_fp)
 
@@ -584,8 +620,9 @@ class ZipFileLinearIndex(Index):
             raise FileNotFoundError(location)
 
         storage = ZipStorage(location)
-        return cls(storage, traverse_yield_all=traverse_yield_all,
-                   use_manifest=use_manifest)
+        return cls(
+            storage, traverse_yield_all=traverse_yield_all, use_manifest=use_manifest
+        )
 
     def _signatures_with_internal(self):
         """Return an iterator of tuples (ss, internal_location).
@@ -596,9 +633,11 @@ class ZipFileLinearIndex(Index):
         # 'Storage' does not provide a way to list all the files, so :shrug:.
         for filename in self.storage._filenames():
             # should we load this file? if it ends in .sig OR we are forcing:
-            if filename.endswith('.sig') or \
-               filename.endswith('.sig.gz') or \
-               self.traverse_yield_all:
+            if (
+                filename.endswith(".sig")
+                or filename.endswith(".sig.gz")
+                or self.traverse_yield_all
+            ):
                 sig_data = self.storage.load(filename)
                 for ss in load_signatures(sig_data):
                     yield ss, filename
@@ -628,14 +667,19 @@ class ZipFileLinearIndex(Index):
             # ad-hoc zipfiles that have no manifests.)
             for filename in storage._filenames():
                 # should we load this file? if it ends in .sig OR force:
-                if filename.endswith('.sig') or \
-                   filename.endswith('.sig.gz') or \
-                   self.traverse_yield_all:
+                if (
+                    filename.endswith(".sig")
+                    or filename.endswith(".sig.gz")
+                    or self.traverse_yield_all
+                ):
                     if selection_dict:
-                        select = lambda x: select_signature(x,
-                                                            **selection_dict)
+
+                        def select(x):
+                            return select_signature(x, **selection_dict)
                     else:
-                        select = lambda x: True
+
+                        def select(x):
+                            return True
 
                     data = self.storage.load(filename)
                     for ss in load_signatures(data):
@@ -651,11 +695,13 @@ class ZipFileLinearIndex(Index):
 
         if manifest is not None:
             manifest = manifest.select_to_manifest(**kwargs)
-            return ZipFileLinearIndex(self.storage,
-                                      selection_dict=None,
-                                      traverse_yield_all=traverse_yield_all,
-                                      manifest=manifest,
-                                      use_manifest=True)
+            return ZipFileLinearIndex(
+                self.storage,
+                selection_dict=None,
+                traverse_yield_all=traverse_yield_all,
+                manifest=manifest,
+                use_manifest=True,
+            )
         else:
             # no manifest? just pass along all the selection kwargs to
             # the new ZipFileLinearIndex.
@@ -671,11 +717,13 @@ class ZipFileLinearIndex(Index):
                     d[k] = v
                 kwargs = d
 
-            return ZipFileLinearIndex(self.storage,
-                                      selection_dict=kwargs,
-                                      traverse_yield_all=traverse_yield_all,
-                                      manifest=None,
-                                      use_manifest=False)
+            return ZipFileLinearIndex(
+                self.storage,
+                selection_dict=kwargs,
+                traverse_yield_all=traverse_yield_all,
+                manifest=None,
+                use_manifest=False,
+            )
 
 
 class CounterGather:
@@ -699,11 +747,12 @@ class CounterGather:
     duplicate md5s are collapsed inside the class, because we use the
     md5sum as a key into the dictionary used to store matches.
     """
+
     def __init__(self, query):
         "Constructor - takes a query SourmashSignature."
         query_mh = query.minhash
         if not query_mh.scaled:
-            raise ValueError('gather requires scaled signatures')
+            raise ValueError("gather requires scaled signatures")
 
         # track query
         self.orig_query_mh = query_mh.copy().flatten()
@@ -746,8 +795,7 @@ class CounterGather:
 
     def signatures(self):
         "Return all signatures."
-        for ss in self.siglist.values():
-            yield ss
+        yield from self.siglist.values()
 
     @property
     def union_found(self):
@@ -763,8 +811,7 @@ class CounterGather:
 
         # for each match, intersect match with query & then add to found_mh.
         for ss in self.siglist.values():
-            intersect_mh = flatten_and_intersect_scaled(ss.minhash,
-                                                        orig_query_mh)
+            intersect_mh = flatten_and_intersect_scaled(ss.minhash, orig_query_mh)
             found_mh.add_many(intersect_mh)
 
         return found_mh
@@ -784,7 +831,7 @@ class CounterGather:
         scaled = self.downsample(cur_query_mh.scaled)
         cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
-        if not cur_query_mh:             # empty query? quit.
+        if not cur_query_mh:  # empty query? quit.
             return []
 
         # CTB: could probably remove this check unless debug requested.
@@ -841,7 +888,7 @@ class CounterGather:
         # Prepare counter for finding the next match by decrementing
         # all hashes found in the current match in other datasets;
         # remove empty datasets from counter, too.
-        for (dataset_id, _) in most_common:
+        for dataset_id, _ in most_common:
             # CTB: note, remaining_mh may not be at correct scaled here.
             # this means that counters that _should_ be empty might not
             # _be_ empty in some situations.  This does not
@@ -849,8 +896,7 @@ class CounterGather:
             # 'counter' objects. The tradeoffs to fixing this would
             # need to be examined! (This could be fixed in self.downsample().)
             remaining_mh = siglist[dataset_id].minhash
-            intersect_count = intersect_mh.count_common(remaining_mh,
-                                                        downsample=True)
+            intersect_count = intersect_mh.count_common(remaining_mh, downsample=True)
             if intersect_count:
                 counter[dataset_id] -= intersect_count
                 if counter[dataset_id] == 0:
@@ -881,6 +927,7 @@ class MultiIndex(Index):
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
+
     def __init__(self, manifest, parent, *, prepend_location=False):
         """Constructor; takes manifest containing signatures, together with
         the top-level location.
@@ -898,16 +945,16 @@ class MultiIndex(Index):
 
     def signatures(self):
         for row in self.manifest.rows:
-            yield row['signature']
+            yield row["signature"]
 
     def signatures_with_location(self):
         for row in self.manifest.rows:
-            loc = row['internal_location']
+            loc = row["internal_location"]
             # here, 'parent' may have been removed from internal_location
             # for directories; if so, add it back in.
             if self.prepend_location:
                 loc = os.path.join(self.parent, loc)
-            yield row['signature'], loc
+            yield row["signature"], loc
 
     def _signatures_with_internal(self):
         """Return an iterator of tuples (ss, location)
@@ -916,8 +963,7 @@ class MultiIndex(Index):
         index. This is a special feature of this (in memory) class.
         """
         for row in self.manifest.rows:
-            yield row['signature'], row['internal_location']
-
+            yield row["signature"], row["internal_location"]
 
     def __len__(self):
         if self.manifest is None:
@@ -986,18 +1032,17 @@ class MultiIndex(Index):
 
                 rel = os.path.relpath(thisfile, pathname)
                 source_list.append(rel)
-            except (IOError, sourmash.exceptions.SourmashError) as exc:
+            except (OSError, sourmash.exceptions.SourmashError) as exc:
                 if force:
-                    continue    # ignore error
+                    continue  # ignore error
                 else:
-                    raise ValueError(exc)      # stop loading!
+                    raise ValueError(exc)  # stop loading!
 
         # did we load anything? if not, error
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        return cls.load(index_list, source_list, pathname,
-                        prepend_location=True)
+        return cls.load(index_list, source_list, pathname, prepend_location=True)
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
@@ -1010,7 +1055,7 @@ class MultiIndex(Index):
         if not os.path.exists(pathname):
             raise ValueError(f"'{pathname}' must exist.")
 
-        if os.path.isdir(pathname): # traverse
+        if os.path.isdir(pathname):  # traverse
             return cls.load_from_directory(pathname, force=force)
 
         # load as a .sig/JSON file
@@ -1020,7 +1065,7 @@ class MultiIndex(Index):
             idx = LinearIndex.load(pathname)
             index_list = [idx]
             source_list = [pathname]
-        except (IOError, sourmash.exceptions.SourmashError):
+        except (OSError, sourmash.exceptions.SourmashError):
             if not force:
                 raise ValueError(f"no signatures to load from '{pathname}'")
             return None
@@ -1035,8 +1080,8 @@ class MultiIndex(Index):
         including zip collections, etc; it uses 'load_file_as_index'
         underneath.
         """
-        from ..sourmash_args import (load_pathlist_from_file,
-                                    load_file_as_index)
+        from ..sourmash_args import load_pathlist_from_file, load_file_as_index
+
         idx_list = []
         src_list = []
 
@@ -1056,8 +1101,9 @@ class MultiIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return MultiIndex(new_manifest, self.parent,
-                          prepend_location=self.prepend_location)
+        return MultiIndex(
+            new_manifest, self.parent, prepend_location=self.prepend_location
+        )
 
 
 class StandaloneManifestIndex(Index):
@@ -1085,6 +1131,7 @@ class StandaloneManifestIndex(Index):
     objects. However, this class does not store any signatures in
     memory, unlike MultiIndex.
     """
+
     is_database = True
 
     def __init__(self, manifest, location, *, prefix=None):
@@ -1119,8 +1166,7 @@ class StandaloneManifestIndex(Index):
 
     def signatures_with_location(self):
         "Return an iterator over all signatures and their locations."
-        for ss, loc in self._signatures_with_internal():
-            yield ss, loc
+        yield from self._signatures_with_internal()
 
     def signatures(self):
         "Return an iterator over all signatures."
@@ -1140,7 +1186,7 @@ class StandaloneManifestIndex(Index):
         picklist = self.manifest.to_picklist()
         for iloc in self.manifest.locations():
             # prepend location with prefix?
-            if not iloc.startswith('/') and self.prefix:
+            if not iloc.startswith("/") and self.prefix:
                 iloc = os.path.join(self.prefix, iloc)
 
             idx = sourmash.load_file_as_index(iloc)
@@ -1165,5 +1211,4 @@ class StandaloneManifestIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return StandaloneManifestIndex(new_manifest, self._location,
-                                       prefix=self.prefix)
+        return StandaloneManifestIndex(new_manifest, self._location, prefix=self.prefix)

@@ -1,5 +1,6 @@
 use std::convert::TryInto;
-use std::io::{Read, Write};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
 
 use camino::Utf8PathBuf as PathBuf;
@@ -15,7 +16,7 @@ use crate::signature::{Signature, SigsTrait};
 use crate::sketch::Sketch;
 use crate::Result;
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -25,7 +26,7 @@ pub struct Record {
 
     md5short: String,
 
-    #[getset(get = "pub", set = "pub")]
+    #[getset(get_copy = "pub", set = "pub")]
     ksize: u32,
 
     moltype: String,
@@ -34,14 +35,25 @@ pub struct Record {
     scaled: u64,
     n_hashes: usize,
 
-    #[getset(get = "pub", set = "pub")]
-    #[serde(deserialize_with = "to_bool")]
+    #[getset(get_copy = "pub", set = "pub")]
+    #[serde(serialize_with = "intbool", deserialize_with = "to_bool")]
     with_abundance: bool,
 
     #[getset(get = "pub", set = "pub")]
     name: String,
 
     filename: String,
+}
+
+fn intbool<S>(x: &bool, s: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    if *x {
+        s.serialize_i32(1)
+    } else {
+        s.serialize_i32(0)
+    }
 }
 
 fn to_bool<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
@@ -52,11 +64,11 @@ where
         .to_ascii_lowercase()
         .as_ref()
     {
-        "0" | "false" => Ok(false),
-        "1" | "true" => Ok(true),
+        "0" | "false" | "False" => Ok(false),
+        "1" | "true" | "True" => Ok(true),
         other => Err(de::Error::invalid_value(
             de::Unexpected::Str(other),
-            &"0/1 or true/false are the only supported values",
+            &"0/1, true/false, True/False are the only supported values",
         )),
     }
 }
@@ -70,7 +82,8 @@ impl Record {
     pub fn from_sig(sig: &Signature, path: &str) -> Vec<Self> {
         sig.iter()
             .map(|sketch| {
-                let (ksize, md5, with_abundance, moltype, n_hashes, num, scaled) = match sketch {
+                let (mut ksize, md5, with_abundance, moltype, n_hashes, num, scaled, hash_function) = match sketch
+                {
                     Sketch::MinHash(mh) => (
                         mh.ksize() as u32,
                         mh.md5sum(),
@@ -79,6 +92,7 @@ impl Record {
                         mh.size(),
                         mh.num(),
                         mh.scaled(),
+                        mh.hash_function(),
                     ),
                     Sketch::LargeMinHash(mh) => (
                         mh.ksize() as u32,
@@ -88,11 +102,17 @@ impl Record {
                         mh.size(),
                         mh.num(),
                         mh.scaled(),
+                        mh.hash_function(),
                     ),
                     _ => unimplemented!(),
                 };
 
                 let md5short = md5[0..8].into();
+
+                ksize = match hash_function {
+                    HashFunctions::Murmur64Protein | HashFunctions::Murmur64Dayhoff | HashFunctions::Murmur64Hp => ksize / 3,
+                    _ => ksize,
+                };
 
                 Self {
                     internal_location: path.into(),
@@ -191,12 +211,23 @@ impl Select for Manifest {
                 valid
             };
             valid = if let Some(abund) = selection.abund() {
-                valid && *row.with_abundance() == abund
+                valid && row.with_abundance() == abund
             } else {
                 valid
             };
             valid = if let Some(moltype) = selection.moltype() {
                 valid && row.moltype() == moltype
+            } else {
+                valid
+            };
+            valid = if let Some(scaled) = selection.scaled() {
+                // num sigs have row.scaled = 0, don't include them
+                valid && row.scaled != 0 && row.scaled <= scaled as u64
+            } else {
+                valid
+            };
+            valid = if let Some(num) = selection.num() {
+                valid && row.num == num
             } else {
                 valid
             };
@@ -270,10 +301,183 @@ impl From<&[PathBuf]> for Manifest {
     }
 }
 
+impl From<&PathBuf> for Manifest {
+    fn from(pathlist: &PathBuf) -> Self {
+        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+        let reader = BufReader::new(file);
+
+        let paths: Vec<PathBuf> = reader
+            .lines()
+            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+            .map(PathBuf::from)
+            .collect();
+
+        paths.as_slice().into()
+    }
+}
+
 impl Deref for Manifest {
     type Target = Vec<Record>;
 
     fn deref(&self) -> &Self::Target {
         &self.records
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use camino::Utf8PathBuf as PathBuf;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    use super::Manifest;
+    use crate::collection::Collection;
+    use crate::encodings::HashFunctions;
+    use crate::selection::{Select, Selection};
+
+    #[test]
+    fn manifest_from_pathlist() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let mut filename = utf8_output.join("sig-pathlist.txt");
+        //convert to camino utf8pathbuf
+        filename = PathBuf::from(filename);
+        // build sig filenames
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/63.fa.sig",
+        ];
+
+        let full_paths: Vec<_> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // write a file in test directory with a filename on each line
+        let mut pathfile = File::create(&filename).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile, "{}", sigfile).unwrap();
+        }
+
+        // load into manifest
+        let manifest = Manifest::from(&filename);
+        assert_eq!(manifest.len(), 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to open \"no-exist\"")]
+    fn manifest_from_pathlist_nonexistent_file() {
+        let filename = PathBuf::from("no-exist");
+        let _manifest = Manifest::from(&filename);
+    }
+
+    #[test]
+    #[should_panic]
+    fn manifest_from_pathlist_badfile() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let mut filename = utf8_output.join("sig-pathlist.txt");
+        //convert to camino utf8pathbuf
+        filename = PathBuf::from(filename);
+
+        let mut pathfile = File::create(&filename).unwrap();
+        writeln!(pathfile, "Valid line").unwrap();
+        pathfile.write_all(&[0xED, 0xA0, 0x80]).unwrap(); // invalid UTF-8
+
+        // load into manifest
+        let _manifest = Manifest::from(&filename);
+    }
+
+    #[test]
+    #[should_panic]
+    fn manifest_from_paths_badpath() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            PathBuf::from("no-exist"),
+            PathBuf::from("../../tests/test-data/63.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // load into manifest
+        let _manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+    }
+
+    #[test]
+    fn manifest_to_writer_bools() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![
+            PathBuf::from("../../tests/test-data/47.fa.sig"),
+            PathBuf::from("../../tests/test-data/track_abund/63.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+
+        let filename = utf8_output.join("sigs.manifest.csv");
+        let mut wtr = File::create(&filename).expect("Failed to create file");
+
+        manifest.to_writer(&mut wtr).unwrap();
+
+        // check that we can reopen the file as a manifest + properly check abund
+        let infile = File::open(&filename).expect("Failed to open file");
+        let m2 = Manifest::from_reader(&infile).unwrap();
+        for record in m2.iter() {
+            eprintln!("{:?}", record.name());
+            if record.name().contains("OS185") {
+                assert_eq!(record.with_abundance(), false)
+            } else {
+                assert_eq!(record.with_abundance(), true)
+            }
+        }
+    }
+
+    #[test]
+    fn manifest_selection() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let collection = Collection::from_zipfile(&full_paths[0]).unwrap();
+        let manifest = collection.manifest().clone();
+
+        // check selection on manifest works
+        let mut selection = Selection::default();
+        selection.set_ksize(19);
+        let prot_collect = manifest.select(&selection).unwrap();
+        // eprintln!("{}", &prot_collect);
+        assert_eq!(prot_collect.len(), 6);
+        selection.set_moltype(HashFunctions::Murmur64Protein);
+
+        let manifest = collection.manifest().clone();
+        let protein_only = manifest.select(&selection).unwrap();
+        assert_eq!(protein_only.len(), 2);
+
+        let manifest = collection.manifest().clone();
+        selection = Selection::default();
+        selection.set_scaled(100);
+        let scaled100 = manifest.select(&selection).unwrap();
+        assert_eq!(scaled100.len(), 6);
     }
 }

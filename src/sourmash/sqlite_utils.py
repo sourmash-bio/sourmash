@@ -31,13 +31,13 @@ def open_sqlite_db(filename):
     # check for the 'sourmash_internal' table.
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT DISTINCT key, value FROM sourmash_internal')
+        cursor.execute("SELECT DISTINCT key, value FROM sourmash_internal")
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
         debug_literal("open_sqlite_db: cannot read sourmash_internal.")
 
         # is this a taxonomy DB?
         try:
-            cursor.execute('SELECT * FROM taxonomy LIMIT 1')
+            cursor.execute("SELECT * FROM taxonomy LIMIT 1")
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
             debug_literal("open_sqlite_db: cannot read 'taxonomy', either.")
             return None
@@ -49,12 +49,14 @@ def add_sourmash_internal(cursor, use_type, version):
     """
     Add use_type/version to sourmash_internal table.
     """
-    cursor.execute("""
+    cursor.execute(
+        """
     CREATE TABLE IF NOT EXISTS sourmash_internal (
        key TEXT UNIQUE,
        value TEXT
     )
-    """)
+    """
+    )
 
     d = get_sourmash_internal(cursor)
 
@@ -62,18 +64,23 @@ def add_sourmash_internal(cursor, use_type, version):
     if val is not None:
         # do version compatibility foo here?
         if version != val:
-            raise Exception(f"sqlite problem: for {use_type}, want version {version}, got version {val}")
+            raise Exception(
+                f"sqlite problem: for {use_type}, want version {version}, got version {val}"
+            )
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
         INSERT INTO sourmash_internal (key, value) VALUES (?, ?)
-        """, (use_type, version))
+        """,
+            (use_type, version),
+        )
 
 
 def get_sourmash_internal(cursor):
     """
     Retrieve a key/value dictionary from sourmash_internal.
     """
-    cursor.execute('SELECT DISTINCT key, value FROM sourmash_internal')
+    cursor.execute("SELECT DISTINCT key, value FROM sourmash_internal")
     d = dict(cursor)
 
     return d

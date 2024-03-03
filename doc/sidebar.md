@@ -15,7 +15,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## How-To Guides
 
-* [Classifying genome sketches](classifying-signatures.md)
+* [Classifying genome and metagenome sketches](classifying-signatures.md)
 
 * [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
@@ -24,6 +24,10 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 * [Building plots from `sourmash compare` output](plotting-compare.ipynb).
 
 * [A short guide to using sourmash output with R](other-languages.md).
+
+## Frequently Asked Questions
+
+* [Frequently asked questions](faq.md)
 
 ## How sourmash works under the hood
 
