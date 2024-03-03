@@ -242,8 +242,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
         }
     }
 
-    c.add_many(&hashes).unwrap();
-    d.add_many(&hashes).unwrap();
+    c.add_many(hashes.iter().copied()).unwrap();
+    d.add_many(hashes.iter().copied()).unwrap();
 
     c.remove_many(to_remove.iter().copied()).unwrap();
     d.remove_many(to_remove.iter().copied()).unwrap();

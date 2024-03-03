@@ -434,7 +434,7 @@ unsafe fn kmerminhash_intersection(ptr: *const SourmashKmerMinHash, other: *cons
     let isect = mh.intersection(other_mh)?;
     let mut new_mh = mh.clone();
     new_mh.clear();
-    new_mh.add_many(&isect.0)?;
+    new_mh.add_many(isect.0.iter().copied())?;
 
     Ok(SourmashKmerMinHash::from_rust(new_mh))
 }

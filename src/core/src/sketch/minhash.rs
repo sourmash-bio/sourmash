@@ -522,9 +522,9 @@ impl KmerMinHash {
         Ok(())
     }
 
-    pub fn add_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn add_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.add_hash(*min);
+            self.add_hash(min);
         }
         Ok(())
     }
@@ -735,7 +735,7 @@ impl KmerMinHash {
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
         } else {
-            new_mh.add_many(&self.mins)?;
+            new_mh.add_many(self.mins.iter().copied())?;
         }
         Ok(new_mh)
     }
@@ -1341,9 +1341,9 @@ impl KmerMinHashBTree {
         Ok(())
     }
 
-    pub fn add_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn add_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.add_hash(*min);
+            self.add_hash(min);
         }
         Ok(())
     }
@@ -1543,7 +1543,7 @@ impl KmerMinHashBTree {
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
         } else {
-            new_mh.add_many(&self.mins())?;
+            new_mh.add_many(self.mins.iter().copied())?;
         }
         Ok(new_mh)
     }
