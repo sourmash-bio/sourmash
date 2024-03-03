@@ -449,3 +449,81 @@ def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format, abspa
     locations = set([row["internal_location"] for row in manifest.rows])
     assert len(locations) == 1, locations
     assert sbt_zip in locations
+
+
+def test_sig_collect_6_path_cwd_cwd(runtmp, manifest_db_format, abspath_relpath_v4):
+    # check: manifest and sigs in cwd
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    protzip_path = "protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    mf_path = f"mf.{ext}"
+
+    runtmp.sourmash(
+        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_relpath_v4
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_6_path_cwd_subdir(runtmp, manifest_db_format, abspath_relpath_v4):
+    # check: manifest in cwd, sigs in subdir
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    protzip_path = "sigs_dir/protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    mf_path = f"mf.{ext}"
+
+    runtmp.sourmash(
+        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_relpath_v4
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_6_path_subdir_cwd(runtmp, manifest_db_format, abspath_or_relpath):
+    # check: manifest in cwd, sigs in subdir.  note, fails with default v4
+    # behavior. see #3008.
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    protzip_path = "protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    os.mkdir(runtmp.output("mf_dir"))
+    mf_path = f"mf_dir/mf.{ext}"
+
+    runtmp.sourmash(
+        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_or_relpath,
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_6_path_subdir_subdir(runtmp, manifest_db_format, abspath_or_relpath):
+    # check: manifest and sigs in subdir.  note, fails with default v4
+    # behavior. see #3008.
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    protzip_path = "sigs_dir/protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    os.mkdir(runtmp.output("mf_dir"))
+    mf_path = f"mf_dir/mf.{ext}"
+
+    runtmp.sourmash(
+        "sig", "collect", protzip_path, "-o", mf_path, "-F", manifest_db_format, abspath_or_relpath,
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
