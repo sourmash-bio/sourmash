@@ -30,9 +30,17 @@ def _write_file(runtmp, basename, lines, *, gz=False):
         fp.write("\n".join(lines))
     return loc
 
+# these should both always succeed for 'sig check' and 'sig collect' output
+# manifests.
+@pytest.fixture(params=["--abspath", "--relpath"])
+def abspath_or_relpath(request):
+    return request.param
 
-@pytest.fixture(params=["--no-abspath", "--abspath"])
-def abspath(request):
+# this will fail if subdirs used; see #3008. but ths ensures v4 behavior of
+# sig collect/sig check works, where manifest paths interpreted relative
+# to cwd.
+@pytest.fixture(params=["--no-abspath", "--abspath", "--relpath"])
+def abspath_relpath_v4(request):
     return request.param
 
 
@@ -3803,7 +3811,6 @@ signature license: CC0
 
 def test_sig_describe_3_manifest_works(runtmp):
     # test on a manifest with relative paths, in proper location
-    # @CTB => has a / in it
     mf = utils.get_test_data("scaled/mf.csv")
     runtmp.sourmash("sig", "describe", mf, "--csv", "out.csv")
 
@@ -4805,7 +4812,7 @@ def test_sig_kmers_2_hp(runtmp):
     assert check_mh2.similarity(mh) == 1.0
 
 
-def test_sig_check_1(runtmp, abspath):
+def test_sig_check_1(runtmp, abspath_relpath_v4):
     # basic check functionality
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -4818,7 +4825,7 @@ def test_sig_check_1(runtmp, abspath):
         f"{picklist}::manifest",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -4839,7 +4846,7 @@ def test_sig_check_1(runtmp, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_1_mf_csv_gz(runtmp, abspath):
+def test_sig_check_1_mf_csv_gz(runtmp, abspath_relpath_v4):
     # basic check functionality, with gzipped manifest output
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -4852,7 +4859,7 @@ def test_sig_check_1_mf_csv_gz(runtmp, abspath):
         f"{picklist}::manifest",
         "-m",
         "mf.csv.gz",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv.gz")
@@ -4873,7 +4880,7 @@ def test_sig_check_1_mf_csv_gz(runtmp, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_1_gz(runtmp, abspath):
+def test_sig_check_1_gz(runtmp, abspath_relpath_v4):
     # basic check functionality with gzipped picklist
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -4891,7 +4898,7 @@ def test_sig_check_1_gz(runtmp, abspath):
         "salmonella.csv.gz::manifest",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -4912,7 +4919,7 @@ def test_sig_check_1_gz(runtmp, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_1_nofail(runtmp, abspath):
+def test_sig_check_1_nofail(runtmp, abspath_relpath_v4):
     # basic check functionality with --fail-if-missing
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -4926,7 +4933,7 @@ def test_sig_check_1_nofail(runtmp, abspath):
         "-m",
         "mf.csv",
         "--fail-if-missing",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -4968,7 +4975,7 @@ def test_sig_check_1_no_picklist(runtmp):
         ("name", "identprefix"),
     ),
 )
-def test_sig_check_1_column(runtmp, column, coltype, abspath):
+def test_sig_check_1_column(runtmp, column, coltype, abspath_relpath_v4):
     # basic check functionality for various columns/coltypes
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -4983,7 +4990,7 @@ def test_sig_check_1_column(runtmp, column, coltype, abspath):
         "mf.csv",
         "-o",
         "missing.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5004,7 +5011,7 @@ def test_sig_check_1_column(runtmp, column, coltype, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_1_diff_col_name(runtmp, abspath):
+def test_sig_check_1_diff_col_name(runtmp, abspath_relpath_v4):
     # 'sig check' with 'name2' column instead of default name
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist-diffcolumn.csv")
@@ -5019,7 +5026,7 @@ def test_sig_check_1_diff_col_name(runtmp, abspath):
         "missing.csv",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5054,7 +5061,7 @@ def test_sig_check_1_diff_col_name(runtmp, abspath):
     assert rows[1][0] == "NOT THERE"
 
 
-def test_sig_check_1_diff_col_name_zip(runtmp, abspath):
+def test_sig_check_1_diff_col_name_zip(runtmp, abspath_relpath_v4):
     # 'sig check' with 'name2' column instead of default name, on a zip file
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist-diffcolumn.csv")
@@ -5073,7 +5080,7 @@ def test_sig_check_1_diff_col_name_zip(runtmp, abspath):
         "missing.csv",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5108,7 +5115,7 @@ def test_sig_check_1_diff_col_name_zip(runtmp, abspath):
     assert rows[1][0] == "NOT THERE"
 
 
-def test_sig_check_1_diff_col_name_exclude(runtmp, abspath):
+def test_sig_check_1_diff_col_name_exclude(runtmp, abspath_relpath_v4):
     # 'sig check' with 'name2' column, :exclude picklist
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist-diffcolumn.csv")
@@ -5121,7 +5128,7 @@ def test_sig_check_1_diff_col_name_exclude(runtmp, abspath):
         f"{picklist}:name2:name:exclude",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5142,7 +5149,7 @@ def test_sig_check_1_diff_col_name_exclude(runtmp, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_1_ksize(runtmp, abspath):
+def test_sig_check_1_ksize(runtmp, abspath_relpath_v4):
     # basic check functionality with selection for ksize
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5157,7 +5164,7 @@ def test_sig_check_1_ksize(runtmp, abspath):
         f"{picklist}::manifest",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5176,7 +5183,7 @@ def test_sig_check_1_ksize(runtmp, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_1_ksize_output_sql(runtmp, abspath):
+def test_sig_check_1_ksize_output_sql(runtmp, abspath_relpath_v4):
     # basic check functionality with selection for ksize
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5193,7 +5200,7 @@ def test_sig_check_1_ksize_output_sql(runtmp, abspath):
         "mf.mfsql",
         "-F",
         "sql",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_mf = runtmp.output("mf.mfsql")
@@ -5212,7 +5219,7 @@ def test_sig_check_1_ksize_output_sql(runtmp, abspath):
     assert 31 in ksizes
 
 
-def test_sig_check_2_output_missing(runtmp, abspath):
+def test_sig_check_2_output_missing(runtmp, abspath_relpath_v4):
     # output missing all as identical to input picklist
     sigfiles = utils.get_test_data("gather/combined.sig")
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5227,7 +5234,7 @@ def test_sig_check_2_output_missing(runtmp, abspath):
         "missing.csv",
         "-m",
         "mf.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_csv = runtmp.output("missing.csv")
@@ -5288,7 +5295,7 @@ def test_sig_check_2_output_missing_error_exit(runtmp):
         ("name", "identprefix"),
     ),
 )
-def test_sig_check_2_output_missing_column(runtmp, column, coltype, abspath):
+def test_sig_check_2_output_missing_column(runtmp, column, coltype, abspath_relpath_v4):
     # output missing all as identical to input picklist
     sigfiles = utils.get_test_data("gather/combined.sig")
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5301,7 +5308,7 @@ def test_sig_check_2_output_missing_column(runtmp, column, coltype, abspath):
         f"{picklist}::manifest",
         "-o",
         "missing.csv",
-        abspath,
+        abspath_relpath_v4,
     )
 
     out_csv = runtmp.output("missing.csv")
@@ -5352,7 +5359,7 @@ def test_sig_check_3_no_manifest(runtmp):
     assert "sig check requires a manifest by default, but no manifest present." in err
 
 
-def test_sig_check_3_no_manifest_ok(runtmp, abspath):
+def test_sig_check_3_no_manifest_ok(runtmp, abspath_relpath_v4):
     # generate manifest if --no-require-manifest
     sbt = utils.get_test_data("v6.sbt.zip")
     picklist = utils.get_test_data("v6.sbt.zip.mf.csv")
@@ -5364,7 +5371,7 @@ def test_sig_check_3_no_manifest_ok(runtmp, abspath):
         "--no-require-manifest",
         "--picklist",
         f"{picklist}::manifest",
-        abspath,
+        abspath_relpath_v4,
     )
 
     print(runtmp.last_result.out)
@@ -5375,7 +5382,7 @@ def test_sig_check_3_no_manifest_ok(runtmp, abspath):
     )
 
 
-def test_sig_check_4_manifest_cwd_cwd(runtmp, abspath):
+def test_sig_check_4_manifest_cwd_cwd(runtmp, abspath_relpath_v4):
     # check: manifest and sigs in cwd
     prot_zip = utils.get_test_data("prot/all.zip")
 
@@ -5394,15 +5401,16 @@ def test_sig_check_4_manifest_cwd_cwd(runtmp, abspath):
         "--picklist",
         "picklist.csv::manifest",
         "prot.zip",
-        abspath,
+        abspath_relpath_v4,
     )
 
     # check that it all works
     runtmp.sourmash("sig", "cat", "mf.csv")
 
 
-def test_sig_check_4_manifest_subdir_cwd(runtmp):
-    # check: manifest in subdir and sigs in cwd
+def test_sig_check_4_manifest_subdir_cwd(runtmp, abspath_or_relpath):
+    # check: manifest in subdir and sigs in cwd. note,
+    # fails with default v4 behavior. see #3008.
     prot_zip = utils.get_test_data("prot/all.zip")
 
     shutil.copyfile(prot_zip, runtmp.output("prot.zip"))
@@ -5421,7 +5429,7 @@ def test_sig_check_4_manifest_subdir_cwd(runtmp):
         "--picklist",
         "picklist.csv::manifest",
         "prot.zip",
-        "--relpath",
+        abspath_or_relpath,
     )
 
     print(runtmp.last_result.out)
@@ -5431,7 +5439,7 @@ def test_sig_check_4_manifest_subdir_cwd(runtmp):
     runtmp.sourmash("sig", "cat", "mf_dir/mf.csv")
 
 
-def test_sig_check_4_manifest_cwd_subdir(runtmp, abspath):
+def test_sig_check_4_manifest_cwd_subdir(runtmp, abspath_relpath_v4):
     # check: manifest in cwd and sigs in subdir
     prot_zip = utils.get_test_data("prot/all.zip")
 
@@ -5451,7 +5459,7 @@ def test_sig_check_4_manifest_cwd_subdir(runtmp, abspath):
         "--picklist",
         "picklist.csv::manifest",
         "zip_dir/prot.zip",
-        abspath,
+        abspath_relpath_v4,
     )
 
     print(runtmp.last_result.out)
@@ -5461,8 +5469,9 @@ def test_sig_check_4_manifest_cwd_subdir(runtmp, abspath):
     runtmp.sourmash("sig", "cat", "mf.csv")
 
 
-def test_sig_check_4_manifest_subdir_subdir(runtmp):
-    # check: manifest and sigs in subdir
+def test_sig_check_4_manifest_subdir_subdir(runtmp, abspath_or_relpath):
+    # check: manifest and sigs in subdir. note, fails with default v4 behavior.
+    # see #3008.
     prot_zip = utils.get_test_data("prot/all.zip")
 
     os.mkdir(runtmp.output("zip_dir"))
@@ -5482,7 +5491,7 @@ def test_sig_check_4_manifest_subdir_subdir(runtmp):
         "--picklist",
         "picklist.csv::manifest",
         "zip_dir/prot.zip",
-        "--relpath",
+        abspath_or_relpath,
     )
 
     print(runtmp.last_result.out)
