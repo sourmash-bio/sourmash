@@ -1962,8 +1962,8 @@ collections of signatures and identifiers.
 With `-m/--save-manifest-matching`, `sig check` creates a standalone
 manifest. In these manifests, sourmash v4 will by default write paths
 to the matched elements that are relative to the current working
-directory.  In some cases - when the matched elements are in
-subdirectories - this will create manifests that do not work properly
+directory.  In some cases - when the output manifest is in different
+directory - this will create manifests that do not work properly
 with sourmash.  The `--relpath` argument will rewrite the paths to be
 relative to the manifest, while the `--abspath` argument will rewrite
 paths to be absolute.  The `--relpath` behavior will be the default in
@@ -1989,8 +1989,8 @@ identifiers, and has command line options for merging and updating manifests.
 
 As with `sig check`, the standalone manifests created by `sig collect`
 in sourmash v4 will by default write paths to the matched elements
-relative to the current working directory.  When the matched elements
-are in subdirectories this will create manifests that do not work
+relative to the current working directory.  When the output manifest
+is in a different directory, this will create manifests that do not work
 properly with sourmash.  The `--relpath` argument will rewrite the
 paths to be relative to the manifest, while the `--abspath` argument
 will rewrite paths to be absolute.  The `--relpath` behavior will be
