@@ -368,7 +368,10 @@ Thus, while standalone manifests can point at any kind of container,
 including JSON files or LCA databases, they are most efficient when
 `internal_location` points at a file with either a single sketch in
 it, or a manifest that supports direct loading of sketches. Therefore,
-we suggest using standalone manifest indices.
+we suggest using standalone manifest indices.  Note that sourmash
+interprets paths to locations in standalone manifests relative to the
+manifest filename; see the `--relpath` behavior in `sig check` and
+`sig collect` for details.
 
 Note that searching a standalone manifest is currently done through a
 linear iteration, and does not use any features of indexed containers
