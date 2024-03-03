@@ -1441,7 +1441,9 @@ def check(args):
         sys.exit(-1)
 
     if args.relpath or args.abspath and not args.save_manifest_matching:
-        notify("** WARNING: --abspath and --relpath only have effects when saving a manifest")
+        notify(
+            "** WARNING: --abspath and --relpath only have effects when saving a manifest"
+        )
 
     relpath = "."
     if args.relpath and args.save_manifest_matching:

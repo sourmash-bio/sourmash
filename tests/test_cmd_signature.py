@@ -31,7 +31,7 @@ def _write_file(runtmp, basename, lines, *, gz=False):
     return loc
 
 
-@pytest.fixture(params=['--no-abspath', '--abspath'])
+@pytest.fixture(params=["--no-abspath", "--abspath"])
 def abspath(request):
     return request.param
 
@@ -4811,7 +4811,14 @@ def test_sig_check_1(runtmp, abspath):
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
     runtmp.sourmash(
-        "sig", "check", *sigfiles, "--picklist", f"{picklist}::manifest", "-m", "mf.csv", abspath
+        "sig",
+        "check",
+        *sigfiles,
+        "--picklist",
+        f"{picklist}::manifest",
+        "-m",
+        "mf.csv",
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -4845,7 +4852,7 @@ def test_sig_check_1_mf_csv_gz(runtmp, abspath):
         f"{picklist}::manifest",
         "-m",
         "mf.csv.gz",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv.gz")
@@ -4884,7 +4891,7 @@ def test_sig_check_1_gz(runtmp, abspath):
         "salmonella.csv.gz::manifest",
         "-m",
         "mf.csv",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -4919,7 +4926,7 @@ def test_sig_check_1_nofail(runtmp, abspath):
         "-m",
         "mf.csv",
         "--fail-if-missing",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -4976,7 +4983,7 @@ def test_sig_check_1_column(runtmp, column, coltype, abspath):
         "mf.csv",
         "-o",
         "missing.csv",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5012,7 +5019,7 @@ def test_sig_check_1_diff_col_name(runtmp, abspath):
         "missing.csv",
         "-m",
         "mf.csv",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5114,7 +5121,7 @@ def test_sig_check_1_diff_col_name_exclude(runtmp, abspath):
         f"{picklist}:name2:name:exclude",
         "-m",
         "mf.csv",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5186,7 +5193,7 @@ def test_sig_check_1_ksize_output_sql(runtmp, abspath):
         "mf.mfsql",
         "-F",
         "sql",
-        abspath
+        abspath,
     )
 
     out_mf = runtmp.output("mf.mfsql")
@@ -5294,7 +5301,7 @@ def test_sig_check_2_output_missing_column(runtmp, column, coltype, abspath):
         f"{picklist}::manifest",
         "-o",
         "missing.csv",
-        abspath
+        abspath,
     )
 
     out_csv = runtmp.output("missing.csv")
@@ -5422,6 +5429,7 @@ def test_sig_check_4_manifest_subdir_cwd(runtmp):
 
     # check that it all works
     runtmp.sourmash("sig", "cat", "mf_dir/mf.csv")
+
 
 def test_sig_check_4_manifest_cwd_subdir(runtmp, abspath):
     # check: manifest in cwd and sigs in subdir
