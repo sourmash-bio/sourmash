@@ -25,7 +25,7 @@ pub struct LinearIndex {
 impl LinearIndex {
     pub fn from_collection(collection: CollectionSet) -> Self {
         let sig = collection.sig_for_dataset(0).unwrap();
-        let template = sig.sketches().swap_remove(0);
+        let template = sig.iter().next().unwrap().clone();
         Self {
             collection,
             template,

@@ -386,10 +386,9 @@ fn load_save_minhash_sketches() {
     let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
-    let sketches = sig.sketches();
+    let mh = sig.minhash().unwrap();
     let mut buffer = vec![];
 
-    if let Sketch::MinHash(mh) = &sketches[0] {
         let bmh: KmerMinHashBTree = mh.clone().into();
         {
             serde_json::to_writer(&mut buffer, &bmh).unwrap();
@@ -474,7 +473,6 @@ fn load_save_minhash_sketches() {
             .abs()
                 < EPSILON
         );
-    }
 }
 
 #[test]
@@ -487,10 +485,9 @@ fn load_save_minhash_sketches_abund() {
     let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
-    let sketches = sig.sketches();
+    let mh = sig.minhash().unwrap();
     let mut buffer = vec![];
 
-    if let Sketch::MinHash(mh) = &sketches[0] {
         let bmh: KmerMinHashBTree = mh.clone().into();
         {
             serde_json::to_writer(&mut buffer, &bmh).unwrap();
@@ -575,7 +572,6 @@ fn load_save_minhash_sketches_abund() {
             .abs()
                 < EPSILON
         );
-    }
 }
 
 #[test]

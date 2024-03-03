@@ -191,7 +191,7 @@ impl RevIndex {
             .collection
             .sig_for_dataset(dataset_id)
             .expect("Couldn't find a compatible Signature");
-        let search_mh = &search_sig.sketches()[0];
+        let search_mh = search_sig.iter().next().unwrap();
 
         let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
 
