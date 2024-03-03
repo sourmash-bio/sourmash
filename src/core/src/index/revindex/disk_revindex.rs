@@ -197,9 +197,9 @@ impl RevIndex {
 
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
 
-        let hashes = match search_mh {
-            Sketch::MinHash(mh) => mh.mins(),
-            Sketch::LargeMinHash(mh) => mh.mins(),
+        let hashes: Vec<_> = match search_mh {
+            Sketch::MinHash(mh) => mh.iter_mins().copied().collect(),
+            Sketch::LargeMinHash(mh) => mh.iter_mins().copied().collect(),
             _ => unimplemented!(),
         };
 

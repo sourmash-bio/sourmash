@@ -175,7 +175,7 @@ impl RevIndex {
                 }
             }
         } else {
-            let matched = search_mh.mins();
+            let matched: Vec<_> = search_mh.iter_mins().copied().collect();
             let size = matched.len() as u64;
             if !matched.is_empty() || size > threshold as u64 {
                 hash_to_color.add_to(&mut colors, dataset_id, matched);

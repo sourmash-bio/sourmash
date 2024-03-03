@@ -708,10 +708,6 @@ impl KmerMinHash {
         self.hash_function == HashFunctions::Murmur64Hp
     }
 
-    pub fn mins(&self) -> Vec<u64> {
-        self.mins.clone()
-    }
-
     pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
         self.mins.iter()
     }
@@ -1523,10 +1519,6 @@ impl KmerMinHashBTree {
         self.hash_function.clone()
     }
 
-    pub fn mins(&self) -> Vec<u64> {
-        self.mins.iter().cloned().collect()
-    }
-
     pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
         self.mins.iter()
     }
@@ -1590,7 +1582,7 @@ impl SigsTrait for KmerMinHashBTree {
     }
 
     fn to_vec(&self) -> Vec<u64> {
-        self.mins()
+        self.iter_mins().copied().collect()
     }
 
     fn ksize(&self) -> usize {
