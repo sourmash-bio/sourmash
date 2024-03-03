@@ -107,5 +107,161 @@ fn intersection(c: &mut Criterion) {
     });
 }
 
-criterion_group!(minhash, intersection);
+fn jaccard(c: &mut Criterion) {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/gather-abund/genome-s10.fa.gz.sig");
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mh = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
+        mh.clone()
+    } else {
+        unimplemented!()
+    };
+
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/gather-abund/genome-s11.fa.gz.sig");
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mh2 = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
+        mh.clone()
+    } else {
+        unimplemented!()
+    };
+
+    let mut group = c.benchmark_group("minhash");
+    group.sample_size(10);
+
+    group.bench_function("jaccard", |b| {
+        b.iter(|| {
+            mh.jaccard(&mh2).unwrap();
+        });
+    });
+
+    let mut mh1 = KmerMinHash::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+    let mut mh2 = KmerMinHash::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+
+    let mut mh1_btree = KmerMinHashBTree::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+    let mut mh2_btree = KmerMinHashBTree::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+
+    for i in 0..=1_000_000 {
+        if i % 2 == 0 {
+            mh1.add_hash(i);
+            mh1_btree.add_hash(i);
+        }
+        if i % 45 == 0 {
+            mh2.add_hash(i);
+            mh2_btree.add_hash(i);
+        }
+    }
+
+    group.bench_function("large jaccard", |b| {
+        b.iter(|| {
+            mh1.jaccard(&mh2).unwrap();
+        });
+    });
+
+    group.bench_function("large jaccard btree", |b| {
+        b.iter(|| {
+            mh1_btree.jaccard(&mh2_btree).unwrap();
+        });
+    });
+}
+
+fn count_common(c: &mut Criterion) {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/gather-abund/genome-s10.fa.gz.sig");
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mh = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
+        mh.clone()
+    } else {
+        unimplemented!()
+    };
+
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/gather-abund/genome-s11.fa.gz.sig");
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mh2 = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
+        mh.clone()
+    } else {
+        unimplemented!()
+    };
+
+    let mut group = c.benchmark_group("minhash");
+    group.sample_size(10);
+
+    group.bench_function("count_common", |b| {
+        b.iter(|| {
+            mh.count_common(&mh2, false).unwrap();
+        });
+    });
+
+    let mut mh1 = KmerMinHash::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+    let mut mh2 = KmerMinHash::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+
+    let mut mh1_btree = KmerMinHashBTree::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+    let mut mh2_btree = KmerMinHashBTree::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+
+    for i in 0..=1_000_000 {
+        if i % 2 == 0 {
+            mh1.add_hash(i);
+            mh1_btree.add_hash(i);
+        }
+        if i % 45 == 0 {
+            mh2.add_hash(i);
+            mh2_btree.add_hash(i);
+        }
+    }
+
+    group.bench_function("large count_common", |b| {
+        b.iter(|| {
+            mh1.count_common(&mh2, false).unwrap();
+        });
+    });
+
+    group.bench_function("large count_common btree", |b| {
+        b.iter(|| {
+            mh1_btree.count_common(&mh2_btree, false).unwrap();
+        });
+    });
+}
+
+criterion_group!(minhash, intersection, jaccard, count_common);
 criterion_main!(minhash);
