@@ -35,6 +35,25 @@ def test_sig_collect_0_nothing(runtmp, manifest_db_format, abspath_relpath_v4):
     assert len(manifest) == 0
 
 
+def test_sig_collect_0_fail_abspath_relpath(runtmp, manifest_db_format):
+    # check that it complains if both --abspath and --relpath are specified
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+    if manifest_db_format != "sql":
+        return
+
+    with pytest.raises(SourmashCommandFailed,
+                       match="Cannot specify both --abspath and --relpath; pick one!"):
+        runtmp.sourmash(
+            "sig",
+            "collect",
+            "-o",
+            f"mf.{ext}",
+            "-F",
+            manifest_db_format,
+            "--abspath", "--relpath"
+        )
+
+
 def test_sig_collect_1_zipfile(runtmp, manifest_db_format, abspath_relpath_v4):
     # collect a manifest from a .zip file
     protzip = utils.get_test_data("prot/protein.zip")

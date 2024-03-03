@@ -4833,6 +4833,43 @@ def test_sig_check_1(runtmp, abspath_relpath_v4):
     assert 31 in ksizes
 
 
+def test_sig_check_1_fail_abspath_relpath(runtmp):
+    # basic check functionality
+    sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
+    picklist = utils.get_test_data("gather/salmonella-picklist.csv")
+
+    with pytest.raises(SourmashCommandFailed,
+                       match="Cannot specify both --abspath and --relpath; pick one!"):
+        runtmp.sourmash(
+            "sig",
+            "check",
+            *sigfiles,
+            "--picklist",
+            f"{picklist}::manifest",
+            "-m",
+            "mf.csv",
+            "--abspath", "--relpath"
+        )
+
+
+def test_sig_check_1_warn_abspath_relpath(runtmp, abspath_or_relpath):
+    # warn that without -m, --abspath/--relpath are not helpful
+    sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
+    picklist = utils.get_test_data("gather/salmonella-picklist.csv")
+
+    runtmp.sourmash(
+        "sig",
+        "check",
+        *sigfiles,
+        "--picklist",
+        f"{picklist}::manifest",
+        abspath_or_relpath,
+    )
+
+    err = runtmp.last_result.err
+    assert " WARNING: --abspath and --relpath only have effects when saving a manifest" in err
+
+
 def test_sig_check_1_mf_csv_gz(runtmp, abspath_relpath_v4):
     # basic check functionality, with gzipped manifest output
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))

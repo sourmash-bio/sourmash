@@ -1562,6 +1562,11 @@ def collect(args):
             f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?"
         )
 
+    # abspath/relpath checks
+    if args.abspath and args.relpath:
+        error("** Cannot specify both --abspath and --relpath; pick one!")
+        sys.exit(-1)
+
     # load previous manifest for --merge-previous. This gets tricky with
     # mismatched manifest types, which we forbid.
     try:

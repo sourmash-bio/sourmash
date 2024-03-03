@@ -371,7 +371,8 @@ it, or a manifest that supports direct loading of sketches. Therefore,
 we suggest using standalone manifest indices.  Note that sourmash
 interprets paths to locations in standalone manifests relative to the
 manifest filename; see the `--relpath` behavior in `sig check` and
-`sig collect` for details.
+`sig collect` to output manifests that deal with relative filenames
+properly.
 
 Note that searching a standalone manifest is currently done through a
 linear iteration, and does not use any features of indexed containers
