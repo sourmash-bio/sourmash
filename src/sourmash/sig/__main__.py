@@ -1460,10 +1460,11 @@ def check(args):
             # convert to abspath
             new_iloc = os.path.abspath(filename)
         elif args.relpath:
-            # interpret paths relative to manifest directory
+            # interpret paths relative to manifest directory.
             new_iloc = os.path.join(relpath, filename)
         else:
-            # default: paths are relative to cwd
+            # default: paths are relative to cwd. This breaks when sketches
+            # are in subdirectories; will be deprecated for v5.
             new_iloc = filename
 
         idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
@@ -1483,7 +1484,6 @@ def check(args):
 
         # rewrite locations so that each signature can be found by filename
         # of its container; this follows `sig collect` logic.
-        # CTB: note that this is relative to cwd, not manifest location.
         for row in sub_manifest.rows:
             row["internal_location"] = new_iloc
             total_manifest_rows.add_row(row)
@@ -1636,7 +1636,8 @@ def collect(args):
             # interpret paths relative to manifest directory
             new_iloc = os.path.join(relpath, loc)
         else:
-            # default: paths are relative to cwd
+            # default: paths are relative to cwd. This breaks when sketches
+            # are in subdirectories; will be deprecated for v5.
             new_iloc = loc
 
         for row in mf.rows:
