@@ -4,8 +4,6 @@
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-use std::error::Error;
-
 use needletail::parse_fastx_reader;
 use wasm_bindgen::prelude::*;
 
@@ -210,10 +208,13 @@ mod test {
 
 use js_sys::Number;
 use js_sys::Uint8Array;
+use once_cell::sync::Lazy;
 use web_sys::FileReaderSync;
 
 thread_local! {
-    static FILE_READER_SYNC: FileReaderSync = FileReaderSync::new().expect("Failed to create FileReaderSync. Is it running in a web worker context?");
+    static FILE_READER_SYNC: Lazy<FileReaderSync> = Lazy::new(|| {
+      FileReaderSync::new().expect("Failed to create FileReaderSync. Is it running in a web worker context?")
+    });
 }
 
 /// Wrapper around a `web_sys::File` that implements `Read` and `Seek`.
