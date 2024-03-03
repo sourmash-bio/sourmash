@@ -41,8 +41,10 @@ def test_sig_collect_0_fail_abspath_relpath(runtmp, manifest_db_format):
     if manifest_db_format != "sql":
         return
 
-    with pytest.raises(SourmashCommandFailed,
-                       match="Cannot specify both --abspath and --relpath; pick one!"):
+    with pytest.raises(
+        SourmashCommandFailed,
+        match="Cannot specify both --abspath and --relpath; pick one!",
+    ):
         runtmp.sourmash(
             "sig",
             "collect",
@@ -50,7 +52,8 @@ def test_sig_collect_0_fail_abspath_relpath(runtmp, manifest_db_format):
             f"mf.{ext}",
             "-F",
             manifest_db_format,
-            "--abspath", "--relpath"
+            "--abspath",
+            "--relpath",
         )
 
 
