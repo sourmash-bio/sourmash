@@ -95,6 +95,7 @@ def sig_save_extension_abund(request):
 def abspath_or_relpath(request):
     return request.param
 
+
 # this will fail if subdirs used; see #3008. but ths ensures v4 behavior of
 # sig collect/sig check works, where manifest paths interpreted relative
 # to cwd.
