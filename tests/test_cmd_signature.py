@@ -5494,13 +5494,13 @@ def test_sig_check_5_relpath(runtmp):
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
-    os.mkdir(runtmp.output('mf_dir'))
+    os.mkdir(runtmp.output("mf_dir"))
 
-    os.mkdir(runtmp.output('sigs_dir'))
+    os.mkdir(runtmp.output("sigs_dir"))
     new_names = []
     for f in sigfiles:
         basename = os.path.basename(f)
-        filename = os.path.join('sigs_dir', basename)
+        filename = os.path.join("sigs_dir", basename)
 
         shutil.copyfile(f, runtmp.output(filename))
         new_names.append(filename)
@@ -5513,7 +5513,7 @@ def test_sig_check_5_relpath(runtmp):
         f"{picklist}::manifest",
         "-m",
         "mf_dir/mf.csv",
-        "--relpath"
+        "--relpath",
     )
 
     out_mf = runtmp.output("mf_dir/mf.csv")
@@ -5524,8 +5524,8 @@ def test_sig_check_5_relpath(runtmp):
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 24
 
-    locations = [ row['internal_location'] for row in mf.rows ]
-    expected_names = [ '../' + f for f in new_names ]
+    locations = [row["internal_location"] for row in mf.rows]
+    expected_names = ["../" + f for f in new_names]
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
@@ -5535,11 +5535,11 @@ def test_sig_check_5_relpath_subdir(runtmp):
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
-    os.mkdir(runtmp.output('sigs_dir'))
+    os.mkdir(runtmp.output("sigs_dir"))
     new_names = []
     for f in sigfiles:
         basename = os.path.basename(f)
-        filename = os.path.join('sigs_dir', basename)
+        filename = os.path.join("sigs_dir", basename)
 
         shutil.copyfile(f, runtmp.output(filename))
         new_names.append(filename)
@@ -5552,7 +5552,7 @@ def test_sig_check_5_relpath_subdir(runtmp):
         f"{picklist}::manifest",
         "-m",
         "mf.csv",
-        "--relpath"
+        "--relpath",
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5563,10 +5563,10 @@ def test_sig_check_5_relpath_subdir(runtmp):
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 24
 
-    locations = [ row['internal_location'] for row in mf.rows ]
-    print('XXX', locations)
-    print('YYY', new_names)
-    expected_names = [ './' + f for f in new_names ]
+    locations = [row["internal_location"] for row in mf.rows]
+    print("XXX", locations)
+    print("YYY", new_names)
+    expected_names = ["./" + f for f in new_names]
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
@@ -5579,7 +5579,7 @@ def test_sig_check_5_abspath(runtmp):
         shutil.copyfile(f, runtmp.output(os.path.basename(f)))
 
     # strip off abspath
-    sigfiles = [ os.path.basename(f) for f in sigfiles ]
+    sigfiles = [os.path.basename(f) for f in sigfiles]
 
     runtmp.sourmash(
         "sig",
@@ -5589,7 +5589,7 @@ def test_sig_check_5_abspath(runtmp):
         f"{picklist}::manifest",
         "-m",
         "mf.csv",
-        "--abspath"
+        "--abspath",
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5600,10 +5600,10 @@ def test_sig_check_5_abspath(runtmp):
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 24
 
-    locations = [ row['internal_location'] for row in mf.rows ]
+    locations = [row["internal_location"] for row in mf.rows]
     for k in locations:
-        assert k.startswith('/') # absolute
-        assert os.path.basename(k) in sigfiles # converts back to basic
+        assert k.startswith("/")  # absolute
+        assert os.path.basename(k) in sigfiles  # converts back to basic
 
 
 def test_sig_check_5_no_abspath(runtmp):
@@ -5616,7 +5616,7 @@ def test_sig_check_5_no_abspath(runtmp):
         shutil.copyfile(f, runtmp.output(os.path.basename(f)))
 
     # strip off abspath
-    sigfiles = [ os.path.basename(f) for f in sigfiles ]
+    sigfiles = [os.path.basename(f) for f in sigfiles]
 
     runtmp.sourmash(
         "sig",
@@ -5637,6 +5637,6 @@ def test_sig_check_5_no_abspath(runtmp):
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 24
 
-    locations = [ row['internal_location'] for row in mf.rows ]
+    locations = [row["internal_location"] for row in mf.rows]
     # no rewriting
     assert set(locations).issubset(sigfiles)

@@ -455,12 +455,12 @@ def test_sig_collect_4_multiple_subdir_subdir_no_abspath(runtmp, manifest_db_for
     sig63 = utils.get_test_data("63.fa.sig")
 
     # copy files to tmp, where they will not have full paths
-    os.mkdir(runtmp.output('sigs_dir'))
+    os.mkdir(runtmp.output("sigs_dir"))
     shutil.copyfile(sig43, runtmp.output("sigs_dir/47.fa.sig"))
     shutil.copyfile(sig63, runtmp.output("sigs_dir/63.fa.sig"))
 
     # put manifest in subdir too.
-    os.mkdir(runtmp.output('mf_dir'))
+    os.mkdir(runtmp.output("mf_dir"))
 
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
 
@@ -473,7 +473,7 @@ def test_sig_collect_4_multiple_subdir_subdir_no_abspath(runtmp, manifest_db_for
         f"mf_dir/mf.{ext}",
         "-F",
         manifest_db_format,
-        "--relpath"
+        "--relpath",
     )
 
     manifest_fn = runtmp.output(f"mf_dir/mf.{ext}")
@@ -500,7 +500,7 @@ def test_sig_collect_4_multiple_cwd_subdir_no_abspath(runtmp, manifest_db_format
     sig63 = utils.get_test_data("63.fa.sig")
 
     # copy files to tmp, where they will not have full paths
-    os.mkdir(runtmp.output('sigs_dir'))
+    os.mkdir(runtmp.output("sigs_dir"))
     shutil.copyfile(sig43, runtmp.output("sigs_dir/47.fa.sig"))
     shutil.copyfile(sig63, runtmp.output("sigs_dir/63.fa.sig"))
 
