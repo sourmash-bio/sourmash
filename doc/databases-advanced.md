@@ -75,7 +75,7 @@ To read from a directory, specify the directory name on the sourmash command lin
 
 When directories are specified as outputs, the signatures will be saved by their complete md5sum underneath the directory.
 
-We don't recommend storing signatures in directory hierarchies, since most of their use cases are now covered by other approaches.
+We don't recommend storing signatures in directory hierarchies, since the implementation is not particularly memory efficient most of the use cases for directories are now covered by other approaches - in particular, standalone manifests.
 
 ### Pathlists
 

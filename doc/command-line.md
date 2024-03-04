@@ -1944,8 +1944,10 @@ CSV and SQLite manifest files.
 
 ### `sourmash signature check` - compare picklists and manifests
 
-Compare picklists and manifests across databases, and optionally output matches
-and missing items.
+Compare picklists and manifests across databases, and optionally
+output matches and missing items.  In particular, `sig check` can be
+used to create standalone manifests for a subset of a large collection,
+using picklists.
 
 For example,
 ```
@@ -1964,7 +1966,7 @@ collections of signatures and identifiers.
 With `-m/--save-manifest-matching`, `sig check` creates a standalone
 manifest. In these manifests, sourmash v4 will by default write paths
 to the matched elements that are relative to the current working
-directory.  In some cases - when the output manifest is in different
+directory.  In some cases - when the output manifest is in a different
 directory - this will create manifests that do not work properly
 with sourmash.  The `--relpath` argument will rewrite the paths to be
 relative to the manifest, while the `--abspath` argument will rewrite
@@ -2293,14 +2295,20 @@ signatures themselves) and can then be used as a database target for most
 sourmash operations - search, gather, etc. Manifests support
 fast selection and lazy loading of sketches in many situations.
 
-Note that `sig collect` will generate manifests containing the
-pathnames given to it - so if you use relative paths, the references
-will be relative to the working directory in which `sig collect` was
+The `sig check` command can also be used to create standalone manifests
+from collections using a picklist, with the `-m/--save-manifest-matching`
+option. This is useful for commands that don't support picklists natively,
+e.g. plugins and extensions.
+
+Note that `sig collect` and `sig check` will generate manifests containing the
+pathnames given to them - so if you use relative paths, the references
+will be relative to the working directory in which the command was
 run.  You can use `sig collect --abspath` to rewrite the paths
-into absolute paths.
+into absolute paths, or `sig collect --relpath` to rewrite the paths
+relative to the manifest file.
 
 **Our advice:** We suggest using zip file collections for most
-situations; we stronlgy recommend using standalone manifests for
+situations; we strongly recommend using standalone manifests for
 situations where you have **very large** sketches or a **very large**
 collection of sketches (1000s or more), and don't want to make
 multiple copies of signatures in the collection (as you would have to,
