@@ -2012,7 +2012,9 @@ the default in sourmash v5.
 
 ### Loading signatures and databases
 
-sourmash uses several different command-line styles.
+sourmash uses several different command-line styles.  Most sourmash
+commands can load sketches from any standard collection; we primarily
+recommend using zipfiles (but read on!)
 
 Briefly,
 
@@ -2023,22 +2025,18 @@ Briefly,
   need to provide a selector (ksize with `-k`, moltype with `--dna` etc,
   or md5sum with `--query-md5`) that picks out a single signature.
 
-* `compare` takes multiple signatures and can load them from files,
-  directories, and indexed databases (SBT or LCA).  It can also take
-  a list of file paths in a text file, using `--from-file` (see below).
+* `compare` takes multiple signatures and can load them from any
+  sourmash collection type.
   
 * the `lca classify` and `lca summarize` commands take multiple
   signatures with `--query`, and multiple LCA databases, with
   `--db`. `sourmash multigather` also uses this style.  This allows these
   commands to specify multiple queries **and** multiple databases without
-  (too much) confusion.  These commands will take files containing
-  signature files using `--query-from-file` (see below).
+  (too much) confusion.  The database must be LCA databases.
   
 * `index` and `lca index` take a few fixed parameters (database name,
   and for `lca index`, a taxonomy file) and then an arbitrary number of
-  other files that contain signatures, including files, directories,
-  and indexed databases. These commands will also take `--from-file`
-  (see below).
+  other files that contain signatures.
 
 None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
@@ -2156,7 +2154,9 @@ slow, especially for many (100s or 1000s) of signatures.
 All of the `sourmash` commands support loading collections of
 signatures from zip files.  You can create a compressed collection of
 signatures using `sourmash sig cat *.sig -o collections.zip` and then
-specifying `collections.zip` on the command line in place of `*.sig`.
+specifying `collections.zip` on the command line in place of `*.sig`;
+you can also sketch FASTA/FASTQ files directly into a zip file with
+`-o collections.zip`.
 
 ### Choosing signature output formats
 
@@ -2183,7 +2183,7 @@ to stdout.
 All of these save formats can be loaded by sourmash commands.
 
 **We strongly suggest using .zip files to store signatures: they are fast,
-small, and fully supported by all the sourmash commands.**
+small, and fully supported by all the sourmash commands and API.**
 
 Note that when outputting large collections of signatures, some save
 formats require holding all the sketches in memory until they can be
@@ -2198,19 +2198,6 @@ databases!](databases-advanced.md)
 
 ### Loading many signatures
 
-#### Loading signatures within a directory hierarchy
-
-All of the `sourmash` commands support loading signatures from
-beneath directories; provide the paths on the command line.
-
-#### Passing in lists of files
-
-Most sourmash commands will also take a `--from-file` or
-`--query-from-file`, which will take the location of a text file containing
-a list of file paths. This can be useful for situations where you want
-to specify thousands of queries, or a subset of signatures produced by
-some other command.
-
 #### Indexed databases
 
 Indexed databases can make searching signatures much faster. SBT
@@ -2220,9 +2207,6 @@ memory and (after a potentially significant load time) are quite fast.
 SQLite databases (new in sourmash v4.4.0) are typically larger on disk
 than SBTs and LCAs, but in turn are fast to load and support very low
 memory search.
-
-(LCA databases also directly permit taxonomic searches using `sourmash lca`
-functions.)
 
 Commands that take multiple signatures or collections of signatures
 will also work with indexed databases.
@@ -2235,9 +2219,9 @@ only at one scaled value. If the database signature type is
 incompatible with the other signatures, sourmash will complain
 appropriately.
 
-In contrast, signature files, zip collections, and directory
-hierarchies can contain many different types of signatures, and
-compatible ones will be selected automatically.
+In contrast, signature files and zip collections can contain many
+different types of signatures, and compatible ones will be selected
+automatically.
 
 Use the `sourmash index` command to create an SBT.
 
@@ -2247,6 +2231,26 @@ database can be saved in JSON or SQL format with `-F json` or `-F sql`.
 Use `sourmash sig cat <list of signatures> -o <output>.sqldb` to create
 a SQLite indexed database.
 
+#### Loading signatures within a directory hierarchy
+
+All of the `sourmash` commands support loading signatures from
+within directories; provide the paths on the command line.
+
+This is no longer recommended; we instead suggest passing all of the
+sketch files in the directory into `sig collect` to build a standalone
+manifest, or using `sig cat` on the directory to generate a zip file.
+
+#### Passing in lists of files
+
+Most sourmash commands will also take a `--from-file` or
+`--query-from-file`, which will take the location of a text file containing
+a list of file paths. This can be useful for situations where you want
+to specify thousands of queries, or a subset of signatures produced by
+some other command.
+
+This is no longer recommended; we instead suggest using standalone manifests
+built with `sig collect`.
+
 ### Combining search databases on the command line
 
 All of the commands in sourmash operate in "online" mode, so you can
@@ -2254,7 +2258,7 @@ combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
 them.  The only caveat to this rule is that if you have multiple
 identical matches present across the databases, the order in which
-they are found will differ depending on the order that the files are
+they are used may depend on the order that the files are
 passed in on the command line.
 
 ### Using stdin
@@ -2262,11 +2266,12 @@ passed in on the command line.
 Most commands will take signature JSON data via stdin using the usual
 UNIX convention, `-`.  Moreover, `sourmash sketch` and the `sourmash
 sig` commands will output to stdout.  So, for example,
+```
+sourmash sketch ... -o - | sourmash sig describe -
+```
+will describe the signatures that were just created.
 
-`sourmash sketch ... -o - | sourmash sig describe -` will describe the
-signatures that were just created.
-
-### Using manifests to explicitly refer to collections of files
+### Using standalone manifests to explicitly refer to collections of files
 
 (sourmash v4.4 and later)
 
@@ -2276,9 +2281,9 @@ internals to speed up signature selection through picklists and
 pattern matching.
 
 Manifests can _also_ be used externally (via the command-line), and
-may be useful for organizing large collections of signatures. They can
-be generated with the `sig collect`, `sig manifest`, and `sig check`
-subcommands.
+these "standalone manifests" may be useful for organizing large
+collections of signatures. They can be generated with the `sig
+collect`, `sig manifest`, and `sig check` subcommands.
 
 Suppose you have a large collection of signatures (`.sig` or `.sig.gz`
 files) in a location (e.g., under a directory, or in a zip file). You
