@@ -39,7 +39,7 @@ getrandom = { version = "0.2", features = ["js"] }
 getset = "0.1.1"
 histogram = "0.9.1"
 itertools = "0.12.1"
-log = "0.4.20"
+log = "0.4.21"
 md5 = "0.7.0"
 memmap2 = "0.9.4"
 murmurhash3 = "0.0.5"
