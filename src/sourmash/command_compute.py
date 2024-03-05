@@ -204,6 +204,7 @@ def _compute_individual(args, signatures_factory):
 
             # make a new signature for each sequence?
             if args.singleton:
+                n_calculated = 0
                 for n, record in enumerate(screed_iter):
                     sigs = signatures_factory()
                     try:
@@ -218,12 +219,13 @@ def _compute_individual(args, signatures_factory):
                         error(str(exc))
                         sys.exit(-1)
 
+                    n_calculated += len(sigs)
                     set_sig_name(sigs, filename, name=record.name)
                     save_sigs_to_location(sigs, save_sigs)
 
                 notify(
                     "calculated {} signatures for {} sequences in {}",
-                    len(save_sigs),
+                    n_calculated,
                     n + 1,
                     filename,
                 )
