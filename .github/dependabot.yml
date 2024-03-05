@@ -12,6 +12,11 @@ updates:
   allow:
     - dependency-type: "direct"
   open-pull-requests-limit: 10
+  ignore:
+    - dependency-name: "byteorder"
+    - dependency-name: "wasm-bindgen"
+    - dependency-name: "once_cell"
+    - dependency-name: "chrono"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
