@@ -1162,6 +1162,7 @@ def multigather(args):
     # run gather on all the queries.
     n = 0
     size_may_be_inaccurate = False
+    output_base_tracking = set()  # make sure we are not reusing 'output_base'
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(
@@ -1228,21 +1229,42 @@ def multigather(args):
             result = None
 
             query_filename = query.filename
-            if not query_filename:
+            if not query_filename or query_filename == "-":
                 # use md5sum if query.filename not properly set
-                query_filename = query.md5sum()
+                output_base = query.md5sum()
+            elif args.output_add_query_md5sum:
+                # Uniquify the output file if all signatures were made from the same file (e.g. with --singleton)
+                assert query_filename and query_filename != "-"  # first branch
+                output_base = os.path.basename(query_filename) + "." + query.md5sum()
+            else:
+                output_base = os.path.basename(query_filename)
 
-            output_base = os.path.basename(query_filename)
             if args.output_dir:
                 output_base = os.path.join(args.output_dir, output_base)
-            output_csv = output_base + ".csv"
+
+            # track overwrites of output files!
+            if output_base in output_base_tracking:
+                error(
+                    f"ERROR: detected overwritten outputs! '{output_base}' has already been used. Failing."
+                )
+                if args.force_allow_overwrite_output:
+                    error("continuing because --force-allow-overwrite was specified")
+                else:
+                    error(
+                        "Consider using '-U/--output-add-query-md5sum' to build unique outputs"
+                    )
+                    error("and/or '--force-allow-overwrite-output'")
+                    sys.exit(-1)
+
+            output_base_tracking.add(output_base)
 
             output_matches = output_base + ".matches.sig"
             save_sig_obj = SaveSignaturesToLocation(output_matches)
             save_sig = save_sig_obj.__enter__()
             notify(f"saving all matching signatures to '{output_matches}'")
 
-            # track matches
+            # write out basic CSV file
+            output_csv = output_base + ".csv"
             notify(f'saving all CSV matches to "{output_csv}"')
             csv_out_obj = FileOutputCSV(output_csv)
             csv_outfp = csv_out_obj.__enter__()
@@ -1330,31 +1352,32 @@ def multigather(args):
                 notify("nothing found... skipping.")
                 continue
 
-            output_unassigned = output_base + ".unassigned.sig"
-            with open(output_unassigned, "w"):
-                remaining_query = gather_iter.query
-                if noident_mh:
-                    remaining_mh = remaining_query.minhash.to_mutable()
-                    remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
-                    remaining_query.minhash = remaining_mh
+            output_unassigned = output_base + f".unassigned{args.extension}"
+            remaining_query = gather_iter.query
+            if noident_mh:
+                remaining_mh = remaining_query.minhash.to_mutable()
+                remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
+                remaining_query.minhash = remaining_mh
 
-                if is_abundance:
-                    abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
-                    remaining_query.minhash = abund_query_mh
+            if is_abundance:
+                abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                remaining_query.minhash = abund_query_mh
 
-                if found == 0:
-                    notify("nothing found - entire query signature unassigned.")
-                elif not remaining_query:
-                    notify("no unassigned hashes! not saving.")
-                else:
-                    notify(f'saving unassigned hashes to "{output_unassigned}"')
+            if found == 0:
+                notify("nothing found - entire query signature unassigned.")
+            elif not remaining_query:
+                notify("no unassigned hashes! not saving.")
+            else:
+                notify(f'saving unassigned hashes to "{output_unassigned}"')
 
-                with SaveSignaturesToLocation(output_unassigned) as save_sig:
-                    # CTB: note, multigather does not save abundances
-                    save_sig.add(remaining_query)
+            with SaveSignaturesToLocation(output_unassigned) as save_sig:
+                save_sig.add(remaining_query)
+
             n += 1
 
         # fini, next query!
+
+    # done! report at end.
     notify(f"\nconducted gather searches on {n} signatures")
     if size_may_be_inaccurate:
         notify(

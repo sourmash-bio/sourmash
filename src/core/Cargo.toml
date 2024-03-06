@@ -38,8 +38,8 @@ fixedbitset = "0.4.0"
 getrandom = { version = "0.2", features = ["js"] }
 getset = "0.1.1"
 histogram = "0.9.1"
-itertools = "0.12.0"
-log = "0.4.20"
+itertools = "0.12.1"
+log = "0.4.21"
 md5 = "0.7.0"
 memmap2 = "0.9.4"
 murmurhash3 = "0.0.5"
@@ -50,12 +50,12 @@ once_cell = "1.18.0"
 ouroboros = "0.18.3"
 piz = "0.5.0"
 primal-check = "0.3.1"
-rayon = { version = "1.8.1", optional = true }
+rayon = { version = "1.9.0", optional = true }
 rkyv = { version = "0.7.44", optional = true }
 roaring = "0.10.3"
 roots = "0.0.8"
-serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.113"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
 statrs = "0.16.0"
 streaming-stats = "0.2.3"
 thiserror = "1.0"
@@ -68,7 +68,7 @@ criterion = "0.5.1"
 needletail = { version = "0.5.1", default-features = false }
 proptest = { version = "1.4.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
-tempfile = "3.10.0"
+tempfile = "3.10.1"
 
 [[bench]]
 name = "compute"
@@ -100,7 +100,7 @@ version = "0.2.89"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
-version = "0.3.68"
+version = "0.3.69"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
@@ -108,7 +108,7 @@ version = "0.4.32"
 features = ["wasmbind"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.41"
+wasm-bindgen-test = "0.3.42"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

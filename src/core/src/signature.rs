@@ -1159,7 +1159,7 @@ mod test {
     }
 
     #[test]
-    fn test_selection_protein() {
+    fn selection_protein() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push(
             "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
@@ -1179,7 +1179,7 @@ mod test {
     }
 
     #[test]
-    fn test_selection_dayhoff() {
+    fn selection_dayhoff() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push(
             "../../tests/test-data/prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
@@ -1200,7 +1200,7 @@ mod test {
     }
 
     #[test]
-    fn test_selection_hp() {
+    fn selection_hp() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename
             .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
@@ -1220,7 +1220,7 @@ mod test {
     }
 
     #[test]
-    fn test_selection_protein2() {
+    fn selection_protein2() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push(
             "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
@@ -1240,7 +1240,7 @@ mod test {
     }
 
     #[test]
-    fn test_selection_scaled_too_low() {
+    fn selection_scaled_too_low() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47+63-multisig.sig");
 

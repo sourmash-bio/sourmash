@@ -434,11 +434,10 @@ mod test {
     use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
-
     use super::{display_summary, summarize_manifest, Manifest, Selection};
     use crate::collection::Collection;
     use crate::encodings::HashFunctions;
-    use crate::selection::Select;
+    use crate::selection::{Select, Selection};
 
     #[test]
     fn test_manifest_from_pathlist() {
@@ -515,7 +514,7 @@ mod test {
     }
 
     #[test]
-    fn test_manifest_to_writer_bools() {
+    fn manifest_to_writer_bools() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let test_sigs = vec![
@@ -553,7 +552,7 @@ mod test {
     }
 
     #[test]
-    fn test_manifest_selection() {
+    fn manifest_selection() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
@@ -586,7 +585,7 @@ mod test {
     }
 
     #[test]
-    fn test_manifest_summarize() {
+    fn manifest_summarize() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let test_sigs = vec![
@@ -613,4 +612,5 @@ mod test {
         assert_eq!(output, expected_output);
         assert_eq!(serialized_summaries.trim(), expected);
     }
+
 }

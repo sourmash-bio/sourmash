@@ -347,6 +347,10 @@ metagenome and genome bin analysis.  (See
 [Classifying Signatures](classifying-signatures.md) for more
 information on the different approaches that can be used here.)
 
+`sourmash gather` takes exactly one query and one or more
+[collections of signatures](#storing-and-searching-signatures). Please see
+[`sourmash multigather`](#sourmash-multigather-do-gather-with-many-queries) if you have multiple queries!
+
 If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
 specified).  `-o/--output` will create a CSV file containing the
@@ -533,6 +537,47 @@ db-matches.sig`.
 This combination of commands ensures that the more time- and
 memory-intensive `gather` step is run only on a small set of relevant
 signatures, rather than all the signatures in the database.
+
+### `sourmash multigather` - do gather with many queries
+
+The `multigather` subcommand runs `sourmash gather` on multiple
+queries.  (See
+[`sourmash gather` docs](#sourmash-gather-find-metagenome-members) for
+specifics on what gather does, and how!)
+
+Usage:
+```
+sourmash multigather --query <queries ...> --db <collections>
+```
+
+Note that multigather is single threaded, so it offers no substantial
+efficiency gains over just running gather multiple times!  Nontheless, it
+is useful for situations where you have many sketches organized in a
+combined file, e.g. sketches built with `sourmash sketch
+... --singleton`).
+
+#### `multigather` output files
+
+multigather produces three output files for each
+query:
+
+* `<output_base>.csv` - gather CSV output
+* `<output_base>.matches.sig` - all matching outputs
+* `<output_base>.unassigned.sig` - all remaining unassigned hashes
+
+As of sourmash v4.8.7, `<output_base>` is set as follows:
+* the filename attribute of the query sketch, if it is not empty or `-`;
+* the query sketch md5sum, if the query filename is empty or `-`;
+* the query filename + the query sketch md5sum
+  (`<query_file>.<md5sum>`), if `-U/--output-add-query-md5sum` is
+  specified;
+
+By default, `multigather` will complain and exit with an error if
+the same `<output_base>` is used repeatedly and an output file is
+going to be overwritten.  With `-U/--output-add-query-md5sum` this
+should only happen when identical sketches are present in a query
+database. Use `--force-allow-overwrite-output`
+to allow overwriting of output files without an error.
 
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
