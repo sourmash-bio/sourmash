@@ -39,7 +39,7 @@ getrandom = { version = "0.2", features = ["js"] }
 getset = "0.1.1"
 histogram = "0.9.1"
 itertools = "0.12.1"
-log = "0.4.20"
+log = "0.4.21"
 md5 = "0.7.0"
 memmap2 = "0.9.4"
 murmurhash3 = "0.0.5"
@@ -100,7 +100,7 @@ version = "0.2.89"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
-version = "0.3.68"
+version = "0.3.69"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
@@ -108,7 +108,7 @@ version = "0.4.32"
 features = ["wasmbind"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.41"
+wasm-bindgen-test = "0.3.42"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
