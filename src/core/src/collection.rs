@@ -4,7 +4,7 @@ use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 
 use crate::encodings::Idx;
-use crate::manifest::{Manifest, Record};
+use crate::manifest::{Manifest, Record, write_summary};
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, Storage, ZipStorage};
@@ -187,6 +187,15 @@ impl Collection {
         let sig = self.storage.load_sig(match_path)?.select(&selection)?;
         assert_eq!(sig.signatures.len(), 1);
         Ok(sig)
+    }
+
+    pub fn summarize(&self, display: bool) -> Result<()> {
+        // call summarize on manifest
+        let summaries = self.manifest.summarize();
+        if display{
+            write_summary(summaries);
+        }
+        Ok(())
     }
 }
 

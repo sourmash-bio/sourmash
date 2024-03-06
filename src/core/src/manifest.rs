@@ -212,6 +212,35 @@ impl Manifest {
     pub fn iter(&self) -> impl Iterator<Item = &Record> {
         self.records.iter()
     }
+
+    pub fn summarize(&self) -> Vec<RecordSummary> {
+        let mut summary_map: HashMap<(u32, String, u32, u64, bool), RecordSummary> = HashMap::new();
+
+        for record in self.iter() {
+            let key = (
+                record.ksize(),
+                record.moltype.clone(),
+                record.num,
+                record.scaled,
+                record.with_abundance(),
+            );
+            let entry = summary_map.entry(key).or_insert_with(|| RecordSummary {
+                ksize: record.ksize(),
+                moltype: record.moltype.clone(),
+                num: record.num,
+                scaled: record.scaled,
+                with_abundance: record.with_abundance(),
+                count: 0,
+                total_n_hashes: 0,
+            });
+
+            entry.count += 1;
+            entry.total_n_hashes += record.n_hashes;
+        }
+
+        summary_map.into_values().collect()
+    }
+
 }
 
 impl Select for Manifest {
@@ -404,7 +433,7 @@ pub fn summarize_manifest(manifest: &Manifest) -> Vec<RecordSummary> {
     summary_map.into_values().collect()
 }
 
-pub fn display_summary(summaries: &[RecordSummary]) -> String {
+pub fn display_manifest_summary(summaries: &[RecordSummary]) -> String {
     let mut output = String::new();
     FmtWrite::write_str(&mut output, "num signatures: ").unwrap();
     write!(
@@ -434,7 +463,7 @@ mod test {
     use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
-    use super::{display_summary, summarize_manifest, Manifest, Selection};
+    use super::{display_manifest_summary, summarize_manifest, Manifest, Selection};
     use crate::collection::Collection;
     use crate::encodings::HashFunctions;
     use crate::selection::{Select, Selection};
@@ -605,12 +634,13 @@ mod test {
         let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
 
         let summaries = summarize_manifest(&manifest);
+        // let summaries = &manifest.summarize();
         let serialized_summaries = serde_json::to_string(&summaries).unwrap();
-        let output = display_summary(&summaries);
+        let output = display_manifest_summary(&summaries);
         let expected_output = "num signatures: 2\n** examining manifest...\ntotal hashes: 8214\nsummary of sketches:\n   2 sketches with protein, k=19, scaled=100  8214 total hashes\n";
-        let expected = "[{\"ksize\":19,\"moltype\":\"protein\",\"num\":0,\"scaled\":100,\"with_abundance\":false,\"count\":2,\"total_n_hashes\":8214}]";
+        let expected_serialized = "[{\"ksize\":19,\"moltype\":\"protein\",\"num\":0,\"scaled\":100,\"with_abundance\":false,\"count\":2,\"total_n_hashes\":8214}]";
         assert_eq!(output, expected_output);
-        assert_eq!(serialized_summaries.trim(), expected);
+        assert_eq!(serialized_summaries.trim(), expected_serialized);
     }
 
 }
