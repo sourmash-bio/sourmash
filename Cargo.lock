@@ -580,9 +580,9 @@ dependencies = [
 
 [[package]]
 name = "fixedbitset"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
+checksum = "b51ee430d5ff16df7998870eb0b4775383ac5bc450f5a2ed547394fe2d617131"
 
 [[package]]
 name = "flate2"
