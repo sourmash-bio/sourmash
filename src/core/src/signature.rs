@@ -908,7 +908,7 @@ mod test {
     use crate::sketch::Sketch;
 
     #[test]
-    fn test_load_sig() {
+    fn load_sig() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
@@ -925,7 +925,7 @@ mod test {
     }
 
     #[test]
-    fn test_load_signature() {
+    fn load_signature() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/genome-s10+s11.sig");
 
@@ -949,7 +949,7 @@ mod test {
     }
 
     #[test]
-    fn test_signature_from_computeparams() {
+    fn signature_from_computeparams() {
         let params = ComputeParameters::builder()
             .ksizes(vec![2, 3, 4])
             .num_hashes(3u32)
@@ -966,7 +966,7 @@ mod test {
     }
 
     #[test]
-    fn test_signature_slow_path() {
+    fn signature_slow_path() {
         let params = ComputeParameters::builder()
             .ksizes(vec![2, 3, 4, 5])
             .num_hashes(3u32)
@@ -984,7 +984,7 @@ mod test {
     }
 
     #[test]
-    fn test_signature_add_sequence_protein() {
+    fn signature_add_sequence_protein() {
         let params = ComputeParameters::builder()
             .ksizes(vec![3, 6])
             .num_hashes(3u32)
@@ -1002,7 +1002,7 @@ mod test {
     }
 
     #[test]
-    fn test_signature_add_protein() {
+    fn signature_add_protein() {
         let params = ComputeParameters::builder()
             .ksizes(vec![3, 6])
             .num_hashes(3u32)
@@ -1020,7 +1020,7 @@ mod test {
     }
 
     #[test]
-    fn test_signature_add_sequence_cp() {
+    fn signature_add_sequence_cp() {
         let mut cp = ComputeParameters::default();
         cp.set_dayhoff(true);
         cp.set_protein(true);
@@ -1046,7 +1046,7 @@ mod test {
     }
 
     #[test]
-    fn test_load_minhash_from_signature() {
+    fn load_minhash_from_signature() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1062,7 +1062,7 @@ mod test {
     }
 
     #[test]
-    fn test_load_single_sketch_from_signature() {
+    fn load_single_sketch_from_signature() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1086,7 +1086,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_get_sketch_multisketch_panic() {
+    fn get_sketch_multisketch_panic() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1111,7 +1111,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_load_minhash_multisketch_panic() {
+    fn load_minhash_multisketch_panic() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47.fa.sig");
 
@@ -1135,7 +1135,7 @@ mod test {
     }
 
     #[test]
-    fn test_selection_with_downsample() {
+    fn selection_with_downsample() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47+63-multisig.sig");
 
