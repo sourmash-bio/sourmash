@@ -4,7 +4,7 @@ use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 
 use crate::encodings::Idx;
-use crate::manifest::{Manifest, Record, write_summary};
+use crate::manifest::{Manifest, Record, RecordSummary};
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, Storage, ZipStorage};
@@ -189,13 +189,8 @@ impl Collection {
         Ok(sig)
     }
 
-    pub fn summarize(&self, display: bool) -> Result<()> {
-        // call summarize on manifest
-        let summaries = self.manifest.summarize();
-        if display{
-            write_summary(summaries);
-        }
-        Ok(())
+    pub fn summarize(&self) -> Result<Vec<RecordSummary>> {
+        Ok(self.manifest.summarize())
     }
 }
 
@@ -215,6 +210,7 @@ mod test {
     use super::Collection;
 
     use crate::encodings::HashFunctions;
+    use crate::manifest::write_summary;
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
@@ -415,4 +411,56 @@ mod test {
             assert_eq!(this_mh.scaled(), 100);
         }
     }
+
+    #[test]
+    fn collection_summarize_zipfile() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let collection = Collection::from_zipfile(&full_paths[0]).unwrap();
+
+        let summaries = collection.summarize().unwrap();
+
+        let summary_output = write_summary(&summaries);
+
+        assert!(summary_output.contains("num signatures: 8"));
+        assert!(summary_output.contains("total hashes: 31758"));
+        assert!(
+            summary_output.contains("2 sketches with DNA, k=31, scaled=1000  10415 total hashes")
+        );
+        assert!(
+            summary_output.contains("2 sketches with protein, k=19, scaled=100  8214 total hashes")
+        );
+        assert!(
+            summary_output.contains("2 sketches with dayhoff, k=19, scaled=100  7945 total hashes")
+        );
+        assert!(summary_output.contains("2 sketches with hp, k=19, scaled=100  5184 total hashes"));
+    }
+
+    // #[test]
+    // fn collection_summarize_rocksdb() {
+    // use crate::index::revindex::RevIndex;
+    //     let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    //     let db_file = PathBuf::from("../../tests/test-data/revindex/all.dna-k31-sc1000.rocksdb");
+
+    //     let db_path = base_path.join(&db_file);
+
+    //     let db = RevIndex::open(db_path, true, None).unwrap();
+    //     let collection = db.load_collection_from_rocksdb();
+
+    //     let summaries = collection.summarize().unwrap();
+
+    //     let summary_output = write_summary(&summaries);
+
+    //     assert!(summary_output.contains("num signatures: 2"));
+    //     assert!(summary_output.contains("total hashes: 10415"));
+    //     assert!(summary_output.contains("2 sketches with DNA, k=31, scaled=1000  10415 total hashes"));
+    // }
 }
