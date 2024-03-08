@@ -324,8 +324,11 @@ def genome(args):
             )
 
         except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
+            if args.force:
+                notify(f"ERROR: {str(exc)}")
+            else:
+                error(f"ERROR: {str(exc)}")
+                sys.exit(-1)
 
     # write outputs
     if "csv_summary" in args.output_format:
