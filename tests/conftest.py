@@ -89,6 +89,21 @@ def sig_save_extension_abund(request):
     return request.param
 
 
+# these should both always succeed for 'sig check' and 'sig collect' output
+# manifests.
+@pytest.fixture(params=["--abspath", "--relpath"])
+def abspath_or_relpath(request):
+    return request.param
+
+
+# this will fail if subdirs used; see #3008. but this ensures v4 behavior of
+# sig collect/sig check works, where manifest paths are interpreted relative
+# to cwd.
+@pytest.fixture(params=["--no-abspath", "--abspath", "--relpath"])
+def abspath_relpath_v4(request):
+    return request.param
+
+
 # --- BEGIN - Only run tests using a particular fixture --- #
 # Cribbed from: http://pythontesting.net/framework/pytest/pytest-run-tests-using-particular-fixture/
 def pytest_collection_modifyitems(items, config):

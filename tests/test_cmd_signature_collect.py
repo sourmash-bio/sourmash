@@ -13,13 +13,21 @@ import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 
 
-def test_sig_collect_0_nothing(runtmp, manifest_db_format):
+def test_sig_collect_0_nothing(runtmp, manifest_db_format, abspath_relpath_v4):
     # run with just output
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
     if manifest_db_format != "sql":
         return
 
-    runtmp.sourmash("sig", "collect", "-o", f"mf.{ext}", "-F", manifest_db_format)
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        "-o",
+        f"mf.{ext}",
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
+    )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
     manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
@@ -27,14 +35,43 @@ def test_sig_collect_0_nothing(runtmp, manifest_db_format):
     assert len(manifest) == 0
 
 
-def test_sig_collect_1_zipfile(runtmp, manifest_db_format):
+def test_sig_collect_0_fail_abspath_relpath(runtmp, manifest_db_format):
+    # check that it complains if both --abspath and --relpath are specified
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+    if manifest_db_format != "sql":
+        return
+
+    with pytest.raises(
+        SourmashCommandFailed,
+        match="Cannot specify both --abspath and --relpath; pick one!",
+    ):
+        runtmp.sourmash(
+            "sig",
+            "collect",
+            "-o",
+            f"mf.{ext}",
+            "-F",
+            manifest_db_format,
+            "--abspath",
+            "--relpath",
+        )
+
+
+def test_sig_collect_1_zipfile(runtmp, manifest_db_format, abspath_relpath_v4):
     # collect a manifest from a .zip file
     protzip = utils.get_test_data("prot/protein.zip")
 
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
 
     runtmp.sourmash(
-        "sig", "collect", protzip, "-o", f"mf.{ext}", "-F", manifest_db_format
+        "sig",
+        "collect",
+        protzip,
+        "-o",
+        f"mf.{ext}",
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
     )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
@@ -46,11 +83,13 @@ def test_sig_collect_1_zipfile(runtmp, manifest_db_format):
     assert "120d311cc785cc9d0df9dc0646b2b857" in md5_list
 
 
-def test_sig_collect_1_zipfile_csv_gz(runtmp):
+def test_sig_collect_1_zipfile_csv_gz(runtmp, abspath_relpath_v4):
     # collect a manifest from a .zip file, save to csv.gz
     protzip = utils.get_test_data("prot/protein.zip")
 
-    runtmp.sourmash("sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv")
+    runtmp.sourmash(
+        "sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv", abspath_relpath_v4
+    )
 
     manifest_fn = runtmp.output("mf.csv.gz")
 
@@ -67,11 +106,13 @@ def test_sig_collect_1_zipfile_csv_gz(runtmp):
     assert "120d311cc785cc9d0df9dc0646b2b857" in md5_list
 
 
-def test_sig_collect_1_zipfile_csv_gz_roundtrip(runtmp):
+def test_sig_collect_1_zipfile_csv_gz_roundtrip(runtmp, abspath_relpath_v4):
     # collect a manifest from a .zip file, save to csv.gz; then load again
     protzip = utils.get_test_data("prot/protein.zip")
 
-    runtmp.sourmash("sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv")
+    runtmp.sourmash(
+        "sig", "collect", protzip, "-o", "mf.csv.gz", "-F", "csv", abspath_relpath_v4
+    )
 
     manifest_fn = runtmp.output("mf.csv.gz")
 
@@ -125,7 +166,7 @@ def test_sig_collect_2_exists_fail(runtmp, manifest_db_format):
         )
 
 
-def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
+def test_sig_collect_2_exists_merge(runtmp, manifest_db_format, abspath_relpath_v4):
     # collect a manifest from two .zip files
     protzip = utils.get_test_data("prot/protein.zip")
     allzip = utils.get_test_data("prot/all.zip")
@@ -133,7 +174,14 @@ def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
     ext = "sqlmf" if manifest_db_format == "sql" else "csv"
 
     runtmp.sourmash(
-        "sig", "collect", protzip, "-o", f"mf.{ext}", "-F", manifest_db_format
+        "sig",
+        "collect",
+        protzip,
+        "-o",
+        f"mf.{ext}",
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
     )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
@@ -205,7 +253,7 @@ def test_sig_collect_2_exists_csv_merge_sql(runtmp):
     assert "ERROR loading" in runtmp.last_result.err
 
 
-def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format):
+def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format, abspath_relpath_v4):
     # test 'merge' when args.output doesn't already exist => warning
     utils.get_test_data("prot/protein.zip")
     allzip = utils.get_test_data("prot/all.zip")
@@ -215,7 +263,15 @@ def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format):
 
     # run with --merge but no previous:
     runtmp.sourmash(
-        "sig", "collect", allzip, "-o", manifest_fn, "-F", manifest_db_format, "--merge"
+        "sig",
+        "collect",
+        allzip,
+        "-o",
+        manifest_fn,
+        "-F",
+        manifest_db_format,
+        "--merge",
+        abspath_relpath_v4,
     )
 
     manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
@@ -411,6 +467,94 @@ def test_sig_collect_4_multiple_no_abspath(runtmp, manifest_db_format):
     assert "47.fa.sig" in locations
     assert "63.fa.sig" in locations
 
+    runtmp.sourmash("sig", "cat", f"mf.{ext}")
+
+
+def test_sig_collect_4_multiple_subdir_subdir_no_abspath(runtmp, manifest_db_format):
+    # collect a manifest from sig files, no abspath; use a subdir for sketches
+    # this should work with default behavior.
+    sig43 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    # copy files to tmp, where they will not have full paths
+    os.mkdir(runtmp.output("sigs_dir"))
+    shutil.copyfile(sig43, runtmp.output("sigs_dir/47.fa.sig"))
+    shutil.copyfile(sig63, runtmp.output("sigs_dir/63.fa.sig"))
+
+    # put manifest in subdir too.
+    os.mkdir(runtmp.output("mf_dir"))
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        "sigs_dir/47.fa.sig",
+        "sigs_dir/63.fa.sig",
+        "-o",
+        f"mf_dir/mf.{ext}",
+        "-F",
+        manifest_db_format,
+        "--relpath",
+    )
+
+    manifest_fn = runtmp.output(f"mf_dir/mf.{ext}")
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [row["md5"] for row in manifest.rows]
+    assert "09a08691ce52952152f0e866a59f6261" in md5_list
+    assert "38729c6374925585db28916b82a6f513" in md5_list
+
+    locations = set([row["internal_location"] for row in manifest.rows])
+    print(locations)
+    assert len(locations) == 2, locations
+    assert "../sigs_dir/47.fa.sig" in locations
+    assert "../sigs_dir/63.fa.sig" in locations
+
+    runtmp.sourmash("sig", "cat", f"mf_dir/mf.{ext}")
+
+
+def test_sig_collect_4_multiple_cwd_subdir_no_abspath(runtmp, manifest_db_format):
+    # collect a manifest from sig files, no abspath; use a subdir for sketches
+    # this should work with default behavior.
+    sig43 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    # copy files to tmp, where they will not have full paths
+    os.mkdir(runtmp.output("sigs_dir"))
+    shutil.copyfile(sig43, runtmp.output("sigs_dir/47.fa.sig"))
+    shutil.copyfile(sig63, runtmp.output("sigs_dir/63.fa.sig"))
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        "sigs_dir/47.fa.sig",
+        "sigs_dir/63.fa.sig",
+        "-o",
+        f"mf.{ext}",
+        "-F",
+        manifest_db_format,
+    )
+
+    manifest_fn = runtmp.output(f"mf.{ext}")
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [row["md5"] for row in manifest.rows]
+    assert "09a08691ce52952152f0e866a59f6261" in md5_list
+    assert "38729c6374925585db28916b82a6f513" in md5_list
+
+    locations = set([row["internal_location"] for row in manifest.rows])
+    print(locations)
+    assert len(locations) == 2, locations
+    assert "sigs_dir/47.fa.sig" in locations
+    assert "sigs_dir/63.fa.sig" in locations
+
+    runtmp.sourmash("sig", "cat", f"mf.{ext}")
+
 
 def test_sig_collect_5_no_manifest_sbt_fail(runtmp, manifest_db_format):
     # collect a manifest from files that don't have one
@@ -424,7 +568,9 @@ def test_sig_collect_5_no_manifest_sbt_fail(runtmp, manifest_db_format):
         )
 
 
-def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format):
+def test_sig_collect_5_no_manifest_sbt_succeed(
+    runtmp, manifest_db_format, abspath_relpath_v4
+):
     # generate a manifest from files that don't have one when --no-require
     sbt_zip = utils.get_test_data("v6.sbt.zip")
 
@@ -439,6 +585,7 @@ def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format):
         f"mf.{ext}",
         "-F",
         manifest_db_format,
+        abspath_relpath_v4,
     )
 
     manifest_fn = runtmp.output(f"mf.{ext}")
@@ -448,3 +595,111 @@ def test_sig_collect_5_no_manifest_sbt_succeed(runtmp, manifest_db_format):
     locations = set([row["internal_location"] for row in manifest.rows])
     assert len(locations) == 1, locations
     assert sbt_zip in locations
+
+
+def test_sig_collect_6_path_cwd_cwd(runtmp, manifest_db_format, abspath_relpath_v4):
+    # check: manifest and sigs in cwd
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    protzip_path = "protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    mf_path = f"mf.{ext}"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_6_path_cwd_subdir(runtmp, manifest_db_format, abspath_relpath_v4):
+    # check: manifest in cwd, sigs in subdir
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    protzip_path = "sigs_dir/protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    mf_path = f"mf.{ext}"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_relpath_v4,
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_6_path_subdir_cwd(runtmp, manifest_db_format, abspath_or_relpath):
+    # check: manifest in cwd, sigs in subdir.  note, fails with default v4
+    # behavior. see #3008.
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    protzip_path = "protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    os.mkdir(runtmp.output("mf_dir"))
+    mf_path = f"mf_dir/mf.{ext}"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_or_relpath,
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_6_path_subdir_subdir(
+    runtmp, manifest_db_format, abspath_or_relpath
+):
+    # check: manifest and sigs in subdir.  note, fails with default v4
+    # behavior. see #3008.
+    protzip = utils.get_test_data("prot/protein.zip")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    protzip_path = "sigs_dir/protein.zip"
+    shutil.copyfile(protzip, runtmp.output(protzip_path))
+
+    os.mkdir(runtmp.output("mf_dir"))
+    mf_path = f"mf_dir/mf.{ext}"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        protzip_path,
+        "-o",
+        mf_path,
+        "-F",
+        manifest_db_format,
+        abspath_or_relpath,
+    )
+
+    runtmp.sourmash("sig", "cat", mf_path)
