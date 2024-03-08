@@ -1461,6 +1461,10 @@ def check(args):
             new_iloc = os.path.abspath(filename)
         elif args.relpath:
             # interpret paths relative to manifest directory.
+            if filename.startswith("/"):
+                notify(
+                    f"** WARNING: cannot convert abspath {filename} into relative path."
+                )
             new_iloc = os.path.join(relpath, filename)
         else:
             # default: paths are relative to cwd. This breaks when sketches
@@ -1637,6 +1641,8 @@ def collect(args):
             new_iloc = os.path.abspath(loc)
         elif args.relpath:
             # interpret paths relative to manifest directory
+            if loc.startswith("/"):
+                notify(f"** WARNING: cannot convert abspath {loc} into relative path.")
             new_iloc = os.path.join(relpath, loc)
         else:
             # default: paths are relative to cwd. This breaks when sketches
