@@ -1435,11 +1435,42 @@ def check(args):
     else:
         debug("sig check: manifest required")
 
+    # abspath/relpath checks
+    if args.abspath and args.relpath:
+        error("** Cannot specify both --abspath and --relpath; pick one!")
+        sys.exit(-1)
+
+    if args.relpath or args.abspath and not args.save_manifest_matching:
+        notify(
+            "** WARNING: --abspath and --relpath only have effects when saving a manifest"
+        )
+
+    relpath = "."
+    if args.relpath and args.save_manifest_matching:
+        output_manifest_dir = os.path.dirname(args.save_manifest_matching)
+        relpath = os.path.relpath(os.curdir, output_manifest_dir)
+
     total_manifest_rows = CollectionManifest([])
 
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
+        # if saving a manifest, think about how to rewrite locations.
+        if args.abspath:
+            # convert to abspath
+            new_iloc = os.path.abspath(filename)
+        elif args.relpath:
+            # interpret paths relative to manifest directory.
+            if filename.startswith("/"):
+                notify(
+                    f"** WARNING: cannot convert abspath {filename} into relative path."
+                )
+            new_iloc = os.path.join(relpath, filename)
+        else:
+            # default: paths are relative to cwd. This breaks when sketches
+            # are in subdirectories; will be deprecated for v5.
+            new_iloc = filename
+
         idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
@@ -1458,7 +1489,7 @@ def check(args):
         # rewrite locations so that each signature can be found by filename
         # of its container; this follows `sig collect` logic.
         for row in sub_manifest.rows:
-            row["internal_location"] = filename
+            row["internal_location"] = new_iloc
             total_manifest_rows.add_row(row)
 
         # the len(sub_manifest) here should only be run when needed :)
@@ -1535,6 +1566,11 @@ def collect(args):
             f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?"
         )
 
+    # abspath/relpath checks
+    if args.abspath and args.relpath:
+        error("** Cannot specify both --abspath and --relpath; pick one!")
+        sys.exit(-1)
+
     # load previous manifest for --merge-previous. This gets tricky with
     # mismatched manifest types, which we forbid.
     try:
@@ -1579,15 +1615,16 @@ def collect(args):
     # load from_file
     _extend_signatures_with_from_file(args, target_attr="locations")
 
-    # convert to abspath
-    if args.abspath:
-        args.locations = [os.path.abspath(iloc) for iloc in args.locations]
+    relpath = None
+    if args.relpath:
+        output_manifest_dir = os.path.dirname(args.output)
+        relpath = os.path.relpath(os.curdir, output_manifest_dir)
 
     # iterate through, loading all the manifests from all the locations.
     for n_files, loc in enumerate(args.locations):
         notify(f"Loading signature information from {loc}.")
 
-        if n_files % 100 == 0:
+        if n_files and n_files % 100 == 0:
             notify(f"... loaded {len(collected_mf)} sigs from {n_files} files")
         idx = sourmash.load_file_as_index(loc)
         if idx.manifest is None and require_manifest:
@@ -1600,8 +1637,22 @@ def collect(args):
 
         mf = sourmash_args.get_manifest(idx)
 
+        # decide how to rewrite locations to container:
+        if args.abspath:
+            # convert to abspath
+            new_iloc = os.path.abspath(loc)
+        elif args.relpath:
+            # interpret paths relative to manifest directory
+            if loc.startswith("/"):
+                notify(f"** WARNING: cannot convert abspath {loc} into relative path.")
+            new_iloc = os.path.join(relpath, loc)
+        else:
+            # default: paths are relative to cwd. This breaks when sketches
+            # are in subdirectories; will be deprecated for v5.
+            new_iloc = loc
+
         for row in mf.rows:
-            row["internal_location"] = loc
+            row["internal_location"] = new_iloc
             collected_mf.add_row(row)
 
     if args.manifest_format == "csv":
