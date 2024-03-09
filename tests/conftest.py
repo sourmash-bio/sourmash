@@ -13,6 +13,11 @@ from sourmash_tst_utils import TempDirectory, RunnerContext
 sys.stdout = sys.stderr
 
 
+@pytest.fixture(params=["v4", "v5"])
+def cli_v4_and_v5(request):
+    return request.param
+
+
 @pytest.fixture
 def runtmp():
     with TempDirectory() as location:

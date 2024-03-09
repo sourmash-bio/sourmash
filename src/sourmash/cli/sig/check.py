@@ -72,6 +72,7 @@ def subparser(subparsers):
         "--use-absolute-paths",
         help="convert all locations to absolute paths",
         action="store_true",
+        default=None,
     )
     subparser.add_argument(
         "--no-abspath",
@@ -97,6 +98,19 @@ def subparser(subparsers):
     add_pattern_args(subparser)
     add_picklist_args(subparser)
 
+    subparser.add_argument(
+        "--v4",
+        dest="cli_version",
+        action='store_const',
+        const="v4",
+        default="v4"
+    )
+    subparser.add_argument(
+        "--v5",
+        dest="cli_version",
+        action='store_const',
+        const="v5"
+    )
 
 def main(args):
     import sourmash

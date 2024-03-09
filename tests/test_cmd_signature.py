@@ -5649,7 +5649,7 @@ def test_sig_check_5_abspath(runtmp):
         assert os.path.basename(k) in sigfiles  # converts back to basic
 
 
-def test_sig_check_5_no_abspath(runtmp):
+def test_sig_check_5_no_abspath(runtmp, cli_v4_and_v5):
     # check path rewriting for default (--no-relpath --no-abspath)
     # this behavior will change in v5; specify `--no-abspath` then?
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
@@ -5670,6 +5670,7 @@ def test_sig_check_5_no_abspath(runtmp):
         "-m",
         "mf.csv",
         # "--no-abspath" # => default behavior
+        version=cli_v4_and_v5
     )
 
     out_mf = runtmp.output("mf.csv")
