@@ -1113,16 +1113,18 @@ class StandaloneManifestIndex(Index):
     with many signature collections underneath it, and you don't want to load
     every collection each time you run sourmash.
 
-    Instead, you can run 'sourmash sig manifest <directory> -o mf.csv' to
-    output a manifest and then use this class to load 'mf.csv' directly.
+    Instead, you can run 'sourmash sig collect <directory> -o <manifest>' to
+    output a manifest and then use this class to load <manifest> directly.
     Sketch type selection, picklists, and pattern matching will all work
     directly on the manifest and will load signatures only upon demand.
 
-    One feature of this class is that absolute paths to sketches in
-    the 'internal_location' field of the manifests will be loaded properly.
-    This permits manifests to be constructed for various collections of
-    signatures that reside elsewhere, and not just below a single directory
-    prefix.
+    One feature of this class is that external paths to sketches in
+    the 'internal_location' field of the manifests will be loaded
+    properly.  This permits manifests to be constructed for various
+    collections of signatures that reside elsewhere, and not just
+    below a single directory prefix. By default paths are interpreted
+    relative to the location of the manifest, unless an absolute path
+    is provided in the 'internal_location' field.
 
     StandaloneManifestIndex does _not_ store signatures in memory.
 
@@ -1130,6 +1132,7 @@ class StandaloneManifestIndex(Index):
     MultiIndex.load_from_pathlist is used to load other Index
     objects. However, this class does not store any signatures in
     memory, unlike MultiIndex.
+
     """
 
     is_database = True
@@ -1155,6 +1158,7 @@ class StandaloneManifestIndex(Index):
         m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
+            # by default, calculate paths relative to manifest location.
             prefix = os.path.dirname(location)
 
         return cls(m, location, prefix=prefix)
