@@ -1393,6 +1393,9 @@ def test_do_sourmash_singleton_multiple_files_no_out_specified(runtmp):
         "saved 2 signature(s) to 'shewanella.faa.sig'. Note: signature license is CC0."
         in runtmp.last_result.err
     )
+    assert (
+        "calculated 2 signatures for 2 sequences in" in runtmp.last_result.err
+    )
 
     sig1 = runtmp.output("ecoli.faa.sig")
     assert os.path.exists(sig1)
@@ -1440,6 +1443,13 @@ def test_do_sourmash_singleton_multiple_files_output(runtmp):
     assert (
         "saved 4 signature(s) to 'output.sig'. Note: signature license is CC0."
         in runtmp.last_result.err
+    )
+    assert (
+        "calculated 2 signatures for 2 sequences in" in runtmp.last_result.err
+    )
+    assert (
+        "calculated 4 signatures for 2 sequences in"
+        not in runtmp.last_result.err
     )
 
     sig1 = runtmp.output("output.sig")
