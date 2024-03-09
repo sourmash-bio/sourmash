@@ -5670,7 +5670,7 @@ def test_sig_check_5_no_abspath(runtmp, cli_v4_and_v5):
         "-m",
         "mf.csv",
         # "--no-abspath" # => default behavior
-        version=cli_v4_and_v5
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")

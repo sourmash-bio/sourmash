@@ -192,18 +192,18 @@ class RunnerContext:
         version_arg = None
         if "version" in kwargs:
             ver = kwargs["version"]
-            assert ver in ('v4', 'v5', 'default'), ver
-            if ver == 'v4':
-                version_arg = '--v4'
-            elif ver == 'v5':
-                version_arg = '--v5'
-            elif ver == 'default':
+            assert ver in ("v4", "v5", "default"), ver
+            if ver == "v4":
+                version_arg = "--v4"
+            elif ver == "v5":
+                version_arg = "--v5"
+            elif ver == "default":
                 pass
 
         cmdlist = ["sourmash"]
         cmdlist.extend(str(x) for x in args)
         if version_arg is not None:
-            print(f'setting CLI version arg to: {version_arg}')
+            print(f"setting CLI version arg to: {version_arg}")
             cmdlist.append(version_arg)
 
         self.last_command = " ".join(cmdlist)
