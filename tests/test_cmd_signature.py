@@ -5533,7 +5533,7 @@ def test_sig_check_4_manifest_subdir_subdir(runtmp, abspath_or_relpath):
 
 def test_sig_check_5_relpath(runtmp):
     # check path rewriting when sketches are in a subdir.
-    # this will be the default behavior in v5 => remove --relpath.
+    # this will be the default behavior in v5.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
@@ -5572,7 +5572,7 @@ def test_sig_check_5_relpath(runtmp):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_relpath_subdir(runtmp):
+def test_sig_check_5_relpath_subdir(runtmp, cli_v4_and_v5):
     # check path rewriting when both sigs and mf are in different subdirs.
     # use explicit --relpath (which will become default in v5)
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
@@ -5596,6 +5596,7 @@ def test_sig_check_5_relpath_subdir(runtmp):
         "-m",
         "mf.csv",
         "--relpath",
+        version=cli_v4_and_v5
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5613,7 +5614,7 @@ def test_sig_check_5_relpath_subdir(runtmp):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_relpath_subdir_default(runtmp, cli_v5_only):
+def test_sig_check_5_relpath_subdir_default_v5(runtmp, cli_v5_only):
     # check path rewriting when both sigs and mf are in different subdirs.
     # default in v5 is --relpath.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
@@ -5654,7 +5655,7 @@ def test_sig_check_5_relpath_subdir_default(runtmp, cli_v5_only):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_abspath(runtmp):
+def test_sig_check_5_abspath(runtmp, cli_v4_and_v5):
     # check path rewriting with `--abspath` => absolute paths.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5674,6 +5675,7 @@ def test_sig_check_5_abspath(runtmp):
         "-m",
         "mf.csv",
         "--abspath",
+        version=cli_v4_and_v5
     )
 
     out_mf = runtmp.output("mf.csv")
