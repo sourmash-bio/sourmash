@@ -5574,7 +5574,7 @@ def test_sig_check_5_relpath(runtmp):
 
 def test_sig_check_5_relpath_subdir(runtmp):
     # check path rewriting when both sigs and mf are in different subdirs.
-    # this will be the default behavior in v5 => can remove --relpath then.
+    # use explicit --relpath (which will become default in v5)
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
@@ -5596,6 +5596,47 @@ def test_sig_check_5_relpath_subdir(runtmp):
         "-m",
         "mf.csv",
         "--relpath",
+    )
+
+    out_mf = runtmp.output("mf.csv")
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline="") as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    locations = [row["internal_location"] for row in mf.rows]
+    print("XXX", locations)
+    print("YYY", new_names)
+    expected_names = ["./" + f for f in new_names]
+    assert set(locations).issubset(expected_names), (locations, expected_names)
+
+
+def test_sig_check_5_relpath_subdir_default(runtmp, cli_v5_only):
+    # check path rewriting when both sigs and mf are in different subdirs.
+    # default in v5 is --relpath.
+    sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
+    picklist = utils.get_test_data("gather/salmonella-picklist.csv")
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    new_names = []
+    for f in sigfiles:
+        basename = os.path.basename(f)
+        filename = os.path.join("sigs_dir", basename)
+
+        shutil.copyfile(f, runtmp.output(filename))
+        new_names.append(filename)
+
+    runtmp.sourmash(
+        "sig",
+        "check",
+        *new_names,
+        "--picklist",
+        f"{picklist}::manifest",
+        "-m",
+        "mf.csv",
+        version=cli_v5_only,
     )
 
     out_mf = runtmp.output("mf.csv")
