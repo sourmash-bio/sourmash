@@ -515,7 +515,9 @@ def test_sig_collect_4_multiple_subdir_subdir_relpath(runtmp, manifest_db_format
     runtmp.sourmash("sig", "cat", f"mf_dir/mf.{ext}")
 
 
-def test_sig_collect_4_multiple_subdir_subdir_default_is_relpath(runtmp, manifest_db_format, cli_v5_only):
+def test_sig_collect_4_multiple_subdir_subdir_default_is_relpath(
+    runtmp, manifest_db_format, cli_v5_only
+):
     # collect a manifest from sig files, no abspath; use a subdir for sketches
     # --relpath is used by default on v5.
     sig43 = utils.get_test_data("47.fa.sig")
