@@ -1413,7 +1413,6 @@ def check(args):
     """
     from sourmash.picklist import PickStyle
 
-    print(args.cli_version)
     if args.cli_version == "v5":
         if args.abspath is None:  # not set by user
             args.relpath = True
@@ -1556,8 +1555,11 @@ def check(args):
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     # TODO:
-    # test what happens with directories :)
     set_quiet(False, args.debug)
+
+    if args.cli_version == "v5":
+        if args.abspath is None:  # not set by user
+            args.relpath = True
 
     if os.path.exists(args.output):
         if args.merge_previous:

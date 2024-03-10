@@ -472,7 +472,7 @@ def test_sig_collect_4_multiple_no_abspath(runtmp, manifest_db_format):
 
 def test_sig_collect_4_multiple_subdir_subdir_no_abspath(runtmp, manifest_db_format):
     # collect a manifest from sig files, no abspath; use a subdir for sketches
-    # this should work with default behavior.
+    # this should work with default behavior. @CTB
     sig43 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
