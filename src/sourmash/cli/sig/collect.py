@@ -58,7 +58,7 @@ def subparser(subparsers):
         "--use-absolute-paths",
         help="convert all locations to absolute paths",
         action="store_true",
-        #        default=None,
+        default=None,
     )
     subparser.add_argument(
         "--no-abspath",
