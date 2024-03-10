@@ -5596,7 +5596,7 @@ def test_sig_check_5_relpath_subdir(runtmp, cli_v4_and_v5):
         "-m",
         "mf.csv",
         "--relpath",
-        version=cli_v4_and_v5
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5675,7 +5675,7 @@ def test_sig_check_5_abspath(runtmp, cli_v4_and_v5):
         "-m",
         "mf.csv",
         "--abspath",
-        version=cli_v4_and_v5
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")

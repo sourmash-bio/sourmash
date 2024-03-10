@@ -18,10 +18,12 @@ sys.stdout = sys.stderr
 def cli_v4_and_v5(request):
     return request.param
 
+
 # behavior is default behavior in v4, and maybe will be invoked by --v4 in v5.
 @pytest.fixture(params=["v4", "(default)"])
 def cli_v4_only(request):
     return request.param
+
 
 # behavior is available with --v5 and will be default in sourmash v5.
 @pytest.fixture(params=["v5"])
