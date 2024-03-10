@@ -192,12 +192,12 @@ class RunnerContext:
         version_arg = None
         if "version" in kwargs:
             ver = kwargs["version"]
-            assert ver in ("v4", "v5", "default"), ver
+            assert ver in ("v4", "v5", "(default)"), ver
             if ver == "v4":
                 version_arg = "--v4"
             elif ver == "v5":
                 version_arg = "--v5"
-            elif ver == "default":
+            elif ver == "(default)":
                 pass
 
         cmdlist = ["sourmash"]
