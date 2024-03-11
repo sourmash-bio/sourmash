@@ -3934,7 +3934,7 @@ def test_sig_manifest_1_zipfile_csv_gz(runtmp):
 
 
 def test_sig_manifest_1_zipfile_already_exists(runtmp):
-    # make a manifest from a .zip file; f
+    # make a manifest from a .zip file;
     protzip = utils.get_test_data("prot/protein.zip")
 
     mf_csv = runtmp.output("mf.csv")
@@ -4080,10 +4080,15 @@ def test_sig_manifest_does_not_exist(runtmp):
     )
 
 
-def test_sig_manifest_7_allzip_1(runtmp):
+def test_sig_manifest_7_allzip_1(runtmp, cli_v4_only):
     # the rebuilt manifest w/o '-f' will miss dna-sig.noext
+    # note: default in v4 is to rebuild manifest
     allzip = utils.get_test_data("prot/all.zip")
-    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv")
+    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv", "-d",
+                    version=cli_v4_only)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
     manifest_fn = runtmp.output("xyz.csv")
     with open(manifest_fn, newline="") as csvfp:
@@ -4108,11 +4113,28 @@ def test_sig_manifest_7_allzip_2(runtmp):
     assert "dna-sig.noext" in filenames
 
 
-def test_sig_manifest_7_allzip_3(runtmp):
-    # the existing manifest contains 'dna-sig.noext' whther or not -f is
-    # used.
+def test_sig_manifest_7_allzip_3_no_rebuild(runtmp, cli_v4_only):
+    # the manifest contains 8 entries.
+    # note: --no-rebuild-manifest is default behavior on v4, but not on v5.
     allzip = utils.get_test_data("prot/all.zip")
-    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv", "--no-rebuild")
+    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv", "--no-rebuild",
+                    version=cli_v4_only)
+
+    manifest_fn = runtmp.output("xyz.csv")
+    with open(manifest_fn, newline="") as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set(row["internal_location"] for row in manifest.rows)
+    assert "dna-sig.noext" in filenames
+
+
+def test_sig_manifest_7_allzip_3_no_rebuild_is_default_v5(runtmp, cli_v5_only):
+    # by default, do not rebuild the manifest.
+    # note: --no-rebuild-manifest is on by default in v5
+    allzip = utils.get_test_data("prot/all.zip")
+    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv",
+                    version=cli_v5_only)
 
     manifest_fn = runtmp.output("xyz.csv")
     with open(manifest_fn, newline="") as csvfp:

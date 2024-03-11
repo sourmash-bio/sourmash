@@ -37,10 +37,18 @@ def subparser(subparsers):
         "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     subparser.add_argument(
-        "--no-rebuild-manifest",
+        "--rebuild-manifest",
         help="use existing manifest if available",
         action="store_true",
+        default=None,
     )
+    subparser.add_argument(
+        "--no-rebuild-manifest",
+        help="force rebuilding manifest if available",
+        action="store_false",
+        dest="rebuild_manifest",
+    )
+
     subparser.add_argument(
         "-F",
         "--manifest-format",
@@ -48,6 +56,10 @@ def subparser(subparsers):
         default="csv",
         choices=["csv", "sql"],
     )
+    subparser.add_argument(
+        "--v4", dest="cli_version", action="store_const", const="v4", default="v4"
+    )
+    subparser.add_argument("--v5", dest="cli_version", action="store_const", const="v5")
 
 
 def main(args):

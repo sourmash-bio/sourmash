@@ -360,12 +360,22 @@ def manifest(args):
         error("Use -d/--debug for details.")
         sys.exit(-1)
 
-    rebuild = True
-    if args.no_rebuild_manifest:
-        debug("sig manifest: not forcing rebuild.")
+    # behavior switch: in v4, manifests were rebuilt by default; in v5, not.
+    if args.cli_version == 'v4':
+        rebuild = True
+
+        # was --no-rebuild-manifest specified?
+        if args.rebuild_manifest is False:
+            debug("sig manifest: not forcing rebuild.")
+            rebuild = False
+        else:
+            # either left as default (None) or set (True) - rebuild
+            debug("sig manifest: forcing rebuild.")
+    else: # args.cli_version == 'v5':
         rebuild = False
-    else:
-        debug("sig manifest: forcing rebuild.")
+        if args.rebuild_manifest:
+            debug("sig manifest: forcing rebuild.")
+            rebuild = True
 
     manifest = sourmash_args.get_manifest(loader, require=True, rebuild=rebuild)
 
