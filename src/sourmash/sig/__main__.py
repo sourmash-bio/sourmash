@@ -361,7 +361,7 @@ def manifest(args):
         sys.exit(-1)
 
     # behavior switch: in v4, manifests were rebuilt by default; in v5, not.
-    if args.cli_version == 'v4':
+    if args.cli_version == "v4":
         rebuild = True
 
         # was --no-rebuild-manifest specified?
@@ -371,7 +371,7 @@ def manifest(args):
         else:
             # either left as default (None) or set (True) - rebuild
             debug("sig manifest: forcing rebuild.")
-    else: # args.cli_version == 'v5':
+    else:  # args.cli_version == 'v5':
         rebuild = False
         if args.rebuild_manifest:
             debug("sig manifest: forcing rebuild.")
