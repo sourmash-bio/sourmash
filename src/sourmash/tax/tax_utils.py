@@ -1274,7 +1274,9 @@ class LineageDB(abc.Mapping):
                 elif "accession" in header:
                     identifier = "accession"
                     header = ["ident" if "accession" == x else x for x in header]
-                elif "lineage" in header and any(["name" in header, "match_name" in header]):
+                elif "lineage" in header and any(
+                    ["name" in header, "match_name" in header]
+                ):
                     return cls.load_from_gather_with_lineages(
                         filename, force=force, lins=lins, ictv=ictv
                     )
@@ -1391,10 +1393,10 @@ class LineageDB(abc.Mapping):
                 raise ValueError(f"cannot read taxonomy assignments from {filename}")
 
             ident_col = None
-            if 'name' in header:
+            if "name" in header:
                 ident_col = "name"
-            elif 'match_name' in header:
-                ident_col = 'match_name'
+            elif "match_name" in header:
+                ident_col = "match_name"
             if "lineage" not in header or ident_col is None:
                 raise ValueError(
                     "Expected headers 'name'/'match_name' and 'lineage' not found. Is this a with-lineages file?"
