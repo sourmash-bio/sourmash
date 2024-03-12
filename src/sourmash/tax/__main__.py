@@ -313,6 +313,7 @@ def genome(args):
         sys.exit(-1)
 
     # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
+    n_classified = 0
     for queryResult in query_gather_results:
         try:
             queryResult.build_classification_result(
@@ -322,10 +323,17 @@ def genome(args):
                 lingroup_ranks=lg_ranks,
                 lingroups=all_lgs,
             )
+            n_classified+=1
 
         except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
+            notify(f"ERROR: {str(exc)}")
+
+    if n_classified == 0:
+        notify(f'No queries could be classified. Exiting.')
+        sys.exit(-1)
+    else:
+        notify(f'classified {n_classified} queries. Writing results')
+
 
     # write outputs
     if "csv_summary" in args.output_format:
