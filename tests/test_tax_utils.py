@@ -1057,7 +1057,7 @@ def test_check_and_load_gather_lineage_csvs_match_name(runtmp):
             for line in f_in:
                 f_out.write(line)
 
-    lins = LineageDB.load_from_gather_with_lineages(g_res)
+    lins = LineageDB.load_from_gather_with_lineages(out_lins)
     assert len(lins) == 4
 
 
