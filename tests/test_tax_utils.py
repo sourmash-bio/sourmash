@@ -1014,7 +1014,8 @@ def test_check_and_load_gather_lineage_csvs_bad_header(runtmp):
     with pytest.raises(ValueError) as exc:
         LineageDB.load_from_gather_with_lineages(g_res)
     assert (
-        "Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?"
+        "Expected headers 'name'/'match_name' and 'lineage' not found. Is this a with-lineages file?"
+
         in str(exc.value)
     )
 
@@ -1036,6 +1037,28 @@ def test_check_and_load_gather_lineage_csvs_isdir(runtmp):
     with pytest.raises(ValueError) as exc:
         LineageDB.load_from_gather_with_lineages(g_res)
     assert "is a directory" in str(exc.value)
+
+def test_check_and_load_gather_lineage_csvs_name(runtmp):
+    # test loading a with-lineage file that has 'name', not 'match_name'
+    g_res = utils.get_test_data("tax/test1.gather.with-lineages.csv")
+
+    lins = LineageDB.load_from_gather_with_lineages(g_res)
+    assert len(lins) == 4
+
+
+def test_check_and_load_gather_lineage_csvs_match_name(runtmp):
+    # test loading a with-lineage file that has 'match_name' instead of 'name'
+    g_res = utils.get_test_data("tax/test1.gather.with-lineages.csv")
+    out_lins = runtmp.output("match-name.lineages.csv")
+    with open(g_res, 'r') as f_in:
+        first_line = f_in.readline().replace('name', 'match_name')
+        with open(out_lins, 'w') as f_out:
+            f_out.write(first_line)
+            for line in f_in:
+                f_out.write(line)
+
+    lins = LineageDB.load_from_gather_with_lineages(g_res)
+    assert len(lins) == 4
 
 
 def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
