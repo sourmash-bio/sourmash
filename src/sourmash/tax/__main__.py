@@ -1,6 +1,7 @@
 """
 Command-line entry point for 'python -m sourmash.tax'
 """
+
 import sys
 import csv
 import os

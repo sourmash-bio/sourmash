@@ -1,6 +1,7 @@
 """
 Functions implementing the 'compute' command and related functions.
 """
+
 import os
 import os.path
 import sys

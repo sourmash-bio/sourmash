@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash tax' command line and high level API.
 """
+
 import os
 import csv
 import pytest
