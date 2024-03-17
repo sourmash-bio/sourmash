@@ -1914,9 +1914,10 @@ will continue processing input sequences.
 
 ### `sourmash signature manifest` - output a manifest for a file
 
-Output a manifest for a file, database, or collection.  Note that these
-manifests are not always suitable for use as standalone manifests;
-the `sourmash sig collect` command produces standalone manifests.
+Output a manifest for a file, database, or collection.  Note that
+these manifests are not usually suitable for use as standalone
+manifests; the `sourmash sig collect` and `sourmash sig check`
+commands produce standalone manifests.
 
 For example,
 ```
@@ -1961,7 +1962,7 @@ of the _matched_ elements to a manifest file, which can then be used as a
 sourmash database.
 
 `sourmash sig check` is particularly useful when working with large
-collections of signatures and identifiers.
+collections of signatures and identifiers. 
 
 With `-m/--save-manifest-matching`, `sig check` creates a standalone
 manifest. In these manifests, sourmash v4 will by default write paths
@@ -1972,6 +1973,12 @@ with sourmash.  The `--relpath` argument will rewrite the paths to be
 relative to the manifest, while the `--abspath` argument will rewrite
 paths to be absolute.  The `--relpath` behavior will be the default in
 sourmash v5.
+
+Standalone manifests created with `-m/--save-manifest-matching` will
+use the paths given to `sig check` on the command line; we recommend
+using zip files and sig files, and avoiding directory hierarchies or
+path lists. You can also use `--from-file` to pass in long lists of
+filenames.
 
 ### `sourmash signature collect` - collect manifests across databases
 
@@ -1996,17 +2003,22 @@ This manifest file can be loaded directly from the command line by sourmash.
 particularly useful when working with large collections of signatures and
 identifiers, and has command line options for merging and updating manifests.
 
-Standalone manifests produced by `sig collect` work most efficiently when
-constructed from many small zip file collections.
+The standalone manifests created by `sig collect` will reference the
+paths given on the command line; we recommend using zip files and sig
+files, and avoiding directory hierarchies or path lists. You can also
+use `--from-file` to pass in long lists of filenames.
+
+Standalone manifests produced by `sig collect` work most efficiently
+when constructed from many small zip file collections.  
 
 As with `sig check`, the standalone manifests created by `sig collect`
 in sourmash v4 will by default write paths to the matched elements
 relative to the current working directory.  When the output manifest
-is in a different directory, this will create manifests that do not work
-properly with sourmash.  The `--relpath` argument will rewrite the
-paths to be relative to the manifest, while the `--abspath` argument
-will rewrite paths to be absolute.  The `--relpath` behavior will be
-the default in sourmash v5.
+is in a different directory, this will create manifests that do not
+work properly with sourmash.  The `--relpath` argument will rewrite
+the paths to be relative to the manifest, while the `--abspath`
+argument will rewrite paths to be absolute.  The `--relpath` behavior
+will be the default in sourmash v5.
 
 ## Advanced command-line usage
 
@@ -2233,23 +2245,26 @@ a SQLite indexed database.
 
 #### Loading signatures within a directory hierarchy
 
-All of the `sourmash` commands support loading signatures from
-within directories; provide the paths on the command line.
+All of the `sourmash` commands support loading signatures (`.sig` or
+`.sig.gz` files) from within directory hierarchies; you can just
+provide the paths to the top-level directory on the command line.
 
-This is no longer recommended; we instead suggest passing all of the
-sketch files in the directory into `sig collect` to build a standalone
-manifest, or using `sig cat` on the directory to generate a zip file.
+However, this is no longer recommended because it can lead to
+inefficiencies; we instead suggest passing all of the sketch files in
+the directory into `sig collect` to build a standalone manifest, or
+using `sig cat` on the directory to generate a zip file.
 
 #### Passing in lists of files
 
-Most sourmash commands will also take a `--from-file` or
-`--query-from-file`, which will take the location of a text file containing
-a list of file paths. This can be useful for situations where you want
-to specify thousands of queries, or a subset of signatures produced by
-some other command.
+sourmash commands support `--from-file` or `--query-from-file`, which
+will take the location of a text file containing a list of file
+paths. This can be useful for situations where you want to specify
+thousands of queries, or a subset of signatures produced by some other
+command.
 
-This is no longer recommended; we instead suggest using standalone manifests
-built with `sig collect`.
+This is no longer recommended when using large collections; we instead
+suggest using standalone manifests built with `sig collect` and `sig
+check`, which will include extra metadata that supports fast loading.
 
 ### Combining search databases on the command line
 
