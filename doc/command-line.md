@@ -1962,7 +1962,7 @@ of the _matched_ elements to a manifest file, which can then be used as a
 sourmash database.
 
 `sourmash sig check` is particularly useful when working with large
-collections of signatures and identifiers. 
+collections of signatures and identifiers.
 
 With `-m/--save-manifest-matching`, `sig check` creates a standalone
 manifest. In these manifests, sourmash v4 will by default write paths
@@ -2114,7 +2114,7 @@ The following `coltype`s are currently supported for picklists:
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
 * `search` - use the CSV output of `sourmash prefetch` as a picklist
-* `manifest` - use CSV manifests as a picklist
+* `manifest` - use CSV manifests produced by `sig manfiest` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
