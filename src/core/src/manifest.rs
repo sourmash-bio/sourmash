@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
-use crate::signature::{Signature, SigsTrait};
+use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::Result;
 

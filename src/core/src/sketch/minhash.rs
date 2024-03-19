@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
-use std::iter::{Iterator, Peekable};
+use std::iter::Peekable;
 use std::str;
 use std::sync::Mutex;
 
