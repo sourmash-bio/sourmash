@@ -1977,8 +1977,8 @@ sourmash v5.
 Standalone manifests created with `-m/--save-manifest-matching` will
 use the paths given to `sig check` on the command line; we recommend
 using zip files and sig files, and avoiding directory hierarchies or
-path lists. You can also use `--from-file` to pass in long lists of
-filenames.
+path lists. You can use `--from-file` to pass in long lists of
+filenames via a text file.
 
 ### `sourmash signature collect` - collect manifests across databases
 
@@ -2025,8 +2025,8 @@ will be the default in sourmash v5.
 ### Loading signatures and databases
 
 sourmash uses several different command-line styles.  Most sourmash
-commands can load sketches from any standard collection; we primarily
-recommend using zipfiles (but read on!)
+commands can load sketches from any standard collection type; we
+primarily recommend using zipfiles (but read on!)
 
 Briefly,
 
@@ -2249,8 +2249,8 @@ All of the `sourmash` commands support loading signatures (`.sig` or
 `.sig.gz` files) from within directory hierarchies; you can just
 provide the paths to the top-level directory on the command line.
 
-However, this is no longer recommended because it can lead to
-inefficiencies; we instead suggest passing all of the sketch files in
+However, this is no longer recommended because it can be very
+inefficient; we instead suggest passing all of the sketch files in
 the directory into `sig collect` to build a standalone manifest, or
 using `sig cat` on the directory to generate a zip file.
 
