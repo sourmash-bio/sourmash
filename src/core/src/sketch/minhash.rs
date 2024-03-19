@@ -942,37 +942,6 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
     }
 }
 
-struct Union<T, I: Iterator<Item = T>> {
-    iter: Peekable<I>,
-    other: Peekable<I>,
-}
-
-impl<T: Ord, I: Iterator<Item = T>> Iterator for Union<T, I> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        let res = match (self.iter.peek(), self.other.peek()) {
-            (Some(ref left_key), Some(ref right_key)) => left_key.cmp(right_key),
-            (None, Some(_)) => {
-                return self.other.next();
-            }
-            (Some(_), None) => {
-                return self.iter.next();
-            }
-            _ => return None,
-        };
-
-        match res {
-            Ordering::Less => self.iter.next(),
-            Ordering::Greater => self.other.next(),
-            Ordering::Equal => {
-                self.other.next();
-                self.iter.next()
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::Union;
