@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;

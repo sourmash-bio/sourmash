@@ -17,7 +17,6 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::prelude::*;
-use crate::selection::Select;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Error;
