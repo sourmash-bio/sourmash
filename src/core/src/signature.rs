@@ -889,7 +889,6 @@ impl PartialEq for Signature {
 
 #[cfg(test)]
 mod test {
-    use std::convert::TryInto;
     use std::fs::File;
     use std::io::{BufReader, Read};
     use std::path::PathBuf;
