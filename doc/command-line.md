@@ -2114,7 +2114,7 @@ The following `coltype`s are currently supported for picklists:
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
 * `search` - use the CSV output of `sourmash prefetch` as a picklist
-* `manifest` - use CSV manifests produced by `sig manfiest` as a picklist
+* `manifest` - use CSV manifests produced by `sig manifest` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
