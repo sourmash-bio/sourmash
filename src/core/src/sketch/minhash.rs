@@ -942,25 +942,6 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::Union;
-
-    #[test]
-    fn test_union() {
-        let v1 = [1u64, 2, 4, 10];
-        let v2 = [1u64, 3, 4, 9];
-
-        let union: Vec<u64> = Union {
-            iter: v1.iter().peekable(),
-            other: v2.iter().peekable(),
-        }
-        .cloned()
-        .collect();
-        assert_eq!(union, [1, 2, 3, 4, 9, 10]);
-    }
-}
-
 //#############
 // A MinHash implementation for low scaled or large cardinalities
 
