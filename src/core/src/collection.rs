@@ -6,8 +6,7 @@ use camino::Utf8PathBuf as PathBuf;
 use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
-use crate::signature::Signature;
-use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, Storage, ZipStorage};
+use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
 use crate::{Error, Result};
 
 #[cfg(feature = "parallel")]
