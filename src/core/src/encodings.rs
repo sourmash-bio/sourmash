@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
-use std::iter::Iterator;
 use std::str;
 
 use nohash_hasher::BuildNoHashHasher;

@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
-use std::iter::{Iterator, Peekable};
+use std::iter::Peekable;
 use std::str;
 use std::sync::Mutex;
 
@@ -939,56 +939,6 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
                 }
             }
         }
-    }
-}
-
-struct Union<T, I: Iterator<Item = T>> {
-    iter: Peekable<I>,
-    other: Peekable<I>,
-}
-
-impl<T: Ord, I: Iterator<Item = T>> Iterator for Union<T, I> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        let res = match (self.iter.peek(), self.other.peek()) {
-            (Some(ref left_key), Some(ref right_key)) => left_key.cmp(right_key),
-            (None, Some(_)) => {
-                return self.other.next();
-            }
-            (Some(_), None) => {
-                return self.iter.next();
-            }
-            _ => return None,
-        };
-
-        match res {
-            Ordering::Less => self.iter.next(),
-            Ordering::Greater => self.other.next(),
-            Ordering::Equal => {
-                self.other.next();
-                self.iter.next()
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::Union;
-
-    #[test]
-    fn test_union() {
-        let v1 = [1u64, 2, 4, 10];
-        let v2 = [1u64, 3, 4, 9];
-
-        let union: Vec<u64> = Union {
-            iter: v1.iter().peekable(),
-            other: v2.iter().peekable(),
-        }
-        .cloned()
-        .collect();
-        assert_eq!(union, [1, 2, 3, 4, 9, 10]);
     }
 }
 
