@@ -5533,7 +5533,7 @@ def test_sig_check_4_manifest_subdir_subdir(runtmp, abspath_or_relpath):
 
 def test_sig_check_5_relpath(runtmp):
     # check path rewriting when sketches are in a subdir.
-    # this will be the default behavior in v5 => remove --relpath.
+    # this will be the default behavior in v5.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
@@ -5572,9 +5572,9 @@ def test_sig_check_5_relpath(runtmp):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_relpath_subdir(runtmp):
+def test_sig_check_5_relpath_subdir(runtmp, cli_v4_and_v5):
     # check path rewriting when both sigs and mf are in different subdirs.
-    # this will be the default behavior in v5 => can remove --relpath then.
+    # use explicit --relpath (which will become default in v5)
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
@@ -5596,6 +5596,7 @@ def test_sig_check_5_relpath_subdir(runtmp):
         "-m",
         "mf.csv",
         "--relpath",
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5613,7 +5614,48 @@ def test_sig_check_5_relpath_subdir(runtmp):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_abspath(runtmp):
+def test_sig_check_5_relpath_subdir_default_v5(runtmp, cli_v5_only):
+    # check path rewriting when both sigs and mf are in different subdirs.
+    # default in v5 is --relpath.
+    sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
+    picklist = utils.get_test_data("gather/salmonella-picklist.csv")
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    new_names = []
+    for f in sigfiles:
+        basename = os.path.basename(f)
+        filename = os.path.join("sigs_dir", basename)
+
+        shutil.copyfile(f, runtmp.output(filename))
+        new_names.append(filename)
+
+    runtmp.sourmash(
+        "sig",
+        "check",
+        *new_names,
+        "--picklist",
+        f"{picklist}::manifest",
+        "-m",
+        "mf.csv",
+        version=cli_v5_only,
+    )
+
+    out_mf = runtmp.output("mf.csv")
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline="") as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    locations = [row["internal_location"] for row in mf.rows]
+    print("XXX", locations)
+    print("YYY", new_names)
+    expected_names = ["./" + f for f in new_names]
+    assert set(locations).issubset(expected_names), (locations, expected_names)
+
+
+def test_sig_check_5_abspath(runtmp, cli_v4_and_v5):
     # check path rewriting with `--abspath` => absolute paths.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5633,6 +5675,7 @@ def test_sig_check_5_abspath(runtmp):
         "-m",
         "mf.csv",
         "--abspath",
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5649,7 +5692,7 @@ def test_sig_check_5_abspath(runtmp):
         assert os.path.basename(k) in sigfiles  # converts back to basic
 
 
-def test_sig_check_5_no_abspath(runtmp):
+def test_sig_check_5_no_abspath(runtmp, cli_v4_only):
     # check path rewriting for default (--no-relpath --no-abspath)
     # this behavior will change in v5; specify `--no-abspath` then?
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
@@ -5670,6 +5713,7 @@ def test_sig_check_5_no_abspath(runtmp):
         "-m",
         "mf.csv",
         # "--no-abspath" # => default behavior
+        version=cli_v4_only,
     )
 
     out_mf = runtmp.output("mf.csv")
