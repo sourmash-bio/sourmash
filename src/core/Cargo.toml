@@ -112,5 +112,5 @@ wasm-bindgen-test = "0.3.42"
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rocksdb = { version = "0.21.0", optional = true }
-rc-zip = { version = "4.0.0", default-features = false }
-rc-zip-sync = "4.0.0"
+rc-zip = { version = "5.1.0", default-features = false }
+rc-zip-sync = "4.1.0"

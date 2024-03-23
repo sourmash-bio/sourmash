@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-#[non_exhaustive]
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum SourmashError {

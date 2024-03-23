@@ -1517,9 +1517,9 @@ dependencies = [
 
 [[package]]
 name = "rc-zip"
-version = "4.0.0"
+version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17a2e4a592e2501742c853fbed65514ccdd11959d3d69ad6688bd1b695471c82"
+checksum = "29dd39582d138524d58f6d50b440e9bcc707ebf13807b70ff77b12cf3341dd19"
 dependencies = [
  "cfg-if",
  "chardetng",
@@ -1538,9 +1538,9 @@ dependencies = [
 
 [[package]]
 name = "rc-zip-sync"
-version = "4.0.0"
+version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40689e7a79f092e45fc3ee24a1ccc38242b626f9234564e561480b768f9e3fdf"
+checksum = "47b119fa4c811a1b9112daaef1437db7ec4394fc15972487c1ce74fd94a6682d"
 dependencies = [
  "oval",
  "positioned-io",
