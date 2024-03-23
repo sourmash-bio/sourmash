@@ -1,5 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
-use std::ffi::OsStr;
+use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::ops::Deref;
@@ -8,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 use once_cell::sync::OnceCell;
+use rc_zip_sync::{ArchiveHandle, ReadZip};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use typed_builder::TypedBuilder;
@@ -108,18 +108,14 @@ pub struct FSStorage {
 
 #[ouroboros::self_referencing]
 pub struct ZipStorage {
-    mapping: Option<memmap2::Mmap>,
+    file: std::fs::File,
 
-    #[borrows(mapping)]
+    #[borrows(file)]
     #[covariant]
-    archive: piz::ZipArchive<'this>,
+    archive: ArchiveHandle<'this, std::fs::File>,
 
     subdir: Option<String>,
     path: Option<PathBuf>,
-
-    #[borrows(archive)]
-    #[covariant]
-    metadata: Metadata<'this>,
 }
 
 /// Store data in memory (no permanent storage)
@@ -128,8 +124,6 @@ pub struct MemStorage {
     //store: HashMap<String, Vec<u8>>,
     sigs: Arc<RwLock<HashMap<String, SigStore>>>,
 }
-
-pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
 // =========================================
 
@@ -286,56 +280,24 @@ impl Storage for FSStorage {
     }
 }
 
-fn lookup<'a, P: AsRef<Path>>(
-    metadata: &'a Metadata,
-    path: P,
-) -> Result<&'a piz::read::FileMetadata<'a>> {
-    let path = path.as_ref();
-    metadata
-        .get(&path.as_os_str())
-        .ok_or_else(|| StorageError::PathNotFoundError(path.to_string()).into())
-        .copied()
-}
-
-fn find_subdirs<'a>(archive: &'a piz::ZipArchive<'a>) -> Result<Option<String>> {
-    let subdirs: Vec<_> = archive
-        .entries()
-        .iter()
-        .filter(|entry| entry.is_dir())
-        .collect();
-    if subdirs.len() == 1 {
-        Ok(Some(subdirs[0].path.as_str().into()))
-    } else {
-        Ok(None)
-    }
-}
-
 impl Storage for ZipStorage {
     fn save(&self, _path: &str, _content: &[u8]) -> Result<String> {
         unimplemented!();
     }
 
     fn load(&self, path: &str) -> Result<Vec<u8>> {
-        let metadata = self.borrow_metadata();
+        let archive = self.borrow_archive();
+        if let Some(entry) = archive.by_name(path) {
+            return Ok(entry.bytes()?);
+        }
 
-        let entry = lookup(metadata, path).or_else(|_| {
-            if let Some(subdir) = self.borrow_subdir() {
-                lookup(metadata, subdir.to_owned() + path)
-                    .map_err(|_| StorageError::PathNotFoundError(path.into()))
-            } else {
-                Err(StorageError::PathNotFoundError(path.into()))
+        if let Some(subdir) = &self.borrow_subdir() {
+            if let Some(entry) = archive.by_name(subdir.to_owned() + path) {
+                return Ok(entry.bytes()?);
             }
-        })?;
+        }
 
-        let mut reader = BufReader::new(
-            self.borrow_archive()
-                .read(entry)
-                .map_err(|_| StorageError::DataReadError(path.into()))?,
-        );
-        let mut contents = Vec::new();
-        reader.read_to_end(&mut contents)?;
-
-        Ok(contents)
+        Err(StorageError::PathNotFoundError(path.into()).into())
     }
 
     fn args(&self) -> StorageArgs {
@@ -352,35 +314,41 @@ impl Storage for ZipStorage {
     }
 
     fn spec(&self) -> String {
-        format!("zip://{}", self.path().unwrap_or_else(|| "".into()))
+        format!("zip://{}", self.borrow_path().clone().unwrap_or("".into()))
     }
 }
 
 impl ZipStorage {
     pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
-        let zip_file = File::open(location.as_ref())?;
-        let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
+        let file = File::open(location.as_ref())?;
 
         let mut storage = ZipStorageBuilder {
-            mapping: Some(mapping),
-            archive_builder: |mapping: &Option<memmap2::Mmap>| {
-                piz::ZipArchive::new(mapping.as_ref().unwrap()).unwrap()
-            },
-            metadata_builder: |archive: &piz::ZipArchive| {
-                archive
-                    .entries()
-                    .iter()
-                    .map(|entry| (entry.path.as_os_str(), entry))
-                    .collect()
-            },
+            file,
+            archive_builder: |file: &std::fs::File| file.read_zip().expect("Error loading zipfile"),
             subdir: None,
             path: Some(location.as_ref().into()),
         }
         .build();
 
-        let subdir = find_subdirs(storage.borrow_archive())?;
-        storage.with_mut(|fields| *fields.subdir = subdir);
+        let subdir = {
+            let subdirs: Vec<_> = storage
+                .borrow_archive()
+                .entries()
+                .filter(|entry| matches!(entry.kind(), rc_zip::parse::EntryKind::Directory))
+                .collect();
+            if subdirs.len() == 1 {
+                Some(
+                    subdirs[0]
+                        .sanitized_name()
+                        .expect("TODO throw right error")
+                        .into(),
+                )
+            } else {
+                None
+            }
+        };
 
+        storage.with_mut(|fields| *fields.subdir = subdir);
         Ok(storage)
     }
 
@@ -400,9 +368,8 @@ impl ZipStorage {
         Ok(self
             .borrow_archive()
             .entries()
-            .iter()
             .filter_map(|entry| {
-                let path = entry.path.as_str();
+                let path = entry.sanitized_name().expect("TODO throw right error");
                 if path.ends_with(".sbt.json") {
                     Some(path.into())
                 } else {
@@ -416,8 +383,12 @@ impl ZipStorage {
         Ok(self
             .borrow_archive()
             .entries()
-            .iter()
-            .map(|entry| entry.path.as_str().into())
+            .map(|entry| {
+                entry
+                    .sanitized_name()
+                    .expect("TODO throw right error")
+                    .into()
+            })
             .collect())
     }
 }
