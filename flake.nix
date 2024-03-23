@@ -128,6 +128,7 @@
             cargo-outdated
             cargo-udeps
             cargo-deny
+            cargo-wasi
             #cargo-semver-checks
             nixpkgs-fmt
           ];
