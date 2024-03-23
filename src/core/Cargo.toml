@@ -52,8 +52,6 @@ ouroboros = "0.18.5"
 piz = "0.5.0"
 primal-check = "0.3.4"
 rayon = { version = "1.10.0", optional = true }
-rc-zip = { version = "5.2.0", default-features = false }
-rc-zip-sync = "4.2.4"
 rkyv = { version = "0.7.45", optional = true }
 roaring = "0.10.10"
 roots = "0.0.8"
@@ -117,8 +115,8 @@ default-features = false
 features = [ "bindgen-runtime", "snappy", "zstd" ]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rc-zip = { version = "4.0.0", default-features = false }
-rc-zip-sync = "4.0.0"
+rc-zip = { version = "5.2.0", default-features = false }
+rc-zip-sync = "4.2.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = "0.5.1"
