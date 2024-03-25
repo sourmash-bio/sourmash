@@ -1,6 +1,7 @@
 """
 Utility functions for lowest-common-ancestor analysis tools.
 """
+
 from os.path import exists
 from collections import namedtuple, defaultdict, Counter
 

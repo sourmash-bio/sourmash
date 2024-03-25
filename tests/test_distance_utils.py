@@ -1,6 +1,7 @@
 """
 Tests for distance utils.
 """
+
 import pytest
 import numpy as np
 from sourmash.distance_utils import (

@@ -1,6 +1,7 @@
 """
 Utility functions for taxonomy analysis tools.
 """
+
 import os
 import csv
 from collections import abc, defaultdict
@@ -1001,9 +1002,9 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
         for res in queryResult.summarized_lineage_results[rank]:
             lineage = res.lineage.display_lineage(null_as_unclassified=True)
             if by_query:
-                lineage_summary[lineage][
-                    query_name
-                ] = res.fraction  # v5?: res.f_weighted_at_rank
+                lineage_summary[lineage][query_name] = (
+                    res.fraction
+                )  # v5?: res.f_weighted_at_rank
             else:
                 lineage_summary[lineage] += res.fraction
 
@@ -2349,15 +2350,15 @@ class QueryTaxResult:
                         rank in lininfo.filled_ranks
                     ):  # only store if this rank is filled.
                         lin_at_rank = lininfo.pop_to_rank(rank)
-                        self.sum_uniq_weighted[rank][
-                            lin_at_rank
-                        ] += taxres.f_unique_weighted
-                        self.sum_uniq_to_query[rank][
-                            lin_at_rank
-                        ] += taxres.f_unique_to_query
-                        self.sum_uniq_bp[rank][
-                            lin_at_rank
-                        ] += taxres.unique_intersect_bp
+                        self.sum_uniq_weighted[rank][lin_at_rank] += (
+                            taxres.f_unique_weighted
+                        )
+                        self.sum_uniq_to_query[rank][lin_at_rank] += (
+                            taxres.f_unique_to_query
+                        )
+                        self.sum_uniq_bp[rank][lin_at_rank] += (
+                            taxres.unique_intersect_bp
+                        )
         # reset ranks levels to the ones that were actually summarized + that we can access for summarized result
         self.summarized_ranks = [
             x for x in self.summarized_ranks if x in self.sum_uniq_bp.keys()

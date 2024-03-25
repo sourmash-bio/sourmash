@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash signature' command line.
 """
+
 import csv
 import shutil
 import os

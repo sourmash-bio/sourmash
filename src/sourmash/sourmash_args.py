@@ -36,6 +36,7 @@ signature and file output functionality:
 misc support:
 * FileInputCSV - context manager for reading CSVs
 """
+
 import sys
 import os
 import csv

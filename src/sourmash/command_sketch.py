@@ -1,6 +1,7 @@
 """
 Functions implementing the 'sketch' subcommands and related functions.
 """
+
 import sys
 import os
 from collections import defaultdict, Counter
