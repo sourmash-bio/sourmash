@@ -1,6 +1,7 @@
 """
 Command-line entry point for 'python -m sourmash.sig grep'
 """
+
 import sys
 import re
 

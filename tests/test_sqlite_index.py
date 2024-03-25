@@ -1,4 +1,5 @@
 "Tests for SqliteIndex, SqliteCollectionManifest, and LCA_SqliteDatabase"
+
 import os
 import pytest
 import shutil

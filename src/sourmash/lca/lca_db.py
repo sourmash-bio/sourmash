@@ -1,4 +1,5 @@
 "LCA database class and utilities."
+
 import os
 import json
 import gzip
@@ -157,16 +158,12 @@ class LCA_Database(Index):
 
         if minhash.ksize != self.ksize:
             raise ValueError(
-                "cannot insert signature with ksize {} into DB (ksize {})".format(
-                    minhash.ksize, self.ksize
-                )
+                f"cannot insert signature with ksize {minhash.ksize} into DB (ksize {self.ksize})"
             )
 
         if minhash.moltype != self.moltype:
             raise ValueError(
-                "cannot insert signature with moltype {} into DB (moltype {})".format(
-                    minhash.moltype, self.moltype
-                )
+                f"cannot insert signature with moltype {minhash.moltype} into DB (moltype {self.moltype})"
             )
 
         # downsample to specified scaled; this has the side effect of

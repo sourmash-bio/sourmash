@@ -1,6 +1,7 @@
 """
 Code for searching collections of signatures.
 """
+
 import csv
 import numpy as np
 from enum import Enum

@@ -1,6 +1,7 @@
 """
 Tests for sourmash sketch command-line functionality.
 """
+
 import os
 import gzip
 import shutil

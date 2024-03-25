@@ -1,6 +1,7 @@
 """
 Sketch Comparison Classes
 """
+
 import numpy as np
 from dataclasses import dataclass
 
