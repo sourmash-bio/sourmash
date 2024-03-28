@@ -51,8 +51,8 @@ impl Update<Nodegraph> for Nodegraph {
 
 impl Update<Nodegraph> for KmerMinHash {
     fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
-        for h in self.mins() {
-            other.count(h);
+        for h in self.iter_mins() {
+            other.count(*h);
         }
         Ok(())
     }
@@ -60,8 +60,8 @@ impl Update<Nodegraph> for KmerMinHash {
 
 impl Update<Nodegraph> for KmerMinHashBTree {
     fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
-        for h in self.mins() {
-            other.count(h);
+        for h in self.iter_mins() {
+            other.count(*h);
         }
         Ok(())
     }

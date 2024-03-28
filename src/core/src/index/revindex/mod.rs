@@ -19,7 +19,6 @@ use crate::index::{GatherResult, SigCounter};
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
-use crate::sketch::Sketch;
 use crate::HashIntoType;
 use crate::Result;
 
@@ -225,13 +224,7 @@ impl RevIndex {
 pub fn prepare_query(search_sig: Signature, selection: &Selection) -> Option<KmerMinHash> {
     let sig = search_sig.select(selection).ok();
 
-    sig.and_then(|sig| {
-        if let Sketch::MinHash(mh) = sig.sketches().swap_remove(0) {
-            Some(mh)
-        } else {
-            None
-        }
-    })
+    sig.and_then(|sig| sig.minhash().cloned())
 }
 
 #[derive(Debug, Default, Clone)]

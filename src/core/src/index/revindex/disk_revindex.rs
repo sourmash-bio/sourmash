@@ -191,15 +191,15 @@ impl RevIndex {
             .collection
             .sig_for_dataset(dataset_id)
             .expect("Couldn't find a compatible Signature");
-        let search_mh = &search_sig.sketches()[0];
+        let search_mh = search_sig.iter().next().unwrap();
 
         let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
 
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
 
-        let hashes = match search_mh {
-            Sketch::MinHash(mh) => mh.mins(),
-            Sketch::LargeMinHash(mh) => mh.mins(),
+        let hashes: Vec<_> = match search_mh {
+            Sketch::MinHash(mh) => mh.iter_mins().copied().collect(),
+            Sketch::LargeMinHash(mh) => mh.iter_mins().copied().collect(),
             _ => unimplemented!(),
         };
 

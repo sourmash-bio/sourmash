@@ -202,7 +202,7 @@ ffi_fn! {
 unsafe fn signature_get_mhs(ptr: *const SourmashSignature, size: *mut usize) -> Result<*mut *mut SourmashKmerMinHash> {
     let sig = SourmashSignature::as_rust(ptr);
 
-    let output = sig.sketches();
+    let output = sig.iter();
 
     // FIXME: how to fit this into the ForeignObject trait?
     let ptr_sigs: Vec<*mut Signature> = output.into_iter().map(|x| {

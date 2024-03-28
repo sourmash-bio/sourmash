@@ -214,8 +214,8 @@ impl SigsTrait for HyperLogLog {
 
 impl Update<HyperLogLog> for KmerMinHash {
     fn update(&self, other: &mut HyperLogLog) -> Result<(), Error> {
-        for h in self.mins() {
-            other.add_hash(h);
+        for h in self.iter_mins() {
+            other.add_hash(*h);
         }
         Ok(())
     }
