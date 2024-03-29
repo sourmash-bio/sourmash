@@ -1550,8 +1550,6 @@ def check(args):
 
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
-    # TODO:
-    # test what happens with directories :)
     set_quiet(False, args.debug)
 
     if os.path.exists(args.output):

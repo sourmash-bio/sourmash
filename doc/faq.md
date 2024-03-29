@@ -139,7 +139,7 @@ you use [the precomputed databases](databases.md), you will always end up
 using your query sketches at a minimum scaled of 1000, even if you created
 them with a lower scaled value.
 
-Please also see [What resolution should my signatures be?](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them).
+Please also see [What resolution should my signatures be?](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-and-how-should-i-create-them).
 
 ## What threshold-bp value should I use with `sourmash prefetch` and `sourmash gather`?
 
