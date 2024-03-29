@@ -56,6 +56,9 @@ last-tag:
 wasm:
 	wasm-pack build src/core -d ../../pkg
 
+wasm-test:
+	wasm-pack test --node src/core
+
 wasi:
 	cargo wasi build
 

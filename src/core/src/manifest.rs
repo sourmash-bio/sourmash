@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
-use crate::signature::{Signature, SigsTrait};
+use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::Result;
 

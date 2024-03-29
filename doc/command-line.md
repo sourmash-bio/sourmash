@@ -551,7 +551,7 @@ sourmash multigather --query <queries ...> --db <collections>
 ```
 
 Note that multigather is single threaded, so it offers no substantial
-efficiency gains over just running gather multiple times!  Nontheless, it
+efficiency gains over just running gather multiple times!  Nonetheless, it
 is useful for situations where you have many sketches organized in a
 combined file, e.g. sketches built with `sourmash sketch
 ... --singleton`).
@@ -1914,7 +1914,10 @@ will continue processing input sequences.
 
 ### `sourmash signature manifest` - output a manifest for a file
 
-Output a manifest for a file, database, or collection.
+Output a manifest for a file, database, or collection.  Note that
+these manifests are not usually suitable for use as standalone
+manifests; the `sourmash sig collect` and `sourmash sig check`
+commands produce standalone manifests.
 
 For example,
 ```
@@ -1942,8 +1945,10 @@ CSV and SQLite manifest files.
 
 ### `sourmash signature check` - compare picklists and manifests
 
-Compare picklists and manifests across databases, and optionally output matches
-and missing items.
+Compare picklists and manifests across databases, and optionally
+output matches and missing items.  In particular, `sig check` can be
+used to create standalone manifests for a subset of a large collection,
+using picklists.
 
 For example,
 ```
@@ -1959,10 +1964,31 @@ sourmash database.
 `sourmash sig check` is particularly useful when working with large
 collections of signatures and identifiers.
 
+With `-m/--save-manifest-matching`, `sig check` creates a standalone
+manifest. In these manifests, sourmash v4 will by default write paths
+to the matched elements that are relative to the current working
+directory.  In some cases - when the output manifest is in a different
+directory - this will create manifests that do not work properly
+with sourmash.  The `--relpath` argument will rewrite the paths to be
+relative to the manifest, while the `--abspath` argument will rewrite
+paths to be absolute.  The `--relpath` behavior will be the default in
+sourmash v5.
+
+Standalone manifests created with `-m/--save-manifest-matching` will
+use the paths given to `sig check` on the command line; we recommend
+using zip files and sig files, and avoiding directory hierarchies or
+path lists. You can use `--from-file` to pass in long lists of
+filenames via a text file.
+
 ### `sourmash signature collect` - collect manifests across databases
 
 Collect manifests from across (many) files and merge into a single
-standalone manifest.
+standalone manifest. Standalone manifests can be used directly as a
+sourmash database; they support efficient searching and selection of
+sketches, as well as lazy loading of individual sketches from large
+collections.  See
+[advanced usage information on sourmash databases](databases-advanced.md)
+for more information.
 
 For example,
 ```
@@ -1977,11 +2003,30 @@ This manifest file can be loaded directly from the command line by sourmash.
 particularly useful when working with large collections of signatures and
 identifiers, and has command line options for merging and updating manifests.
 
+The standalone manifests created by `sig collect` will reference the
+paths given on the command line; we recommend using zip files and sig
+files, and avoiding directory hierarchies or path lists. You can also
+use `--from-file` to pass in long lists of filenames.
+
+Standalone manifests produced by `sig collect` work most efficiently
+when constructed from many small zip file collections.  
+
+As with `sig check`, the standalone manifests created by `sig collect`
+in sourmash v4 will by default write paths to the matched elements
+relative to the current working directory.  When the output manifest
+is in a different directory, this will create manifests that do not
+work properly with sourmash.  The `--relpath` argument will rewrite
+the paths to be relative to the manifest, while the `--abspath`
+argument will rewrite paths to be absolute.  The `--relpath` behavior
+will be the default in sourmash v5.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
 
-sourmash uses several different command-line styles.
+sourmash uses several different command-line styles.  Most sourmash
+commands can load sketches from any standard collection type; we
+primarily recommend using zipfiles (but read on!)
 
 Briefly,
 
@@ -1992,22 +2037,18 @@ Briefly,
   need to provide a selector (ksize with `-k`, moltype with `--dna` etc,
   or md5sum with `--query-md5`) that picks out a single signature.
 
-* `compare` takes multiple signatures and can load them from files,
-  directories, and indexed databases (SBT or LCA).  It can also take
-  a list of file paths in a text file, using `--from-file` (see below).
+* `compare` takes multiple signatures and can load them from any
+  sourmash collection type.
   
 * the `lca classify` and `lca summarize` commands take multiple
   signatures with `--query`, and multiple LCA databases, with
   `--db`. `sourmash multigather` also uses this style.  This allows these
   commands to specify multiple queries **and** multiple databases without
-  (too much) confusion.  These commands will take files containing
-  signature files using `--query-from-file` (see below).
+  (too much) confusion.  The database must be LCA databases.
   
 * `index` and `lca index` take a few fixed parameters (database name,
   and for `lca index`, a taxonomy file) and then an arbitrary number of
-  other files that contain signatures, including files, directories,
-  and indexed databases. These commands will also take `--from-file`
-  (see below).
+  other files that contain signatures.
 
 None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
@@ -2073,7 +2114,7 @@ The following `coltype`s are currently supported for picklists:
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
 * `search` - use the CSV output of `sourmash prefetch` as a picklist
-* `manifest` - use the CSV output of `sourmash sig manifest` as a picklist
+* `manifest` - use CSV manifests produced by `sig manifest` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
@@ -2082,7 +2123,7 @@ One way to build a picklist is to use `sourmash sig grep <pattern>
 <collection> --csv out.csv` to construct a CSV file containing a list
 of all sketches that match the pattern (which can be a string or
 regexp). The `out.csv` file can be used as a picklist via the picklist
-manifest format with `--picklist out.csv::manifest`.
+manifest CSV format with `--picklist out.csv::manifest`.
 
 You can also use `sourmash sig describe --csv out.csv <signatures>` or
 `sourmash sig manifest -o out.csv <filename_or_db>` to construct an
@@ -2125,7 +2166,9 @@ slow, especially for many (100s or 1000s) of signatures.
 All of the `sourmash` commands support loading collections of
 signatures from zip files.  You can create a compressed collection of
 signatures using `sourmash sig cat *.sig -o collections.zip` and then
-specifying `collections.zip` on the command line in place of `*.sig`.
+specifying `collections.zip` on the command line in place of `*.sig`;
+you can also sketch FASTA/FASTQ files directly into a zip file with
+`-o collections.zip`.
 
 ### Choosing signature output formats
 
@@ -2152,7 +2195,7 @@ to stdout.
 All of these save formats can be loaded by sourmash commands.
 
 **We strongly suggest using .zip files to store signatures: they are fast,
-small, and fully supported by all the sourmash commands.**
+small, and fully supported by all the sourmash commands and API.**
 
 Note that when outputting large collections of signatures, some save
 formats require holding all the sketches in memory until they can be
@@ -2167,19 +2210,6 @@ databases!](databases-advanced.md)
 
 ### Loading many signatures
 
-#### Loading signatures within a directory hierarchy
-
-All of the `sourmash` commands support loading signatures from
-beneath directories; provide the paths on the command line.
-
-#### Passing in lists of files
-
-Most sourmash commands will also take a `--from-file` or
-`--query-from-file`, which will take the location of a text file containing
-a list of file paths. This can be useful for situations where you want
-to specify thousands of queries, or a subset of signatures produced by
-some other command.
-
 #### Indexed databases
 
 Indexed databases can make searching signatures much faster. SBT
@@ -2189,9 +2219,6 @@ memory and (after a potentially significant load time) are quite fast.
 SQLite databases (new in sourmash v4.4.0) are typically larger on disk
 than SBTs and LCAs, but in turn are fast to load and support very low
 memory search.
-
-(LCA databases also directly permit taxonomic searches using `sourmash lca`
-functions.)
 
 Commands that take multiple signatures or collections of signatures
 will also work with indexed databases.
@@ -2204,9 +2231,9 @@ only at one scaled value. If the database signature type is
 incompatible with the other signatures, sourmash will complain
 appropriately.
 
-In contrast, signature files, zip collections, and directory
-hierarchies can contain many different types of signatures, and
-compatible ones will be selected automatically.
+In contrast, signature files and zip collections can contain many
+different types of signatures, and compatible ones will be selected
+automatically.
 
 Use the `sourmash index` command to create an SBT.
 
@@ -2216,6 +2243,29 @@ database can be saved in JSON or SQL format with `-F json` or `-F sql`.
 Use `sourmash sig cat <list of signatures> -o <output>.sqldb` to create
 a SQLite indexed database.
 
+#### Loading signatures within a directory hierarchy
+
+All of the `sourmash` commands support loading signatures (`.sig` or
+`.sig.gz` files) from within directory hierarchies; you can just
+provide the paths to the top-level directory on the command line.
+
+However, this is no longer recommended because it can be very
+inefficient; we instead suggest passing all of the sketch files in
+the directory into `sig collect` to build a standalone manifest, or
+using `sig cat` on the directory to generate a zip file.
+
+#### Passing in lists of files
+
+sourmash commands support `--from-file` or `--query-from-file`, which
+will take the location of a text file containing a list of file
+paths. This can be useful for situations where you want to specify
+thousands of queries, or a subset of signatures produced by some other
+command.
+
+This is no longer recommended when using large collections; we instead
+suggest using standalone manifests built with `sig collect` and `sig
+check`, which will include extra metadata that supports fast loading.
+
 ### Combining search databases on the command line
 
 All of the commands in sourmash operate in "online" mode, so you can
@@ -2223,7 +2273,7 @@ combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
 them.  The only caveat to this rule is that if you have multiple
 identical matches present across the databases, the order in which
-they are found will differ depending on the order that the files are
+they are used may depend on the order that the files are
 passed in on the command line.
 
 ### Using stdin
@@ -2231,11 +2281,12 @@ passed in on the command line.
 Most commands will take signature JSON data via stdin using the usual
 UNIX convention, `-`.  Moreover, `sourmash sketch` and the `sourmash
 sig` commands will output to stdout.  So, for example,
+```
+sourmash sketch ... -o - | sourmash sig describe -
+```
+will describe the signatures that were just created.
 
-`sourmash sketch ... -o - | sourmash sig describe -` will describe the
-signatures that were just created.
-
-### Using manifests to explicitly refer to collections of files
+### Using standalone manifests to explicitly refer to collections of files
 
 (sourmash v4.4 and later)
 
@@ -2245,9 +2296,9 @@ internals to speed up signature selection through picklists and
 pattern matching.
 
 Manifests can _also_ be used externally (via the command-line), and
-may be useful for organizing large collections of signatures. They can
-be generated with the `sig collect`, `sig manifest`, and `sig check`
-subcommands.
+these "standalone manifests" may be useful for organizing large
+collections of signatures. They can be generated with the `sig
+collect`, `sig manifest`, and `sig check` subcommands.
 
 Suppose you have a large collection of signatures (`.sig` or `.sig.gz`
 files) in a location (e.g., under a directory, or in a zip file). You
@@ -2261,21 +2312,32 @@ sourmash sig fileinfo manifest.sqlmf
 ```
 This manifest contains _references_ to the signatures (but not the
 signatures themselves) and can then be used as a database target for most
-sourmash operations - search, gather, etc.
+sourmash operations - search, gather, etc. Manifests support
+fast selection and lazy loading of sketches in many situations.
 
-Note that `sig collect` will generate manifests containing the
-pathnames given to it - so if you use relative paths, the references
-will be relative to the working directory in which `sig collect` was
+The `sig check` command can also be used to create standalone manifests
+from collections using a picklist, with the `-m/--save-manifest-matching`
+option. This is useful for commands that don't support picklists natively,
+e.g. plugins and extensions.
+
+Note that `sig collect` and `sig check` will generate manifests containing the
+pathnames given to them - so if you use relative paths, the references
+will be relative to the working directory in which the command was
 run.  You can use `sig collect --abspath` to rewrite the paths
-into absolute paths.
+into absolute paths, or `sig collect --relpath` to rewrite the paths
+relative to the manifest file.
 
 **Our advice:** We suggest using zip file collections for most
-situations; we primarily recommend using explicit manifests for
-situations where you have a **very large** collection of signatures
-(1000s or more), and don't want to make multiple copies of signatures
-in the collection (as you would have to, with a zipfile). This can be
-useful if you want to refer to different subsets of the collection
-without making multiple copies in a zip file.
+situations; we strongly recommend using standalone manifests for
+situations where you have **very large** sketches or a **very large**
+collection of sketches (1000s or more), and don't want to make
+multiple copies of signatures in the collection (as you would have to,
+with a zipfile). This is particularly useful if you want to refer to different
+subsets of the collection without making multiple copies in a zip
+file.
+
+You can read more about the details of zip files and manifests in
+[the advanced usage information for databases](databases-advanced.md).
 
 ### Using sourmash plugins
 
