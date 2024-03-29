@@ -6,7 +6,6 @@ use core::iter::FusedIterator;
 
 use std::fs::File;
 use std::io;
-use std::iter::Iterator;
 use std::path::Path;
 use std::str;
 
@@ -18,7 +17,6 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::prelude::*;
-use crate::selection::{Select, Selection};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Error;
@@ -891,7 +889,6 @@ impl PartialEq for Signature {
 
 #[cfg(test)]
 mod test {
-    use std::convert::TryInto;
     use std::fs::File;
     use std::io::{BufReader, Read};
     use std::path::PathBuf;

@@ -324,18 +324,17 @@ def genome(args):
                 lingroup_ranks=lg_ranks,
                 lingroups=all_lgs,
             )
-            n_classified+=1
+            n_classified += 1
 
         except ValueError as exc:
             notify(f"ERROR: {str(exc)}")
 
     if n_classified == 0:
-        notify(f'No queries could be classified. Exiting.')
+        notify("No queries could be classified. Exiting.")
         sys.exit(-1)
     else:
         classif_perc = (float(n_classified)/float(n_total)) * 100
-        notify(f'classified {n_classified}/{n_total} queries ({classif_perc :2f}%). Writing results')
-
+        notify(f"classified {n_classified}/{n_total} queries ({classif_perc :2f}%). Writing results")
 
     # write outputs
     if "csv_summary" in args.output_format:
