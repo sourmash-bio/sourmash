@@ -334,8 +334,10 @@ def genome(args):
         notify("No queries could be classified. Exiting.")
         sys.exit(-1)
     else:
-        classif_perc = (float(n_classified)/float(n_total)) * 100
-        notify(f"classified {n_classified}/{n_total} queries ({classif_perc :.2f}%). Writing results")
+        classif_perc = (float(n_classified) / float(n_total)) * 100
+        notify(
+            f"classified {n_classified}/{n_total} queries ({classif_perc :.2f}%). Writing results"
+        )
 
     # write outputs
     if "csv_summary" in args.output_format:

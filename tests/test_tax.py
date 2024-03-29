@@ -2711,7 +2711,9 @@ def test_genome_gather_two_files_one_classif(runtmp):
     test2_results = [
         x.replace("test1", "test2") + "\n" for x in Path(g_res).read_text().splitlines()
     ]
-    test2_results[1] = test2_results[1].replace('0.08815317112086159', '1.1') # make f_unique_to_query sum to >1
+    test2_results[1] = test2_results[1].replace(
+        "0.08815317112086159", "1.1"
+    )  # make f_unique_to_query sum to >1
     for line in test2_results:
         print(line)
     with open(g_res2, "w") as fp:
@@ -2744,12 +2746,16 @@ def test_genome_gather_two_files_one_classif(runtmp):
         "test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000"
         in c.last_result.out
     )
-    assert 'test2' not in c.last_result.out
-    assert "ERROR: Summarized fraction is > 100% of the query! This should not be possible. Please check that your input files come directly from a single gather run per query." in c.last_result.err
+    assert "test2" not in c.last_result.out
+    assert (
+        "ERROR: Summarized fraction is > 100% of the query! This should not be possible. Please check that your input files come directly from a single gather run per query."
+        in c.last_result.err
+    )
     # assert (
     #     "test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000"
     #     in c.last_result.out
     # )
+
 
 def test_genome_gather_duplicate_filename(runtmp):
     c = runtmp
