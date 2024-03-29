@@ -314,6 +314,7 @@ def genome(args):
 
     # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
     n_classified = 0
+    n_total = len(query_gather_results)
     for queryResult in query_gather_results:
         try:
             queryResult.build_classification_result(
@@ -332,7 +333,8 @@ def genome(args):
         notify(f'No queries could be classified. Exiting.')
         sys.exit(-1)
     else:
-        notify(f'classified {n_classified} queries. Writing results')
+        classif_perc = (float(n_classified)/float(n_total)) * 100
+        notify(f'classified {n_classified}/{n_total} queries ({classif_perc :2f}%). Writing results')
 
 
     # write outputs
