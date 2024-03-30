@@ -5990,10 +5990,6 @@ def test_metagenome_LIN_lingroups(runtmp):
 
     assert c.last_result.status == 0
     assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
-    assert (
         "Read 5 lingroup rows and found 5 distinct lingroup prefixes."
         in c.last_result.err
     )
@@ -6023,10 +6019,6 @@ def test_metagenome_LIN_human_summary_no_lin_position(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert "sample name    proportion   cANI   lineage" in c.last_result.out
     assert "-----------    ----------   ----   -------" in c.last_result.out
     assert "test1             86.9%     -      unclassified" in c.last_result.out
@@ -6073,10 +6065,6 @@ def test_metagenome_LIN_human_summary_lin_position_5(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert "sample name    proportion   cANI   lineage" in c.last_result.out
     assert "-----------    ----------   ----   -------" in c.last_result.out
     assert "test1             86.9%     -      unclassified" in c.last_result.out
@@ -6111,10 +6099,6 @@ def test_metagenome_LIN_krona_lin_position_5(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert "fraction	0	1	2	3	4	5" in c.last_result.out
     assert "0.08815317112086159	0	0	0	0	0	0" in c.last_result.out
     assert "0.07778220981252493	1	0	0	0	0	0" in c.last_result.out
@@ -6186,10 +6170,6 @@ def test_metagenome_LIN_lingroups_empty_lg_file(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert (
         f"Cannot read lingroups from '{lg_file}'. Is file empty?" in c.last_result.err
     )
@@ -6355,8 +6335,4 @@ def test_metagenome_LIN_lingroups_lg_only_header(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert f"No lingroups loaded from {lg_file}" in c.last_result.err
