@@ -315,6 +315,7 @@ def genome(args):
     # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
     n_total = len(query_gather_results)
     classified_results = []
+    found_error=False
     for queryResult in query_gather_results:
         try:
             queryResult.build_classification_result(
@@ -327,6 +328,7 @@ def genome(args):
             classified_results.append(queryResult)
 
         except ValueError as exc:
+            found_error=True
             notify(f"ERROR: {str(exc)}")
 
     n_classified = len(classified_results)
@@ -400,6 +402,11 @@ def genome(args):
             lineage_results.append(lineageD)
         with FileOutputCSV(lineage_outfile) as out_fp:
             tax_utils.write_output(header, lineage_results, out_fp)
+
+    # if there was a classification error, exit with err code
+    if found_error:
+        if not args.force:
+            sys.exit(-1)
 
 
 def annotate(args):

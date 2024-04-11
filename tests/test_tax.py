@@ -2731,6 +2731,7 @@ def test_genome_gather_two_files_one_classif(runtmp):
         "species",
         "--containment-threshold",
         "0",
+        "--force",
     )
 
     print(c.last_result.status)
