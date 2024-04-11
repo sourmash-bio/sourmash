@@ -315,7 +315,7 @@ def genome(args):
     # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
     n_total = len(query_gather_results)
     classified_results = []
-    found_error=False
+    found_error = False
     for queryResult in query_gather_results:
         try:
             queryResult.build_classification_result(
@@ -328,7 +328,7 @@ def genome(args):
             classified_results.append(queryResult)
 
         except ValueError as exc:
-            found_error=True
+            found_error = True
             notify(f"ERROR: {str(exc)}")
 
     n_classified = len(classified_results)
