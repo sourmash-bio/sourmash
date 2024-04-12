@@ -2720,7 +2720,7 @@ def test_genome_gather_two_files_one_classif_fail(runtmp):
     with open(g_res2, "w") as fp:
         fp.writelines(test2_results)
 
-    with pytest.raises(SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash(
             "tax",
             "genome",
