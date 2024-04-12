@@ -1554,7 +1554,6 @@ def check(args):
 
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
-    # TODO:
     set_quiet(False, args.debug)
 
     if args.cli_version == "v5":

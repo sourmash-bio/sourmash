@@ -13,9 +13,15 @@ from .logging import notify, error, set_quiet
 from .utils import RustObject
 from ._lowlevel import ffi, lib
 
-DEFAULT_COMPUTE_K = "21,31,51"
-DEFAULT_MMHASH_SEED = 42
-DEFAULT_LINE_COUNT = 1500
+
+from .command_sketch import (
+    _compute_individual,
+    _compute_merged,
+    ComputeParameters,
+    add_seq,
+    set_sig_name,
+    DEFAULT_MMHASH_SEED,
+)
 
 
 def compute(args):

@@ -2700,6 +2700,115 @@ def test_genome_gather_two_files_empty_force(runtmp):
     )
 
 
+def test_genome_gather_two_files_one_classif_fail(runtmp):
+    # if one query cant be classified still get classif for second
+    # no --force = fail but still write file
+    c = runtmp
+    taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
+    g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    # make test2 results (identical to test1 except query_name and filename)
+    g_res2 = runtmp.output("test2.gather.csv")
+    test2_results = [
+        x.replace("test1", "test2") + "\n" for x in Path(g_res).read_text().splitlines()
+    ]
+    test2_results[1] = test2_results[1].replace(
+        "0.08815317112086159", "1.1"
+    )  # make test2 f_unique_to_query sum to >1
+    for line in test2_results:
+        print(line)
+    with open(g_res2, "w") as fp:
+        fp.writelines(test2_results)
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash(
+            "tax",
+            "genome",
+            "-g",
+            g_res,
+            g_res2,
+            "--taxonomy-csv",
+            taxonomy_csv,
+            "--rank",
+            "species",
+            "--containment-threshold",
+            "0",
+        )
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == -1
+    assert (
+        "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in c.last_result.out
+    )
+    assert (
+        "test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000"
+        in c.last_result.out
+    )
+    assert "test2" not in c.last_result.out
+    assert (
+        "ERROR: Summarized fraction is > 100% of the query! This should not be possible. Please check that your input files come directly from a single gather run per query."
+        in c.last_result.err
+    )
+
+
+def test_genome_gather_two_files_one_classif(runtmp):
+    # if one query cant be classified, still get classif for second
+    c = runtmp
+    taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
+    g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    # make test2 results (identical to test1 except query_name and filename)
+    g_res2 = runtmp.output("test2.gather.csv")
+    test2_results = [
+        x.replace("test1", "test2") + "\n" for x in Path(g_res).read_text().splitlines()
+    ]
+    test2_results[1] = test2_results[1].replace(
+        "0.08815317112086159", "1.1"
+    )  # make test2 f_unique_to_query sum to >1
+    for line in test2_results:
+        print(line)
+    with open(g_res2, "w") as fp:
+        fp.writelines(test2_results)
+
+    c.run_sourmash(
+        "tax",
+        "genome",
+        "-g",
+        g_res,
+        g_res2,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "--rank",
+        "species",
+        "--containment-threshold",
+        "0",
+        "--force",
+    )
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert (
+        "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in c.last_result.out
+    )
+    assert (
+        "test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000"
+        in c.last_result.out
+    )
+    assert "test2" not in c.last_result.out
+    assert (
+        "ERROR: Summarized fraction is > 100% of the query! This should not be possible. Please check that your input files come directly from a single gather run per query."
+        in c.last_result.err
+    )
+
+
 def test_genome_gather_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
@@ -5937,10 +6046,6 @@ def test_metagenome_LIN_lingroups(runtmp):
 
     assert c.last_result.status == 0
     assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
-    assert (
         "Read 5 lingroup rows and found 5 distinct lingroup prefixes."
         in c.last_result.err
     )
@@ -5970,10 +6075,6 @@ def test_metagenome_LIN_human_summary_no_lin_position(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert "sample name    proportion   cANI   lineage" in c.last_result.out
     assert "-----------    ----------   ----   -------" in c.last_result.out
     assert "test1             86.9%     -      unclassified" in c.last_result.out
@@ -6020,10 +6121,6 @@ def test_metagenome_LIN_human_summary_lin_position_5(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert "sample name    proportion   cANI   lineage" in c.last_result.out
     assert "-----------    ----------   ----   -------" in c.last_result.out
     assert "test1             86.9%     -      unclassified" in c.last_result.out
@@ -6058,10 +6155,6 @@ def test_metagenome_LIN_krona_lin_position_5(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert "fraction	0	1	2	3	4	5" in c.last_result.out
     assert "0.08815317112086159	0	0	0	0	0	0" in c.last_result.out
     assert "0.07778220981252493	1	0	0	0	0	0" in c.last_result.out
@@ -6133,10 +6226,6 @@ def test_metagenome_LIN_lingroups_empty_lg_file(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert (
         f"Cannot read lingroups from '{lg_file}'. Is file empty?" in c.last_result.err
     )
@@ -6302,8 +6391,4 @@ def test_metagenome_LIN_lingroups_lg_only_header(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert (
-        "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0"
-        in c.last_result.err
-    )
     assert f"No lingroups loaded from {lg_file}" in c.last_result.err

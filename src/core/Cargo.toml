@@ -1,8 +1,8 @@
 [package]
 name = "sourmash"
-version = "0.13.0"
-authors = ["Luiz Irber <luiz.irber@gmail.com>"]
-description = "MinHash sketches for genomic data"
+version = "0.13.1"
+authors = ["Luiz Irber <luiz@sourmash.bio>", "N. Tessa Pierce-Ward <tessa@sourmash.bio>"]
+description = "tools for comparing biological sequences with k-mer sketches"
 repository = "https://github.com/sourmash-bio/sourmash"
 keywords = ["minhash", "bioinformatics"]
 categories = ["science", "algorithms", "data-structures"]
@@ -32,17 +32,18 @@ camino = { version = "1.1.6", features = ["serde1"] }
 cfg-if = "1.0"
 counter = "0.5.7"
 csv = "1.3.0"
-enum_dispatch = "0.3.12"
+enum_dispatch = "0.3.13"
 finch = { version = "0.6.0", optional = true }
 fixedbitset = "0.4.0"
 getrandom = { version = "0.2", features = ["js"] }
 getset = "0.1.1"
-histogram = "0.9.1"
+histogram = "0.10.0"
 itertools = "0.12.1"
 log = "0.4.21"
 md5 = "0.7.0"
 memmap2 = "0.9.4"
 murmurhash3 = "0.0.5"
+needletail = { version = "0.5.1", default-features = false }
 niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
 num-iter = "0.1.44"
@@ -50,12 +51,12 @@ once_cell = "1.18.0"
 ouroboros = "0.18.3"
 piz = "0.5.0"
 primal-check = "0.3.1"
-rayon = { version = "1.9.0", optional = true }
+rayon = { version = "1.10.0", optional = true }
 rkyv = { version = "0.7.44", optional = true }
 roaring = "0.10.3"
 roots = "0.0.8"
 serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.114"
+serde_json = "1.0.115"
 statrs = "0.16.0"
 streaming-stats = "0.2.3"
 thiserror = "1.0"
@@ -64,8 +65,6 @@ typed-builder = "0.18.0"
 vec-collections = "0.4.3"
 
 [dev-dependencies]
-criterion = "0.5.1"
-needletail = { version = "0.5.1", default-features = false }
 proptest = { version = "1.4.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
 tempfile = "3.10.1"
@@ -95,17 +94,13 @@ skip_feature_sets = [
 
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
-[target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.wasm-bindgen]
-version = "0.2.89"
-features = ["serde-serialize"]
+[target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies]
+js-sys = "0.3.68"
+web-sys = { version = "0.3.69", features = ["console", "File", "FileReaderSync"] }
+wasm-bindgen = { version = "0.2.89", features = ["serde-serialize"] }
 
-[target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
-version = "0.3.69"
-features = ["console", "File"]
-
-[target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
-version = "0.4.32"
-features = ["wasmbind"]
+[target.'cfg(all(target_arch = "wasm32"))'.dependencies]
+chrono = { version = "0.4.32", features = ["wasmbind"] }
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]
 wasm-bindgen-test = "0.3.42"
@@ -113,3 +108,5 @@ wasm-bindgen-test = "0.3.42"
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rocksdb = { version = "0.21.0", optional = true }
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+criterion = "0.5.1"
