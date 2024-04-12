@@ -41,7 +41,7 @@ however, and it probably doesn't really matter.
 (When we have blog posts or publications providing more formal
 guidance, we'll link to them here!)
 
-## What resolution should my signatures be / how should I create them?
+## What resolution should my signatures be and how should I create them?
 
 sourmash supports two ways of choosing the resolution or size of
 your signatures: using `num` to specify the maximum number of hashes,

@@ -1274,7 +1274,9 @@ class LineageDB(abc.Mapping):
                 elif "accession" in header:
                     identifier = "accession"
                     header = ["ident" if "accession" == x else x for x in header]
-                elif "name" in header and "lineage" in header:
+                elif "lineage" in header and any(
+                    ["name" in header, "match_name" in header]
+                ):
                     return cls.load_from_gather_with_lineages(
                         filename, force=force, lins=lins, ictv=ictv
                     )
@@ -1390,9 +1392,14 @@ class LineageDB(abc.Mapping):
             if not header:
                 raise ValueError(f"cannot read taxonomy assignments from {filename}")
 
-            if "name" not in header or "lineage" not in header:
+            ident_col = None
+            if "name" in header:
+                ident_col = "name"
+            elif "match_name" in header:
+                ident_col = "match_name"
+            if "lineage" not in header or ident_col is None:
                 raise ValueError(
-                    "Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?"
+                    "Expected headers 'name'/'match_name' and 'lineage' not found. Is this a with-lineages file?"
                 )
 
             ranks = None
@@ -1405,7 +1412,7 @@ class LineageDB(abc.Mapping):
             for n, row in enumerate(r):
                 num_rows += 1
 
-                name = row["name"]
+                name = row[ident_col]
                 ident = get_ident(name)
 
                 if lins:
@@ -2321,9 +2328,6 @@ class QueryTaxResult:
                     f"Error: rank '{single_rank}' not in available ranks ({', '.join(self.summarized_ranks)})"
                 )
             self.summarized_ranks = [single_rank]
-        notify(
-            f"Starting summarization up rank(s): {', '.join(self.summarized_ranks)} "
-        )
         for taxres in self.raw_taxresults:
             lininfo = taxres.lineageInfo
             if (

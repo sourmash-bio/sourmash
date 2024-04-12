@@ -15,8 +15,7 @@ import sourmash
 from sourmash import MinHash
 from sourmash.sbt import SBT, Node
 from sourmash.sbtmh import SigLeaf, load_sbt_index
-from sourmash.command_compute import ComputeParameters
-from sourmash.cli.compute import subparser
+from sourmash.command_sketch import ComputeParameters
 from sourmash.cli import SourmashParser
 from sourmash import manifest
 

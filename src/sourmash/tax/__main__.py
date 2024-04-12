@@ -313,6 +313,9 @@ def genome(args):
         sys.exit(-1)
 
     # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
+    n_total = len(query_gather_results)
+    classified_results = []
+    found_error = False
     for queryResult in query_gather_results:
         try:
             queryResult.build_classification_result(
@@ -322,10 +325,21 @@ def genome(args):
                 lingroup_ranks=lg_ranks,
                 lingroups=all_lgs,
             )
+            classified_results.append(queryResult)
 
         except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
+            found_error = True
+            notify(f"ERROR: {str(exc)}")
+
+    n_classified = len(classified_results)
+    if n_classified == 0:
+        notify("No queries could be classified. Exiting.")
+        sys.exit(-1)
+    else:
+        classif_perc = (float(n_classified) / float(n_total)) * 100
+        notify(
+            f"classified {n_classified}/{n_total} queries ({classif_perc :.2f}%). Writing results"
+        )
 
     # write outputs
     if "csv_summary" in args.output_format:
@@ -334,7 +348,7 @@ def genome(args):
         )
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(
-                query_gather_results,
+                classified_results,
                 out_fp,
                 limit_float_decimals=limit_float,
                 classification=True,
@@ -388,6 +402,11 @@ def genome(args):
             lineage_results.append(lineageD)
         with FileOutputCSV(lineage_outfile) as out_fp:
             tax_utils.write_output(header, lineage_results, out_fp)
+
+    # if there was a classification error, exit with err code
+    if found_error:
+        if not args.force:
+            sys.exit(-1)
 
 
 def annotate(args):

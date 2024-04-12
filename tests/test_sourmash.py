@@ -1791,26 +1791,48 @@ def test_compare_deduce_molecule(runtmp):
 
 
 def test_compare_choose_molecule_dna(runtmp):
-    # choose molecule type
+    # choose molecule type with --dna, ignoring protein
     testdata1 = utils.get_test_data("short.fa")
     testdata2 = utils.get_test_data("short2.fa")
 
-    runtmp.sourmash("compute", "-k", "30", "--dna", "--protein", testdata1, testdata2)
-
-    runtmp.sourmash("compare", "--dna", "short.fa.sig", "short2.fa.sig")
+    runtmp.sourmash(
+        "sketch", "dna", "-p", "k=30,num=500", testdata1, testdata2, "-o", "sigs.zip"
+    )
+    runtmp.sourmash(
+        "sketch",
+        "translate",
+        "-p",
+        "k=10,num=500",
+        testdata1,
+        testdata2,
+        "-o",
+        "sigs.zip",
+    )
+    runtmp.sourmash("compare", "--dna", "sigs.zip")
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert "min similarity in matrix: 0.938" in runtmp.last_result.out
 
 
 def test_compare_choose_molecule_protein(runtmp):
-    # choose molecule type
+    # choose molecule type with --protein, ignoring DNA
     testdata1 = utils.get_test_data("short.fa")
     testdata2 = utils.get_test_data("short2.fa")
 
-    runtmp.sourmash("compute", "-k", "30", "--dna", "--protein", testdata1, testdata2)
-
-    runtmp.sourmash("compare", "--protein", "short.fa.sig", "short2.fa.sig")
+    runtmp.sourmash(
+        "sketch", "dna", "-p", "k=30,num=500", testdata1, testdata2, "-o", "sigs.zip"
+    )
+    runtmp.sourmash(
+        "sketch",
+        "translate",
+        "-p",
+        "k=10,num=500",
+        testdata1,
+        testdata2,
+        "-o",
+        "sigs.zip",
+    )
+    runtmp.sourmash("compare", "--protein", "sigs.zip")
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert "min similarity in matrix: 0.91" in runtmp.last_result.out
