@@ -1,5 +1,5 @@
 ---
-title: 'sourmash: a tool to quickly search, compare, and analyze genomic
+title: 'sourmash v4: a multitool to quickly search, compare, and analyze genomic
 and metagenomic data sets'
 tags:
   - FracMinHash
@@ -63,6 +63,9 @@ authors:
    affiliation: 1
  - name: Ricky Lim
    orcid: 0000-0003-1313-7076
+   affiliation: 9
+ - name: Bradley Nelson
+   orcid: 0009-0001-1553-932X
    affiliation: 9
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
