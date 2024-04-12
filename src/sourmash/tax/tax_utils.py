@@ -2328,9 +2328,6 @@ class QueryTaxResult:
                     f"Error: rank '{single_rank}' not in available ranks ({', '.join(self.summarized_ranks)})"
                 )
             self.summarized_ranks = [single_rank]
-        notify(
-            f"Starting summarization up rank(s): {', '.join(self.summarized_ranks)} "
-        )
         for taxres in self.raw_taxresults:
             lininfo = taxres.lineageInfo
             if (
