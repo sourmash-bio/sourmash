@@ -123,7 +123,7 @@ doc = [
   "sphinxcontrib-napoleon",
   "nbsphinx",
   "ipython",
-  "docutils>=0.17.1,<0.21",
+  "docutils>=0.17.1,<0.22",
 ]
 storage = [
   "ipfshttpclient>=0.4.13",
