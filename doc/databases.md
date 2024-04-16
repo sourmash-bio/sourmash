@@ -34,7 +34,7 @@ You can verify that they've been successfully downloaded (and view database prop
 
 [GTDB R08-RS214](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r08-rs214/456) consists of 402,709 genomes organized into 85,205 species clusters.
 
-The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214.lineages.csv.gz).
+The lineage spreadsheet (for `sourmash tax` commands) is available [for the genome database (402k)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214.lineages.csv.gz).
 
 ### GTDB R08-RS214 genomic representatives (85k)
 
@@ -139,7 +139,7 @@ Taxonomic spreadsheets for each domain are provided below as well.
 
 [GTDB R07-RS207](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r07-rs207/264) consists of 317,542 genomes organized into 65,703 species clusters.
 
-The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.species-taxonomy.csv.gz) and [at the genome level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.with-strain.csv.gz).
+The lineage spreadsheet (for `sourmash tax` commands) is available [for the species database (65k)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.reps.csv.gz) and [for the genome database (317k)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.with-strain.csv.gz).
 
 ### GTDB R07-RS207 genomic representatives (66k)
 
