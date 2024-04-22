@@ -41,6 +41,7 @@ pub struct Record {
     #[getset(get = "pub", set = "pub")]
     name: String,
 
+    #[getset(get = "pub", set = "pub")]
     filename: String,
 }
 
