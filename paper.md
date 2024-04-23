@@ -164,8 +164,12 @@ interface. It has been used in over 350 publications (based on citations of
 
 # Acknowledgements
 
-This work is funded in part by the Gordon and Betty Moore Foundation’s
-Data-Driven Discovery Initiative [GBMF4551 to CTB].
+This work was funded in part by the Gordon and Betty Moore Foundation’s
+Data-Driven Discovery Initiative [GBMF4551 to CTB]. It is also funded in
+part by the National Science Foundation [#2018522 to CTB] and PIG-PARADIGM
+(Preventing Infection in the Gut of developing Piglets–and thus Antimicrobial
+Resistance – by disentAngling the interface of DIet, the host and the
+Gastrointestinal Microbiome) from the Novo Nordisk Foundation to CTB.
 
 Notice: This manuscript has been authored by BNBI under Contract
 No. HSHQDC-15-C-00064 with the DHS. The US Government retains and the
