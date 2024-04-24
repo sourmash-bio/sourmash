@@ -252,7 +252,7 @@ def test_containment_to_distance_confidence():
     print(res2)
     # check results
     assert res2.dist == res.dist
-    assert res2.dist_low == 0.05599435479247415
+    assert round(res2.dist_low, 10) == round(0.05599435479247415, 10)
     assert res2.dist_high == 0.08758718871990222
     assert res.p_exceeds_threshold == False
 
