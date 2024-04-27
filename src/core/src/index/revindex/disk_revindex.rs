@@ -428,6 +428,10 @@ impl RevIndexOps for RevIndex {
         Ok(module::RevIndex::Plain(self))
     }
 
+    fn collection(&self) -> &CollectionSet {
+        &self.collection
+    }
+
     fn check(&self, quick: bool) -> DbStats {
         stats_for_cf(self.db.clone(), HASHES, true, quick)
     }

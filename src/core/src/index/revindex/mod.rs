@@ -66,6 +66,8 @@ pub trait RevIndexOps {
     where
         Self: Sized;
 
+    fn collection(&self) -> &CollectionSet;
+
     fn compact(&self);
 
     fn flush(&self) -> Result<()>;
