@@ -6,7 +6,7 @@ use std::sync::Arc;
 use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
-use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
+use rocksdb::{ColumnFamilyDescriptor, MergeOperands, WriteBatchWithTransaction};
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
@@ -81,6 +81,8 @@ impl RevIndex {
             collection: Arc::new(collection),
         };
 
+        index.save_collection().expect("Error saving collection");
+
         index.collection.par_iter().for_each(|(dataset_id, _)| {
             let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
             if i % 1000 == 0 {
@@ -89,8 +91,6 @@ impl RevIndex {
 
             index.map_hashes_colors(dataset_id as Idx);
         });
-
-        index.save_collection().expect("Error saving collection");
 
         info!("Compact SSTs");
         index.compact();
@@ -408,6 +408,8 @@ impl RevIndexOps for RevIndex {
 
         self.collection = Arc::new(collection);
 
+        self.save_collection().expect("Error saving collection");
+
         self.collection
             .par_iter()
             .skip(to_skip)
@@ -419,8 +421,6 @@ impl RevIndexOps for RevIndex {
 
                 self.map_hashes_colors(dataset_id as Idx);
             });
-
-        self.save_collection().expect("Error saving collection");
 
         info!("Compact SSTs");
         self.compact();
