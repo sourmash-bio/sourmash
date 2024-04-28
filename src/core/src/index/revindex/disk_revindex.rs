@@ -503,7 +503,7 @@ impl RevIndexOps for RevIndex {
 }
 
 fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
-    let mut cfopts = Options::default();
+    let mut cfopts = module::RevIndex::db_options();
     cfopts.set_max_write_buffer_number(16);
     cfopts.set_merge_operator_associative("datasets operator", merge_datasets);
     cfopts.set_min_write_buffer_number_to_merge(10);
@@ -511,22 +511,17 @@ fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     // Updated default from
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
     cfopts.set_level_compaction_dynamic_level_bytes(true);
+    cfopts.prepare_for_bulk_load();
 
     let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
 
-    let mut cfopts = Options::default();
+    let mut cfopts = module::RevIndex::db_options();
     cfopts.set_max_write_buffer_number(16);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
     //cfopts.set_merge_operator_associative("colors operator", merge_colors);
 
     let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
 
     vec![cf_hashes, cf_metadata]
 }
