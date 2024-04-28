@@ -67,7 +67,7 @@ impl Storage for RocksDBStorage {
 }
 
 pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
-    let mut cfopts = Options::default();
+    let mut cfopts = db_options();
     cfopts.set_max_write_buffer_number(16);
     cfopts.set_merge_operator_associative(
         "datasets operator",
@@ -81,7 +81,7 @@ pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
 
     let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
 
-    let mut cfopts = Options::default();
+    let mut cfopts = db_options();
     cfopts.set_max_write_buffer_number(16);
     cfopts.set_merge_operator_associative(
         "datasets operator",
@@ -92,14 +92,14 @@ pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
 
     let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
 
-    let mut cfopts = Options::default();
+    let mut cfopts = db_options();
     cfopts.set_max_write_buffer_number(16);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
 
     let cf_storage = ColumnFamilyDescriptor::new(STORAGE, cfopts);
 
-    let mut cfopts = Options::default();
+    let mut cfopts = db_options();
     cfopts.set_max_write_buffer_number(16);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
