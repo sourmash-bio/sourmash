@@ -203,15 +203,15 @@ impl RevIndex {
             _ => unimplemented!(),
         };
 
+        let mut batch = WriteBatchWithTransaction::<false>::default();
         let mut hash_bytes = [0u8; 8];
         for hash in hashes {
             (&mut hash_bytes[..])
                 .write_u64::<LittleEndian>(hash)
                 .expect("error writing bytes");
-            self.db
-                .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
-                .expect("error merging");
+            batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
         }
+        self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
     }
 }
 
