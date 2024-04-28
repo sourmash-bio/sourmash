@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
-use rocksdb::MergeOperands;
+use rocksdb::{MergeOperands, WriteBatchWithTransaction};
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
@@ -93,6 +93,8 @@ impl RevIndex {
             processed: processed.clone(),
         };
 
+        index.save_collection().expect("Error saving collection");
+
         index.collection.par_iter().for_each(|(dataset_id, _)| {
             // check if this dataset_id was processed already
             // call map_hashes_colors only if not already processed
@@ -110,8 +112,6 @@ impl RevIndex {
                 processed.write().unwrap().extend([dataset_id]);
             }
         });
-
-        index.save_collection().expect("Error saving collection");
 
         info!("Compact SSTs");
         index.compact();
@@ -484,6 +484,8 @@ impl RevIndexOps for RevIndex {
             self.collection.len()
         );
 
+        self.save_collection().expect("Error saving collection");
+
         let processed = self.processed.clone();
         info!(
             "sigs left to process: {}",
@@ -510,8 +512,6 @@ impl RevIndexOps for RevIndex {
                 processed.write().unwrap().extend([dataset_id]);
             }
         });
-
-        self.save_collection().expect("Error saving collection");
 
         info!("Compact SSTs");
         self.compact();
