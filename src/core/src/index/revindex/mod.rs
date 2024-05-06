@@ -202,7 +202,7 @@ impl RevIndex {
 
     fn db_options() -> rocksdb::Options {
         let mut opts = rocksdb::Options::default();
-        opts.set_max_open_files(500);
+        opts.set_max_open_files(50000);
 
         // Updated defaults from
         // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
@@ -216,7 +216,7 @@ impl RevIndex {
         // End of updated defaults
 
         opts.increase_parallelism(rayon::current_num_threads() as i32);
-        //opts.max_background_jobs = 6;
+        opts.set_max_background_jobs(rayon::current_num_threads() as i32);
         // opts.optimize_level_style_compaction();
         // opts.optimize_universal_style_compaction();
 

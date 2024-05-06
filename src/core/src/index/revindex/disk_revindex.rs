@@ -18,7 +18,6 @@ use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
-use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Result;
 
@@ -83,14 +82,44 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
-        index.collection.par_iter().for_each(|(dataset_id, _)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
+        index
+            .collection
+            .par_iter()
+            .map(|(dataset_id, _)| {
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 && i > 0 {
+                    info!("Processed {} reference sigs", i);
+                }
 
-            index.map_hashes_colors(dataset_id as Idx);
-        });
+                if i % 5000 == 0 && i > 0 {
+                    info!("Triggering manual compaction");
+                    index.compact();
+                    info!("Finished manual compaction");
+                }
+
+                (
+                    index.map_hashes_colors(dataset_id as Idx),
+                    dataset_id as Idx,
+                )
+            })
+            .chunks(100)
+            .for_each(|chunk| {
+                let mut batch = WriteBatchWithTransaction::<false>::default();
+                let cf_hashes = index.db.cf_handle(HASHES).unwrap();
+
+                let mut hash_bytes = [0u8; 8];
+                for (hashes, dataset_id) in chunk {
+                    let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
+
+                    for hash in hashes {
+                        (&mut hash_bytes[..])
+                            .write_u64::<LittleEndian>(hash)
+                            .expect("error writing bytes");
+                        batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                    }
+                }
+                index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+            });
 
         info!("Compact SSTs");
         index.compact();
@@ -186,32 +215,14 @@ impl RevIndex {
         Ok(())
     }
 
-    fn map_hashes_colors(&self, dataset_id: Idx) {
+    fn map_hashes_colors(&self, dataset_id: Idx) -> impl Iterator<Item = crate::HashIntoType> {
         let search_sig = self
             .collection
             .sig_for_dataset(dataset_id)
             .expect("Couldn't find a compatible Signature");
-        let search_mh = &search_sig.sketches()[0];
+        let mh = search_sig.minhash().expect("Error extracting a minhash");
 
-        let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
-
-        let cf_hashes = self.db.cf_handle(HASHES).unwrap();
-
-        let hashes = match search_mh {
-            Sketch::MinHash(mh) => mh.mins(),
-            Sketch::LargeMinHash(mh) => mh.mins(),
-            _ => unimplemented!(),
-        };
-
-        let mut batch = WriteBatchWithTransaction::<false>::default();
-        let mut hash_bytes = [0u8; 8];
-        for hash in hashes {
-            (&mut hash_bytes[..])
-                .write_u64::<LittleEndian>(hash)
-                .expect("error writing bytes");
-            batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
-        }
-        self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+        mh.mins().into_iter()
     }
 }
 
@@ -413,13 +424,31 @@ impl RevIndexOps for RevIndex {
         self.collection
             .par_iter()
             .skip(to_skip)
-            .for_each(|(dataset_id, _)| {
+            .map(|(dataset_id, _)| {
                 let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
                 if i % 1000 == 0 {
                     info!("Processed {} reference sigs", i);
                 }
 
-                self.map_hashes_colors(dataset_id as Idx);
+                (self.map_hashes_colors(dataset_id as Idx), dataset_id as Idx)
+            })
+            .chunks(10)
+            .for_each(|chunk| {
+                let mut batch = WriteBatchWithTransaction::<false>::default();
+                let cf_hashes = self.db.cf_handle(HASHES).unwrap();
+
+                let mut hash_bytes = [0u8; 8];
+                for (hashes, dataset_id) in chunk {
+                    let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
+
+                    for hash in hashes {
+                        (&mut hash_bytes[..])
+                            .write_u64::<LittleEndian>(hash)
+                            .expect("error writing bytes");
+                        batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                    }
+                }
+                self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
             });
 
         info!("Compact SSTs");
@@ -512,6 +541,16 @@ fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
     cfopts.set_level_compaction_dynamic_level_bytes(true);
     cfopts.prepare_for_bulk_load();
+
+    let mut tfopts = rocksdb::BlockBasedOptions::default();
+    tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    tfopts.set_optimize_filters_for_memory(true);
+    tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
+    // Keys for HASHES are HashIntoType, a u64
+    tfopts.set_hybrid_ribbon_filter(64.0, 2);
+    cfopts.set_block_based_table_factory(&tfopts);
+    // Keys for HASHES are HashIntoType, a u64, and so 8 bytes
+    cfopts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(8));
 
     let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
 
