@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash' command line.
 """
+
 import os
 import gzip
 import shutil
@@ -4779,9 +4780,7 @@ def test_multigather_check_scaled_bounds_negative(runtmp):
     c.run_sourmash(*cmd)
 
     cmd = (
-        "multigather --query {} --db gcf_all -k 21 --scaled -5 --threshold-bp=0".format(
-            query_sig
-        )
+        f"multigather --query {query_sig} --db gcf_all -k 21 --scaled -5 --threshold-bp=0"
     )
     cmd = cmd.split(" ")
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -4803,9 +4802,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(runtmp):
     c.run_sourmash(*cmd)
 
     cmd = (
-        "multigather --query {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0".format(
-            query_sig
-        )
+        f"multigather --query {query_sig} --db gcf_all -k 21 --scaled 50 --threshold-bp=0"
     )
     cmd = cmd.split(" ")
     # Note: this is the value error that is emitted, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
@@ -4829,9 +4826,7 @@ def test_multigather_check_scaled_bounds_more_than_maximum(runtmp):
     cmd.extend(["-k", "21"])
     c.run_sourmash(*cmd)
 
-    cmd = "multigather --query {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0".format(
-        query_sig
-    )
+    cmd = f"multigather --query {query_sig} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0"
     cmd = cmd.split(" ")
 
     c.run_sourmash(*cmd)
@@ -4862,9 +4857,7 @@ def test_multigather_metagenome_query_from_file(runtmp):
     with open(query_list, "w") as fp:
         print(query_sig, file=fp)
 
-    cmd = "multigather --query-from-file {} --db gcf_all -k 21 --threshold-bp=0".format(
-        query_list
-    )
+    cmd = f"multigather --query-from-file {query_list} --db gcf_all -k 21 --threshold-bp=0"
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 
@@ -5040,9 +5033,7 @@ def test_multigather_metagenome_query_on_lca_db(runtmp):
     testdata_sig2 = utils.get_test_data("63.fa.sig")
     lca_db = utils.get_test_data("lca/47+63.lca.json")
 
-    cmd = "multigather --query {} {} --db {} -k 31 --threshold-bp=0".format(
-        testdata_sig1, testdata_sig2, lca_db
-    )
+    cmd = f"multigather --query {testdata_sig1} {testdata_sig2} --db {lca_db} -k 31 --threshold-bp=0"
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 
@@ -5084,9 +5075,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(runtmp):
 
     assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
-    cmd = "multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output".format(
-        another_query
-    )
+    cmd = f"multigather --query {another_query} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output"
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 
@@ -5152,9 +5141,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite(runtmp)
     assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
     cmd = (
-        "multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0".format(
-            another_query, another_query
-        )
+        f"multigather --query {another_query} {another_query} --db gcf_all.sbt.zip -k 21 --threshold-bp=0"
     )
     cmd = cmd.split(" ")
 
@@ -5191,9 +5178,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite_force(r
 
     assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
-    cmd = "multigather --query {} {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output".format(
-        another_query, another_query
-    )
+    cmd = f"multigather --query {another_query} {another_query} --db gcf_all.sbt.zip -k 21 --threshold-bp=0 --force-allow-overwrite-output"
     cmd = cmd.split(" ")
 
     c.run_sourmash(*cmd)
@@ -5234,9 +5219,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(runtmp):
     with open(query_list, "w") as fp:
         print("gcf_all.sbt.zip", file=fp)
 
-    cmd = "multigather --query {} --query-from-file {} --db gcf_all.sbt.zip {} -k 21 --threshold-bp=0".format(
-        another_query, query_list, another_query
-    )
+    cmd = f"multigather --query {another_query} --query-from-file {query_list} --db gcf_all.sbt.zip {another_query} -k 21 --threshold-bp=0"
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 
@@ -5330,9 +5313,7 @@ def test_multigather_metagenome_lca_query_from_file(runtmp):
     with open(query_list, "w") as fp:
         print(lca_db, file=fp)
 
-    cmd = "multigather --query-from-file {} --db 47+63.sbt.zip -k 31 --threshold-bp=0".format(
-        query_list
-    )
+    cmd = f"multigather --query-from-file {query_list} --db 47+63.sbt.zip -k 31 --threshold-bp=0"
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 
@@ -5372,9 +5353,7 @@ def test_multigather_metagenome_query_from_file_with_addl_query(runtmp):
         "gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig"
     )
 
-    cmd = "multigather --query-from-file {} --query {} --db gcf_all -k 21 --threshold-bp=0".format(
-        query_list, another_query
-    )
+    cmd = f"multigather --query-from-file {query_list} --query {another_query} --db gcf_all -k 21 --threshold-bp=0"
     cmd = cmd.split(" ")
     c.run_sourmash(*cmd)
 

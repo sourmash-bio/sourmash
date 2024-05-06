@@ -2,6 +2,7 @@
 """
 Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
+
 import sys
 import csv
 import os

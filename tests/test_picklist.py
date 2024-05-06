@@ -1,6 +1,7 @@
 """
 Tests for the picklist API.
 """
+
 import pytest
 import sourmash
 

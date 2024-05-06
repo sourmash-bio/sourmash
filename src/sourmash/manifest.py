@@ -1,6 +1,7 @@
 """
 Manifests for collections of signatures.
 """
+
 import csv
 import ast
 import gzip

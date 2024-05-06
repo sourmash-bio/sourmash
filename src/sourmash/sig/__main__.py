@@ -1,6 +1,7 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+
 __all__ = [
     "cat",
     "split",
@@ -81,9 +82,7 @@ sourmash signature merge -h
 def _check_abundance_compatibility(sig1, sig2):
     if sig1.minhash.track_abundance != sig2.minhash.track_abundance:
         raise ValueError(
-            "incompatible signatures: track_abundance is {} in first sig, {} in second".format(
-                sig1.minhash.track_abundance, sig2.minhash.track_abundance
-            )
+            f"incompatible signatures: track_abundance is {sig1.minhash.track_abundance} in first sig, {sig2.minhash.track_abundance} in second"
         )
 
 
