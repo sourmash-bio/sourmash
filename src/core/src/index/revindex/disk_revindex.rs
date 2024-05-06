@@ -95,22 +95,53 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
-        index.collection.par_iter().for_each(|(dataset_id, _)| {
-            // check if this dataset_id was processed already
-            // call map_hashes_colors only if not already processed
-            if !processed.read().unwrap().contains(&dataset_id) {
-                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                if i % 1000 == 0 {
-                    info!("Processed {} reference sigs", i);
+        index.collection.par_iter().chunks(100).for_each(|chunk| {
+            let filtered_chunk = chunk.into_iter().filter_map(|(dataset_id, _)| {
+                // check if this dataset_id was processed already
+                // call map_hashes_colors only if not already processed
+                if !processed.read().unwrap().contains(&dataset_id) {
+                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                    if i % 1000 == 0 && i > 0 {
+                        info!("Processed {} reference sigs", i);
+                    }
+
+                    if i % 5000 == 0 && i > 0 {
+                        info!("Triggering manual compaction");
+                        index.compact();
+                        info!("Finished manual compaction");
+                    }
+
+                    Some((
+                        index.map_hashes_colors(dataset_id as Idx),
+                        dataset_id as Idx,
+                    ))
+                } else {
+                    None
                 }
+            });
 
-                index.map_hashes_colors(dataset_id as Idx);
+            let mut batch = WriteBatchWithTransaction::<false>::default();
+            let cf_hashes = index.db.cf_handle(HASHES).unwrap();
+            let mut dataset_ids = vec![];
 
-                // if cached in a new field in the RevIndex,
-                // then update the cache too
+            let mut hash_bytes = [0u8; 8];
+            for (hashes, dataset_id) in filtered_chunk {
+                let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
 
-                processed.write().unwrap().extend([dataset_id]);
+                for hash in hashes {
+                    (&mut hash_bytes[..])
+                        .write_u64::<LittleEndian>(hash)
+                        .expect("error writing bytes");
+                    batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                }
+                dataset_ids.push(dataset_id);
             }
+            index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+
+            // if cached in a new field in the RevIndex,
+            // then update the cache too
+
+            processed.write().unwrap().extend(dataset_ids);
         });
 
         info!("Compact SSTs");
@@ -237,41 +268,14 @@ impl RevIndex {
         Ok(())
     }
 
-    fn map_hashes_colors(&self, dataset_id: Idx) {
+    fn map_hashes_colors(&self, dataset_id: Idx) -> impl Iterator<Item = crate::HashIntoType> {
         let search_sig = self
             .collection
             .sig_for_dataset(dataset_id)
             .expect("Couldn't find a compatible Signature");
-        let search_mh = &search_sig.sketches()[0];
+        let mh = search_sig.minhash().expect("Error extracting a minhash");
 
-        let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
-
-        let cf_hashes = self.db.cf_handle(HASHES).unwrap();
-
-        let hashes = match search_mh {
-            Sketch::MinHash(mh) => mh.mins(),
-            Sketch::LargeMinHash(mh) => mh.mins(),
-            _ => unimplemented!(),
-        };
-
-        let mut batch = WriteBatchWithTransaction::<false>::default();
-        let mut hash_bytes = [0u8; 8];
-        for hash in hashes {
-            (&mut hash_bytes[..])
-                .write_u64::<LittleEndian>(hash)
-                .expect("error writing bytes");
-            batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
-        }
-
-        self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
-
-        // finished processing this dataset,
-        // do a merge_cf in the PROCESSED key in metadata
-        // to account for that.
-        let cf_metadata = self.db.cf_handle(METADATA).unwrap();
-        self.db
-            .merge_cf(&cf_metadata, PROCESSED, colors.as_slice())
-            .expect("error merging");
+        mh.mins().into_iter()
     }
 }
 
@@ -496,22 +500,44 @@ impl RevIndexOps for RevIndex {
         // process the remainder
         let processed_sigs = AtomicUsize::new(0);
 
-        self.collection.par_iter().for_each(|(dataset_id, _)| {
-            // check if this dataset_id was processed already
-            // call map_hashes_colors only if not already processed
-            if !processed.read().unwrap().contains(&dataset_id) {
-                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                if i % 1000 == 0 {
-                    info!("Processed {} reference sigs", i);
+        self.collection.par_iter().chunks(100).for_each(|chunk| {
+            let filtered_chunk = chunk.into_iter().filter_map(|(dataset_id, _)| {
+                // check if this dataset_id was processed already
+                // call map_hashes_colors only if not already processed
+                if !processed.read().unwrap().contains(&dataset_id) {
+                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                    if i % 1000 == 0 {
+                        info!("Processed {} reference sigs", i);
+                    }
+
+                    Some((self.map_hashes_colors(dataset_id as Idx), dataset_id as Idx))
+                } else {
+                    None
                 }
+            });
 
-                self.map_hashes_colors(dataset_id as Idx);
+            let mut batch = WriteBatchWithTransaction::<false>::default();
+            let cf_hashes = self.db.cf_handle(HASHES).unwrap();
+            let mut dataset_ids = vec![];
 
-                // if cached in a new field in the RevIndex,
-                // then update the cache too
+            let mut hash_bytes = [0u8; 8];
+            for (hashes, dataset_id) in filtered_chunk {
+                let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
 
-                processed.write().unwrap().extend([dataset_id]);
+                for hash in hashes {
+                    (&mut hash_bytes[..])
+                        .write_u64::<LittleEndian>(hash)
+                        .expect("error writing bytes");
+                    batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                }
+                dataset_ids.push(dataset_id);
             }
+            self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+
+            // if cached in a new field in the RevIndex,
+            // then update the cache too
+
+            processed.write().unwrap().extend(dataset_ids);
         });
 
         info!("Compact SSTs");
@@ -549,10 +575,6 @@ impl RevIndexOps for RevIndex {
         }
 
         Ok(())
-    }
-
-    fn collection(&self) -> &CollectionSet {
-        &self.collection
     }
 
     fn internalize_storage(&mut self) -> Result<()> {

@@ -79,6 +79,16 @@ pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
     cfopts.set_level_compaction_dynamic_level_bytes(true);
 
+    let mut tfopts = rocksdb::BlockBasedOptions::default();
+    tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    tfopts.set_optimize_filters_for_memory(true);
+    tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
+    // Keys for HASHES are HashIntoType, a u64
+    tfopts.set_hybrid_ribbon_filter(64.0, 2);
+    cfopts.set_block_based_table_factory(&tfopts);
+    // Keys for HASHES are HashIntoType, a u64, and so 8 bytes
+    cfopts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(8));
+
     let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
 
     let mut cfopts = db_options();
@@ -123,7 +133,7 @@ pub(crate) fn db_options() -> rocksdb::Options {
     // End of updated defaults
 
     opts.increase_parallelism(rayon::current_num_threads() as i32);
-    //opts.max_background_jobs = 6;
+    opts.set_max_background_jobs(rayon::current_num_threads() as i32);
     // opts.optimize_level_style_compaction();
     // opts.optimize_universal_style_compaction();
 
