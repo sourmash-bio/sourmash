@@ -16,7 +16,7 @@ pub fn counts(registers: &[CounterType], q: usize) -> Vec<u16> {
 pub fn mle(counts: &[u16], p: usize, q: usize, relerr: f64) -> f64 {
     let m = 1 << p;
     if counts[q + 1] == m {
-        return std::f64::INFINITY;
+        return f64::INFINITY;
     }
 
     let (k_min, _) = counts.iter().enumerate().find(|(_, v)| **v != 0).unwrap();

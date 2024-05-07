@@ -21,15 +21,15 @@ use crate::Error;
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
         0 => 0,
-        1 => u64::max_value(),
-        _ => (u64::max_value() as f64 / scaled as f64) as u64,
+        1 => u64::MAX,
+        _ => (u64::MAX as f64 / scaled as f64) as u64,
     }
 }
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
         0 => 0,
-        _ => (u64::max_value() as f64 / max_hash as f64) as u64,
+        _ => (u64::MAX as f64 / max_hash as f64) as u64,
     }
 }
 
@@ -48,7 +48,7 @@ pub struct KmerMinHash {
     #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default = u64::max_value())]
+    #[builder(default = u64::MAX)]
     max_hash: u64,
 
     #[builder(default)]
@@ -313,7 +313,7 @@ impl KmerMinHash {
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
         let current_max = match self.mins.last() {
             Some(&x) => x,
-            None => u64::max_value(),
+            None => u64::MAX,
         };
 
         if hash > self.max_hash && self.max_hash != 0 {
@@ -960,7 +960,7 @@ pub struct KmerMinHashBTree {
     #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default = u64::max_value())]
+    #[builder(default = u64::MAX)]
     max_hash: u64,
 
     #[builder(default)]
@@ -1309,7 +1309,7 @@ impl KmerMinHashBTree {
         let union = self.mins.union(&other.mins);
 
         let to_take = if self.num == 0 {
-            usize::max_value()
+            usize::MAX
         } else {
             self.num as usize
         };
