@@ -19,7 +19,6 @@ use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
-use crate::sketch::Sketch;
 use crate::storage::{
     rocksdb::{cf_descriptors, db_options, ALL_CFS, DB, HASHES, METADATA},
     InnerStorage, RocksDBStorage, Storage,
@@ -95,6 +94,7 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
+        info!("Starting indexing");
         index.collection.par_iter().chunks(100).for_each(|chunk| {
             let filtered_chunk = chunk.into_iter().filter_map(|(dataset_id, _)| {
                 // check if this dataset_id was processed already
@@ -120,7 +120,7 @@ impl RevIndex {
                 }
             });
 
-            let mut batch = WriteBatchWithTransaction::<false>::default();
+            //let mut batch = WriteBatchWithTransaction::<false>::default();
             let cf_hashes = index.db.cf_handle(HASHES).unwrap();
             let mut dataset_ids = vec![];
 
@@ -132,11 +132,15 @@ impl RevIndex {
                     (&mut hash_bytes[..])
                         .write_u64::<LittleEndian>(hash)
                         .expect("error writing bytes");
-                    batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                    index
+                        .db
+                        .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
+                        .expect("error merging");
+                    //batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
                 }
                 dataset_ids.push(dataset_id);
             }
-            index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+            //index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
 
             // if cached in a new field in the RevIndex,
             // then update the cache too
