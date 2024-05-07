@@ -4779,9 +4779,7 @@ def test_multigather_check_scaled_bounds_negative(runtmp):
     cmd.extend(["-k", "21"])
     c.run_sourmash(*cmd)
 
-    cmd = (
-        f"multigather --query {query_sig} --db gcf_all -k 21 --scaled -5 --threshold-bp=0"
-    )
+    cmd = f"multigather --query {query_sig} --db gcf_all -k 21 --scaled -5 --threshold-bp=0"
     cmd = cmd.split(" ")
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
@@ -4801,9 +4799,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(runtmp):
     cmd.extend(["-k", "21"])
     c.run_sourmash(*cmd)
 
-    cmd = (
-        f"multigather --query {query_sig} --db gcf_all -k 21 --scaled 50 --threshold-bp=0"
-    )
+    cmd = f"multigather --query {query_sig} --db gcf_all -k 21 --scaled 50 --threshold-bp=0"
     cmd = cmd.split(" ")
     # Note: this is the value error that is emitted, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -5140,9 +5136,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query_fail_overwrite(runtmp)
 
     assert os.path.exists(c.output("gcf_all.sbt.zip"))
 
-    cmd = (
-        f"multigather --query {another_query} {another_query} --db gcf_all.sbt.zip -k 21 --threshold-bp=0"
-    )
+    cmd = f"multigather --query {another_query} {another_query} --db gcf_all.sbt.zip -k 21 --threshold-bp=0"
     cmd = cmd.split(" ")
 
     with pytest.raises(SourmashCommandFailed):
