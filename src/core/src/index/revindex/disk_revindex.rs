@@ -82,6 +82,7 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
+        info!("Starting indexing");
         index
             .collection
             .par_iter()
@@ -91,7 +92,7 @@ impl RevIndex {
                     info!("Processed {} reference sigs", i);
                 }
 
-                if i % 5000 == 0 && i > 0 {
+                if i % 10000 == 0 && i > 0 {
                     info!("Triggering manual compaction");
                     index.compact();
                     info!("Finished manual compaction");
@@ -102,9 +103,9 @@ impl RevIndex {
                     dataset_id as Idx,
                 )
             })
-            .chunks(100)
+            .chunks(10)
             .for_each(|chunk| {
-                let mut batch = WriteBatchWithTransaction::<false>::default();
+                //let mut batch = WriteBatchWithTransaction::<false>::default();
                 let cf_hashes = index.db.cf_handle(HASHES).unwrap();
 
                 let mut hash_bytes = [0u8; 8];
@@ -115,10 +116,14 @@ impl RevIndex {
                         (&mut hash_bytes[..])
                             .write_u64::<LittleEndian>(hash)
                             .expect("error writing bytes");
-                        batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                        index
+                            .db
+                            .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
+                            .expect("error merging");
+                        //batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
                     }
                 }
-                index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+                //index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
             });
 
         info!("Compact SSTs");
@@ -533,6 +538,18 @@ impl RevIndexOps for RevIndex {
 
 fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     let mut cfopts = module::RevIndex::db_options();
+
+    // following https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
+    cfopts.set_enable_blob_files(true);
+    // If empty or one dataset, avoid saving to blob store
+    cfopts.set_min_blob_size(8);
+    // TODO: set blob file size to write_buffer_size
+    //cfopts.set_blob_file_size(cfopts.write_bufffer_size());
+    cfopts.set_blob_file_size(0x4000000); // 64 MiB
+    cfopts.set_enable_blob_gc(true);
+    //
+    cfopts.set_blob_compression_type(rocksdb::DBCompressionType::Zstd);
+
     cfopts.set_max_write_buffer_number(16);
     cfopts.set_merge_operator_associative("datasets operator", merge_datasets);
     cfopts.set_min_write_buffer_number_to_merge(10);
@@ -543,14 +560,24 @@ fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     cfopts.prepare_for_bulk_load();
 
     let mut tfopts = rocksdb::BlockBasedOptions::default();
-    tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    //tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
     tfopts.set_optimize_filters_for_memory(true);
-    tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
+    //tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
     // Keys for HASHES are HashIntoType, a u64
-    tfopts.set_hybrid_ribbon_filter(64.0, 2);
+    //tfopts.set_hybrid_ribbon_filter(64.0, 2);
+
+    // these are from db_options, not sure if overwritten if not here
+    tfopts.set_block_size(0x4000000);
+    tfopts.set_cache_index_and_filter_blocks(true);
+    tfopts.set_pin_l0_filter_and_index_blocks_in_cache(true);
+    tfopts.set_format_version(6);
+
     cfopts.set_block_based_table_factory(&tfopts);
     // Keys for HASHES are HashIntoType, a u64, and so 8 bytes
-    cfopts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(8));
+    //cfopts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(8));
+
+    // 10GB for memory budget
+    cfopts.optimize_level_style_compaction(10 * 1024 * 1024 * 1024);
 
     let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
 
