@@ -1,5 +1,5 @@
 ---
-title: 'sourmash: a tool to quickly search, compare, and analyze genomic
+title: 'sourmash v4: a multitool to quickly search, compare, and analyze genomic
 and metagenomic data sets'
 tags:
   - FracMinHash
@@ -63,6 +63,9 @@ authors:
    affiliation: 1
  - name: Ricky Lim
    orcid: 0000-0003-1313-7076
+   affiliation: 9
+ - name: Bradley Nelson
+   orcid: 0009-0001-1553-932X
    affiliation: 9
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
@@ -161,8 +164,12 @@ interface. It has been used in over 350 publications (based on citations of
 
 # Acknowledgements
 
-This work is funded in part by the Gordon and Betty Moore Foundation’s
-Data-Driven Discovery Initiative [GBMF4551 to CTB].
+This work was funded in part by the Gordon and Betty Moore Foundation’s
+Data-Driven Discovery Initiative [GBMF4551 to CTB]. It is also funded in
+part by the National Science Foundation [#2018522 to CTB] and PIG-PARADIGM
+(Preventing Infection in the Gut of developing Piglets–and thus Antimicrobial
+Resistance – by disentAngling the interface of DIet, the host and the
+Gastrointestinal Microbiome) from the Novo Nordisk Foundation to CTB.
 
 Notice: This manuscript has been authored by BNBI under Contract
 No. HSHQDC-15-C-00064 with the DHS. The US Government retains and the

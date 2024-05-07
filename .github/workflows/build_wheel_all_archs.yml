@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [aarch64, ppc64le]
+        target: [aarch64]
+        #target: [aarch64, ppc64le]
         #target: [aarch64, s390x, ppc64le]
     steps:
       - uses: actions/checkout@v4

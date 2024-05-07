@@ -240,7 +240,7 @@ impl LinearIndex {
         threshold: usize,
         query: &KmerMinHash,
     ) -> std::result::Result<Vec<GatherResult>, Box<dyn std::error::Error>> {
-        let mut match_size = usize::max_value();
+        let mut match_size = usize::MAX;
         let mut matches = vec![];
         let template = self.template();
 

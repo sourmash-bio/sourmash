@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
-use std::iter::{Iterator, Peekable};
+use std::iter::Peekable;
 use std::str;
 use std::sync::Mutex;
 
@@ -21,15 +21,15 @@ use crate::Error;
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
         0 => 0,
-        1 => u64::max_value(),
-        _ => (u64::max_value() as f64 / scaled as f64) as u64,
+        1 => u64::MAX,
+        _ => (u64::MAX as f64 / scaled as f64) as u64,
     }
 }
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
         0 => 0,
-        _ => (u64::max_value() as f64 / max_hash as f64) as u64,
+        _ => (u64::MAX as f64 / max_hash as f64) as u64,
     }
 }
 
@@ -48,7 +48,7 @@ pub struct KmerMinHash {
     #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default = u64::max_value())]
+    #[builder(default = u64::MAX)]
     max_hash: u64,
 
     #[builder(default)]
@@ -313,7 +313,7 @@ impl KmerMinHash {
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
         let current_max = match self.mins.last() {
             Some(&x) => x,
-            None => u64::max_value(),
+            None => u64::MAX,
         };
 
         if hash > self.max_hash && self.max_hash != 0 {
@@ -942,56 +942,6 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
     }
 }
 
-struct Union<T, I: Iterator<Item = T>> {
-    iter: Peekable<I>,
-    other: Peekable<I>,
-}
-
-impl<T: Ord, I: Iterator<Item = T>> Iterator for Union<T, I> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        let res = match (self.iter.peek(), self.other.peek()) {
-            (Some(ref left_key), Some(ref right_key)) => left_key.cmp(right_key),
-            (None, Some(_)) => {
-                return self.other.next();
-            }
-            (Some(_), None) => {
-                return self.iter.next();
-            }
-            _ => return None,
-        };
-
-        match res {
-            Ordering::Less => self.iter.next(),
-            Ordering::Greater => self.other.next(),
-            Ordering::Equal => {
-                self.other.next();
-                self.iter.next()
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::Union;
-
-    #[test]
-    fn test_union() {
-        let v1 = [1u64, 2, 4, 10];
-        let v2 = [1u64, 3, 4, 9];
-
-        let union: Vec<u64> = Union {
-            iter: v1.iter().peekable(),
-            other: v2.iter().peekable(),
-        }
-        .cloned()
-        .collect();
-        assert_eq!(union, [1, 2, 3, 4, 9, 10]);
-    }
-}
-
 //#############
 // A MinHash implementation for low scaled or large cardinalities
 
@@ -1010,7 +960,7 @@ pub struct KmerMinHashBTree {
     #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default = u64::max_value())]
+    #[builder(default = u64::MAX)]
     max_hash: u64,
 
     #[builder(default)]
@@ -1359,7 +1309,7 @@ impl KmerMinHashBTree {
         let union = self.mins.union(&other.mins);
 
         let to_take = if self.num == 0 {
-            usize::max_value()
+            usize::MAX
         } else {
             self.num as usize
         };

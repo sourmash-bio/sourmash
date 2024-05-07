@@ -3356,16 +3356,35 @@ def test_sig_describe_dayhoff(c):
     )
 
 
-@utils.in_tempdir
-def test_sig_describe_1_hp(c):
+def test_sig_describe_1_hp(runtmp):
+    c = runtmp
+
     # get basic info on a signature
     testdata = utils.get_test_data("short.fa")
-    c.run_sourmash(
-        "compute", "-k", "21,30", "--dayhoff", "--hp", "--protein", "--dna", testdata
+
+    # run four separate commands to make 4 different sets of sigs...
+    c.sourmash("sketch", "dna", "-p", "k=21,k=30,num=500", "-o", "out.zip", testdata)
+    c.sourmash(
+        "sketch", "translate", "-p", "k=7,k=10,num=500", "-o", "out.zip", testdata
     )
-    # stdout should be new signature
-    computed_sig = os.path.join(c.location, "short.fa.sig")
-    c.run_sourmash("sig", "describe", computed_sig)
+    c.sourmash(
+        "sketch", "translate", "-p", "k=7,k=10,num=500,hp", "-o", "out.zip", testdata
+    )
+    c.sourmash(
+        "sketch",
+        "translate",
+        "-p",
+        "k=7,k=10,num=500,dayhoff",
+        "-o",
+        "out.zip",
+        testdata,
+    )
+
+    # then combine into one .sig file
+    c.sourmash("sig", "cat", "out.zip", "-o", "short.fa.sig")
+
+    # & run sig describe
+    c.run_sourmash("sig", "describe", "short.fa.sig")
 
     out = c.last_result.out
     print(c.last_result.out)
@@ -3445,7 +3464,6 @@ sum hashes: 500
 signature license: CC0
 
 ---
-signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: 71f7c111c01785e5f38efad45b00a0e1

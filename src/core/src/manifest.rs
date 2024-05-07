@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
@@ -12,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
-use crate::signature::{Signature, SigsTrait};
+use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::Result;
 
@@ -42,6 +41,7 @@ pub struct Record {
     #[getset(get = "pub", set = "pub")]
     name: String,
 
+    #[getset(get = "pub", set = "pub")]
     filename: String,
 }
 

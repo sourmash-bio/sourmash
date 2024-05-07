@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+## [0.13.1] - 2024-03-23
+
+MSRV: 1.65
+
+Changes/additions:
+
+* Implement file parsing for webassembly (#3047)
+* fix `calculate_gather_stats` `threshold=0` bug (#3052)
+* fix clippy beta issues (#3088)
+
+Updates:
+
+* Bump wasm-bindgen-test from 0.3.41 to 0.3.42 (#3063)
+* Bump web-sys from 0.3.68 to 0.3.69 (#3061)
+* Bump log from 0.4.20 to 0.4.21 (#3062)
+* Bump rayon from 1.8.1 to 1.9.0 (#3058)
+* Bump tempfile from 3.10.0 to 3.10.1 (#3059)
+* Bump serde_json from 1.0.113 to 1.0.114 (#3044)
+* Bump serde from 1.0.196 to 1.0.197 (#3045)
+* Bump itertools from 0.12.0 to 0.12.1 (#3043)
+
 ## [0.13.0] - 2024-02-23
 
 MSRV: 1.65
@@ -17,6 +40,7 @@ Changes/additions:
 * make core Manifest booleans python compatible (core) (#3007)
 
 Updates:
+
 * Bump roaring from 0.10.2 to 0.10.3 (#3014)
 * Bump histogram from 0.9.0 to 0.9.1 (#3002)
 * Bump chrono from 0.4.33 to 0.4.34 (#3000)
@@ -287,7 +311,11 @@ Fixed:
 - Fix mem leak in get_mins (#807)
 - Fixes for WASI and WASM compilation (#771) (#723)
 
-[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.11.0...HEAD
+[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...HEAD
+[0.13.1]: https://github.com/sourmash-bio/sourmash/compare/r0.13.0...r0.13.1
+[0.13.0]: https://github.com/sourmash-bio/sourmash/compare/r0.12.1...r0.13.0
+[0.12.1]: https://github.com/sourmash-bio/sourmash/compare/r0.12.0...r0.12.1
+[0.12.0]: https://github.com/sourmash-bio/sourmash/compare/r0.11.0...r0.12.0
 [0.11.0]: https://github.com/sourmash-bio/sourmash/compare/r0.10.0...r0.11.0
 [0.10.0]: https://github.com/sourmash-bio/sourmash/compare/r0.9.0...r0.10.0
 [0.9.0]: https://github.com/sourmash-bio/sourmash/compare/r0.9.0...r0.10.0
