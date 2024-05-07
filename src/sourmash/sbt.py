@@ -102,7 +102,7 @@ class _NodesCache(Cache):
             # we just need to select the maximum key/node id
             (key, _) = max(c for c in common if c[1] == count)
         except IndexError:
-            msg = "%s is empty" % self.__class__.__name__
+            msg = f"{self.__class__.__name__} is empty"
             raise KeyError(msg) from None
         else:
             value = self.pop(key)
