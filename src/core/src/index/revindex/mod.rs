@@ -649,7 +649,9 @@ mod test {
             Some(selection),
         )?;
 
-        assert_eq!(matches.len(), 6); // should be 11, based on test_gather_metagenome_num_results @CTB
+        // should be 11, based on test_gather_metagenome_num_results @CTB.
+        // see sourmash#3139 and sourmash_plugin_branchwater#322.
+        assert_eq!(matches.len(), 6);
 
         fn round5(a: f64) -> f64 {
             (a * 1e5).round() / 1e5
