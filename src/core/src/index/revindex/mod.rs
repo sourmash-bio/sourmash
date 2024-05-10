@@ -608,11 +608,14 @@ mod test {
             "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
             "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
         ];
-        let against: Vec<_> = against.iter().map(|sig| {
-            let mut filename = basedir.clone();
-            filename.push(sig);
-            filename
-        }).collect();
+        let against: Vec<_> = against
+            .iter()
+            .map(|sig| {
+                let mut filename = basedir.clone();
+                filename.push(sig);
+                filename
+            })
+            .collect();
 
         // build 'against' sketches into a revindex
         let selection = Selection::builder().ksize(21).scaled(10000).build();
