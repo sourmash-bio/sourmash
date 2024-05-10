@@ -683,6 +683,7 @@ mod test {
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.103683));
 
         let match_ = &matches[5];
+        dbg!(match_);
         let names: Vec<&str> = match_.name().split(' ').take(1).collect();
         assert_eq!(names[0], "NC_009486.1");
 
@@ -691,6 +692,12 @@ mod test {
 
         // @CTB this fails: 0.05593 != 0.06276
         // assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
+
+        // @CTB fails
+        // assert_eq!(match_.unique_intersect_bp, 820000);
+
+        // @CTB fails
+        // assert_eq!(match_.remaining_bp, 2170000);
 
         Ok(())
     }
