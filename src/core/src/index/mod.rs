@@ -232,7 +232,7 @@ pub fn calculate_gather_stats(
     // stats for this match vs current (subtracted) query
     let f_match = match_size as f64 / match_mh.size() as f64;
     let unique_intersect_bp = match_mh.scaled() as usize * match_size;
-    let f_unique_to_query = match_size as f64 / query.size() as f64;
+    let f_unique_to_query = match_size as f64 / orig_query.size() as f64;
 
     // // get ANI values
     let ksize = match_mh.ksize() as f64;
