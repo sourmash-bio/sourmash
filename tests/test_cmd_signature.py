@@ -799,8 +799,9 @@ def test_sig_subtract_1_sigzip(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test1_sig = list(sourmash.load_file_as_signatures(sig47))[0]
-    test2_sig = list(sourmash.load_file_as_signatures(sig63))[0]
+    from sourmash import sourmash_args
+    test1_sig = sourmash_args.load_one_signature(sig47)
+    test2_sig = sourmash_args.load_one_signature(sig63)
     actual_subtract_sig = sourmash.load_one_signature(out)
 
     mins = set(test1_sig.minhash.hashes.keys())

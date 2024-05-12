@@ -51,7 +51,9 @@ from .logging import notify, error, debug_literal
 from .index import LinearIndex
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
-from .save_load import SaveSignaturesToLocation, load_file_as_index, _load_database
+from .save_load import (SaveSignaturesToLocation,
+                        load_file_as_index,
+                        _load_database)
 
 
 DEFAULT_LOAD_K = 31
@@ -810,3 +812,43 @@ def load_file_as_signatures(
         return progress.start_file(filename, loader)
     else:
         return loader
+
+
+def load_one_signature(
+    filename,
+    *,
+    select_moltype=None,
+    ksize=None,
+    picklist=None,
+    yield_all_files=False,
+    pattern=None,
+    _use_manifest=True,
+):
+    db = _load_database(filename, yield_all_files)
+
+    # test fixture ;)
+    if not _use_manifest and db.manifest:
+        db.manifest = None
+
+    db = db.select(moltype=select_moltype, ksize=ksize)
+
+    # apply pattern search & picklist
+    db = apply_picklist_and_pattern(db, picklist, pattern)
+
+    loader = db.signatures()
+
+    # load exactly one!
+    try:
+        ss = next(iter(loader))
+    except StopIteration:
+        raise ValueError(f"no signatures in '{filename}'? expected exactly one.")
+
+    # make sure there's not a second one...
+    try:
+        _ = next(iter(loader))
+
+        raise ValueError(f"more than one signature in '{filename}'; expected exactly one")
+    except StopIteration:
+        pass
+
+    return ss
