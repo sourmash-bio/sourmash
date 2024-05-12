@@ -3839,11 +3839,29 @@ def test_sig_describe_3_manifest_fails_when_moved(runtmp):
         runtmp.sourmash("sig", "describe", "mf.csv")
 
 
-@utils.in_tempdir
-def test_sig_overlap(c):
+def test_sig_overlap(runtmp):
+    c = runtmp
     # get overlap details
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
+    c.run_sourmash("sig", "overlap", sig47, sig63)
+    out = c.last_result.out
+
+    print(out)
+
+    # md5s
+    assert "09a08691ce52952152f0e866a59f6261" in out
+    assert "38729c6374925585db28916b82a6f513" in out
+
+    assert "similarity:                  0.32069" in out
+    assert "number of hashes in common:  2529" in out
+
+
+def test_sig_overlap_2(runtmp):
+    c = runtmp
+    # get overlap details
+    sig47 = utils.get_test_data("47.fa.sig.zip")
+    sig63 = utils.get_test_data("63.fa.sig.zip")
     c.run_sourmash("sig", "overlap", sig47, sig63)
     out = c.last_result.out
 

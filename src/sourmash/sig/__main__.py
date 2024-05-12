@@ -384,12 +384,23 @@ def overlap(args):
 
     moltype = sourmash_args.calculate_moltype(args)
 
-    sig1 = sourmash.load_one_signature(
+    sig1 = sourmash.load_file_as_signatures(
         args.signature1, ksize=args.ksize, select_moltype=moltype
     )
-    sig2 = sourmash.load_one_signature(
+    sig1 = list(sig1)
+    if len(sig1) != 1:
+        notify(f"ERROR: 'sig overlap' needs exactly one signature per file; found {len(sig1)} in '{args.signature1}'")
+        sys.exit(-1)
+    sig2 = sourmash.load_file_as_signatures(
         args.signature2, ksize=args.ksize, select_moltype=moltype
     )
+    sig2 = list(sig2)
+    if len(sig2) != 1:
+        notify(f"ERROR: 'sig overlap' needs exactly one signature per file; found {len(sig2)} in '{args.signature2}'")
+        sys.exit(-1)
+
+    sig1 = sig1[0]
+    sig2 = sig2[0]
 
     notify(f"loaded one signature each from {args.signature1} and {args.signature2}")
 
