@@ -51,9 +51,7 @@ from .logging import notify, error, debug_literal
 from .index import LinearIndex
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
-from .save_load import (SaveSignaturesToLocation,
-                        load_file_as_index,
-                        _load_database)
+from .save_load import SaveSignaturesToLocation, load_file_as_index, _load_database
 
 
 DEFAULT_LOAD_K = 31
@@ -847,7 +845,9 @@ def load_one_signature(
     try:
         _ = next(iter(loader))
 
-        raise ValueError(f"more than one signature in '{filename}'; expected exactly one")
+        raise ValueError(
+            f"more than one signature in '{filename}'; expected exactly one"
+        )
     except StopIteration:
         pass
 

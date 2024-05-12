@@ -800,6 +800,7 @@ def test_sig_subtract_1_sigzip(runtmp):
     out = c.last_result.out
 
     from sourmash import sourmash_args
+
     test1_sig = sourmash_args.load_one_signature(sig47)
     test2_sig = sourmash_args.load_one_signature(sig63)
     actual_subtract_sig = sourmash.load_one_signature(out)
