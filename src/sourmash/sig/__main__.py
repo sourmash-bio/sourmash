@@ -658,9 +658,14 @@ def subtract(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     from_sigfile = args.signature_from
-    from_sigobj = sourmash.load_one_signature(
+    from_sigobj = sourmash.load_file_as_signatures(
         from_sigfile, ksize=args.ksize, select_moltype=moltype
     )
+    from_sigobj = list(from_sigobj)
+    if len(from_sigobj) != 1:
+        notify(f"ERROR: 'sig subtract' needs exactly one signature per file; found {len(from_sigobj)} in '{from_sigfile}'")
+        sys.exit(-1)
+    from_sigobj = from_sigobj[0]
 
     if args.abundances_from:  # it's ok to work with abund signatures if -A.
         args.flatten = True
@@ -705,9 +710,15 @@ def subtract(args):
     # borrow abundances from somewhere?
     if args.abundances_from:
         notify(f"loading signature from {args.abundances_from}, keeping abundances")
-        abund_sig = sourmash.load_one_signature(
+        abund_sig = sourmash.load_file_as_signatures(
             args.abundances_from, ksize=args.ksize, select_moltype=moltype
         )
+        abund_sig = list(abund_sig)
+        if len(abund_sig) != 1:
+            notify(f"ERROR: 'sig subtract' needs exactly one signature per file; found {len(abund_sig)} in '{args.abundances_from}'")
+            sys.exit(-1)
+        abund_sig = abund_sig[0]
+
         if not abund_sig.minhash.track_abundance:
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
