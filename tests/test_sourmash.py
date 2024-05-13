@@ -24,7 +24,7 @@ from sourmash.sbt import SBT, Node
 from sourmash.sbtmh import SigLeaf, load_sbt_index
 from sourmash.search import SearchResult, GatherResult
 from sourmash.signature import load_one_signature_from_json as load_one_signature
-from sourmash.signature import load_signatures_from_json as load_signatures
+from sourmash.signature import load_signatures_from_json
 
 try:
     import matplotlib
@@ -7210,7 +7210,7 @@ def test_license_cc0(runtmp):
     sigfile = runtmp.output("short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
     assert sig.license == "CC0"
@@ -7233,7 +7233,7 @@ def test_license_load_non_cc0():
     sigfile = utils.get_test_data("bad-license.sig")
 
     try:
-        next(load_signatures(sigfile, do_raise=True))
+        next(load_signatures_from_json(sigfile, do_raise=True))
     except Exception as e:
         assert "sourmash only supports CC0-licensed signatures" in str(e)
 

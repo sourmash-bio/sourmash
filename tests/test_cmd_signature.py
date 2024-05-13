@@ -12,7 +12,9 @@ import screed
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash import load_signatures
+from sourmash.signature import (load_signatures_from_json,
+                                save_signatures_to_json,
+                                load_one_signature_from_json)
 from sourmash.manifest import CollectionManifest
 from sourmash_tst_utils import SourmashCommandFailed
 
@@ -68,8 +70,8 @@ def test_sig_merge_1_use_full_signature_in_cmd(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -101,8 +103,8 @@ def test_sig_merge_1_fromfile_picklist(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -137,8 +139,8 @@ def test_sig_merge_1_fromfile_picklist_gz(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -158,8 +160,8 @@ def test_sig_merge_1(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -178,8 +180,8 @@ def test_sig_merge_1_multisig(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -211,7 +213,7 @@ def test_sig_merge_1_name(c):
         assignedSigName,
     )
 
-    test_merge_sig = sourmash.load_one_signature(outsig)
+    test_merge_sig = load_one_signature_from_json(outsig)
 
     print("outsig", outsig)
     print("xx_test_merge_sig.name", test_merge_sig.name)
@@ -230,8 +232,8 @@ def test_sig_merge_1_ksize_moltype(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig2and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig2and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -262,8 +264,8 @@ def test_sig_merge_2(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(out)
 
@@ -277,7 +279,7 @@ def test_sig_merge_3_abund_ab_ok(c):
     sig63abund = utils.get_test_data("track_abund/63.fa.sig")
 
     c.run_sourmash("sig", "merge", sig47abund, sig63abund)
-    sourmash.load_one_signature(c.last_result.out)
+    load_one_signature_from_json(c.last_result.out)
     # CTB: should check that this merge did what we think it should do!
 
 
@@ -323,13 +325,13 @@ def test_sig_filter_1(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    filtered_sigs = list(load_signatures(out))
+    filtered_sigs = list(load_signatures_from_json(out))
     filtered_sigs.sort(key=lambda x: str(x))
 
     assert len(filtered_sigs) == 2
 
-    mh47 = sourmash.load_one_signature(sig47).minhash
-    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47 = load_one_signature_from_json(sig47).minhash
+    mh63 = load_one_signature_from_json(sig63).minhash
 
     assert filtered_sigs[0].minhash == mh47
     assert filtered_sigs[1].minhash == mh63
@@ -344,8 +346,8 @@ def test_sig_filter_2(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    filtered_sig = sourmash.load_one_signature(out)
-    test_sig = sourmash.load_one_signature(sig47)
+    filtered_sig = load_one_signature_from_json(out)
+    test_sig = load_one_signature_from_json(sig47)
 
     abunds = test_sig.minhash.hashes
     abunds = {k: v for (k, v) in abunds.items() if v >= 2 and v <= 5}
@@ -363,8 +365,8 @@ def test_sig_filter_3(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    filtered_sig = sourmash.load_one_signature(out)
-    test_sig = sourmash.load_one_signature(sig47)
+    filtered_sig = load_one_signature_from_json(out)
+    test_sig = load_one_signature_from_json(sig47)
 
     abunds = test_sig.minhash.hashes
     abunds = {k: v for (k, v) in abunds.items() if v >= 2}
@@ -382,8 +384,8 @@ def test_sig_filter_3_ksize_select(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    filtered_sig = sourmash.load_one_signature(out)
-    test_sig = sourmash.load_one_signature(psw_mag, ksize=31)
+    filtered_sig = load_one_signature_from_json(out)
+    test_sig = load_one_signature_from_json(psw_mag, ksize=31)
 
     abunds = test_sig.minhash.hashes
     abunds = {k: v for (k, v) in abunds.items() if v >= 2}
@@ -404,8 +406,8 @@ def test_sig_merge_flatten(c):
     print(c.last_result)
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -426,8 +428,8 @@ def test_sig_merge_flatten_2(c):
     print(c.last_result)
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
-    actual_merge_sig = sourmash.load_one_signature(out)
+    test_merge_sig = load_one_signature_from_json(sig47and63)
+    actual_merge_sig = load_one_signature_from_json(out)
 
     print(test_merge_sig.minhash)
     print(actual_merge_sig.minhash)
@@ -459,8 +461,8 @@ def test_sig_intersect_1(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_intersect_sig = sourmash.load_one_signature(sig47and63)
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    test_intersect_sig = load_one_signature_from_json(sig47and63)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     print(test_intersect_sig.minhash)
     print(actual_intersect_sig.minhash)
@@ -492,8 +494,8 @@ def test_sig_intersect_1_fromfile_picklist(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_intersect_sig = sourmash.load_one_signature(sig47and63)
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    test_intersect_sig = load_one_signature_from_json(sig47and63)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     print(test_intersect_sig.minhash)
     print(actual_intersect_sig.minhash)
@@ -514,8 +516,8 @@ def test_sig_intersect_2(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_intersect_sig = sourmash.load_one_signature(sig47and63)
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    test_intersect_sig = load_one_signature_from_json(sig47and63)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     print(test_intersect_sig.minhash)
     print(actual_intersect_sig.minhash)
@@ -534,11 +536,11 @@ def test_sig_intersect_3(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     # actually do an intersection ourselves for the test
-    mh47 = sourmash.load_one_signature(sig47).minhash
-    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47 = load_one_signature_from_json(sig47).minhash
+    mh63 = load_one_signature_from_json(sig63).minhash
     mh47_abunds = mh47.hashes
     mh63_mins = set(mh63.hashes.keys())
 
@@ -566,11 +568,11 @@ def test_sig_intersect_4(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     # actually do an intersection ourselves for the test
-    mh47 = sourmash.load_one_signature(sig47).minhash
-    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47 = load_one_signature_from_json(sig47).minhash
+    mh63 = load_one_signature_from_json(sig63).minhash
     mh47_abunds = mh47.hashes
     mh63_mins = set(mh63.hashes.keys())
 
@@ -631,8 +633,8 @@ def test_sig_intersect_7(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_intersect_sig = sourmash.load_one_signature(sig47)
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    test_intersect_sig = load_one_signature_from_json(sig47)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     print(test_intersect_sig.minhash)
     print(actual_intersect_sig.minhash)
@@ -650,7 +652,7 @@ def test_sig_intersect_8_multisig(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    actual_intersect_sig = sourmash.load_one_signature(out)
+    actual_intersect_sig = load_one_signature_from_json(out)
 
     assert not len(actual_intersect_sig.minhash)
 
@@ -664,11 +666,11 @@ def test_sig_inflate_1(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    actual_inflate_sig = sourmash.load_one_signature(out)
+    actual_inflate_sig = load_one_signature_from_json(out)
     actual_inflate_mh = actual_inflate_sig.minhash
 
     # should be identical to track_abund sig
-    sig47 = sourmash.load_one_signature(sig47_abund)
+    sig47 = load_one_signature_from_json(sig47_abund)
     mh47 = sig47.minhash
 
     assert actual_inflate_sig.name == sig47.name
@@ -684,11 +686,11 @@ def test_sig_inflate_2(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    actual_inflate_sig = sourmash.load_one_signature(out)
+    actual_inflate_sig = load_one_signature_from_json(out)
 
     # actually do an inflation ourselves for the test
-    mh47 = sourmash.load_one_signature(sig47).minhash
-    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47 = load_one_signature_from_json(sig47).minhash
+    mh63 = load_one_signature_from_json(sig63).minhash
     mh47_abunds = mh47.hashes
     mh63_mins = set(mh63.hashes.keys())
 
@@ -723,7 +725,7 @@ def test_sig_inflate_4_picklist(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
     sig47_flat = utils.get_test_data("47.fa.sig")
 
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     _write_file(runtmp, "pl.csv", ["md5", ss63.md5sum()])
 
@@ -736,11 +738,11 @@ def test_sig_inflate_4_picklist(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    actual_inflate_sig = sourmash.load_one_signature(out)
+    actual_inflate_sig = load_one_signature_from_json(out)
 
     # actually do an inflation ourselves for the test
-    mh47 = sourmash.load_one_signature(sig47).minhash
-    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47 = load_one_signature_from_json(sig47).minhash
+    mh63 = load_one_signature_from_json(sig63).minhash
     mh47_abunds = mh47.hashes
     mh63_mins = set(mh63.hashes.keys())
 
@@ -779,9 +781,9 @@ def test_sig_subtract_1(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test1_sig = sourmash.load_one_signature(sig47)
-    test2_sig = sourmash.load_one_signature(sig63)
-    actual_subtract_sig = sourmash.load_one_signature(out)
+    test1_sig = load_one_signature_from_json(sig47)
+    test2_sig = load_one_signature_from_json(sig63)
+    actual_subtract_sig = load_one_signature_from_json(out)
 
     mins = set(test1_sig.minhash.hashes.keys())
     mins -= set(test2_sig.minhash.hashes.keys())
@@ -803,7 +805,7 @@ def test_sig_subtract_1_sigzip(runtmp):
 
     test1_sig = sourmash_args.load_one_signature(sig47)
     test2_sig = sourmash_args.load_one_signature(sig63)
-    actual_subtract_sig = sourmash.load_one_signature(out)
+    actual_subtract_sig = load_one_signature_from_json(out)
 
     mins = set(test1_sig.minhash.hashes.keys())
     mins -= set(test2_sig.minhash.hashes.keys())
@@ -822,9 +824,9 @@ def test_sig_subtract_1_abund(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test1_sig = sourmash.load_one_signature(sig47)
-    test2_sig = sourmash.load_one_signature(sig63)
-    actual_subtract_sig = sourmash.load_one_signature(out)
+    test1_sig = load_one_signature_from_json(sig47)
+    test2_sig = load_one_signature_from_json(sig63)
+    actual_subtract_sig = load_one_signature_from_json(out)
     assert actual_subtract_sig.minhash.track_abundance
 
     mins = set(test1_sig.minhash.hashes.keys())
@@ -867,9 +869,9 @@ def test_sig_subtract_1_flatten(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test1_sig = sourmash.load_one_signature(sig47)
-    test2_sig = sourmash.load_one_signature(sig63)
-    actual_subtract_sig = sourmash.load_one_signature(out)
+    test1_sig = load_one_signature_from_json(sig47)
+    test2_sig = load_one_signature_from_json(sig63)
+    actual_subtract_sig = load_one_signature_from_json(out)
     assert not actual_subtract_sig.minhash.track_abundance
 
     mins = set(test1_sig.minhash.hashes.keys())
@@ -888,7 +890,7 @@ def test_sig_subtract_1_multisig(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    actual_subtract_sig = sourmash.load_one_signature(out)
+    actual_subtract_sig = load_one_signature_from_json(out)
 
     assert not set(actual_subtract_sig.minhash.hashes.keys())
 
@@ -954,8 +956,8 @@ def test_sig_rename_1(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_rename_sig = sourmash.load_one_signature(sig47)
-    actual_rename_sig = sourmash.load_one_signature(out)
+    test_rename_sig = load_one_signature_from_json(sig47)
+    actual_rename_sig = load_one_signature_from_json(out)
 
     print(test_rename_sig.minhash)
     print(actual_rename_sig.minhash)
@@ -987,8 +989,8 @@ def test_sig_rename_1_fromfile_picklist(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_rename_sig = sourmash.load_one_signature(sig47)
-    actual_rename_sig = sourmash.load_one_signature(out)
+    test_rename_sig = load_one_signature_from_json(sig47)
+    actual_rename_sig = load_one_signature_from_json(out)
 
     print(test_rename_sig.minhash)
     print(actual_rename_sig.minhash)
@@ -1009,7 +1011,7 @@ def test_sig_rename_1_multisig(c):
     out = c.last_result.out
 
     n = 0
-    for sig in load_signatures(out):
+    for sig in load_signatures_from_json(out):
         assert sig.name == "fiz bar"
         n += 1
 
@@ -1027,7 +1029,7 @@ def test_sig_rename_1_multisig_ksize(c):
     out = c.last_result.out
 
     n = 0
-    for sig in load_signatures(out):
+    for sig in load_signatures_from_json(out):
         assert sig.name == "fiz bar"
         n += 1
 
@@ -1045,7 +1047,7 @@ def test_sig_rename_2_output_to_same(c):
 
     c.run_sourmash("sig", "rename", "-d", inplace, "fiz bar", "-o", inplace)
 
-    actual_rename_sig = sourmash.load_one_signature(inplace)
+    actual_rename_sig = load_one_signature_from_json(inplace)
     assert actual_rename_sig.name == "fiz bar"
 
 
@@ -1104,8 +1106,8 @@ def test_sig_cat_1(c):
     # stdout should be same signature
     out = c.last_result.out
 
-    test_cat_sig = sourmash.load_one_signature(sig47)
-    actual_cat_sig = sourmash.load_one_signature(out)
+    test_cat_sig = load_one_signature_from_json(sig47)
+    actual_cat_sig = load_one_signature_from_json(out)
 
     assert actual_cat_sig == test_cat_sig
 
@@ -1119,8 +1121,8 @@ def test_sig_cat_1_no_unique(c):
     # stdout should be same signature
     out = c.last_result.out
 
-    test_cat_sig = sourmash.load_one_signature(sig47)
-    actual_cat_sigs = load_signatures(out)
+    test_cat_sig = load_one_signature_from_json(sig47)
+    actual_cat_sigs = load_signatures_from_json(out)
 
     for n, sig in enumerate(actual_cat_sigs):
         assert sig == test_cat_sig
@@ -1139,8 +1141,8 @@ def test_sig_cat_1_unique(c):
     out = c.last_result.out
     err = c.last_result.err
 
-    test_cat_sig = sourmash.load_one_signature(sig47)
-    actual_cat_sigs = load_signatures(out)
+    test_cat_sig = load_one_signature_from_json(sig47)
+    actual_cat_sigs = load_signatures_from_json(out)
 
     for n, sig in enumerate(actual_cat_sigs):
         assert sig == test_cat_sig
@@ -1161,7 +1163,7 @@ def test_sig_cat_2(c):
     # stdout should be same signatures
     out = c.last_result.out
 
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
     print(len(siglist))
 
     assert (
@@ -1181,7 +1183,7 @@ def test_sig_cat_2_out(c):
     # stdout should be same signatures
     out = c.output("out.sig")
 
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
     print(len(siglist))
 
     assert (
@@ -1206,7 +1208,7 @@ def test_sig_cat_2_out_inplace(c):
     # stdout should be same signatures
     out = input_sig
 
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
     print(len(siglist))
 
     assert (
@@ -1234,14 +1236,14 @@ def test_sig_cat_3_filelist(c):
     # make this a list, not a set, because a set will collapse identical
     # signatures. `sig cat` does not collapse identical signatures, although
     # the pathlist function will ignore duplicate files.
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
 
     # verify the number of signatures matches what we expect to see based
     # on the input files
     all_sigs = []
-    all_sigs += list(load_signatures(sig47))
-    all_sigs += list(load_signatures(sig47abund))
-    all_sigs += list(load_signatures(multisig))
+    all_sigs += list(load_signatures_from_json(sig47))
+    all_sigs += list(load_signatures_from_json(sig47abund))
+    all_sigs += list(load_signatures_from_json(multisig))
 
     assert len(all_sigs) == len(siglist)
 
@@ -1270,7 +1272,7 @@ def test_sig_cat_4_filelist_with_dbs(c):
     # stdout should be same signatures
     out = c.output("out.sig")
 
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
     print(len(siglist))
     # print("siglist: ",siglist)
     # print("\n")
@@ -1278,8 +1280,8 @@ def test_sig_cat_4_filelist_with_dbs(c):
     # verify the number of signatures matches what we expect to see based
     # on the input files
     all_sigs = []
-    all_sigs += list(load_signatures(sig47))
-    all_sigs += list(load_signatures(sig47abund))
+    all_sigs += list(load_signatures_from_json(sig47))
+    all_sigs += list(load_signatures_from_json(sig47abund))
     all_sigs += list(sourmash.load_file_as_signatures(sbt))
 
     assert len(all_sigs) == len(siglist)
@@ -1309,7 +1311,7 @@ def test_sig_cat_5_from_file(c):
     # stdout should be same signatures
     out = c.output("out.sig")
 
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
     print(len(siglist))
     # print("siglist: ",siglist)
     # print("\n")
@@ -1317,8 +1319,8 @@ def test_sig_cat_5_from_file(c):
     # verify the number of signatures matches what we expect to see based
     # on the input files
     all_sigs = []
-    all_sigs += list(load_signatures(sig47))
-    all_sigs += list(load_signatures(sig47abund))
+    all_sigs += list(load_signatures_from_json(sig47))
+    all_sigs += list(load_signatures_from_json(sig47abund))
     all_sigs += list(sourmash.load_file_as_signatures(sbt))
 
     assert len(all_sigs) == len(siglist)
@@ -1359,7 +1361,7 @@ def test_sig_cat_5_from_file_picklist(runtmp):
     # stdout should be same signatures
     out = c.output("out.sig")
 
-    siglist = list(load_signatures(out))
+    siglist = list(load_signatures_from_json(out))
     print(len(siglist))
     # print("siglist: ",siglist)
     # print("\n")
@@ -1367,7 +1369,7 @@ def test_sig_cat_5_from_file_picklist(runtmp):
     # verify the number of signatures matches what we expect to see based
     # on the input files
     all_sigs = []
-    all_sigs += list(load_signatures(sig47, ksize=31))
+    all_sigs += list(load_signatures_from_json(sig47, ksize=31))
 
     assert len(all_sigs) == len(siglist)
 
@@ -1426,8 +1428,8 @@ def test_sig_split_1(runtmp):
 
     assert os.path.exists(c.output(outname))
 
-    test_split_sig = sourmash.load_one_signature(sig47)
-    actual_split_sig = sourmash.load_one_signature(c.output(outname))
+    test_split_sig = load_one_signature_from_json(sig47)
+    actual_split_sig = load_one_signature_from_json(c.output(outname))
 
     assert actual_split_sig == test_split_sig
 
@@ -1453,8 +1455,8 @@ def test_sig_split_1_fromfile_picklist(runtmp):
 
     assert os.path.exists(c.output(outname))
 
-    test_split_sig = sourmash.load_one_signature(sig47)
-    actual_split_sig = sourmash.load_one_signature(c.output(outname))
+    test_split_sig = load_one_signature_from_json(sig47)
+    actual_split_sig = load_one_signature_from_json(c.output(outname))
 
     assert actual_split_sig == test_split_sig
 
@@ -1487,12 +1489,12 @@ def test_sig_split_2(c):
     assert os.path.exists(c.output(outname1))
     assert os.path.exists(c.output(outname2))
 
-    test_split_sig = sourmash.load_one_signature(sig47)
+    test_split_sig = load_one_signature_from_json(sig47)
 
-    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    actual_split_sig = load_one_signature_from_json(c.output(outname1))
     assert actual_split_sig == test_split_sig
 
-    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    actual_split_sig = load_one_signature_from_json(c.output(outname2))
     assert actual_split_sig == test_split_sig
 
 
@@ -1509,12 +1511,12 @@ def test_sig_split_2_outdir(c):
     assert os.path.exists(c.output(outname1))
     assert os.path.exists(c.output(outname2))
 
-    test_split_sig = sourmash.load_one_signature(sig47)
+    test_split_sig = load_one_signature_from_json(sig47)
 
-    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    actual_split_sig = load_one_signature_from_json(c.output(outname1))
     assert actual_split_sig == test_split_sig
 
-    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    actual_split_sig = load_one_signature_from_json(c.output(outname2))
     assert actual_split_sig == test_split_sig
 
 
@@ -1531,12 +1533,12 @@ def test_sig_split_2_output_dir(c):
     assert os.path.exists(c.output(outname1))
     assert os.path.exists(c.output(outname2))
 
-    test_split_sig = sourmash.load_one_signature(sig47)
+    test_split_sig = load_one_signature_from_json(sig47)
 
-    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    actual_split_sig = load_one_signature_from_json(c.output(outname1))
     assert actual_split_sig == test_split_sig
 
-    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    actual_split_sig = load_one_signature_from_json(c.output(outname2))
     assert actual_split_sig == test_split_sig
 
 
@@ -1679,8 +1681,8 @@ def test_sig_extract_1(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -1697,8 +1699,8 @@ def test_sig_extract_1_from_file(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -1713,8 +1715,8 @@ def test_sig_extract_2(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     print(test_extract_sig.minhash)
     print(actual_extract_sig.minhash)
@@ -1733,8 +1735,8 @@ def test_sig_extract_2_zipfile(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     print(test_extract_sig.minhash)
     print(actual_extract_sig.minhash)
@@ -1760,8 +1762,8 @@ def test_sig_extract_4(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     print(test_extract_sig.minhash)
     print(actual_extract_sig.minhash)
@@ -1787,7 +1789,7 @@ def test_sig_extract_6(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 2
@@ -1802,7 +1804,7 @@ def test_sig_extract_7(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 1
@@ -1817,7 +1819,7 @@ def test_sig_extract_7_no_ksize(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 3
@@ -1889,8 +1891,8 @@ def test_sig_extract_8_picklist_md5(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -1931,8 +1933,8 @@ def test_sig_extract_8_picklist_md5_zipfile(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2014,8 +2016,8 @@ def test_sig_extract_8_picklist_md5_include(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2055,8 +2057,8 @@ def test_sig_extract_8_picklist_md5_exclude(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig63)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig63)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2115,8 +2117,8 @@ def test_sig_extract_8_picklist_md5_require_all(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2158,8 +2160,8 @@ def test_sig_extract_8_picklist_name(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2191,8 +2193,8 @@ def test_sig_extract_8_picklist_name_exclude(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig63)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig63)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2224,8 +2226,8 @@ def test_sig_extract_8_picklist_ident(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2257,8 +2259,8 @@ def test_sig_extract_8_picklist_ident_exclude(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig63)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig63)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2290,8 +2292,8 @@ def test_sig_extract_8_picklist_ident_dot(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2323,8 +2325,8 @@ def test_sig_extract_8_picklist_ident_dot_exclude(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig63)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig63)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2356,8 +2358,8 @@ def test_sig_extract_8_picklist_md5_short(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2389,8 +2391,8 @@ def test_sig_extract_8_picklist_md5_short_exclude(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig63)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig63)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2422,8 +2424,8 @@ def test_sig_extract_8_picklist_md5_short_alias(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2455,8 +2457,8 @@ def test_sig_extract_8_picklist_md5_short_alias_exclude(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig63)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig63)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2561,8 +2563,8 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector(runtmp):
     # stdout should be new signature
     out = runtmp.last_result.out
 
-    test_extract_sig = sourmash.load_one_signature(sig47)
-    actual_extract_sig = sourmash.load_one_signature(out)
+    test_extract_sig = load_one_signature_from_json(sig47)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig == test_extract_sig
 
@@ -2651,7 +2653,7 @@ def test_sig_extract_8_picklist_md5_nomatch_exclude(runtmp):
 
     # stdout should be both signatures
     out = runtmp.last_result.out
-    extract_siglist = list(load_signatures(out))
+    extract_siglist = list(load_signatures_from_json(out))
     print(len(extract_siglist))
     s47 = sourmash.load_file_as_signatures(sig47)
     s63 = sourmash.load_file_as_signatures(sig63)
@@ -2687,7 +2689,7 @@ def test_sig_extract_9_picklist_md5_ksize_hp_select(runtmp):
 
     # stdout should be new signature
     out = runtmp.last_result.out
-    actual_extract_sig = sourmash.load_one_signature(out)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     print(actual_extract_sig.md5sum)
     assert str(actual_extract_sig) == "GCA_001593925"
@@ -2715,7 +2717,7 @@ def test_sig_extract_9_picklist_md5_ksize_hp_select_exclude(runtmp):
 
     # stdout should be new signature
     out = runtmp.last_result.out
-    actual_extract_sig = sourmash.load_one_signature(out)
+    actual_extract_sig = load_one_signature_from_json(out)
     print(actual_extract_sig.md5sum)
 
     assert str(actual_extract_sig) == "GCA_001593935"
@@ -2745,7 +2747,7 @@ def test_sig_extract_10_picklist_md5_dups_and_empty(runtmp):
 
     # stdout should be new signature
     out = runtmp.last_result.out
-    actual_extract_sig = sourmash.load_one_signature(out)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig.minhash.ksize == 19
     assert actual_extract_sig.minhash.moltype == "hp"
@@ -2779,7 +2781,7 @@ def test_sig_extract_10_picklist_md5_dups_and_empty_exclude(runtmp):
 
     # stdout should be new signature
     out = runtmp.last_result.out
-    actual_extract_sig = sourmash.load_one_signature(out)
+    actual_extract_sig = load_one_signature_from_json(out)
 
     assert actual_extract_sig.minhash.ksize == 19
     assert actual_extract_sig.minhash.moltype == "hp"
@@ -2966,20 +2968,20 @@ def test_sig_extract_11_pattern_exclude(runtmp):
 def test_sig_extract_identical_md5s(runtmp):
     # test that we properly handle different signatures with identical md5s
     sig47 = utils.get_test_data("47.fa.sig")
-    ss = load_signatures(sig47)
+    ss = load_signatures_from_json(sig47)
     sig = list(ss)[0]
     new_sig = sig.to_mutable()
     new_sig.name = "foo"
     sig47foo = runtmp.output("foo.sig")
     # this was only a problem when the signatures are stored in the same file
     with open(sig47foo, "w") as fp:
-        sourmash.save_signatures([new_sig, sig], fp)
+        save_signatures_to_json([new_sig, sig], fp)
 
     runtmp.run_sourmash("sig", "extract", "--name", "foo", sig47foo)
 
     out = runtmp.last_result.out
     print(out)
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -2999,12 +3001,12 @@ def test_sig_flatten_1(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 1
 
-    test_flattened = sourmash.load_one_signature(sig47)
+    test_flattened = load_one_signature_from_json(sig47)
     assert test_flattened.minhash == siglist[0].minhash
 
 
@@ -3030,12 +3032,12 @@ def test_sig_flatten_1_from_file(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 1
 
-    test_flattened = sourmash.load_one_signature(sig47)
+    test_flattened = load_one_signature_from_json(sig47)
     assert test_flattened.minhash == siglist[0].minhash
 
 
@@ -3050,12 +3052,12 @@ def test_sig_flatten_1_select_name(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 1
 
-    test_flattened = sourmash.load_one_signature(sig47)
+    test_flattened = load_one_signature_from_json(sig47)
     assert test_flattened.minhash == siglist[0].minhash
 
 
@@ -3071,12 +3073,12 @@ def test_sig_flatten_1_select_md5(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 1
 
-    test_flattened = sourmash.load_one_signature(sig47)
+    test_flattened = load_one_signature_from_json(sig47)
     assert test_flattened.minhash == siglist[0].minhash
 
 
@@ -3089,7 +3091,7 @@ def test_sig_flatten_2_ksize(runtmp):
     # stdout should be new signature
     out = c.last_result.out
 
-    siglist = load_signatures(out)
+    siglist = load_signatures_from_json(out)
     siglist = list(siglist)
 
     assert len(siglist) == 1
@@ -3104,8 +3106,8 @@ def test_sig_downsample_1_scaled(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_downsample_sig = sourmash.load_one_signature(sig47)
-    actual_downsample_sig = sourmash.load_one_signature(out)
+    test_downsample_sig = load_one_signature_from_json(sig47)
+    actual_downsample_sig = load_one_signature_from_json(out)
 
     test_mh = test_downsample_sig.minhash.downsample(scaled=10000)
 
@@ -3121,7 +3123,7 @@ def test_sig_downsample_1_scaled_downsample_multisig(c):
     # stdout should be new signatures
     out = c.last_result.out
 
-    for sig in load_signatures(out):
+    for sig in load_signatures_from_json(out):
         assert sig.minhash.scaled == 10000
 
 
@@ -3134,12 +3136,12 @@ def test_sig_downsample_1_scaled_to_num(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    actual_downsample_sig = sourmash.load_one_signature(out)
+    actual_downsample_sig = load_one_signature_from_json(out)
     actual_mins = actual_downsample_sig.minhash.hashes.keys()
     actual_mins = list(actual_mins)
     actual_mins.sort()
 
-    test_downsample_sig = sourmash.load_one_signature(sig47)
+    test_downsample_sig = load_one_signature_from_json(sig47)
     test_mins = test_downsample_sig.minhash.hashes.keys()
     test_mins = list(test_mins)
     test_mins.sort()
@@ -3206,10 +3208,10 @@ def test_sig_downsample_2_num(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_downsample_sig = sourmash.load_one_signature(
+    test_downsample_sig = load_one_signature_from_json(
         sigs11, ksize=21, select_moltype="DNA"
     )
-    actual_downsample_sig = sourmash.load_one_signature(out)
+    actual_downsample_sig = load_one_signature_from_json(out)
     test_mh = test_downsample_sig.minhash.downsample(num=500)
 
     assert actual_downsample_sig.minhash == test_mh
@@ -3226,10 +3228,10 @@ def test_sig_downsample_2_num_to_scaled(c):
     # stdout should be new signature
     out = c.last_result.out
 
-    test_downsample_sig = sourmash.load_one_signature(
+    test_downsample_sig = load_one_signature_from_json(
         sigs11, ksize=21, select_moltype="DNA"
     )
-    actual_downsample_sig = sourmash.load_one_signature(out)
+    actual_downsample_sig = load_one_signature_from_json(out)
 
     test_mins = test_downsample_sig.minhash.hashes.keys()
     actual_mins = actual_downsample_sig.minhash.hashes.keys()
@@ -3648,7 +3650,7 @@ def test_sig_describe_empty(c):
 
     outsig = c.output("xxx.sig")
     with open(outsig, "w") as fp:
-        sourmash.save_signatures([ss], fp)
+        save_signatures_to_json([ss], fp)
 
     ss = sourmash.load_file_as_signatures(outsig)
     ss = list(ss)
@@ -3906,8 +3908,8 @@ def test_import_export_1(c):
     c.run_sourmash("sig", "export", inp, "-o", outp, "-k", "21", "--dna")
     c.run_sourmash("sig", "import", outp)
 
-    original = sourmash.load_one_signature(inp, ksize=21, select_moltype="DNA")
-    roundtrip = sourmash.load_one_signature(c.last_result.out)
+    original = load_one_signature_from_json(inp, ksize=21, select_moltype="DNA")
+    roundtrip = load_one_signature_from_json(c.last_result.out)
 
     assert original.minhash == roundtrip.minhash
 
@@ -3921,8 +3923,8 @@ def test_import_export_1_by_md5(c):
     c.run_sourmash("sig", "export", inp, "-o", outp, "--md5", "1437d8eae6")
     c.run_sourmash("sig", "import", outp)
 
-    original = sourmash.load_one_signature(inp, ksize=21, select_moltype="DNA")
-    roundtrip = sourmash.load_one_signature(c.last_result.out)
+    original = load_one_signature_from_json(inp, ksize=21, select_moltype="DNA")
+    roundtrip = load_one_signature_from_json(c.last_result.out)
 
     assert original.minhash == roundtrip.minhash
 
@@ -3938,8 +3940,8 @@ def test_import_export_2(c):
     msh_sig = utils.get_test_data("genome-s11.fa.gz.msh.json_dump")
 
     c.run_sourmash("sig", "import", msh_sig)
-    imported = sourmash.load_one_signature(c.last_result.out)
-    compare = sourmash.load_one_signature(sig1, ksize=21, select_moltype="DNA")
+    imported = load_one_signature_from_json(c.last_result.out)
+    compare = load_one_signature_from_json(sig1, ksize=21, select_moltype="DNA")
 
     assert imported.minhash == compare.minhash
 
@@ -4240,7 +4242,7 @@ def test_sig_kmers_1_dna(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "dna", seqfile, "-p", "scaled=1")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "DNA"
 
@@ -4298,7 +4300,7 @@ def test_sig_kmers_1_dna_more_in_query(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "dna", seqfile, "-p", "scaled=1")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "DNA"
 
@@ -4326,7 +4328,7 @@ def test_sig_kmers_1_dna_empty_seq(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "dna", seqfile, "-p", "scaled=1")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "DNA"
 
@@ -4353,7 +4355,7 @@ def test_sig_kmers_1_dna_empty_sig(runtmp):
     mh = sourmash.MinHash(ksize=31, n=0, scaled=1)
     ss = sourmash.SourmashSignature(mh, name="empty")
     with open(runtmp.output("empty.sig"), "w") as fp:
-        sourmash.save_signatures([ss], fp)
+        save_signatures_to_json([ss], fp)
 
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash("sig", "kmers", "--sig", "empty.sig", "--seq", seqfile)
@@ -4374,7 +4376,7 @@ def test_sig_kmers_1_dna_single_sig(runtmp):
     mh.add_hash(1070961951490202715)
     ss = sourmash.SourmashSignature(mh, name="small")
     with open(runtmp.output("small.sig"), "w") as fp:
-        sourmash.save_signatures([ss], fp)
+        save_signatures_to_json([ss], fp)
 
     runtmp.sourmash("sig", "kmers", "--sig", "small.sig", "--seq", seqfile)
 
@@ -4392,7 +4394,7 @@ def test_sig_kmers_1_dna_lowscaled(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "dna", seqfile, "-p", "scaled=100")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "DNA"
 
@@ -4450,7 +4452,7 @@ def test_sig_kmers_1_dna_num(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "dna", seqfile, "-p", "num=50")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "DNA"
 
@@ -4508,7 +4510,7 @@ def test_sig_kmers_1_dna_translate_protein(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "translate", seqfile, "-p", "scaled=1")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "protein"
 
@@ -4567,7 +4569,7 @@ def test_sig_kmers_1_dna_translate_dayhoff(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "translate", seqfile, "-p", "scaled=1,dayhoff")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "dayhoff"
 
@@ -4626,7 +4628,7 @@ def test_sig_kmers_1_dna_translate_hp(runtmp):
     seqfile = utils.get_test_data("short.fa")
 
     runtmp.sourmash("sketch", "translate", seqfile, "-p", "scaled=1,hp")
-    ss = sourmash.load_one_signature(runtmp.output("short.fa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("short.fa.sig"))
     mh = ss.minhash
     assert mh.moltype == "hp"
 
@@ -4685,7 +4687,7 @@ def test_sig_kmers_2_protein(runtmp):
     seqfile = utils.get_test_data("ecoli.faa")
 
     runtmp.sourmash("sketch", "protein", seqfile, "-p", "scaled=1")
-    ss = sourmash.load_one_signature(runtmp.output("ecoli.faa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("ecoli.faa.sig"))
     mh = ss.minhash
     assert mh.moltype == "protein"
 
@@ -4744,7 +4746,7 @@ def test_sig_kmers_2_dayhoff(runtmp):
     seqfile = utils.get_test_data("ecoli.faa")
 
     runtmp.sourmash("sketch", "protein", seqfile, "-p", "scaled=1,dayhoff")
-    ss = sourmash.load_one_signature(runtmp.output("ecoli.faa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("ecoli.faa.sig"))
     mh = ss.minhash
     assert mh.moltype == "dayhoff"
 
@@ -4803,7 +4805,7 @@ def test_sig_kmers_2_hp(runtmp):
     seqfile = utils.get_test_data("ecoli.faa")
 
     runtmp.sourmash("sketch", "protein", seqfile, "-p", "scaled=1,hp")
-    ss = sourmash.load_one_signature(runtmp.output("ecoli.faa.sig"))
+    ss = load_one_signature_from_json(runtmp.output("ecoli.faa.sig"))
     mh = ss.minhash
     assert mh.moltype == "hp"
 
