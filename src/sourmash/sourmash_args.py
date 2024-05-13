@@ -820,13 +820,8 @@ def load_one_signature(
     picklist=None,
     yield_all_files=False,
     pattern=None,
-    _use_manifest=True,
 ):
     db = _load_database(filename, yield_all_files)
-
-    # test fixture ;)
-    if not _use_manifest and db.manifest:
-        db.manifest = None
 
     db = db.select(moltype=select_moltype, ksize=ksize)
 
