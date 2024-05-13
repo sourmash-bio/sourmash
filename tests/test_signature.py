@@ -7,9 +7,11 @@ from sourmash.signature import (
     SourmashSignature,
     FrozenSourmashSignature,
 )
-from sourmash.signature import (save_signatures_to_json,
-                                load_signatures_from_json,
-                                load_one_signature_from_json)
+from sourmash.signature import (
+    save_signatures_to_json,
+    load_signatures_from_json,
+    load_one_signature_from_json,
+)
 import sourmash_tst_utils as utils
 from sourmash.minhash import MinHash, FrozenMinHash
 from sourmash_tst_utils import SourmashCommandFailed

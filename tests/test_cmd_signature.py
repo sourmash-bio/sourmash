@@ -12,9 +12,11 @@ import screed
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash.signature import (load_signatures_from_json,
-                                save_signatures_to_json,
-                                load_one_signature_from_json)
+from sourmash.signature import (
+    load_signatures_from_json,
+    save_signatures_to_json,
+    load_one_signature_from_json,
+)
 from sourmash.manifest import CollectionManifest
 from sourmash_tst_utils import SourmashCommandFailed
 

@@ -11,8 +11,7 @@ import pytest
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
-from sourmash.signature import (load_signatures_from_json,
-                                save_signatures_to_json)
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
 
 ## command line tests
 

@@ -18,8 +18,7 @@ from sourmash.index import (
     MultiIndex,
     StandaloneManifestIndex,
 )
-from sourmash.signature import (load_one_signature_from_json,
-                                save_signatures_to_json)
+from sourmash.signature import load_one_signature_from_json, save_signatures_to_json
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash import sourmash_args

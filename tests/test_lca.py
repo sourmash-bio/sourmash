@@ -11,8 +11,7 @@ from pathlib import Path
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import SourmashSignature, sourmash_args
-from sourmash.signature import (save_signatures_to_json,
-                                load_one_signature_from_json)
+from sourmash.signature import save_signatures_to_json, load_one_signature_from_json
 
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils

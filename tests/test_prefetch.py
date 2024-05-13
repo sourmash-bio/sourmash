@@ -13,9 +13,11 @@ import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
 from sourmash import SourmashSignature, sourmash_args
-from sourmash.signature import (save_signatures_to_json,
-                                load_signatures_from_json,
-                                load_one_signature_from_json)
+from sourmash.signature import (
+    save_signatures_to_json,
+    load_signatures_from_json,
+    load_one_signature_from_json,
+)
 
 
 def approx_eq(val1, val2):

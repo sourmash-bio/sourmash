@@ -19,8 +19,7 @@ from sourmash import sourmash_args, manifest
 from sourmash.index import LinearIndex
 from sourmash.cli.utils import add_ksize_arg
 
-from sourmash.signature import (load_signatures_from_json,
-                                save_signatures_to_json)
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
 
 
 def test_save_signatures_api_none():
