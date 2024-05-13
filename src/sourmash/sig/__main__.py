@@ -573,7 +573,7 @@ def intersect(args):
     # borrow abundances from a signature?
     if args.abundances_from:
         notify(f"loading signature from {args.abundances_from}, keeping abundances")
-        abund_sig = sourmash.load_one_signature(
+        abund_sig = sourmash_args.load_one_signature(
             args.abundances_from, ksize=args.ksize, select_moltype=moltype
         )
         if not abund_sig.minhash.track_abundance:
