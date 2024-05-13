@@ -12,7 +12,7 @@ import screed
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash.signature import load_signatures
+from sourmash import load_signatures
 from sourmash.manifest import CollectionManifest
 from sourmash_tst_utils import SourmashCommandFailed
 

@@ -162,7 +162,7 @@ class SBT(Index):
         if self.manifest:
             # if manifest, use it & load using direct path to storage.
             # this will be faster when using picklists.
-            from .signature import load_one_signature
+            from .signature import load_one_signature_from_json
 
             manifest = self.manifest
 
@@ -175,7 +175,7 @@ class SBT(Index):
                 buf = self.storage.load(loc)
                 # if more than one signature can be in a file, we need
                 # to recheck picklists here.
-                ss = load_one_signature(buf)
+                ss = load_one_signature_from_json(buf)
                 yield ss
         else:
             # no manifest? iterate over all leaves.

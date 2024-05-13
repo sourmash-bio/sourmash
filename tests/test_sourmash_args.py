@@ -19,6 +19,8 @@ from sourmash import sourmash_args, manifest
 from sourmash.index import LinearIndex
 from sourmash.cli.utils import add_ksize_arg
 
+from sourmash.signature import load_signatures_from_json as load_signatures
+
 
 def test_save_signatures_api_none():
     # save to sigfile
@@ -69,7 +71,7 @@ def test_save_signatures_to_location_1_stdout():
 
     output = output_capture.getvalue()
 
-    saved = list(sourmash.signature.load_signatures(output))
+    saved = list(load_signatures(output))
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2
@@ -88,7 +90,7 @@ def test_save_signatures_to_location_1_sig_is_default(runtmp):
         save_sig.add(ss2)
         save_sig.add(ss47)
 
-    saved = list(sourmash.signature.load_signatures(outloc))
+    saved = list(load_signatures(outloc))
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2

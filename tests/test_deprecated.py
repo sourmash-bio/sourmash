@@ -9,6 +9,6 @@ def test_load_textmode(track_abundance):
     # to make sure we still support it =/
     sigfile = utils.get_test_data("genome-s10+s11.sig")
     with open(sigfile) as sigfp:
-        siglist = list(signature.load_signatures(sigfp))
+        siglist = list(signature.load_signatures_from_json(sigfp))
     loaded_sig = siglist[0]
     assert loaded_sig.name == "genome-s10+s11"

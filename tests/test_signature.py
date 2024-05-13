@@ -5,11 +5,11 @@ import pytest
 import sourmash
 from sourmash.signature import (
     SourmashSignature,
-    save_signatures,
-    load_signatures,
-    load_one_signature,
     FrozenSourmashSignature,
 )
+from sourmash.signature import save_signatures_to_json as save_signatures
+from sourmash.signature import load_signatures_from_json as load_signatures
+from sourmash.signature import load_one_signature_from_json as load_one_signature
 import sourmash_tst_utils as utils
 from sourmash.minhash import MinHash, FrozenMinHash
 from sourmash_tst_utils import SourmashCommandFailed

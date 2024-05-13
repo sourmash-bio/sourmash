@@ -11,7 +11,7 @@ import pytest
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
-from sourmash.signature import load_signatures
+from sourmash import load_signatures
 
 ## command line tests
 

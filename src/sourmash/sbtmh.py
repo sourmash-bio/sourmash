@@ -52,7 +52,7 @@ class SigLeaf(Leaf):
         # content...)
         self.data
 
-        buf = signature.save_signatures([self.data], compression=1)
+        buf = signature.save_signatures_to_json([self.data], compression=1)
         return self.storage.save(path, buf)
 
     def update(self, parent):
@@ -70,7 +70,7 @@ class SigLeaf(Leaf):
     def data(self):
         if self._data is None:
             buf = BytesIO(self.storage.load(self._path))
-            self._data = signature.load_one_signature(buf)
+            self._data = signature.load_one_signature_from_json(buf)
         return self._data
 
     @data.setter

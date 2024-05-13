@@ -5,6 +5,7 @@ objects.
 
 import pytest
 from sourmash import MinHash
+from sourmash import load_signatures
 
 import sourmash_tst_utils as utils
 
@@ -172,8 +173,6 @@ def test_abund_similarity_zero():
 
 
 def test_jaccard_on_real_data():
-    from sourmash.signature import load_signatures
-
     afile = "n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
@@ -204,8 +203,6 @@ def test_jaccard_on_real_data():
 
 
 def test_scaled_on_real_data():
-    from sourmash.signature import load_signatures
-
     afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
@@ -237,8 +234,6 @@ def test_scaled_on_real_data():
 
 
 def test_scaled_on_real_data_2():
-    from sourmash.signature import load_signatures
-
     afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
@@ -270,8 +265,6 @@ def test_scaled_on_real_data_2():
 
 
 def test_downsample_scaled_with_num():
-    from sourmash.signature import load_signatures
-
     afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
