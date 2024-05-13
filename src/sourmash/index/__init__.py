@@ -46,8 +46,7 @@ from sourmash.search import (
 )
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
-from sourmash.signature import (load_signatures_from_json,
-                                save_signatures_to_json)
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
 
 from sourmash.minhash import (
     flatten_and_downsample_scaled,

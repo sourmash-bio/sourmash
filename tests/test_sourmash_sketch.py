@@ -29,6 +29,7 @@ from sourmash_tst_utils import SourmashCommandFailed
 from sourmash.signature import load_one_signature_from_json as load_one_signature
 from sourmash.signature import load_signatures_from_json as load_signatures
 
+
 def test_do_sourmash_sketch_check_scaled_bounds_negative(runtmp):
     testdata1 = utils.get_test_data("short.fa")
     with pytest.raises(SourmashCommandFailed):

@@ -469,7 +469,9 @@ def load_signatures_from_json(
             raise
 
 
-def load_one_signature_from_json(data, ksize=None, select_moltype=None, ignore_md5sum=False):
+def load_one_signature_from_json(
+    data, ksize=None, select_moltype=None, ignore_md5sum=False
+):
     sigiter = load_signatures_from_json(
         data, ksize=ksize, select_moltype=select_moltype, ignore_md5sum=ignore_md5sum
     )
