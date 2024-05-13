@@ -469,7 +469,9 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
         manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
+
         self.storage.save(manifest_name, manifest_data, overwrite=True, compress=True)
+
         self.storage.flush()
         self.storage.close()
 

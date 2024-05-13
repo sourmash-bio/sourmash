@@ -8,6 +8,7 @@ from tempfile import NamedTemporaryFile
 import zipfile
 from abc import ABC
 from pathlib import Path
+import warnings
 
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
@@ -279,27 +280,31 @@ class _RwZipStorage(Storage):
         zi.external_attr = perms
 
     def save(self, path, content, *, overwrite=False, compress=False):
-        # First try to save to self.zipfile, if it is not writable
-        # or would introduce duplicates then try to save it in the buffer
-        if overwrite:
-            newpath = path
-            do_write = True
-        else:
-            newpath, do_write = self._generate_filename(self.zipfile, path, content)
-        if do_write:
-            try:
-                self._write_to_zf(self.zipfile, newpath, content, compress=compress)
-            except (ValueError, RuntimeError):
-                # Can't write in the zipfile, write in buffer instead
-                # CTB: do we need to generate a new filename wrt to the
-                # bufferzip, too? Not sure this code is working as intended...
-                if self.bufferzip:
-                    self._write_to_zf(
-                        self.bufferzip, newpath, content, compress=compress
-                    )
-                else:
-                    # Throw error, can't write the data
-                    raise ValueError("can't write data")
+        # ignore UserWarnings for duplicate filenames.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            # First try to save to self.zipfile, if it is not writable
+            # or would introduce duplicates then try to save it in the buffer
+            if overwrite:
+                newpath = path
+                do_write = True
+            else:
+                newpath, do_write = self._generate_filename(self.zipfile, path, content)
+            if do_write:
+                try:
+                    self._write_to_zf(self.zipfile, newpath, content, compress=compress)
+                except (ValueError, RuntimeError):
+                    # Can't write in the zipfile, write in buffer instead
+                    # CTB: do we need to generate a new filename wrt to the
+                    # bufferzip, too? Not sure this code is working as intended...
+                    if self.bufferzip:
+                        self._write_to_zf(
+                            self.bufferzip, newpath, content, compress=compress
+                        )
+                    else:
+                        # Throw error, can't write the data
+                        raise ValueError("can't write data")
 
         return newpath
 
