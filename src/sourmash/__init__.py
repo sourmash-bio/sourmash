@@ -44,7 +44,7 @@ DEFAULT_SEED = get_minhash_default_seed()
 MAX_HASH = get_minhash_max_hash()
 
 from .signature import (
-    load_signatures_from_json as load_signatures_private,
+    load_signatures_from_json,
     load_one_signature_from_json,
     SourmashSignature,
     save_signatures_to_json,
@@ -69,7 +69,7 @@ def load_signatures(*args, **kwargs):
     has been removed and the function no longer outputs to stderr.
     Moreover, do_raise is now True by default.
     """
-    return load_signatures_private(*args, **kwargs)
+    return load_signatures_from_json(*args, **kwargs)
 
 
 @deprecated(
