@@ -473,6 +473,28 @@ def test_sig_intersect_1(runtmp):
     assert actual_intersect_sig.minhash == test_intersect_sig.minhash
 
 
+def test_sig_intersect_1_rename(runtmp):
+    # intersect of 47 and 63 should be intersection of mins
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+    sig47and63 = utils.get_test_data("47+63-intersect.fa.sig")
+    runtmp.run_sourmash("sig", "intersect", sig47, sig63,
+                        "--name", "footest")
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_intersect_sig = load_one_signature_from_json(sig47and63)
+    actual_intersect_sig = load_one_signature_from_json(out)
+
+    print(test_intersect_sig.minhash)
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+    assert actual_intersect_sig.name == "footest"
+
+
 def test_sig_intersect_1_fromfile_picklist(runtmp):
     c = runtmp
 
@@ -791,6 +813,27 @@ def test_sig_subtract_1(runtmp):
     mins -= set(test2_sig.minhash.hashes.keys())
 
     assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
+def test_sig_subtract_1_name(runtmp):
+    # subtract of 63 from 47; rename
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+    runtmp.run_sourmash("sig", "subtract", sig47, sig63,
+                        "--name", "footest")
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test1_sig = load_one_signature_from_json(sig47)
+    test2_sig = load_one_signature_from_json(sig63)
+    actual_subtract_sig = load_one_signature_from_json(out)
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+    assert actual_subtract_sig.name == "footest"
 
 
 def test_sig_subtract_1_sigzip(runtmp):

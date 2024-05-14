@@ -50,6 +50,7 @@ def subparser(subparsers):
         metavar="FILE",
         help="intersect with & take abundances from this signature",
     )
+    subparser.add_argument("--name", help="rename output signature")
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
