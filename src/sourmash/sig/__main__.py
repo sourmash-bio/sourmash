@@ -582,8 +582,7 @@ def intersect(args):
 
         intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
-    intersect_sigobj = sourmash.SourmashSignature(intersect_mh,
-                                                  name=args.set_name)
+    intersect_sigobj = sourmash.SourmashSignature(intersect_mh, name=args.set_name)
 
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(intersect_sigobj)
@@ -705,8 +704,7 @@ def subtract(args):
 
         subtract_mh = subtract_mh.inflate(abund_sig.minhash)
 
-    subtract_sigobj = sourmash.SourmashSignature(subtract_mh,
-                                                 name=args.set_name)
+    subtract_sigobj = sourmash.SourmashSignature(subtract_mh, name=args.set_name)
 
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(subtract_sigobj)
