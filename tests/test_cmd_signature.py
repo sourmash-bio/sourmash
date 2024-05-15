@@ -332,11 +332,13 @@ def test_sig_filter_1(c):
 
     assert len(filtered_sigs) == 2
 
-    mh47 = load_one_signature_from_json(sig47).minhash
-    mh63 = load_one_signature_from_json(sig63).minhash
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
-    assert filtered_sigs[0].minhash == mh47
-    assert filtered_sigs[1].minhash == mh63
+    assert filtered_sigs[0].minhash == ss47.minhash
+    assert filtered_sigs[0].name == ss47.name
+    assert filtered_sigs[1].minhash == ss63.minhash
+    assert filtered_sigs[1].name == ss63.name
 
 
 @utils.in_tempdir
@@ -3053,6 +3055,7 @@ def test_sig_flatten_1(runtmp):
 
     test_flattened = load_one_signature_from_json(sig47)
     assert test_flattened.minhash == siglist[0].minhash
+    assert test_flattened.name == siglist[0].name
 
 
 def test_sig_flatten_1_from_file(runtmp):
@@ -3157,6 +3160,7 @@ def test_sig_downsample_1_scaled(c):
     test_mh = test_downsample_sig.minhash.downsample(scaled=10000)
 
     assert actual_downsample_sig.minhash == test_mh
+    assert actual_downsample_sig.name == test_downsample_sig.name
 
 
 @utils.in_tempdir
