@@ -481,7 +481,7 @@ def test_sig_intersect_1_rename(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
     sig47and63 = utils.get_test_data("47+63-intersect.fa.sig")
     runtmp.run_sourmash("sig", "intersect", sig47, sig63,
-                        "--name", "footest")
+                        "--set-name", "footest")
 
     # stdout should be new signature
     out = runtmp.last_result.out
@@ -822,7 +822,7 @@ def test_sig_subtract_1_name(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
     runtmp.run_sourmash("sig", "subtract", sig47, sig63,
-                        "--name", "footest")
+                        "--set-name", "footest")
 
     # stdout should be new signature
     out = runtmp.last_result.out
