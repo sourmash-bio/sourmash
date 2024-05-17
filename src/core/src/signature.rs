@@ -86,6 +86,7 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.size(),
             Sketch::LargeMinHash(ref mh) => mh.size(),
             Sketch::HyperLogLog(ref hll) => hll.size(),
+            Sketch::LowScaled(ref ls) => ls.size(),
         }
     }
 
@@ -94,6 +95,7 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.to_vec(),
             Sketch::LargeMinHash(ref mh) => mh.to_vec(),
             Sketch::HyperLogLog(ref hll) => hll.to_vec(),
+            Sketch::LowScaled(ref ls) => ls.to_vec(),
         }
     }
 
@@ -102,6 +104,7 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.ksize(),
             Sketch::LargeMinHash(ref mh) => mh.ksize(),
             Sketch::HyperLogLog(ref hll) => hll.ksize(),
+            Sketch::LowScaled(ref ls) => ls.ksize(),
         }
     }
 
@@ -110,6 +113,7 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.seed(),
             Sketch::LargeMinHash(ref mh) => mh.seed(),
             Sketch::HyperLogLog(ref hll) => hll.seed(),
+            Sketch::LowScaled(ref ls) => ls.seed(),
         }
     }
 
@@ -118,6 +122,7 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.hash_function(),
             Sketch::LargeMinHash(ref mh) => mh.hash_function(),
             Sketch::HyperLogLog(ref hll) => hll.hash_function(),
+            Sketch::LowScaled(ref ls) => ls.hash_function(),
         }
     }
 
@@ -126,6 +131,7 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mut mh) => mh.add_hash(hash),
             Sketch::LargeMinHash(ref mut mh) => mh.add_hash(hash),
             Sketch::HyperLogLog(ref mut hll) => hll.add_hash(hash),
+            Sketch::LowScaled(ref mut ls) => ls.add_hash(hash),
         }
     }
 
@@ -143,6 +149,10 @@ impl SigsTrait for Sketch {
                 Sketch::HyperLogLog(ref ot) => hll.check_compatible(ot),
                 _ => Err(Error::MismatchSignatureType),
             },
+            Sketch::LowScaled(ref ls) => match other {
+                Sketch::LowScaled(ref ot) => ls.check_compatible(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
         }
     }
 
@@ -150,7 +160,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_sequence(seq, force),
             Sketch::LargeMinHash(ref mut mh) => mh.add_sequence(seq, force),
-            Sketch::HyperLogLog(_) => unimplemented!(),
+            _ => unimplemented!(),
         }
     }
 
@@ -158,7 +168,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
-            Sketch::HyperLogLog(_) => unimplemented!(),
+            _ => unimplemented!(),
         }
     }
 }
@@ -508,7 +518,7 @@ impl Signature {
             match &self.signatures[0] {
                 Sketch::MinHash(mh) => mh.md5sum(),
                 Sketch::LargeMinHash(mh) => mh.md5sum(),
-                Sketch::HyperLogLog(_) => unimplemented!(),
+                _ => unimplemented!(),
             }
         } else {
             // TODO: select the correct signature
@@ -641,7 +651,7 @@ impl Signature {
                                 None => return true, // TODO: match previous behavior
                             };
                         }
-                        Sketch::HyperLogLog(_) => unimplemented!(),
+                        _ => unimplemented!(),
                     };
                     false
                 })

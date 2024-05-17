@@ -3,8 +3,11 @@ pub mod minhash;
 
 pub mod nodegraph;
 
+pub mod cbl;
+
 use serde::{Deserialize, Serialize};
 
+use crate::sketch::cbl::CBL;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 
@@ -18,4 +21,5 @@ pub enum Sketch {
     MinHash(KmerMinHash),
     LargeMinHash(KmerMinHashBTree),
     HyperLogLog(HyperLogLog),
+    LowScaled(CBL),
 }

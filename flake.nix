@@ -20,7 +20,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        rustVersion = pkgs.rust-bin.stable.latest.default.override {
+        rustVersion = pkgs.rust-bin.nightly."2024-03-01".default.override {
           #extensions = [ "rust-src" ];
           #targets = [ "x86_64-unknown-linux-musl" ];
           targets = [ "wasm32-wasi" "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
@@ -34,7 +34,7 @@
 
         python = pkgs.python311Packages;
 
-        stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideSDK pkgs.stdenv "11.0" else pkgs.stdenv;
+        stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideSDK pkgs.stdenv "11.0" else pkgs.llvmPackages_15.stdenv;
 
         commonArgs = {
           src = ./.;
@@ -42,11 +42,6 @@
           preConfigure = lib.optionalString stdenv.isDarwin ''
             export MACOSX_DEPLOYMENT_TARGET=10.14
           '';
-
-          # Work around https://github.com/NixOS/nixpkgs/issues/166205.
-          env = lib.optionalAttrs stdenv.cc.isClang {
-            NIX_LDFLAGS = "-l${stdenv.cc.libcxx.cxxabi.libName}";
-          };
 
           buildInputs = lib.optionals stdenv.isDarwin [ pkgs.libiconv pkgs.darwin.apple_sdk.frameworks.Security ];
 
