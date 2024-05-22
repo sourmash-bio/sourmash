@@ -23,8 +23,9 @@ use crate::sketch::Sketch;
 use crate::HashIntoType;
 use crate::Result;
 
-type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
+//type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
 //type DB = rocksdb::TransactionDB<rocksdb::MultiThreaded>;
+type DB = rocksdb::OptimisticTransactionDB<rocksdb::MultiThreaded>;
 
 type QueryColors = HashMap<Color, Datasets>;
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;

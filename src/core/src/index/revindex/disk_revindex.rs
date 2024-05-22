@@ -147,12 +147,7 @@ impl RevIndex {
         let cfs = cf_descriptors();
 
         let db = if read_only {
-            Arc::new(DB::open_cf_descriptors_read_only(
-                &opts,
-                path.as_ref(),
-                cfs,
-                false,
-            )?)
+            Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)
         } else {
             Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)
         };
@@ -439,7 +434,7 @@ impl RevIndexOps for RevIndex {
             })
             .chunks(10)
             .for_each(|chunk| {
-                let mut batch = WriteBatchWithTransaction::<false>::default();
+                let mut batch = WriteBatchWithTransaction::<true>::default();
                 let cf_hashes = self.db.cf_handle(HASHES).unwrap();
 
                 let mut hash_bytes = [0u8; 8];
