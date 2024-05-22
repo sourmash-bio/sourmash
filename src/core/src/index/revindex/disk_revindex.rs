@@ -171,12 +171,7 @@ impl RevIndex {
         let cfs = cf_descriptors();
 
         let db = if read_only {
-            Arc::new(DB::open_cf_descriptors_read_only(
-                &opts,
-                path.as_ref(),
-                cfs,
-                false,
-            )?)
+            Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)
         } else {
             Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)
         };
@@ -520,7 +515,7 @@ impl RevIndexOps for RevIndex {
                 }
             });
 
-            let mut batch = WriteBatchWithTransaction::<false>::default();
+            let mut batch = WriteBatchWithTransaction::<true>::default();
             let cf_hashes = self.db.cf_handle(HASHES).unwrap();
             let mut dataset_ids = vec![];
 
@@ -536,7 +531,7 @@ impl RevIndexOps for RevIndex {
                 }
                 dataset_ids.push(dataset_id);
             }
-            self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+            //self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
 
             // if cached in a new field in the RevIndex,
             // then update the cache too

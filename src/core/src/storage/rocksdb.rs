@@ -15,8 +15,8 @@ pub(crate) const STORAGE: &str = "storage";
 
 pub(crate) const ALL_CFS: [&str; 3] = [HASHES, METADATA, STORAGE];
 
-pub type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
-//pub type DB = rocksdb::TransactionDB<rocksdb::MultiThreaded>;
+//pub type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
+pub type DB = rocksdb::OptimisticTransactionDB<rocksdb::MultiThreaded>;
 
 /// Store data in RocksDB
 #[derive(Debug, Clone)]
