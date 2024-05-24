@@ -68,7 +68,8 @@ def subparser(subparsers):
         type=str,
         default="",
         metavar="FILE",
-        help="name the output sketch as specified; note, merges all input " "files while sketching",
+        help="name the output sketch as specified; note, merges all input "
+        "files while sketching",
     )
     file_args.add_argument(
         "--output-dir",
