@@ -383,7 +383,7 @@ fn load_save_minhash_sketches() {
 
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
     let sketches = sig.sketches();
@@ -392,11 +392,11 @@ fn load_save_minhash_sketches() {
     if let Sketch::MinHash(mh) = &sketches[0] {
         let bmh: KmerMinHashBTree = mh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
+            simd_json::to_writer(&mut buffer, &bmh).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh: KmerMinHash = simd_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = simd_json::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -430,11 +430,11 @@ fn load_save_minhash_sketches() {
         buffer.clear();
         let imh: KmerMinHash = bmh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
+            simd_json::to_writer(&mut buffer, &imh).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh: KmerMinHash = simd_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = simd_json::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -484,7 +484,7 @@ fn load_save_minhash_sketches_abund() {
 
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
     let sketches = sig.sketches();
@@ -493,11 +493,11 @@ fn load_save_minhash_sketches_abund() {
     if let Sketch::MinHash(mh) = &sketches[0] {
         let bmh: KmerMinHashBTree = mh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
+            simd_json::to_writer(&mut buffer, &bmh).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh: KmerMinHash = simd_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = simd_json::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -541,11 +541,11 @@ fn load_save_minhash_sketches_abund() {
         buffer.clear();
         let imh: KmerMinHash = bmh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
+            simd_json::to_writer(&mut buffer, &imh).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh: KmerMinHash = simd_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = simd_json::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -671,14 +671,14 @@ fn load_save_minhash_dayhoff(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
     let mut buffer_b = vec![];
 
     {
-        serde_json::to_writer(&mut buffer_a, &a).unwrap();
-        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+        simd_json::to_writer(&mut buffer_a, &a).unwrap();
+        simd_json::to_writer(&mut buffer_b, &b).unwrap();
     }
 
     assert_eq!(buffer_a, buffer_b);
 
-    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
-    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+    let c: KmerMinHash = simd_json::from_reader(&buffer_b[..]).unwrap();
+    let d: KmerMinHashBTree = simd_json::from_reader(&buffer_a[..]).unwrap();
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
@@ -699,14 +699,14 @@ fn load_save_minhash_hp(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
     let mut buffer_b = vec![];
 
     {
-        serde_json::to_writer(&mut buffer_a, &a).unwrap();
-        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+        simd_json::to_writer(&mut buffer_a, &a).unwrap();
+        simd_json::to_writer(&mut buffer_b, &b).unwrap();
     }
 
     assert_eq!(buffer_a, buffer_b);
 
-    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
-    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+    let c: KmerMinHash = simd_json::from_reader(&buffer_b[..]).unwrap();
+    let d: KmerMinHashBTree = simd_json::from_reader(&buffer_a[..]).unwrap();
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
@@ -727,14 +727,14 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
     let mut buffer_b = vec![];
 
     {
-        serde_json::to_writer(&mut buffer_a, &a).unwrap();
-        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+        simd_json::to_writer(&mut buffer_a, &a).unwrap();
+        simd_json::to_writer(&mut buffer_b, &b).unwrap();
     }
 
     assert_eq!(buffer_a, buffer_b);
 
-    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
-    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+    let c: KmerMinHash = simd_json::from_reader(&buffer_b[..]).unwrap();
+    let d: KmerMinHashBTree = simd_json::from_reader(&buffer_a[..]).unwrap();
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);

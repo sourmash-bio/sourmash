@@ -577,7 +577,7 @@ impl Signature {
     {
         let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
-        let sigs: Vec<Signature> = serde_json::from_reader(rdr)?;
+        let sigs: Vec<Signature> = simd_json::from_reader(rdr)?;
         Ok(sigs)
     }
 
@@ -788,7 +788,7 @@ impl ToWriter for Signature {
     where
         W: io::Write,
     {
-        serde_json::to_writer(writer, &vec![&self])?;
+        simd_json::to_writer(writer, &vec![&self])?;
         Ok(())
     }
 }
@@ -928,7 +928,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 4);
 
@@ -1049,7 +1049,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1065,7 +1065,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1089,7 +1089,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1114,7 +1114,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1138,7 +1138,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1164,7 +1164,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1184,7 +1184,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1204,7 +1204,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1225,7 +1225,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1243,7 +1243,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
