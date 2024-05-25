@@ -56,7 +56,7 @@ pub enum SourmashError {
     StorageError(#[from] crate::storage::StorageError),
 
     #[error(transparent)]
-    SerdeError(#[from] serde_json::error::Error),
+    SerdeError(#[from] simd_json::Error),
 
     #[error(transparent)]
     NifflerError(#[from] niffler::Error),

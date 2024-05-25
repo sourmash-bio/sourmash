@@ -43,11 +43,6 @@
             export MACOSX_DEPLOYMENT_TARGET=10.14
           '';
 
-          # Work around https://github.com/NixOS/nixpkgs/issues/166205.
-          env = lib.optionalAttrs stdenv.cc.isClang {
-            NIX_LDFLAGS = "-l${stdenv.cc.libcxx.cxxabi.libName}";
-          };
-
           buildInputs = lib.optionals stdenv.isDarwin [ pkgs.libiconv pkgs.darwin.apple_sdk.frameworks.Security ];
 
           nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook bindgenHook ];

@@ -16,7 +16,7 @@ fn intersection(c: &mut Criterion) {
     filename.push("../../tests/test-data/gather-abund/genome-s10.fa.gz.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mut sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
     let mh = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
         mh.clone()
     } else {
@@ -27,7 +27,7 @@ fn intersection(c: &mut Criterion) {
     filename.push("../../tests/test-data/gather-abund/genome-s11.fa.gz.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mut sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
     let mh2 = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
         mh.clone()
     } else {

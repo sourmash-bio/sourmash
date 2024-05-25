@@ -193,7 +193,7 @@ unsafe fn signature_eq(ptr: *const SourmashSignature, other: *const SourmashSign
 ffi_fn! {
 unsafe fn signature_save_json(ptr: *const SourmashSignature) -> Result<SourmashStr> {
     let sig = SourmashSignature::as_rust(ptr);
-    let st = serde_json::to_string(sig)?;
+    let st = simd_json::to_string(sig)?;
     Ok(SourmashStr::from_string(st))
 }
 }
@@ -248,7 +248,7 @@ unsafe fn signatures_save_buffer(ptr: *const *const SourmashSignature, size: usi
       } else {
           Box::new(&mut buffer)
       };
-      serde_json::to_writer(&mut writer, &rsigs)?;
+      simd_json::to_writer(&mut writer, &rsigs)?;
     }
 
     let b = buffer.into_boxed_slice();

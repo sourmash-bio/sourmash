@@ -216,7 +216,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_scaled(2000);
@@ -242,7 +242,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_scaled(500);
@@ -263,7 +263,7 @@ mod test {
         filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         assert_eq!(sigs.len(), 4);
         // create Selection object
         let mut selection = Selection::default();
@@ -285,7 +285,7 @@ mod test {
         filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         let sigs_copy = sigs.clone();
         assert_eq!(sigs.len(), 4);
         // create Selection object
@@ -315,7 +315,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         assert_eq!(sigs.len(), 6);
         // create Selection object
         let mut selection = Selection::default();
@@ -336,7 +336,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_scaled(2000);
@@ -387,7 +387,7 @@ mod test {
             .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = simd_json::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_moltype(HashFunctions::Murmur64Hp);
