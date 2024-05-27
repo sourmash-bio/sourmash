@@ -20,7 +20,7 @@ use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::storage::{
-    rocksdb::{cf_descriptors, db_options, ALL_CFS, DB, HASHES, METADATA},
+    rocksdb::{cf_descriptors, db_options, ALL_CFS, DB, HASHES, METADATA, SOURMASH_MEM_CACHE},
     InnerStorage, RocksDBStorage, Storage,
 };
 use crate::Result;
@@ -71,9 +71,17 @@ impl RevIndex {
         let mut opts = db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
+        //opts.prepare_for_bulk_load();
+
+        let cache_size: usize = std::env::var(SOURMASH_MEM_CACHE)
+            .unwrap_or_else(|_| "1".into())
+            .parse()
+            .unwrap();
+        // in bytes, (1024 << 20 == 1GiB)
+        let cache = rocksdb::Cache::new_lru_cache(cache_size * (1024 << 20));
 
         // prepare column family descriptors
-        let cfs = cf_descriptors();
+        let cfs = cf_descriptors(cache.clone());
 
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
@@ -167,8 +175,15 @@ impl RevIndex {
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
 
+        let cache_size: usize = std::env::var(SOURMASH_MEM_CACHE)
+            .unwrap_or_else(|_| "1".into())
+            .parse()
+            .unwrap();
+        // in bytes, (1024 << 20 == 1GiB)
+        let cache = rocksdb::Cache::new_lru_cache(cache_size * (1024 << 20));
+
         // prepare column family descriptors
-        let cfs = cf_descriptors();
+        let cfs = cf_descriptors(cache);
 
         let db = if read_only {
             Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)

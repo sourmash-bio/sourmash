@@ -15,6 +15,9 @@ pub(crate) const STORAGE: &str = "storage";
 
 pub(crate) const ALL_CFS: [&str; 3] = [HASHES, METADATA, STORAGE];
 
+// Env var for controlling cache size
+pub(crate) const SOURMASH_MEM_CACHE: &str = "SOURMASH_MEM_CACHE";
+
 //pub type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
 pub type DB = rocksdb::OptimisticTransactionDB<rocksdb::MultiThreaded>;
 
@@ -31,8 +34,15 @@ impl RocksDBStorage {
         opts.create_missing_column_families(true);
         opts.prepare_for_bulk_load();
 
+        let cache_size: usize = std::env::var(SOURMASH_MEM_CACHE)
+            .unwrap_or_else(|_| "1".into())
+            .parse()
+            .unwrap();
+        // in bytes, (1024 << 20 == 1GiB)
+        let cache = rocksdb::Cache::new_lru_cache(cache_size * (1024 << 20));
+
         // prepare column family descriptors
-        let cfs = cf_descriptors();
+        let cfs = cf_descriptors(cache.clone());
 
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
@@ -67,13 +77,13 @@ impl Storage for RocksDBStorage {
     }
 }
 
-pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
+pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescriptor> {
     let mut cfopts = db_options();
 
     // following https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
     cfopts.set_enable_blob_files(true);
     // If empty or one dataset, avoid saving to blob store
-    cfopts.set_min_blob_size(8);
+    cfopts.set_min_blob_size(4);
     // TODO: set blob file size to write_buffer_size
     //cfopts.set_blob_file_size(cfopts.write_bufffer_size());
     cfopts.set_blob_file_size(0x4000000); // 64 MiB
@@ -93,10 +103,12 @@ pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
 
     let mut tfopts = rocksdb::BlockBasedOptions::default();
     //tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    tfopts.set_block_cache(&cache);
     tfopts.set_optimize_filters_for_memory(true);
     //tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
     // Keys for HASHES are HashIntoType, a u64
     //tfopts.set_hybrid_ribbon_filter(64.0, 2);
+
     // these are from db_options, not sure if overwritten if not here
     //tfopts.set_block_size(0x4000000); // 64 MiB
     tfopts.set_block_size(16 * 1024);
