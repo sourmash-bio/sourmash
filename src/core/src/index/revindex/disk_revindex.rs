@@ -96,11 +96,11 @@ impl RevIndex {
             .par_iter()
             .map(|(dataset_id, _)| {
                 let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                if i % 1000 == 0 && i > 0 {
+                if i % 100 == 0 && i > 0 {
                     info!("Processed {} reference sigs", i);
                 }
 
-                if i % 10000 == 0 && i > 0 {
+                if i % 1000 == 0 && i > 0 {
                     info!("Triggering manual compaction");
                     index.compact();
                     info!("Finished manual compaction");

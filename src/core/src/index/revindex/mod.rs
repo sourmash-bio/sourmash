@@ -204,7 +204,7 @@ impl RevIndex {
 
     fn db_options() -> rocksdb::Options {
         let mut opts = rocksdb::Options::default();
-        opts.set_max_open_files(50000);
+        opts.set_max_open_files(-1);
 
         // Updated defaults from
         // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
