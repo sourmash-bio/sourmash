@@ -22,6 +22,7 @@ use crate::storage::{InnerStorage, Storage};
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
+static SOURMASH_MEM_CACHE: &str = "SOURMASH_MEM_CACHE";
 
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
@@ -66,10 +67,17 @@ impl RevIndex {
         let mut opts = module::RevIndex::db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
-        opts.prepare_for_bulk_load();
+        //opts.prepare_for_bulk_load();
+
+        let cache_size: usize = std::env::var(SOURMASH_MEM_CACHE)
+            .unwrap_or_else(|_| "1".into())
+            .parse()
+            .unwrap();
+        // in bytes, (1024 << 20 == 1GiB)
+        let cache = rocksdb::Cache::new_lru_cache(cache_size * (1024 << 20));
 
         // prepare column family descriptors
-        let cfs = cf_descriptors();
+        let cfs = cf_descriptors(cache.clone());
 
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
@@ -140,11 +148,18 @@ impl RevIndex {
     ) -> Result<module::RevIndex> {
         let mut opts = module::RevIndex::db_options();
         if !read_only {
-            opts.prepare_for_bulk_load();
+            //opts.prepare_for_bulk_load();
         }
 
+        let cache_size: usize = std::env::var(SOURMASH_MEM_CACHE)
+            .unwrap_or_else(|_| "1".into())
+            .parse()
+            .unwrap();
+        // in bytes, (1024 << 20 == 1GiB)
+        let cache = rocksdb::Cache::new_lru_cache(cache_size * (1024 << 20));
+
         // prepare column family descriptors
-        let cfs = cf_descriptors();
+        let cfs = cf_descriptors(cache);
 
         let db = if read_only {
             Arc::new(DB::open_cf_descriptors(&opts, path.as_ref(), cfs)?)
@@ -531,7 +546,7 @@ impl RevIndexOps for RevIndex {
     }
 }
 
-fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
+fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescriptor> {
     let mut cfopts = module::RevIndex::db_options();
 
     // following https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
@@ -552,10 +567,11 @@ fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     // Updated default from
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
     cfopts.set_level_compaction_dynamic_level_bytes(true);
-    cfopts.prepare_for_bulk_load();
+    //cfopts.prepare_for_bulk_load();
 
     let mut tfopts = rocksdb::BlockBasedOptions::default();
     //tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    tfopts.set_block_cache(&cache);
     tfopts.set_optimize_filters_for_memory(true);
     //tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
     // Keys for HASHES are HashIntoType, a u64
