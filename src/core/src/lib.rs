@@ -28,6 +28,7 @@ pub mod prelude;
 pub mod cmd;
 
 pub mod ani_utils;
+pub mod banding;
 pub mod collection;
 pub mod encodings;
 pub mod index;
