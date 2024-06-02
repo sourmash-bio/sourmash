@@ -22,7 +22,7 @@ bench = false
 from-finch = ["dep:finch"]
 parallel = ["dep:rayon"]
 maturin = []
-branchwater = ["dep:rocksdb", "parallel"]
+branchwater = ["dep:rocksdb", "parallel", "dep:dashmap", "dep:voracious_radix_sort"]
 rkyv = ["dep:rkyv"]
 default = []
 
@@ -110,5 +110,7 @@ wasm-bindgen-test = "0.3.42"
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rocksdb = { version = "0.22.0", optional = true }
+dashmap = { version = "5.5.3", optional = true, features = ["rayon"] }
+voracious_radix_sort = { version = "1.2.0", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = "0.5.1"
