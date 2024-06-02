@@ -118,7 +118,7 @@ impl RevIndex {
             let processed_hashes = AtomicUsize::new(0);
 
             let hashes_len = hashes.len();
-            let chunk_size = hashes_len / 100;
+            let chunk_size = usize::max(1, hashes_len / 100);
 
             info!("Starting index scaffolding");
             hashes.into_par_iter().chunks(chunk_size).for_each(|chunk| {
@@ -635,15 +635,15 @@ fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescriptor> {
     //cfopts.prepare_for_bulk_load();
 
     let mut tfopts = rocksdb::BlockBasedOptions::default();
-    //tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
     tfopts.set_block_cache(&cache);
     tfopts.set_optimize_filters_for_memory(true);
-    //tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
+    tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
     // Keys for HASHES are HashIntoType, a u64
-    //tfopts.set_hybrid_ribbon_filter(64.0, 2);
+    tfopts.set_hybrid_ribbon_filter(64.0, 2);
 
     // these are from db_options, not sure if overwritten if not here
-    tfopts.set_block_size(0x4000000);
+    tfopts.set_block_size(16 * 1024); // 16 KiB
     tfopts.set_cache_index_and_filter_blocks(true);
     tfopts.set_pin_l0_filter_and_index_blocks_in_cache(true);
     tfopts.set_format_version(6);

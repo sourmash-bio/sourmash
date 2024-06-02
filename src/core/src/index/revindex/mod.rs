@@ -210,7 +210,7 @@ impl RevIndex {
         // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
         opts.set_bytes_per_sync(1048576);
         let mut block_opts = rocksdb::BlockBasedOptions::default();
-        block_opts.set_block_size(0x4000000); // 64 MiB
+        block_opts.set_block_size(16 * 1024); // 16 KiB
         block_opts.set_cache_index_and_filter_blocks(true);
         block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
         block_opts.set_format_version(6);
