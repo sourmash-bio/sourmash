@@ -626,8 +626,10 @@ mod test {
         let selection = Selection::builder().ksize(21).scaled(10000).build();
         let output = TempDir::new()?;
 
-        let collection = Collection::from_paths(&against)?.select(&selection)?;
-        let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+        {
+            let collection = Collection::from_paths(&against)?.select(&selection)?;
+            let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+        }
 
         let index = RevIndex::open(output.path(), true, None)?;
 
