@@ -90,6 +90,53 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
+        info!("Starting indexing scaffold");
+        index
+            .collection
+            .par_iter()
+            .map(|(dataset_id, _)| {
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 100 == 0 && i > 0 {
+                    info!("Processed {} reference sigs", i);
+                }
+
+                if i % 1000 == 0 && i > 0 {
+                    info!("Triggering manual compaction");
+                    index.compact();
+                    info!("Finished manual compaction");
+                }
+
+                (
+                    index.map_hashes_colors(dataset_id as Idx),
+                    dataset_id as Idx,
+                )
+            })
+            .chunks(10)
+            .for_each(|chunk| {
+                let mut batch = WriteBatchWithTransaction::<true>::default();
+                let cf_hashes = index.db.cf_handle(HASHES).unwrap();
+
+                let mut hash_bytes = [0u8; 8];
+                for (hashes, dataset_id) in chunk {
+                    let colors = Datasets::Empty.as_bytes().unwrap();
+
+                    for hash in hashes {
+                        (&mut hash_bytes[..])
+                            .write_u64::<LittleEndian>(hash)
+                            .expect("error writing bytes");
+                        let v = index.db.get_pinned_cf(&cf_hashes, &hash_bytes[..]).ok().unwrap_or(None);
+                        if v.is_none() {
+                            batch.put_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
+                        }
+                    }
+                }
+                let mut write_options = rocksdb::WriteOptions::default();
+                write_options.set_sync(false);
+                write_options.disable_wal(true);
+                index.db.write_opt(batch, &write_options).expect("Error committing batch"); // Atomically commits the batch
+            });
+        info!("Finished indexing scaffold");
+
         info!("Starting indexing");
         index
             .collection
