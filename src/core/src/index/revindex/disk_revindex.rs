@@ -130,7 +130,7 @@ impl RevIndex {
             let processed_hashes = AtomicUsize::new(0);
 
             let hashes_len = hashes.len();
-            let chunk_size = hashes_len / 100;
+            let chunk_size = usize::max(1, hashes_len / 100);
 
             info!("Starting index scaffolding");
             hashes.into_par_iter().chunks(chunk_size).for_each(|chunk| {

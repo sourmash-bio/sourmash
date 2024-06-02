@@ -102,12 +102,12 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
     cfopts.set_level_compaction_dynamic_level_bytes(true);
 
     let mut tfopts = rocksdb::BlockBasedOptions::default();
-    //tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    tfopts.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
     tfopts.set_block_cache(&cache);
     tfopts.set_optimize_filters_for_memory(true);
-    //tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
+    tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
     // Keys for HASHES are HashIntoType, a u64
-    //tfopts.set_hybrid_ribbon_filter(64.0, 2);
+    tfopts.set_hybrid_ribbon_filter(64.0, 2);
 
     // these are from db_options, not sure if overwritten if not here
     //tfopts.set_block_size(0x4000000); // 64 MiB
