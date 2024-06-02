@@ -1,7 +1,7 @@
 use std::ops::Range;
 
-use crate::HashIntoType;
 use crate::sketch::minhash::max_hash_for_scaled;
+use crate::HashIntoType;
 
 pub struct FracBand(usize, Range<usize>);
 
@@ -77,7 +77,7 @@ impl From<&FracBand> for BandIdx {
 mod test {
     use crate::HashIntoType;
 
-    use super::{Bands, FracBand, BandIdx};
+    use super::{BandIdx, Bands, FracBand};
 
     #[test]
     fn band_to_idx() {
@@ -97,8 +97,16 @@ mod test {
     // Bands(100, 10, 0) == Bands(1000, 1, 0)
     #[test]
     fn contains_1000() {
-        let band_100 = FracBand::from(BandIdx { scaled: 100, n_bands: 10, idx: 0 });
-        let band_1000 = FracBand::from(BandIdx { scaled: 1000, n_bands: 1, idx: 0 });
+        let band_100 = FracBand::from(BandIdx {
+            scaled: 100,
+            n_bands: 10,
+            idx: 0,
+        });
+        let band_1000 = FracBand::from(BandIdx {
+            scaled: 1000,
+            n_bands: 1,
+            idx: 0,
+        });
 
         for n in band_100.1.clone() {
             assert!(band_1000.contains(&(n as HashIntoType)));
@@ -125,8 +133,16 @@ mod test {
     // Bands(100, 100, 0) == Bands(10000, 1, 0)
     #[test]
     fn contains_10000() {
-        let band_100 = FracBand::from(BandIdx { scaled: 100, n_bands: 100, idx: 0 });
-        let band_10000 = FracBand::from(BandIdx { scaled: 10000, n_bands: 1, idx: 0 });
+        let band_100 = FracBand::from(BandIdx {
+            scaled: 100,
+            n_bands: 100,
+            idx: 0,
+        });
+        let band_10000 = FracBand::from(BandIdx {
+            scaled: 10000,
+            n_bands: 1,
+            idx: 0,
+        });
 
         for n in band_100.1.clone() {
             assert!(band_10000.contains(&(n as HashIntoType)));
