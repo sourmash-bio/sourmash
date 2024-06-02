@@ -7,6 +7,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
 use rocksdb::{ColumnFamilyDescriptor, MergeOperands, WriteBatchWithTransaction};
+use voracious_radix_sort::RadixSort;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
@@ -19,6 +20,7 @@ use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::storage::{InnerStorage, Storage};
+use crate::HashIntoType;
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
@@ -90,52 +92,68 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
-        info!("Starting indexing scaffold");
-        index
-            .collection
-            .par_iter()
-            .map(|(dataset_id, _)| {
-                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                if i % 100 == 0 && i > 0 {
-                    info!("Processed {} reference sigs", i);
-                }
+        info!("Starting collect hashes");
+        let mut hashes: dashmap::DashSet<HashIntoType> = Default::default();
 
-                if i % 1000 == 0 && i > 0 {
-                    info!("Triggering manual compaction");
-                    index.compact();
-                    info!("Finished manual compaction");
-                }
+        hashes.par_extend(index.collection.par_iter().flat_map(|(dataset_id, _)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 100 == 0 && i > 0 {
+                info!("Processed {} reference sigs", i);
+            }
 
-                (
-                    index.map_hashes_colors(dataset_id as Idx),
-                    dataset_id as Idx,
-                )
-            })
-            .chunks(10)
-            .for_each(|chunk| {
+            let search_sig = index
+                .collection
+                .sig_for_dataset(dataset_id)
+                .expect("Couldn't find a compatible Signature");
+            let mh = search_sig.minhash().expect("Error extracting a minhash");
+
+            mh.mins().into_par_iter()
+        }));
+        info!("Collected all hashes");
+
+        {
+            let mut hashes: Vec<HashIntoType> = hashes.into_iter().collect();
+            hashes.voracious_sort();
+
+            let processed_hashes = AtomicUsize::new(0);
+
+            let hashes_len = hashes.len();
+            let chunk_size = hashes_len / 100;
+
+            info!("Starting index scaffolding");
+            hashes.into_par_iter().chunks(chunk_size).for_each(|chunk| {
                 let mut batch = WriteBatchWithTransaction::<true>::default();
                 let cf_hashes = index.db.cf_handle(HASHES).unwrap();
 
                 let mut hash_bytes = [0u8; 8];
-                for (hashes, dataset_id) in chunk {
-                    let colors = Datasets::Empty.as_bytes().unwrap();
-
-                    for hash in hashes {
-                        (&mut hash_bytes[..])
-                            .write_u64::<LittleEndian>(hash)
-                            .expect("error writing bytes");
-                        let v = index.db.get_pinned_cf(&cf_hashes, &hash_bytes[..]).ok().unwrap_or(None);
-                        if v.is_none() {
-                            batch.put_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
-                        }
-                    }
+                let color = Datasets::Empty.as_bytes().unwrap();
+                for hash in chunk {
+                    (&mut hash_bytes[..])
+                        .write_u64::<LittleEndian>(hash)
+                        .expect("error writing bytes");
+                    batch.put_cf(&cf_hashes, &hash_bytes[..], color.as_slice());
                 }
                 let mut write_options = rocksdb::WriteOptions::default();
                 write_options.set_sync(false);
                 write_options.disable_wal(true);
-                index.db.write_opt(batch, &write_options).expect("Error committing batch"); // Atomically commits the batch
+                index
+                    .db
+                    .write_opt(batch, &write_options)
+                    .expect("Error committing batch"); // Atomically commits the batch
+                                                       //
+                let i = processed_hashes.fetch_add(chunk_size, Ordering::SeqCst);
+                let percent = i as f64 / hashes_len as f64;
+                info!(
+                    "Processed {}/{} ({:.2}%) hashes",
+                    i,
+                    hashes_len,
+                    percent * 100.0
+                );
             });
-        info!("Finished indexing scaffold");
+            info!("Finished indexing scaffold");
+        }
+
+        let processed_sigs = AtomicUsize::new(0);
 
         info!("Starting indexing");
         index
@@ -277,7 +295,7 @@ impl RevIndex {
         Ok(())
     }
 
-    fn map_hashes_colors(&self, dataset_id: Idx) -> impl Iterator<Item = crate::HashIntoType> {
+    fn map_hashes_colors(&self, dataset_id: Idx) -> impl Iterator<Item = HashIntoType> {
         let search_sig = self
             .collection
             .sig_for_dataset(dataset_id)
