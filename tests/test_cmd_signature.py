@@ -815,6 +815,28 @@ def test_sig_subtract_1_sigzip(runtmp):
     assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
 
 
+def test_sig_subtract_1_sigzip(runtmp):
+    c = runtmp
+    # subtract of 63 from 47
+    sig47 = utils.get_test_data("47.fa.sig.zip")
+    sig63 = utils.get_test_data("63.fa.sig.zip")
+    c.run_sourmash("sig", "subtract", sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    from sourmash import sourmash_args
+
+    test1_sig = sourmash_args.load_one_signature(sig47)
+    test2_sig = sourmash_args.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
 def test_sig_subtract_1_abund(runtmp):
     # subtract 63 from 47, with abundances borrowed from 47
 
