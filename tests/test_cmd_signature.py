@@ -769,8 +769,8 @@ def test_sig_inflate_5_bad_moltype(runtmp):
     assert "no signatures to inflate" in runtmp.last_result.err
 
 
-@utils.in_tempdir
-def test_sig_subtract_1(c):
+def test_sig_subtract_1(runtmp):
+    c = runtmp
     # subtract of 63 from 47
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -781,6 +781,28 @@ def test_sig_subtract_1(c):
 
     test1_sig = sourmash.load_one_signature(sig47)
     test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
+def test_sig_subtract_1_sigzip(runtmp):
+    c = runtmp
+    # subtract of 63 from 47
+    sig47 = utils.get_test_data("47.fa.sig.zip")
+    sig63 = utils.get_test_data("63.fa.sig.zip")
+    c.run_sourmash("sig", "subtract", sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    from sourmash import sourmash_args
+
+    test1_sig = sourmash_args.load_one_signature(sig47)
+    test2_sig = sourmash_args.load_one_signature(sig63)
     actual_subtract_sig = sourmash.load_one_signature(out)
 
     mins = set(test1_sig.minhash.hashes.keys())
@@ -856,8 +878,8 @@ def test_sig_subtract_1_flatten(runtmp):
     assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
 
 
-@utils.in_tempdir
-def test_sig_subtract_1_multisig(c):
+def test_sig_subtract_1_multisig(runtmp):
+    c = runtmp
     # subtract of everything from 47
     sig47 = utils.get_test_data("47.fa.sig")
     multisig = utils.get_test_data("47+63-multisig.sig")
@@ -871,8 +893,8 @@ def test_sig_subtract_1_multisig(c):
     assert not set(actual_subtract_sig.minhash.hashes.keys())
 
 
-@utils.in_tempdir
-def test_sig_subtract_2(c):
+def test_sig_subtract_2(runtmp):
+    c = runtmp
     # subtract of 63 from 47 should fail if 47 has abund
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -881,8 +903,8 @@ def test_sig_subtract_2(c):
         c.run_sourmash("sig", "subtract", sig47, sig63)
 
 
-@utils.in_tempdir
-def test_sig_subtract_3(c):
+def test_sig_subtract_3(runtmp):
+    c = runtmp
     # subtract of 63 from 47 should fail if 63 has abund
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("track_abund/63.fa.sig")
@@ -891,8 +913,8 @@ def test_sig_subtract_3(c):
         c.run_sourmash("sig", "subtract", sig47, sig63)
 
 
-@utils.in_tempdir
-def test_sig_subtract_4_ksize_fail(c):
+def test_sig_subtract_4_ksize_fail(runtmp):
+    c = runtmp
     # subtract of 2 from 47 should fail without -k specified
     sig47 = utils.get_test_data("47.fa.sig")
     sig2 = utils.get_test_data("2.fa.sig")
@@ -901,8 +923,8 @@ def test_sig_subtract_4_ksize_fail(c):
         c.run_sourmash("sig", "subtract", sig47, sig2)
 
 
-@utils.in_tempdir
-def test_sig_subtract_4_ksize_succeed(c):
+def test_sig_subtract_4_ksize_succeed(runtmp):
+    c = runtmp
     # subtract of 2 from 47 should fail without -k specified
     sig47 = utils.get_test_data("47.fa.sig")
     sig2 = utils.get_test_data("2.fa.sig")
@@ -3839,11 +3861,29 @@ def test_sig_describe_3_manifest_fails_when_moved(runtmp):
         runtmp.sourmash("sig", "describe", "mf.csv")
 
 
-@utils.in_tempdir
-def test_sig_overlap(c):
+def test_sig_overlap(runtmp):
+    c = runtmp
     # get overlap details
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
+    c.run_sourmash("sig", "overlap", sig47, sig63)
+    out = c.last_result.out
+
+    print(out)
+
+    # md5s
+    assert "09a08691ce52952152f0e866a59f6261" in out
+    assert "38729c6374925585db28916b82a6f513" in out
+
+    assert "similarity:                  0.32069" in out
+    assert "number of hashes in common:  2529" in out
+
+
+def test_sig_overlap_2(runtmp):
+    c = runtmp
+    # get overlap details
+    sig47 = utils.get_test_data("47.fa.sig.zip")
+    sig63 = utils.get_test_data("63.fa.sig.zip")
     c.run_sourmash("sig", "overlap", sig47, sig63)
     out = c.last_result.out
 

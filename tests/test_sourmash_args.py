@@ -841,3 +841,31 @@ def test_bug_2370(runtmp):
     # try running sourmash_args.load_file_as_index
     # runtmp.sourmash('sig', 'describe', runtmp.output('not_really_gzipped.gz'))
     sourmash_args.load_file_as_index(runtmp.output("not_really_gzipped.gz"))
+
+
+def test_load_one_signature_1(runtmp):
+    # test the sourmash_args.load_one_signature function
+    sigfile = utils.get_test_data("63.fa.sig.zip")
+
+    ss = sourmash_args.load_one_signature(sigfile, ksize=31)
+    assert ss.name.startswith("NC_011663.1 ")
+
+
+def test_load_one_signature_2_fail(runtmp):
+    # test the sourmash_args.load_one_signature function on failure - no sig
+    sigfile = utils.get_test_data("63.fa.sig.zip")
+
+    with pytest.raises(ValueError) as exc:
+        sourmash_args.load_one_signature(sigfile, ksize=21)
+
+    assert "expected exactly one." in str(exc)
+
+
+def test_load_one_signature_3_fail(runtmp):
+    # test the sourmash_args.load_one_signature function on failure - many sigs
+    sigfile = utils.get_test_data("prot/all.zip")
+
+    with pytest.raises(ValueError) as exc:
+        sourmash_args.load_one_signature(sigfile)
+
+    assert "more than one signature" in str(exc)
