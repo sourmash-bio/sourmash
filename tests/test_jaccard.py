@@ -5,6 +5,7 @@ objects.
 
 import pytest
 from sourmash import MinHash
+from sourmash.signature import load_signatures_from_json
 
 import sourmash_tst_utils as utils
 
@@ -172,16 +173,14 @@ def test_abund_similarity_zero():
 
 
 def test_jaccard_on_real_data():
-    from sourmash.signature import load_signatures
-
     afile = "n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
-    sig1 = list(load_signatures(a))[0]
+    sig1 = list(load_signatures_from_json(a))[0]
     mh1 = sig1.minhash
 
     bfile = "n10000/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz"
     b = utils.get_test_data(bfile)
-    sig2 = list(load_signatures(b))[0]
+    sig2 = list(load_signatures_from_json(b))[0]
     mh2 = sig2.minhash
 
     assert mh1.similarity(mh2) == 0.0183
@@ -204,16 +203,14 @@ def test_jaccard_on_real_data():
 
 
 def test_scaled_on_real_data():
-    from sourmash.signature import load_signatures
-
     afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
-    sig1 = list(load_signatures(a))[0]
+    sig1 = list(load_signatures_from_json(a))[0]
     mh1 = sig1.minhash
 
     bfile = "scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz"
     b = utils.get_test_data(bfile)
-    sig2 = list(load_signatures(b))[0]
+    sig2 = list(load_signatures_from_json(b))[0]
     mh2 = sig2.minhash
 
     assert round(mh1.similarity(mh2), 5) == 0.01644
@@ -237,16 +234,14 @@ def test_scaled_on_real_data():
 
 
 def test_scaled_on_real_data_2():
-    from sourmash.signature import load_signatures
-
     afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
-    sig1 = list(load_signatures(a))[0]
+    sig1 = list(load_signatures_from_json(a))[0]
     mh1 = sig1.minhash
 
     bfile = "scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz"
     b = utils.get_test_data(bfile)
-    sig2 = list(load_signatures(b))[0]
+    sig2 = list(load_signatures_from_json(b))[0]
     mh2 = sig2.minhash
 
     assert round(mh1.similarity(mh2), 5) == 0.01644
@@ -270,11 +265,9 @@ def test_scaled_on_real_data_2():
 
 
 def test_downsample_scaled_with_num():
-    from sourmash.signature import load_signatures
-
     afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
-    sig1 = list(load_signatures(a))[0]
+    sig1 = list(load_signatures_from_json(a))[0]
     mh1 = sig1.minhash
 
     with pytest.raises(ValueError) as exc:

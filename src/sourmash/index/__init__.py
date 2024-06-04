@@ -46,7 +46,8 @@ from sourmash.search import (
 )
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
-from sourmash.signature import load_signatures, save_signatures
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
+
 from sourmash.minhash import (
     flatten_and_downsample_scaled,
     flatten_and_downsample_num,
@@ -425,12 +426,12 @@ class LinearIndex(Index):
 
     def save(self, path):
         with open(path, "w") as fp:
-            save_signatures(self.signatures(), fp)
+            save_signatures_to_json(self.signatures(), fp)
 
     @classmethod
     def load(cls, location, filename=None):
         "Load signatures from a JSON signature file."
-        si = load_signatures(location, do_raise=True)
+        si = load_signatures_from_json(location, do_raise=True)
 
         if filename is None:
             filename = location
@@ -639,7 +640,7 @@ class ZipFileLinearIndex(Index):
                 or self.traverse_yield_all
             ):
                 sig_data = self.storage.load(filename)
-                for ss in load_signatures(sig_data):
+                for ss in load_signatures_from_json(sig_data):
                     yield ss, filename
 
     def signatures(self):
@@ -653,7 +654,7 @@ class ZipFileLinearIndex(Index):
             # yield all signatures found in manifest
             for filename in manifest.locations():
                 data = self.storage.load(filename)
-                for ss in load_signatures(data):
+                for ss in load_signatures_from_json(data):
                     # in case multiple signatures are in the file, check
                     # to make sure we want to return each one.
                     if ss in manifest:
@@ -682,7 +683,7 @@ class ZipFileLinearIndex(Index):
                             return True
 
                     data = self.storage.load(filename)
-                    for ss in load_signatures(data):
+                    for ss in load_signatures_from_json(data):
                         if select(ss):
                             yield ss
 

@@ -24,6 +24,8 @@ from sourmash import signature
 from sourmash import VERSION
 from sourmash_tst_utils import SourmashCommandFailed
 
+from sourmash.signature import load_signatures_from_json
+
 
 def test_do_sourmash_compute():
     with utils.TempDirectory() as location:
@@ -35,7 +37,7 @@ def test_do_sourmash_compute():
         sigfile = os.path.join(location, "short.fa.sig")
         assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
+        sig = next(load_signatures_from_json(sigfile))
         assert str(sig).endswith("short.fa")
 
 
@@ -127,7 +129,7 @@ def test_do_sourmash_compute_outdir(c):
     sigfile = os.path.join(c.location, "short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
 
@@ -269,7 +271,7 @@ def test_do_sourmash_compute_singleton():
         sigfile = os.path.join(location, "short.fa.sig")
         assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
+        sig = next(load_signatures_from_json(sigfile))
         assert sig.name.endswith("shortName")
 
 
@@ -285,7 +287,7 @@ def test_do_sourmash_compute_name():
         sigfile = os.path.join(location, "foo.sig")
         assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
+        sig = next(load_signatures_from_json(sigfile))
         assert sig.name == "foo"
 
         status, out, err = utils.runscript(
@@ -297,7 +299,7 @@ def test_do_sourmash_compute_name():
         sigfile2 = os.path.join(location, "foo2.sig")
         assert os.path.exists(sigfile2)
 
-        sig2 = next(signature.load_signatures(sigfile))
+        sig2 = next(load_signatures_from_json(sigfile))
         assert sig2.name == "foo"
         assert sig.name == sig2.name
 
@@ -346,7 +348,7 @@ def test_do_sourmash_compute_name_from_first():
         sigfile = os.path.join(location, "short3.fa.sig")
         assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
+        sig = next(load_signatures_from_json(sigfile))
         assert sig.name == "firstname"
 
 
@@ -359,7 +361,7 @@ def test_do_sourmash_compute_multik():
         outfile = os.path.join(location, "short.fa.sig")
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
+        siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 21 in ksizes
@@ -380,7 +382,7 @@ def test_do_sourmash_compute_multik_with_protein():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 4
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 21 in ksizes
@@ -407,7 +409,7 @@ def test_do_sourmash_compute_multik_with_dayhoff():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 7 in ksizes
@@ -429,7 +431,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 4
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 21 in ksizes
@@ -458,7 +460,7 @@ def test_do_sourmash_compute_multik_with_hp():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 7 in ksizes
@@ -480,7 +482,7 @@ def test_do_sourmash_compute_multik_with_hp_and_dna():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 4
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 7 in ksizes
@@ -503,7 +505,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 6
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 21 in ksizes
@@ -529,7 +531,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 8
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 7 in ksizes
@@ -581,7 +583,7 @@ def test_do_sourmash_compute_multik_only_protein(c):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -622,7 +624,7 @@ def test_do_sourmash_compute_multik_only_protein_no_rna(c):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -644,7 +646,7 @@ def test_do_sourmash_compute_protein_bad_sequences():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 7 in ksizes
@@ -665,7 +667,7 @@ def test_do_sourmash_compute_multik_input_is_protein():
 
         with open(outfile) as fp:
             sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
             ksizes = set([x.minhash.ksize for x in siglist])
             assert 7 in ksizes
@@ -688,7 +690,7 @@ def test_do_sourmash_compute_multik_outfile():
         )
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
+        siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 21 in ksizes
@@ -706,7 +708,7 @@ def test_do_sourmash_compute_with_scaled_1():
         )
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
+        siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
 
         scaled_vals = [x.minhash.scaled for x in siglist]
@@ -725,7 +727,7 @@ def test_do_sourmash_compute_with_scaled_2():
         )
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
+        siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
 
         max_hashes = [x.minhash._max_hash for x in siglist]
@@ -744,7 +746,7 @@ def test_do_sourmash_compute_with_scaled():
         )
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
+        siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
 
         max_hashes = [x.minhash._max_hash for x in siglist]
@@ -797,7 +799,7 @@ def test_do_sourmash_compute_with_seed():
         )
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
+        siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
 
         seeds = [x.minhash.seed for x in siglist]
@@ -826,11 +828,11 @@ def test_do_sourmash_check_protein_comparisons():
         sig2 = os.path.join(location, "ecoli.genes.fna.sig")
         assert os.path.exists(sig2)
 
-        # I'm not sure why load_signatures is randomizing order, but ok.
-        x = list(signature.load_signatures(sig1))
+        # I'm not sure why load_signatures_from_json is randomizing order, but ok.
+        x = list(load_signatures_from_json(sig1))
         sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
-        x = list(signature.load_signatures(sig2))
+        x = list(load_signatures_from_json(sig2))
         sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
         name1 = sig1_aa.name.split()[0]
@@ -862,13 +864,13 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
     sig1 = c.output("ecoli.genes.fna.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     sig1, sig2 = sorted(x, key=lambda x: x.name)
     print(sig1.name)
     print(sig2.name)
 
     knowngood = utils.get_test_data("benchmark.dna.sig")
-    good = list(signature.load_signatures(knowngood))[0]
+    good = list(load_signatures_from_json(knowngood))[0]
 
     assert sig2.similarity(good) == 1.0
 
@@ -881,11 +883,11 @@ def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
     sig1 = c.output("ecoli.genes.fna.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     sig1, sig2 = sorted(x, key=lambda x: x.name)
 
     knowngood = utils.get_test_data("benchmark.dna.sig")
-    good = list(signature.load_signatures(knowngood))[0]
+    good = list(load_signatures_from_json(knowngood))[0]
 
     assert sig2.similarity(good) == 1.0
 
@@ -903,11 +905,11 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons():
         sig1 = os.path.join(location, "ecoli.faa.sig")
         assert os.path.exists(sig1)
 
-        x = list(signature.load_signatures(sig1))
+        x = list(load_signatures_from_json(sig1))
         sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
         knowngood = utils.get_test_data("benchmark.input_prot.sig")
-        good_aa = list(signature.load_signatures(knowngood))[0]
+        good_aa = list(load_signatures_from_json(knowngood))[0]
 
         assert sig1_aa.similarity(good_aa) == 1.0
 
@@ -925,11 +927,11 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         sig1 = os.path.join(location, "ecoli.genes.fna.sig")
         assert os.path.exists(sig1)
 
-        x = list(signature.load_signatures(sig1))
+        x = list(load_signatures_from_json(sig1))
         sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
         knowngood = utils.get_test_data("benchmark.prot.sig")
-        good_trans = list(signature.load_signatures(knowngood))[0]
+        good_trans = list(load_signatures_from_json(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
 

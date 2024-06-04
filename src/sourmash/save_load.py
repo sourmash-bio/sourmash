@@ -299,8 +299,8 @@ def _get_signatures_from_rust(siglist):
     # minhash (and hence one md5sum) per signature, while
     # Rust supports multiple. For now, go through serializing
     # and deserializing the signature! See issue #1167 for more.
-    json_str = sourmash.save_signatures(siglist)
-    yield from sourmash.signature.load_signatures(json_str)
+    json_str = sigmod.save_signatures_to_json(siglist)
+    yield from sigmod.load_signatures_from_json(json_str)
 
 
 class SaveSignatures_NoOutput(Base_SaveSignaturesToLocation):
@@ -362,7 +362,7 @@ class SaveSignatures_Directory(Base_SaveSignaturesToLocation):
                 i += 1
 
         with open(outname, "wb") as fp:
-            sigmod.save_signatures([ss], fp, compression=1)
+            sigmod.save_signatures_to_json([ss], fp, compression=1)
 
 
 class SaveSignatures_SqliteIndex(Base_SaveSignaturesToLocation):
@@ -425,7 +425,7 @@ class SaveSignatures_SigFile(Base_SaveSignaturesToLocation):
 
     def close(self):
         if self.location == "-":
-            sourmash.save_signatures(self.keep, sys.stdout)
+            sigmod.save_signatures_to_json(self.keep, sys.stdout)
         else:
             # text mode? encode in utf-8
             mode = "w"
@@ -437,7 +437,7 @@ class SaveSignatures_SigFile(Base_SaveSignaturesToLocation):
                 mode = "wb"
 
             with open(self.location, mode, encoding=encoding) as fp:
-                sourmash.save_signatures(self.keep, fp, compression=self.compress)
+                sigmod.save_signatures_to_json(self.keep, fp, compression=self.compress)
 
     def add(self, ss):
         super().add(ss)
@@ -470,6 +470,7 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
         self.storage.save(manifest_name, manifest_data, overwrite=True, compress=True)
+
         self.storage.flush()
         self.storage.close()
 
@@ -523,7 +524,7 @@ class SaveSignatures_ZipFile(Base_SaveSignaturesToLocation):
             raise ValueError("this output is not open")
 
         for ss in _get_signatures_from_rust([add_sig]):
-            buf = sigmod.save_signatures([ss], compression=1)
+            buf = sigmod.save_signatures_to_json([ss], compression=1)
             md5 = ss.md5sum()
 
             storage = self.storage

@@ -10,7 +10,8 @@ from pathlib import Path
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash import load_one_signature, SourmashSignature, sourmash_args
+from sourmash import SourmashSignature, sourmash_args
+from sourmash.signature import save_signatures_to_json, load_one_signature_from_json
 
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
@@ -21,7 +22,7 @@ from sourmash_tst_utils import SourmashCommandFailed
 
 def test_api_create_search():
     # create a database and then search for result.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     assert len(lca_db) == 0
@@ -43,8 +44,8 @@ def test_api_create_search():
 def test_api_find_picklist_select():
     # does 'find' respect picklists?
 
-    sig47 = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    sig63 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    sig47 = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    sig63 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(sig47)
@@ -75,8 +76,8 @@ def test_api_find_picklist_select():
 def test_api_find_picklist_select_exclude():
     # does 'find' respect picklists?
 
-    sig47 = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    sig63 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    sig47 = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    sig63 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(sig47)
@@ -106,7 +107,7 @@ def test_api_find_picklist_select_exclude():
 
 def test_api_create_insert():
     # test some internal implementation stuff: create & then insert a sig.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
@@ -133,7 +134,7 @@ def test_api_create_insert():
 
 def test_api_create_insert_bad_ksize():
     # can we insert a ksize=21 signature into a ksize=31 DB? hopefully not.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=21, scaled=1000)
     with pytest.raises(ValueError):
@@ -142,8 +143,8 @@ def test_api_create_insert_bad_ksize():
 
 def test_api_create_insert_bad_ident():
     # can we insert a signature with no/empty ident?
-    ss1 = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    ss1 = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss2 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
     ss1 = ss1.to_mutable()
     ss2 = ss2.to_mutable()
 
@@ -162,7 +163,7 @@ def test_api_create_insert_bad_ident():
 def test_api_create_insert_bad_scaled():
     # can we insert a scaled=1000 signature into a scaled=500 DB?
     # hopefully not.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
     assert ss.minhash.scaled == 1000
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500)
@@ -173,7 +174,7 @@ def test_api_create_insert_bad_scaled():
 def test_api_create_insert_bad_moltype():
     # can we insert a DNAsignature into a protein DB?
     # hopefully not.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
     assert ss.minhash.moltype == "DNA"
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500, moltype="protein")
@@ -184,7 +185,7 @@ def test_api_create_insert_bad_moltype():
 def test_api_create_insert_ident():
     # test some internal implementation stuff: signature inserted with
     # different ident than name.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss, ident="foo")
@@ -213,8 +214,8 @@ def test_api_create_insert_ident():
 
 def test_api_create_insert_two():
     # check internal details if multiple signatures are inserted.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss2 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss, ident="foo")
@@ -254,7 +255,7 @@ def test_api_create_insert_two():
 
 def test_api_create_insert_w_lineage():
     # test some internal implementation stuff - insert signature w/lineage
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lineage = (LineagePair("rank1", "name1"), LineagePair("rank2", "name2"))
@@ -292,7 +293,7 @@ def test_api_create_insert_w_lineage():
 
 def test_api_create_insert_w_bad_lineage():
     # test some internal implementation stuff - insert signature w/bad lineage
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lineage = ([LineagePair("rank1", "name1"), LineagePair("rank2", "name2")],)
@@ -303,7 +304,7 @@ def test_api_create_insert_w_bad_lineage():
 
 def test_api_create_insert_w_bad_lineage_2():
     # test some internal implementation stuff - insert signature w/bad lineage
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lineage = 1  # something non-iterable...
@@ -314,7 +315,7 @@ def test_api_create_insert_w_bad_lineage_2():
 
 def test_api_create_gather():
     # create a database, and then run gather on it.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
@@ -328,7 +329,7 @@ def test_api_create_gather():
 
 def test_api_add_genome_lineage():
     # LCA_Databases can store/retrieve arbitrary lineages/taxonomies.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
     lineage = (LineagePair("rank1", "name1"), (LineagePair("rank2", "name2")))
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
@@ -344,8 +345,8 @@ def test_api_add_genome_lineage():
 def test_api_insert_update():
     # check that cached parts of LCA_Database are updated when a new
     # signature is inserted.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss2 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
@@ -369,7 +370,7 @@ def test_api_insert_update():
 def test_api_insert_retrieve_check_name():
     # check that signatures retrieved from LCA_Database objects have the
     # right name.
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
@@ -383,8 +384,8 @@ def test_api_insert_retrieve_check_name():
 
 def test_api_create_insert_two_then_scale():
     # construct database, THEN downsample
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss2 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
@@ -404,8 +405,8 @@ def test_api_create_insert_two_then_scale():
 
 def test_api_create_insert_two_then_scale_then_add():
     # construct database, THEN downsample, then add another
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss2 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
@@ -431,8 +432,8 @@ def test_api_create_insert_two_then_scale_then_add():
 
 def test_api_create_insert_scale_two():
     # downsample while constructing database
-    ss = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    ss = load_one_signature_from_json(utils.get_test_data("47.fa.sig"), ksize=31)
+    ss2 = load_one_signature_from_json(utils.get_test_data("63.fa.sig"), ksize=31)
 
     # downsample to 5000 while inserting:
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
@@ -584,7 +585,7 @@ def test_lca_index_find_picklist_check_overlap():
     # (bug #1638)
 
     query_fn = utils.get_test_data("47.fa.sig")
-    query_sig = sourmash.load_one_signature(query_fn, ksize=31)
+    query_sig = load_one_signature_from_json(query_fn, ksize=31)
     db_fn = utils.get_test_data("lca/47+63.lca.json")
     db, ksize, scaled = lca_utils.load_single_database(db_fn)
 
@@ -641,7 +642,7 @@ def test_lca_index_select_picklist_twice():
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
-    sig = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"))
+    sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
 
     results = db.search(sig, threshold=0.01, ignore_abundance=True)
     match_sig = results[0][1]
@@ -653,7 +654,7 @@ def test_search_db_scaled_gt_sig_scaled():
 def test_search_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
-    sig = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"))
+    sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
 
     sig = sig.to_mutable()
     sig.minhash = sig.minhash.downsample(scaled=100000)
@@ -663,14 +664,14 @@ def test_search_db_scaled_lt_sig_scaled():
     assert results[0].score == 1.0
     match = results[0].signature
 
-    orig_sig = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"))
+    orig_sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
     assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
 
 
 def test_gather_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
-    sig = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"))
+    sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
 
     result = db.best_containment(sig, threshold=0.01, ignore_abundance=True)
     match_sig = result[1]
@@ -682,7 +683,7 @@ def test_gather_db_scaled_gt_sig_scaled():
 def test_gather_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
-    sig = sourmash.load_one_signature(utils.get_test_data("47.fa.sig"))
+    sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
     sig_minhash = sig.minhash.downsample(scaled=100000)
 
     result = db.best_containment(sig, threshold=0.01, ignore_abundance=True)
@@ -1383,7 +1384,7 @@ def test_single_classify_zip_query(runtmp):
     db1 = utils.get_test_data("lca/delmont-1.lca.json")
     input_sig = utils.get_test_data("lca/TARA_ASE_MAG_00031.sig")
 
-    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_ss = load_one_signature_from_json(input_sig, ksize=31)
     query_zipfile = runtmp.output("query.zip")
     with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
         save_sig.add(query_ss)
@@ -1436,13 +1437,13 @@ def test_single_classify_to_output(runtmp):
 def test_single_classify_to_output_no_name(runtmp):
     db1 = utils.get_test_data("lca/delmont-1.lca.json")
     input_sig = utils.get_test_data("lca/TARA_ASE_MAG_00031.sig")
-    ss = sourmash.load_one_signature(input_sig, ksize=31)
+    ss = load_one_signature_from_json(input_sig, ksize=31)
 
     outsig_filename = runtmp.output("q.sig")
     with open(outsig_filename, "w") as fp:
         # remove name from signature here --
         new_sig = sourmash.SourmashSignature(ss.minhash, filename="xyz")
-        sourmash.save_signatures([new_sig], fp)
+        save_signatures_to_json([new_sig], fp)
 
     cmd = [
         "lca",
@@ -2255,7 +2256,7 @@ def test_single_summarize_scaled_zip_query(runtmp):
     db1 = utils.get_test_data("lca/delmont-1.lca.json")
     input_sig = utils.get_test_data("lca/TARA_ASE_MAG_00031.sig")
 
-    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_ss = load_one_signature_from_json(input_sig, ksize=31)
     query_zipfile = runtmp.output("query.zip")
     with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
         save_sig.add(query_ss)
@@ -2399,9 +2400,9 @@ def test_multi_summarize_with_zip_unassigned_singleton(runtmp, lca_db_format):
     query_zipfile = runtmp.output("query.zip")
     with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
         input_sig1 = utils.get_test_data("lca/TARA_ASE_MAG_00031.sig")
-        sig1 = sourmash.load_one_signature(input_sig1, ksize=31)
+        sig1 = load_one_signature_from_json(input_sig1, ksize=31)
         input_sig2 = utils.get_test_data("lca/TARA_PSW_MAG_00136.sig")
-        sig2 = sourmash.load_one_signature(input_sig2, ksize=31)
+        sig2 = load_one_signature_from_json(input_sig2, ksize=31)
 
         save_sig.add(sig1)
         save_sig.add(sig2)
@@ -2914,7 +2915,7 @@ def test_lca_index_empty(runtmp, lca_db_format):
     sig47file = utils.get_test_data("47.fa.sig")
     sig63file = utils.get_test_data("63.fa.sig")
 
-    sig63 = load_one_signature(sig63file, ksize=31)
+    sig63 = load_one_signature_from_json(sig63file, ksize=31)
 
     # create an empty spreadsheet
     with open(c.output("empty.csv"), "w") as fp:
@@ -2955,9 +2956,9 @@ def test_lca_gather_threshold_1():
     sig47file = utils.get_test_data("47.fa.sig")
     sig63file = utils.get_test_data("63.fa.sig")
 
-    sig2 = load_one_signature(sig2file, ksize=31)
-    sig47 = load_one_signature(sig47file, ksize=31)
-    sig63 = load_one_signature(sig63file, ksize=31)
+    sig2 = load_one_signature_from_json(sig2file, ksize=31)
+    sig47 = load_one_signature_from_json(sig47file, ksize=31)
+    sig63 = load_one_signature_from_json(sig63file, ksize=31)
 
     # construct LCA Database
     db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
@@ -3015,9 +3016,9 @@ def test_lca_gather_threshold_5():
     sig47file = utils.get_test_data("47.fa.sig")
     sig63file = utils.get_test_data("63.fa.sig")
 
-    sig2 = load_one_signature(sig2file, ksize=31)
-    sig47 = load_one_signature(sig47file, ksize=31)
-    sig63 = load_one_signature(sig63file, ksize=31)
+    sig2 = load_one_signature_from_json(sig2file, ksize=31)
+    sig47 = load_one_signature_from_json(sig47file, ksize=31)
+    sig63 = load_one_signature_from_json(sig63file, ksize=31)
 
     # construct LCA Database
     db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
@@ -3061,9 +3062,9 @@ def test_gather_multiple_return():
     sig47file = utils.get_test_data("47.fa.sig")
     sig63file = utils.get_test_data("63.fa.sig")
 
-    sig2 = load_one_signature(sig2file, ksize=31)
-    sig47 = load_one_signature(sig47file, ksize=31)
-    sig63 = load_one_signature(sig63file, ksize=31)
+    sig2 = load_one_signature_from_json(sig2file, ksize=31)
+    sig47 = load_one_signature_from_json(sig47file, ksize=31)
+    sig63 = load_one_signature_from_json(sig63file, ksize=31)
 
     # construct LCA Database
     db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
@@ -3088,8 +3089,8 @@ def test_lca_db_protein_build():
         "prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="protein")
     assert db.insert(sig1)
@@ -3119,8 +3120,8 @@ def test_lca_db_protein_save_load(c):
         "prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="protein")
     assert db.insert(sig1)
@@ -3187,8 +3188,8 @@ def test_lca_db_protein_command_index(runtmp, lca_db_format):
     db2 = x[0]
     assert db2.moltype == "protein"
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -3230,8 +3231,8 @@ def test_lca_db_hp_build():
         "prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="hp")
     assert db.insert(sig1)
@@ -3261,8 +3262,8 @@ def test_lca_db_hp_save_load(c):
         "prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="hp")
     assert db.insert(sig1)
@@ -3327,8 +3328,8 @@ def test_lca_db_hp_command_index(runtmp, lca_db_format):
     db2 = x[0]
     assert db2.moltype == "hp"
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -3370,8 +3371,8 @@ def test_lca_db_dayhoff_build():
         "prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="dayhoff")
     assert db.insert(sig1)
@@ -3401,8 +3402,8 @@ def test_lca_db_dayhoff_save_load(c):
         "prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="dayhoff")
     assert db.insert(sig1)
@@ -3467,8 +3468,8 @@ def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
     db2 = x[0]
     assert db2.moltype == "dayhoff"
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -3701,8 +3702,8 @@ def test_lca_db_protein_save_twice(runtmp, lca_db_format):
         "prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature_from_json(sigfile1)
+    sig2 = load_one_signature_from_json(sigfile2)
 
     db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype="protein")
     assert db.insert(sig1)

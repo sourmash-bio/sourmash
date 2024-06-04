@@ -11,7 +11,7 @@ import pytest
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
-from sourmash.signature import load_signatures
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
 
 ## command line tests
 
@@ -23,7 +23,7 @@ def test_grep_1_sig_name(runtmp):
     runtmp.run_sourmash("sig", "grep", "Shewanella", sig47)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -46,7 +46,7 @@ def test_grep_1_sig_name_case_insensitive(runtmp):
     runtmp.run_sourmash("sig", "grep", "-i", "shewanella", sig47)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -70,7 +70,7 @@ def test_grep_2_sig_md5(runtmp):
     runtmp.run_sourmash("sig", "grep", "ce52952152f0", sig47)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -92,7 +92,7 @@ def test_grep_2_sig_md5_case_insensitive(runtmp):
     runtmp.run_sourmash("sig", "grep", "-i", "CE52952152f0", sig47)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -106,7 +106,7 @@ def test_grep_3_filename(runtmp):
     runtmp.run_sourmash("sig", "grep", "47.fa", sig47)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -121,7 +121,7 @@ def test_grep_3_filename_regexp(runtmp):
     runtmp.run_sourmash("sig", "grep", "^47.fa", sig47)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -150,7 +150,7 @@ def test_grep_4_no_manifest_ok(runtmp):
 
     runtmp.run_sourmash("sig", "grep", "e60265", sbt, "--no-require-manifest")
 
-    ss = load_signatures(runtmp.last_result.out)
+    ss = load_signatures_from_json(runtmp.last_result.out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -164,7 +164,7 @@ def test_grep_5_zip_include(runtmp):
     runtmp.run_sourmash("sig", "grep", "--dna", "OS223", allzip)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -193,7 +193,7 @@ def test_grep_5_zip_include_picklist(runtmp):
     print(err)
     assert "for given picklist, found 2 matches to 2 distinct values" in err
 
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -208,7 +208,7 @@ def test_grep_5_zip_include_case_insensitive(runtmp):
     runtmp.run_sourmash("sig", "grep", "--dna", "-i", "os223", allzip)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -223,7 +223,7 @@ def test_grep_5_zip_exclude(runtmp):
     runtmp.run_sourmash("sig", "grep", "--dna", "-v", "OS185", allzip)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -238,7 +238,7 @@ def test_grep_5_zip_exclude_case_insensitive(runtmp):
     runtmp.run_sourmash("sig", "grep", "--dna", "-vi", "os185", allzip)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -253,7 +253,7 @@ def test_grep_6_zip_manifest_csv(runtmp):
     runtmp.run_sourmash("sig", "grep", "--dna", "OS223", allzip, "--csv", "match.csv")
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -264,7 +264,7 @@ def test_grep_6_zip_manifest_csv(runtmp):
     runtmp.run_sourmash("sig", "cat", allzip, "--picklist", "match.csv::manifest")
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -281,7 +281,7 @@ def test_grep_6_zip_manifest_csv_gz(runtmp):
     )
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -296,7 +296,7 @@ def test_grep_6_zip_manifest_csv_gz(runtmp):
     runtmp.run_sourmash("sig", "cat", allzip, "--picklist", "match.csv.gz::manifest")
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -414,19 +414,19 @@ def test_sig_grep_8_count(runtmp):
 def test_sig_grep_identical_md5s(runtmp):
     # test that we properly handle different signatures with identical md5s
     sig47 = utils.get_test_data("47.fa.sig")
-    ss = load_signatures(sig47)
+    ss = load_signatures_from_json(sig47)
     sig = list(ss)[0]
     new_sig = sig.to_mutable()
     new_sig.name = "foo"
     sig47foo = runtmp.output("foo.sig")
     # this was only a problem when the signatures are stored in the same file
     with open(sig47foo, "w") as fp:
-        sourmash.save_signatures([new_sig, sig], fp)
+        save_signatures_to_json([new_sig, sig], fp)
 
     runtmp.run_sourmash("sig", "grep", "-i", "foo", sig47foo)
 
     out = runtmp.last_result.out
-    ss = load_signatures(out)
+    ss = load_signatures_from_json(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]

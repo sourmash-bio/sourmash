@@ -44,10 +44,10 @@ DEFAULT_SEED = get_minhash_default_seed()
 MAX_HASH = get_minhash_max_hash()
 
 from .signature import (
-    load_signatures as load_signatures_private,
-    load_one_signature,
+    load_signatures_from_json,
+    load_one_signature_from_json,
     SourmashSignature,
-    save_signatures,
+    save_signatures_to_json,
 )
 
 
@@ -69,7 +69,33 @@ def load_signatures(*args, **kwargs):
     has been removed and the function no longer outputs to stderr.
     Moreover, do_raise is now True by default.
     """
-    return load_signatures_private(*args, **kwargs)
+    return load_signatures_from_json(*args, **kwargs)
+
+
+@deprecated(
+    deprecated_in="4.8.9",
+    removed_in="5.0",
+    current_version=VERSION,
+    details="Use load_file_as_signatures instead.",
+)
+def load_one_signature(*args, **kwargs):
+    """Load a JSON string with signatures into classes.
+
+    Returns list of SourmashSignature objects.
+
+    Note, the order is not necessarily the same as what is in the source file.
+    """
+    return load_one_signature_from_json(*args, **kwargs)
+
+
+@deprecated(
+    deprecated_in="4.8.9",
+    removed_in="5.0",
+    current_version=VERSION,
+    details="use sourmash_args.SaveSignaturesToLocation instead.",
+)
+def save_signatures(*args, **kwargs):
+    return save_signatures_to_json(*args, **kwargs)
 
 
 from .sbtmh import load_sbt_index as load_sbt_index_private

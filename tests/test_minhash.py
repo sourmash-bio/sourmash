@@ -1723,7 +1723,8 @@ def test_distance_matrix(track_abundance):
     import numpy
 
     siglist = [
-        next(signature.load_signatures(utils.get_test_data(f))) for f in utils.SIG_FILES
+        next(signature.load_signatures_from_json(utils.get_test_data(f)))
+        for f in utils.SIG_FILES
     ]
 
     D1 = numpy.zeros([len(siglist), len(siglist)])

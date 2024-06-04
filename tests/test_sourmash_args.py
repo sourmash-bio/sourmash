@@ -19,6 +19,8 @@ from sourmash import sourmash_args, manifest
 from sourmash.index import LinearIndex
 from sourmash.cli.utils import add_ksize_arg
 
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
+
 
 def test_save_signatures_api_none():
     # save to sigfile
@@ -69,7 +71,7 @@ def test_save_signatures_to_location_1_stdout():
 
     output = output_capture.getvalue()
 
-    saved = list(sourmash.signature.load_signatures(output))
+    saved = list(load_signatures_from_json(output))
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2
@@ -88,7 +90,7 @@ def test_save_signatures_to_location_1_sig_is_default(runtmp):
         save_sig.add(ss2)
         save_sig.add(ss47)
 
-    saved = list(sourmash.signature.load_signatures(outloc))
+    saved = list(load_signatures_from_json(outloc))
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2
@@ -281,7 +283,7 @@ def test_save_signatures_to_location_3_zip_add_fail(runtmp):
     outloc = runtmp.output("foo.zip")
     with zipfile.ZipFile(outloc, "x") as zf:
         with zf.open("xyz.sig", "w") as fp:
-            sourmash.save_signatures([ss2], fp=fp, compression=1)
+            save_signatures_to_json([ss2], fp=fp, compression=1)
 
     # verify it can be loaded, yada yada
     saved = list(sourmash.load_file_as_signatures(outloc))
@@ -307,7 +309,7 @@ def test_save_signatures_to_location_3_zip_add_with_manifest(runtmp):
     outloc = runtmp.output("foo.zip")
     with zipfile.ZipFile(outloc, "x") as zf:
         with zf.open("xyz.sig", "w") as fp:
-            sourmash.save_signatures([ss2], fp=fp, compression=1)
+            save_signatures_to_json([ss2], fp=fp, compression=1)
 
         # make a manifest row...
         row = manifest.CollectionManifest.make_manifest_row(

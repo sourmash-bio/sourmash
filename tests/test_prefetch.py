@@ -12,7 +12,12 @@ from sourmash.search import PrefetchResult
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
-from sourmash import signature, sourmash_args
+from sourmash import SourmashSignature, sourmash_args
+from sourmash.signature import (
+    save_signatures_to_json,
+    load_signatures_from_json,
+    load_one_signature_from_json,
+)
 
 
 def approx_eq(val1, val2):
@@ -332,7 +337,7 @@ def test_prefetch_matches(runtmp, linear_gather):
 
     expected_matches = [sig63, sig47]
     for match, expected in zip(sigs.signatures(), expected_matches):
-        ss = sourmash.load_one_signature(expected, ksize=31)
+        ss = load_one_signature_from_json(expected, ksize=31)
         assert match == ss
 
 
@@ -343,8 +348,8 @@ def test_prefetch_matches_to_dir(runtmp, linear_gather):
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
-    ss63 = sourmash.load_one_signature(sig63)
-    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+    ss47 = load_one_signature_from_json(sig47)
 
     matches_out = c.output("matches_dir/")
 
@@ -385,8 +390,8 @@ def test_prefetch_matches_to_sig_gz(runtmp, linear_gather):
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
-    ss63 = sourmash.load_one_signature(sig63)
-    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+    ss47 = load_one_signature_from_json(sig47)
 
     matches_out = c.output("matches.sig.gz")
 
@@ -431,8 +436,8 @@ def test_prefetch_matches_to_zip(runtmp, linear_gather):
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
-    ss63 = sourmash.load_one_signature(sig63)
-    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+    ss47 = load_one_signature_from_json(sig47)
 
     matches_out = c.output("matches.zip")
 
@@ -496,14 +501,14 @@ def test_prefetch_matching_hashes(runtmp, linear_gather):
     assert c.last_result.status == 0
     assert os.path.exists(matches_out)
 
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
     matches = set(ss47.minhash.hashes) & set(ss63.minhash.hashes)
 
     intersect = ss47.minhash.copy_and_clear()
     intersect.add_many(matches)
 
-    ss = sourmash.load_one_signature(matches_out)
+    ss = load_one_signature_from_json(matches_out)
     assert ss.name.endswith("-known")
     assert ss.minhash == intersect
 
@@ -536,13 +541,13 @@ def test_prefetch_nomatch_hashes(runtmp, linear_gather):
     assert c.last_result.status == 0
     assert os.path.exists(nomatch_out)
 
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     remain = ss47.minhash.to_mutable()
     remain.remove_many(ss63.minhash.hashes)
 
-    ss = sourmash.load_one_signature(nomatch_out)
+    ss = load_one_signature_from_json(nomatch_out)
     assert ss.name.endswith("-unknown")
     assert ss.minhash == remain
 
@@ -756,7 +761,7 @@ def test_prefetch_downsample_multiple(runtmp, linear_gather):
     query_sig = utils.get_test_data("GCF_000006945.2-s500.sig")
 
     # load in the hashes and do split them into four bins, randomly.
-    ss = sourmash.load_one_signature(query_sig)
+    ss = load_one_signature_from_json(query_sig)
     hashes = list(ss.minhash.hashes)
 
     random.seed(a=1)  # fix seed so test is reproducible
@@ -775,10 +780,10 @@ def test_prefetch_downsample_multiple(runtmp, linear_gather):
 
     gathersigs = []
     for i in range(4):
-        binsig = signature.SourmashSignature(mh_bins[i], name=f"bin{i}")
+        binsig = SourmashSignature(mh_bins[i], name=f"bin{i}")
 
         with open(runtmp.output(f"bin{i}.sig"), "wb") as fp:
-            sourmash.save_signatures([binsig], fp)
+            save_signatures_to_json([binsig], fp)
 
         gathersigs.append(f"bin{i}.sig")
 

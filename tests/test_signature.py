@@ -5,10 +5,12 @@ import pytest
 import sourmash
 from sourmash.signature import (
     SourmashSignature,
-    save_signatures,
-    load_signatures,
-    load_one_signature,
     FrozenSourmashSignature,
+)
+from sourmash.signature import (
+    save_signatures_to_json,
+    load_signatures_from_json,
+    load_one_signature_from_json,
 )
 import sourmash_tst_utils as utils
 from sourmash.minhash import MinHash, FrozenMinHash
@@ -137,8 +139,8 @@ def test_roundtrip(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_kmer("AT" * 10)
     sig = SourmashSignature(e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s))
+    s = save_signatures_to_json([sig])
+    siglist = list(load_signatures_from_json(s))
     sig2 = siglist[0]
 
     assert sig.similarity(sig2) == 1.0
@@ -167,8 +169,8 @@ def test_load_signature_ksize_nonint(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_kmer("AT" * 10)
     sig = SourmashSignature(e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s, ksize="20"))
+    s = save_signatures_to_json([sig])
+    siglist = list(load_signatures_from_json(s, ksize="20"))
     sig2 = siglist[0]
 
     assert sig.similarity(sig2) == 1.0
@@ -180,8 +182,8 @@ def test_roundtrip_empty(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
 
     sig = SourmashSignature(e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s))
+    s = save_signatures_to_json([sig])
+    siglist = list(load_signatures_from_json(s))
     sig2 = siglist[0]
 
     assert sig.similarity(sig2) == 0
@@ -192,8 +194,8 @@ def test_roundtrip_scaled(track_abundance):
     e = MinHash(n=0, ksize=20, track_abundance=track_abundance, max_hash=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s))
+    s = save_signatures_to_json([sig])
+    siglist = list(load_signatures_from_json(s))
     sig2 = siglist[0]
     e2 = sig2.minhash
 
@@ -207,8 +209,8 @@ def test_roundtrip_seed(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance, seed=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s))
+    s = save_signatures_to_json([sig])
+    siglist = list(load_signatures_from_json(s))
     sig2 = siglist[0]
     e2 = sig2.minhash
 
@@ -291,8 +293,8 @@ def test_save_load_multisig(track_abundance):
     e2 = MinHash(n=1, ksize=25, track_abundance=track_abundance)
     sig2 = SourmashSignature(e2)
 
-    x = save_signatures([sig1, sig2])
-    y = list(load_signatures(x))
+    x = save_signatures_to_json([sig1, sig2])
+    y = list(load_signatures_from_json(x))
 
     print(x)
 
@@ -303,19 +305,19 @@ def test_save_load_multisig(track_abundance):
 
 
 def test_load_one_fail_nosig(track_abundance):
-    x = save_signatures([])
+    x = save_signatures_to_json([])
     print((x,))
     with pytest.raises(ValueError):
-        load_one_signature(x)
+        load_one_signature_from_json(x)
 
 
 def test_load_one_succeed(track_abundance):
     e1 = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1)
 
-    x = save_signatures([sig1])
+    x = save_signatures_to_json([sig1])
 
-    y = load_one_signature(x)
+    y = load_one_signature_from_json(x)
     assert sig1 == y
 
 
@@ -326,10 +328,10 @@ def test_load_one_fail_multisig(track_abundance):
     e2 = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig2 = SourmashSignature(e2)
 
-    x = save_signatures([sig1, sig2])
+    x = save_signatures_to_json([sig1, sig2])
 
     with pytest.raises(ValueError):
-        load_one_signature(x)
+        load_one_signature_from_json(x)
 
 
 def test_save_minified(track_abundance):
@@ -339,11 +341,11 @@ def test_save_minified(track_abundance):
     e2 = MinHash(n=1, ksize=25, track_abundance=track_abundance)
     sig2 = SourmashSignature(e2, name="bar baz")
 
-    x = save_signatures([sig1, sig2])
+    x = save_signatures_to_json([sig1, sig2])
     assert b"\n" not in x
     assert len(x.split(b"\n")) == 1
 
-    y = list(load_signatures(x))
+    y = list(load_signatures_from_json(x))
     assert len(y) == 2
     assert any(sig.name == "foo" for sig in y)
     assert any(sig.name == "bar baz" for sig in y)
@@ -351,9 +353,9 @@ def test_save_minified(track_abundance):
 
 def test_load_minified(track_abundance):
     sigfile = utils.get_test_data("genome-s10+s11.sig")
-    sigs = load_signatures(sigfile)
+    sigs = load_signatures_from_json(sigfile)
 
-    minified = save_signatures(sigs)
+    minified = save_signatures_to_json(sigs)
     with open(sigfile) as f:
         orig_file = f.read()
     assert len(minified) < len(orig_file)
@@ -364,13 +366,13 @@ def test_load_compressed(track_abundance):
     e1 = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1)
 
-    x = save_signatures([sig1], compression=5)
+    x = save_signatures_to_json([sig1], compression=5)
 
-    y = load_one_signature(x)
+    y = load_one_signature_from_json(x)
     assert sig1 == y
 
     sigfile = utils.get_test_data("genome-s10+s11.sig.gz")
-    load_signatures(sigfile)
+    load_signatures_from_json(sigfile)
 
 
 def test_binary_fp(tmpdir, track_abundance):
@@ -380,19 +382,19 @@ def test_binary_fp(tmpdir, track_abundance):
     path = tmpdir.join("1.sig")
     with open(str(path), "wb") as fp:
         sig = SourmashSignature(e)
-        save_signatures([sig], fp)
+        save_signatures_to_json([sig], fp)
 
 
-def test_load_signatures_no_file_do_raise(tmpdir):
+def test_load_signatures_from_json_no_file_do_raise(tmpdir):
     path = tmpdir.join("dne.sig")
-    siglist = load_signatures(path, do_raise=True)
+    siglist = load_signatures_from_json(path, do_raise=True)
     with pytest.raises(Exception):
         list(siglist)
 
 
-def test_load_signatures_no_file_do_not_raise(tmpdir):
+def test_load_signatures_from_json_no_file_do_not_raise(tmpdir):
     path = tmpdir.join("dne.sig")
-    siglist = load_signatures(path)
+    siglist = load_signatures_from_json(path)
     siglist = list(siglist)
     assert not siglist
 
@@ -446,8 +448,8 @@ def test_max_containment_equal():
 def test_containment_ANI():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2, ksize=31)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2, ksize=31)
 
     s1_cont_s2 = ss1.containment_ani(ss2, estimate_ci=True)
     s2_cont_s1 = ss2.containment_ani(ss1, estimate_ci=True)
@@ -482,8 +484,8 @@ def test_containment_ANI():
 def test_containment_ANI_precalc_containment():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2, ksize=31)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2, ksize=31)
     # precalc containments and assert same results
     s1c = ss1.contained_by(ss2)
     s2c = ss2.contained_by(ss1)
@@ -505,8 +507,8 @@ def test_containment_ANI_precalc_containment():
 def test_avg_containment():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2, ksize=31)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2, ksize=31)
     # check average_containment_ani
     ac_s1 = ss1.avg_containment(ss2)
     ac_s2 = ss2.avg_containment(ss1)
@@ -521,8 +523,8 @@ def test_avg_containment():
 def test_avg_containment_ani():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2, ksize=31)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2, ksize=31)
     # check average_containment_ani
     ac_s1 = ss1.avg_containment_ani(ss2)
     ac_s2 = ss2.avg_containment_ani(ss1)
@@ -536,8 +538,8 @@ def test_avg_containment_ani():
 def test_containment_ANI_downsample():
     f2 = utils.get_test_data("2+63.fa.sig")
     f3 = utils.get_test_data("47+63.fa.sig")
-    ss2 = sourmash.load_one_signature(f2, ksize=31)
-    ss3 = sourmash.load_one_signature(f3, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2, ksize=31)
+    ss3 = sourmash.load_one_signature_from_json(f3, ksize=31)
     # check that downsampling works properly
     print(ss2.minhash.scaled)
 
@@ -571,8 +573,8 @@ def test_containment_ANI_downsample():
 def test_jaccard_ANI():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2)
 
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2))
 
@@ -590,8 +592,8 @@ def test_jaccard_ANI():
 def test_jaccard_ANI_untrustworthy():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2)
 
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2))
 
@@ -608,8 +610,8 @@ def test_jaccard_ANI_untrustworthy():
 def test_jaccard_ANI_precalc_jaccard():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2)
     # precalc jaccard and assert same result
     jaccard = ss1.jaccard(ss2)
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2, jaccard=jaccard))
@@ -626,8 +628,8 @@ def test_jaccard_ANI_precalc_jaccard():
 def test_jaccard_ANI_downsample():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    ss1 = sourmash.load_one_signature(f1, ksize=31)
-    ss2 = sourmash.load_one_signature(f2)
+    ss1 = sourmash.load_one_signature_from_json(f1, ksize=31)
+    ss2 = sourmash.load_one_signature_from_json(f2)
 
     print(ss1.minhash.scaled)
     ss1 = ss1.to_mutable()
