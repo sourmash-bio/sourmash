@@ -1625,6 +1625,8 @@ k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
 moltype with `--dna/--protein/--hp/--dayhoff`.
 
+Use `--set-name <name>` to set the name of the output sketch.
+
 Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
@@ -1661,6 +1663,8 @@ k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
 moltype with `--dna/--protein/--hp/--dayhoff`.
 
+Use `--set-name <name>` to set the name of the output sketch.
+
 Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
@@ -1685,6 +1689,8 @@ to the intersection).
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
 moltype with `--dna/--protein/--hp/--dayhoff`.
+
+Use `--set-name <name>` to set the name of the output sketch(es).
 
 ### `sourmash signature inflate` - transfer abundances from one signature to others
 
