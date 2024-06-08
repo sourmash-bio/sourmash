@@ -65,6 +65,7 @@ typed-builder = "0.18.0"
 vec-collections = "0.4.3"
 
 [dev-dependencies]
+env_logger = "0.11.3"
 proptest = { version = "1.4.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
 tempfile = "3.10.1"

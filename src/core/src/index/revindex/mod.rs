@@ -445,6 +445,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 
 #[cfg(test)]
 mod test {
+    use env_logger::try_init;
     use camino::Utf8PathBuf as PathBuf;
     use tempfile::TempDir;
 
@@ -591,6 +592,8 @@ mod test {
 
     #[test]
     fn revindex_load_and_gather_2() -> Result<()> {
+        let _ = env_logger::try_init();
+
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
@@ -651,7 +654,7 @@ mod test {
 
         // should be 11, based on test_gather_metagenome_num_results @CTB.
         // see sourmash#3139 and sourmash_plugin_branchwater#322.
-        assert_eq!(matches.len(), 6);
+        assert_eq!(matches.len(), 11);
 
         fn round5(a: f64) -> f64 {
             (a * 1e5).round() / 1e5
