@@ -58,7 +58,7 @@ impl std::fmt::Display for HashFunctions {
             f,
             "{}",
             match self {
-                HashFunctions::Murmur64Dna => "dna",
+                HashFunctions::Murmur64Dna => "DNA",
                 HashFunctions::Murmur64Protein => "protein",
                 HashFunctions::Murmur64Dayhoff => "dayhoff",
                 HashFunctions::Murmur64Hp => "hp",
