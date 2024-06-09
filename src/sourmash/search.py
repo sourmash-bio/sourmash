@@ -939,7 +939,7 @@ class GatherDatabases:
             estimate_ani_ci=self.estimate_ani_ci,
             sum_weighted_found=sum_weighted_found,
             total_weighted_hashes=total_weighted_hashes,
-            noident_len=len(self.noident_mh) * self.noident_mh.scaled
+            noident_len=len(self.noident_mh) * self.noident_mh.scaled,
         )
 
         self.result_n += 1
