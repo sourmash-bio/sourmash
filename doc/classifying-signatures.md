@@ -556,7 +556,7 @@ Note that order of columns is not guaranteed and may change between versions.
 | `md5`                          | string        | Full md5sum of the match sketch. |
 | `f_match_orig`                 | float         | The fraction of the match in the full query. Rank independent. |
 | `gather_result_rank`           | float         | Rank of this match in the results. |
-| `remaining_bp`                 | integer       | How many bp remain in the query after subtracting this match, estimated by multiplying remaining hashes by scaled. |
+| `remaining_bp`                 | integer       | How many bp remain in the query after subtracting this match, estimated by multiplying remaining hashes by scaled. Starts at `query_n_hashes`. Unweighted. See `sum_weighted_found` for weighted. |
 | `query_filename`               | string        | The filename from which the query was loaded. |
 | `query_name`                   | string        | The query sketch name. |
 | `query_md5`                    | string        | Truncated md5sum of the query sketch. |
@@ -564,7 +564,7 @@ Note that order of columns is not guaranteed and may change between versions.
 | `ksize`                        | integer       | K-mer size for the sketches used in the comparison. |
 | `moltype`                      | string        | Molecule type of the comparison. |
 | `scaled`                       | integer       | Scaled value of the comparison. |
-| `query_n_hashes`               | integer       | Number of hashes in the query sketch. |
+| `query_n_hashes`               | integer       | Number of hashes in the query sketch. Unweighted. |
 | `query_abundance`              | boolean       | True if the query has abundance information; False otherwise. |
 | `query_containment_ani`        | float         | ANI estimated from the query containment in the match. |
 | `match_containment_ani`        | float         | ANI estimated from the match containment in the query. |
