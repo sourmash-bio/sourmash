@@ -647,13 +647,12 @@ mod test {
             counter,
             query_colors,
             hash_to_color,
-            0,
+            5,                  // 50kb threshold
             &query,
             Some(selection),
         )?;
 
-        // should be 11, based on test_gather_metagenome_num_results @CTB.
-        // see sourmash#3139 and sourmash_plugin_branchwater#322.
+        // should be 11, based on test_gather_metagenome_num_results
         assert_eq!(matches.len(), 11);
 
         fn round5(a: f64) -> f64 {
@@ -694,23 +693,50 @@ mod test {
         dbg!(match_);
         let names: Vec<&str> = match_.name().split(' ').take(1).collect();
         assert_eq!(names[0], "NC_009486.1");
+        assert_eq!(round5(match_.f_match()), round5(0.4842105));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
 
-        // @CTB this fails: 0.43158 != 0.48421
-        // assert_eq!(round5(match_.f_match()), round5(0.4842105));
+        let match_ = &matches[6];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_006905.1");
+        assert_eq!(round5(match_.f_match()), round5(0.161016949152542));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.0518417462482947));
 
-        // @CTB this fails: 0.05593 != 0.06276
-        // assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
+        let match_ = &matches[7];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011080.1");
+        assert_eq!(round5(match_.f_match()), round5(0.125799573560768));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.04024556616643930));
 
-        // @CTB fails
-        // assert_eq!(match_.unique_intersect_bp, 820000);
+        let match_ = &matches[8];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011274.1");
+        assert_eq!(round5(match_.f_match()), round5(0.0919037199124727));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.0286493860845839));
 
-        // @CTB fails
-        // assert_eq!(match_.remaining_bp, 2170000);
+        let match_ = &matches[9];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_006511.1");
+        assert_eq!(round5(match_.f_match()), round5(0.0725995316159251));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.021145975443383400));
+
+        let match_ = &matches[10];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011294.1");
+        assert_eq!(round5(match_.f_match()), round5(0.0148619957537155));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.0047748976807639800));
 
         Ok(())
     }
 
     #[test]
+    // a more detailed/focused version of revindex_load_and_gather_2,
+    // added in sourmash#3193 for debugging purposes.
     fn revindex_load_and_gather_3() -> Result<()> {
         let _ = env_logger::try_init();
 
@@ -787,18 +813,10 @@ mod test {
         dbg!(match_);
         let names: Vec<&str> = match_.name().split(' ').take(1).collect();
         assert_eq!(names[0], "NC_009486.1");
-
-        // @CTB this fails: 0.43158 != 0.48421
         assert_eq!(round5(match_.f_match()), round5(0.4842105));
-
-        // @CTB this fails: 0.05593 != 0.06276
-        // assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
-
-        // @CTB fails
-        // assert_eq!(match_.unique_intersect_bp, 820000);
-
-        // @CTB fails
-        // assert_eq!(match_.remaining_bp, 2170000);
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
+        assert_eq!(match_.unique_intersect_bp, 820000);
+        assert_eq!(match_.remaining_bp, 2170000);
 
         Ok(())
     }
