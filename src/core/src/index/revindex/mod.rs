@@ -813,6 +813,7 @@ mod test {
         assert_eq!(match_.f_match(), 1.0);
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.13096862));
         assert_eq!(match_.unique_intersect_bp, 1920000);
+        assert_eq!(match_.remaining_bp, 12740000);
 
         let match_ = &matches[1];
         let names: Vec<&str> = match_.name().split(' ').take(1).collect();
@@ -820,6 +821,7 @@ mod test {
         assert_eq!(match_.f_match(), 0.898936170212766);
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.115279));
         assert_eq!(match_.unique_intersect_bp, 1690000);
+        assert_eq!(match_.remaining_bp, 11050000);
 
         let match_ = &matches[2];
         dbg!(match_);
@@ -828,6 +830,7 @@ mod test {
         assert_eq!(round5(match_.f_match()), round5(0.4842105));
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
         assert_eq!(match_.unique_intersect_bp, 920000);
+        assert_eq!(match_.remaining_bp, 10130000);
 
         Ok(())
     }
