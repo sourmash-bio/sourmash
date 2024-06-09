@@ -328,6 +328,17 @@ impl RevIndexOps for RevIndex {
             trace!("counter len: {}", counter.len());
             trace!("match size: {}", match_size);
 
+            let (dataset_id, size) = counter.k_most_common_ordered(3)[0];
+            trace!("counter0: {}, {}", dataset_id, size);
+            if counter.len() > 1 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[1];
+                trace!("counter1: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 2 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[2];
+                trace!("counter2: {}, {}", dataset_id, size);
+            }
+
             let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
             match_size = if size >= threshold { size } else { break };
             // handle special case where threshold was set to 0
@@ -345,6 +356,9 @@ impl RevIndexOps for RevIndex {
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
+
+            let query_mh = KmerMinHash::from(query.clone());
+            let isect = match_mh.intersection(&query_mh)?;
 
             // Calculate stats
             let gather_result = calculate_gather_stats(
@@ -369,10 +383,23 @@ impl RevIndexOps for RevIndex {
             // TODO: not used at the moment, so just skip.
             query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
 
+            if counter.len() > 0 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[0];
+                trace!("counter0 mark 1: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 1 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[1];
+                trace!("counter1 mark 1: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 2 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[2];
+                trace!("counter2 mark 1: {}, {}", dataset_id, size);
+            }
+
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.
-            match_mh
-                .iter_mins()
+            isect.0
+                .iter()
                 .filter_map(|hash| hash_to_color.get(hash))
                 .flat_map(|color| {
                     // TODO: remove this clone
@@ -388,7 +415,32 @@ impl RevIndexOps for RevIndex {
                     });
                 });
 
+            if counter.len() > 0 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[0];
+                trace!("counter0 mark 2: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 1 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[1];
+                trace!("counter1 mark 2: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 2 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[2];
+                trace!("counter2 mark 2: {}, {}", dataset_id, size);
+            }
+
             counter.remove(&dataset_id);
+            if counter.len() > 0 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[0];
+                trace!("counter0 mark 3: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 1 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[1];
+                trace!("counter1 mark 3: {}, {}", dataset_id, size);
+            }
+            if counter.len() > 2 {
+                let (dataset_id, size) = counter.k_most_common_ordered(3)[2];
+                trace!("counter2 mark 3: {}, {}", dataset_id, size);
+            }
         }
         Ok(matches)
     }
