@@ -815,7 +815,7 @@ mod test {
         assert_eq!(names[0], "NC_009486.1");
         assert_eq!(round5(match_.f_match()), round5(0.4842105));
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
-        assert_eq!(match_.unique_intersect_bp, 820000);
+        assert_eq!(match_.unique_intersect_bp, 920000);
         assert_eq!(match_.remaining_bp, 2170000);
 
         Ok(())

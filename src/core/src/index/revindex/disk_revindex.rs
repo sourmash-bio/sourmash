@@ -347,7 +347,12 @@ impl RevIndexOps for RevIndex {
             let gather_result_rank = matches.len();
 
             let query_mh = KmerMinHash::from(query.clone());
+
+            // grab the specific intersection:
             let isect = match_mh.intersection(&query_mh)?;
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0)?;
 
             // Calculate stats
             let gather_result = calculate_gather_stats(
