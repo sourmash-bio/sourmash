@@ -452,9 +452,7 @@ mod test {
     fn manifest_to_writer_moltype_dna() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
-        let test_sigs = vec![
-            PathBuf::from("../../tests/test-data/47.fa.sig"),
-        ];
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/47.fa.sig")];
 
         let full_paths: Vec<PathBuf> = test_sigs
             .into_iter()
