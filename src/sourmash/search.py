@@ -476,7 +476,7 @@ class GatherResult(PrefetchResult):
     orig_query_abunds: list = None
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
-    noident_len: int = None
+    noident_len: int = 0
 
     gather_write_cols = [
         "intersect_bp",
