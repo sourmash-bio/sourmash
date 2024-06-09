@@ -591,8 +591,6 @@ mod test {
 
     #[test]
     fn revindex_load_and_gather_2() -> Result<()> {
-        let _ = env_logger::try_init();
-
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
@@ -752,8 +750,6 @@ mod test {
     // a more detailed/focused version of revindex_load_and_gather_2,
     // added in sourmash#3193 for debugging purposes.
     fn revindex_load_and_gather_3() -> Result<()> {
-        let _ = env_logger::try_init();
-
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
