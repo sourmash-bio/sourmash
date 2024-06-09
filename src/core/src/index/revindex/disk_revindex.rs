@@ -390,7 +390,7 @@ impl RevIndexOps for RevIndex {
                 .for_each(|dataset| {
                     // TODO: collect the flat_map into a Counter, and remove more
                     //       than one at a time...
-                    counter.entry(dataset).and_modify(|e| { *e -= 1 });
+                    counter.entry(dataset).and_modify(|e| *e -= 1);
                 });
 
             counter.remove(&dataset_id);
