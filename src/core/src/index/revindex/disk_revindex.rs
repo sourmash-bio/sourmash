@@ -379,7 +379,8 @@ impl RevIndexOps for RevIndex {
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.
-            isect.0
+            isect
+                .0
                 .iter()
                 .filter_map(|hash| hash_to_color.get(hash))
                 .flat_map(|color| {
