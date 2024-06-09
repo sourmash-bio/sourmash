@@ -4578,11 +4578,11 @@ def test_gather_metagenome_3_thermo(runtmp):
     f_match = float(row["f_match"])
     f_unique_to_query = round(float(row["f_unique_to_query"]), 5)
     unique_intersect_bp = int(row["unique_intersect_bp"])
-    int(row["remaining_bp"])
+    remaining_bp = int(row["remaining_bp"])
     assert f_match == 1.0
     assert f_unique_to_query == round(0.13096862, 5)
     assert unique_intersect_bp == 1920000
-    # assert remaining_bp == 12740000
+    assert remaining_bp == 12740000
 
     # second row
     row = rows[1]
@@ -4590,11 +4590,11 @@ def test_gather_metagenome_3_thermo(runtmp):
     f_match = float(row["f_match"])
     f_unique_to_query = round(float(row["f_unique_to_query"]), 5)
     unique_intersect_bp = int(row["unique_intersect_bp"])
-    int(row["remaining_bp"])
+    remaining_bp = int(row["remaining_bp"])
     assert round(f_match, 5) == round(0.898936170212766, 5)
     assert f_unique_to_query == round(0.115279, 5)
     assert unique_intersect_bp == 1690000
-    # assert remaining_bp == 11050000
+    assert remaining_bp == 11050000
 
     # third row
     row = rows[2]
@@ -4602,11 +4602,11 @@ def test_gather_metagenome_3_thermo(runtmp):
     f_match = float(row["f_match"])
     f_unique_to_query = round(float(row["f_unique_to_query"]), 5)
     unique_intersect_bp = int(row["unique_intersect_bp"])
-    int(row["remaining_bp"])
+    remaining_bp = int(row["remaining_bp"])
     assert round(f_match, 5) == round(0.4842105, 5)
     assert f_unique_to_query == round(0.0627557, 5)
     assert unique_intersect_bp == 920000
-    # assert remaining_bp == 10130000
+    assert remaining_bp == 10130000
 
 
 def test_gather_metagenome(runtmp):
