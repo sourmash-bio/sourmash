@@ -449,6 +449,39 @@ mod test {
     }
 
     #[test]
+    fn manifest_to_writer_moltype_dna() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![
+            PathBuf::from("../../tests/test-data/47.fa.sig"),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+
+        let filename = utf8_output.join("sigs.manifest.csv");
+        let mut wtr = File::create(&filename).expect("Failed to create file");
+
+        manifest.to_writer(&mut wtr).unwrap();
+
+        // check that we can reopen the file as a manifest + properly check abund
+        let infile = File::open(&filename).expect("Failed to open file");
+        let m2 = Manifest::from_reader(&infile).unwrap();
+        for record in m2.iter() {
+            eprintln!("{:?} {}", record.name(), record.moltype());
+            assert_eq!(record.moltype().to_string(), "DNA");
+        }
+    }
+
+    #[test]
     fn manifest_selection() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
