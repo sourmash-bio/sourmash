@@ -226,6 +226,7 @@ pub fn calculate_gather_stats(
     let isect = match_mh.intersection(&query)?;
     let isect_size = isect.0.len();
     trace!("isect_size: {}", isect_size);
+    trace!("query.size: {}", query.size());
 
     //bp remaining in subtracted query
     let remaining_bp = (query.size() - isect_size) * query.scaled() as usize;
