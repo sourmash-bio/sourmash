@@ -4540,6 +4540,7 @@ def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_metagenome_3_thermo(runtmp):
+    # test gather matches in more detail.
     match1 = "gather/GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig"
     match2 = "gather/GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig"
     match3 = "gather/GCF_000008545.1_ASM854v1_genomic.fna.gz.sig"
