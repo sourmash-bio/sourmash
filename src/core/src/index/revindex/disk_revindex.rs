@@ -346,6 +346,14 @@ impl RevIndexOps for RevIndex {
             // just calculate essentials here
             let gather_result_rank = matches.len();
 
+            let query_mh = KmerMinHash::from(query.clone());
+
+            // grab the specific intersection:
+            let isect = match_mh.intersection(&query_mh)?;
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0)?;
+
             // Calculate stats
             let gather_result = calculate_gather_stats(
                 &orig_query_ds,
@@ -371,8 +379,9 @@ impl RevIndexOps for RevIndex {
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.
-            match_mh
-                .iter_mins()
+            isect
+                .0
+                .iter()
                 .filter_map(|hash| hash_to_color.get(hash))
                 .flat_map(|color| {
                     // TODO: remove this clone
@@ -381,11 +390,7 @@ impl RevIndexOps for RevIndex {
                 .for_each(|dataset| {
                     // TODO: collect the flat_map into a Counter, and remove more
                     //       than one at a time...
-                    counter.entry(dataset).and_modify(|e| {
-                        if *e > 0 {
-                            *e -= 1
-                        }
-                    });
+                    counter.entry(dataset).and_modify(|e| { *e -= 1 });
                 });
 
             counter.remove(&dataset_id);

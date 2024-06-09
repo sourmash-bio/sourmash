@@ -14,6 +14,7 @@ pub mod search;
 use std::path::Path;
 
 use getset::{CopyGetters, Getters, Setters};
+use log::trace;
 use serde::{Deserialize, Serialize};
 use stats::{median, stddev};
 use typed_builder::TypedBuilder;
@@ -220,8 +221,15 @@ pub fn calculate_gather_stats(
 ) -> Result<GatherResult> {
     // get match_mh
     let match_mh = match_sig.minhash().unwrap();
+
+    // calculate intersection
+    let isect = match_mh.intersection(&query)?;
+    let isect_size = isect.0.len();
+    trace!("isect_size: {}", isect_size);
+    trace!("query.size: {}", query.size());
+
     //bp remaining in subtracted query
-    let remaining_bp = (query.size() - match_size) * query.scaled() as usize;
+    let remaining_bp = (query.size() - isect_size) * query.scaled() as usize;
 
     // stats for this match vs original query
     let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
@@ -231,8 +239,8 @@ pub fn calculate_gather_stats(
 
     // stats for this match vs current (subtracted) query
     let f_match = match_size as f64 / match_mh.size() as f64;
-    let unique_intersect_bp = match_mh.scaled() as usize * match_size;
-    let f_unique_to_query = match_size as f64 / orig_query.size() as f64;
+    let unique_intersect_bp = match_mh.scaled() as usize * isect_size;
+    let f_unique_to_query = isect_size as f64 / orig_query.size() as f64;
 
     // // get ANI values
     let ksize = match_mh.ksize() as f64;

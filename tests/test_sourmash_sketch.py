@@ -353,7 +353,7 @@ def test_protein_override_bad_rust_foo():
     with pytest.raises(ValueError) as exc:
         sig.add_protein(record.sequence)
 
-    assert 'Invalid hash function: "dna"' in str(exc)
+    assert 'Invalid hash function: "DNA"' in str(exc)
 
 
 def test_dayhoff_defaults():
