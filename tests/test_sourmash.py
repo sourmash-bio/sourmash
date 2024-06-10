@@ -4539,6 +4539,77 @@ def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
     assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
+def test_gather_metagenome_3_thermo(runtmp):
+    # test gather matches in more detail.
+    match1 = "gather/GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig"
+    match2 = "gather/GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig"
+    match3 = "gather/GCF_000008545.1_ASM854v1_genomic.fna.gz.sig"
+
+    match1 = utils.get_test_data(match1)
+    match2 = utils.get_test_data(match2)
+    match3 = utils.get_test_data(match3)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    runtmp.sourmash(
+        "gather",
+        query_sig,
+        match1,
+        match2,
+        match3,
+        "-k",
+        "21",
+        "--threshold-bp=0",
+        "-o",
+        "match3.csv",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    outfile = runtmp.output("match3.csv")
+    with sourmash_args.FileInputCSV(outfile) as r:
+        rows = list(r)
+
+    assert len(rows) == 3
+
+    # first row
+    row = rows[0]
+    assert row["name"].startswith("NC_000853.1 ")
+    f_match = float(row["f_match"])
+    f_unique_to_query = round(float(row["f_unique_to_query"]), 5)
+    unique_intersect_bp = int(row["unique_intersect_bp"])
+    remaining_bp = int(row["remaining_bp"])
+    assert f_match == 1.0
+    assert f_unique_to_query == round(0.13096862, 5)
+    assert unique_intersect_bp == 1920000
+    assert remaining_bp == 12740000
+
+    # second row
+    row = rows[1]
+    assert row["name"].startswith("NC_011978.1 ")
+    f_match = float(row["f_match"])
+    f_unique_to_query = round(float(row["f_unique_to_query"]), 5)
+    unique_intersect_bp = int(row["unique_intersect_bp"])
+    remaining_bp = int(row["remaining_bp"])
+    assert round(f_match, 5) == round(0.898936170212766, 5)
+    assert f_unique_to_query == round(0.115279, 5)
+    assert unique_intersect_bp == 1690000
+    assert remaining_bp == 11050000
+
+    # third row
+    row = rows[2]
+    assert row["name"].startswith("NC_009486.1 ")
+    f_match = float(row["f_match"])
+    f_unique_to_query = round(float(row["f_unique_to_query"]), 5)
+    unique_intersect_bp = int(row["unique_intersect_bp"])
+    remaining_bp = int(row["remaining_bp"])
+    assert round(f_match, 5) == round(0.4842105, 5)
+    assert f_unique_to_query == round(0.0627557, 5)
+    assert unique_intersect_bp == 920000
+    assert remaining_bp == 10130000
+
+
 def test_gather_metagenome(runtmp):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)

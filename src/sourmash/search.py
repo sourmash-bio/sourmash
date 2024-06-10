@@ -476,6 +476,7 @@ class GatherResult(PrefetchResult):
     orig_query_abunds: list = None
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
+    noident_len: int = 0
 
     gather_write_cols = [
         "intersect_bp",
@@ -589,7 +590,8 @@ class GatherResult(PrefetchResult):
 
         # here, need to make sure to use the mh1_cmp (bc was downsampled to cmp_scaled)
         self.remaining_bp = (
-            self.gather_comparison.mh1_cmp.unique_dataset_hashes
+            self.noident_len
+            + self.gather_comparison.mh1_cmp.unique_dataset_hashes
             - self.gather_comparison.total_unique_intersect_hashes
         )
 
@@ -937,6 +939,7 @@ class GatherDatabases:
             estimate_ani_ci=self.estimate_ani_ci,
             sum_weighted_found=sum_weighted_found,
             total_weighted_hashes=total_weighted_hashes,
+            noident_len=len(self.noident_mh) * self.noident_mh.scaled,
         )
 
         self.result_n += 1
