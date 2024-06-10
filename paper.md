@@ -1,5 +1,5 @@
 ---
-title: 'sourmash v4: a multitool to quickly search, compare, and analyze genomic
+title: 'sourmash v4: A multitool to quickly search, compare, and analyze genomic
 and metagenomic data sets'
 tags:
   - FracMinHash
