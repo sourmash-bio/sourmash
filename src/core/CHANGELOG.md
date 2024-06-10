@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.14.0] - 2024-06-10
+
+MSRV: 1.65
+
+Changes/additions:
+
+* fix cargo fmt for updated `disk_revindex.rs` code (#3197)
+* fix RocksDB-based gather & other rust-based infelicities revealed by plugins (#3193)
+* use correct denominator in f_unique_to_query (#3138)
+* fix clippy warnings about max_value (#3146)
+* allow get/set record.filename (#3121)
+
+Updates:
+
+* Bump statrs from 0.16.0 to 0.16.1 (#3186)
+* Bump serde from 1.0.202 to 1.0.203 (#3175)
+* Bump ouroboros from 0.18.3 to 0.18.4 (#3176)
+* Bump itertools from 0.12.1 to 0.13.0 (#3166)
+* Bump camino from 1.1.6 to 1.1.7 (#3169)
+* Bump serde from 1.0.201 to 1.0.202 (#3168)
+* Bump serde_json from 1.0.116 to 1.0.117 (#3159)
+* Bump serde from 1.0.200 to 1.0.201 (#3160)
+* Bump roaring from 0.10.3 to 0.10.4 (#3142)
+* Bump histogram from 0.10.0 to 0.10.1 (#3141)
+* Bump num-iter from 0.1.44 to 0.1.45 (#3140)
+* Bump serde from 1.0.199 to 1.0.200 (#3144)
+* Bump serde from 1.0.198 to 1.0.199 (#3130)
+* Bump serde_json from 1.0.115 to 1.0.116 (#3124)
+* Bump serde from 1.0.197 to 1.0.198 (#3122)
+* Bump histogram from 0.9.1 to 0.10.0 (#3109)
+* Bump enum_dispatch from 0.3.12 to 0.3.13 (#3102)
+* Bump serde_json from 1.0.114 to 1.0.115 (#3101)
+* Bump rayon from 1.9.0 to 1.10.0 (#3098)
+
 ## [0.13.1] - 2024-03-23
 
 MSRV: 1.65
