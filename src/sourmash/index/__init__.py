@@ -1227,22 +1227,27 @@ class StandaloneManifestIndex(Index):
 
 
 def _check_select_parameters(**kw):
-    ksize = kw.get('ksize')
+    ksize = kw.get("ksize")
     if ksize is not None:
-        if type(ksize) != int: raise ValueError(f"{type(ksize)}")
+        if type(ksize) != int:
+            raise ValueError(f"{type(ksize)}")
 
-    moltype = kw.get('moltype')
+    moltype = kw.get("moltype")
     if moltype is not None:
-        if moltype not in ['DNA', 'protein', 'dayhoff', 'hp']: raise ValueError
+        if moltype not in ["DNA", "protein", "dayhoff", "hp"]:
+            raise ValueError
 
-    scaled = kw.get('scaled')
+    scaled = kw.get("scaled")
     if scaled is not None:
-        if type(scaled) not in [bool, int]: raise ValueError(f"{type(scaled)}")
+        if type(scaled) not in [bool, int]:
+            raise ValueError(f"{type(scaled)}")
 
-    abund = kw.get('abund')
+    abund = kw.get("abund")
     if abund is not None:
-        if type(abund) != bool: raise ValueError(f"{type(abund)}")
+        if type(abund) != bool:
+            raise ValueError(f"{type(abund)}")
 
-    num = kw.get('num')
+    num = kw.get("num")
     if num is not None:
-        if type(num) != int: raise ValueError(f"{type(num)}")
+        if type(num) != int:
+            raise ValueError(f"{type(num)}")
