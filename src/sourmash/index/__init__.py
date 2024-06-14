@@ -443,6 +443,8 @@ class LinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
+        _check_select_parameters(**kwargs)
+
         siglist = []
         for ss in self._signatures:
             if select_signature(ss, **kwargs):
@@ -512,6 +514,8 @@ class LazyLinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
+        _check_select_parameters(**kwargs)
+
         selection_dict = dict(self.selection_dict)
         for k, v in kwargs.items():
             if k in selection_dict:
@@ -689,6 +693,7 @@ class ZipFileLinearIndex(Index):
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
+        _check_select_parameters(**kwargs)
 
         # if we have a manifest, run 'select' on the manifest.
         manifest = self.manifest
@@ -1101,6 +1106,7 @@ class MultiIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
+        _check_select_parameters(**kwargs)
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(
             new_manifest, self.parent, prepend_location=self.prepend_location
@@ -1215,5 +1221,28 @@ class StandaloneManifestIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
+        _check_select_parameters(**kwargs)
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return StandaloneManifestIndex(new_manifest, self._location, prefix=self.prefix)
+
+
+def _check_select_parameters(**kw):
+    ksize = kw.get('ksize')
+    if ksize is not None:
+        if type(ksize) != int: raise ValueError(f"{type(ksize)}")
+
+    moltype = kw.get('moltype')
+    if moltype is not None:
+        if moltype not in ['DNA', 'protein', 'dayhoff', 'hp']: raise ValueError
+
+    scaled = kw.get('scaled')
+    if scaled is not None:
+        if type(scaled) not in [bool, int]: raise ValueError(f"{type(scaled)}")
+
+    abund = kw.get('abund')
+    if abund is not None:
+        if type(abund) != bool: raise ValueError(f"{type(abund)}")
+
+    num = kw.get('num')
+    if num is not None:
+        if type(num) != int: raise ValueError(f"{type(num)}")
