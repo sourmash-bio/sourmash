@@ -1262,7 +1262,7 @@ def _check_select_parameters(**kw):
     abund = kw.get("abund")
     if abund is not None:
         if type(abund) != bool:
-            raise ValueError(f"abund value '{abund}' must be a bool is: {type(abund)}")
+            raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
 
     num = kw.get("num")
     if num is not None:

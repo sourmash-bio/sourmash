@@ -20,7 +20,8 @@ from io import StringIO
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index, IndexSearchResult, CollectionManifest
+from .index import (Index, IndexSearchResult, CollectionManifest,
+                    _check_select_parameters)
 from .picklist import passes_all_picklists
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
@@ -193,8 +194,7 @@ class SBT(Index):
             ss = k.data
             yield ss, k._path
 
-    def select(
-        self,
+    def select(self,
         ksize=None,
         moltype=None,
         num=0,
@@ -202,6 +202,7 @@ class SBT(Index):
         containment=False,
         abund=None,
         picklist=None,
+        **kwargs,
     ):
         """Make sure this database matches the requested requirements.
 
@@ -220,6 +221,10 @@ class SBT(Index):
           implicitly downsample or necessarily estimate similarity if
           the scaled values differ.
         """
+        _check_select_parameters(ksize=ksize, num=num, moltype=moltype,
+                                 scaled=scaled, containment=containment,
+                                 abund=abund, picklist=picklist, **kwargs)
+
         # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))
         db_mh = first_sig.minhash

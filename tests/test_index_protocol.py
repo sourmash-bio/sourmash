@@ -364,6 +364,18 @@ def test_index_select_fail(index_obj):
     with pytest.raises(ValueError):
         index_obj.select(scaled=1000.1)
 
+    # non-int num
+    with pytest.raises(ValueError):
+        index_obj.select(num=1000.1)
+
+    # non-bool abund
+    with pytest.raises(ValueError):
+        index_obj.select(abund=1)
+
+    # extra parameters
+    with pytest.raises(ValueError):
+        index_obj.select(plausible_extra_parameter=5)
+
 
 def test_index_select_nada(index_obj):
     # select works ok when nothing matches!
