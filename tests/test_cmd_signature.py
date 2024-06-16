@@ -1857,10 +1857,9 @@ def test_sig_extract_5_to_zip(runtmp):
     # extract nothing (no name match)
     sig47 = utils.get_test_data("47.fa.sig")
     with pytest.raises(SourmashCommandFailed):
-        c.run_sourmash("sig", "extract", sig47, "--name", "FOO",
-                       '-o', 'xyz.sig.zip')
+        c.run_sourmash("sig", "extract", sig47, "--name", "FOO", "-o", "xyz.sig.zip")
 
-    outfile = runtmp.output('xyz.sig.zip')
+    outfile = runtmp.output("xyz.sig.zip")
 
     assert os.path.exists(outfile)
     assert list(sourmash.load_file_as_signatures(outfile)) == []
