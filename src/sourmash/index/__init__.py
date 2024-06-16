@@ -1228,27 +1228,38 @@ class StandaloneManifestIndex(Index):
 
 def _check_select_parameters(**kw):
     "Check 'select' parameters for types/conversion."
+    params = set(kw)
+    params -= {'ksize', 'num', 'moltype', 'scaled', 'abund', 'picklist',
+               'containment'}
+    if params:
+        raise ValueError(f"unknown 'select' parameters: {params}")
+
     ksize = kw.get("ksize")
     if ksize is not None:
         if type(ksize) != int:
-            raise ValueError(f"{type(ksize)}")
+            raise ValueError(f"ksize value '{ksize}' must be an integer, is: {type(ksize)}")
 
     moltype = kw.get("moltype")
     if moltype is not None:
         if moltype not in ["DNA", "protein", "dayhoff", "hp"]:
-            raise ValueError
+            raise ValueError(f"unknown moltype: {moltype}")
 
     scaled = kw.get("scaled")
     if scaled is not None:
-        if type(scaled) not in [bool, int]:
-            raise ValueError(f"{type(scaled)}")
+        if type(scaled) != int:
+            raise ValueError(f"scaled value '{scaled}' must be an integer, is: {type(scaled)}")
+
+    containment = kw.get("containment")
+    if containment is not None:
+        if type(containment) != bool:
+            raise ValueError(f"containment value '{containment}' must be a bool, is: {type(containment)}")
 
     abund = kw.get("abund")
     if abund is not None:
         if type(abund) != bool:
-            raise ValueError(f"{type(abund)}")
+            raise ValueError(f"abund value '{abund}' must be a bool is: {type(abund)}")
 
     num = kw.get("num")
     if num is not None:
         if type(num) != int:
-            raise ValueError(f"{type(num)}")
+            raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")

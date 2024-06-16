@@ -8,7 +8,7 @@ import os.path
 from abc import abstractmethod
 import itertools
 
-from sourmash import picklist
+from sourmash import picklist, index
 
 
 class BaseCollectionManifest:
@@ -298,21 +298,11 @@ class CollectionManifest(BaseCollectionManifest):
 
         Internal method; call `select_to_manifest` instead.
         """
-        if ksize is not None:
-            if type(ksize) != int:
-                raise ValueError(f"{type(ksize)}")
-        if moltype is not None:
-            if moltype not in ["DNA", "protein", "dayhoff", "hp"]:
-                raise ValueError
-        if scaled is not None:
-            if type(scaled) not in [bool, int]:
-                raise ValueError(f"{type(scaled)}")
-        if abund is not None:
-            if type(abund) != bool:
-                raise ValueError(f"{type(abund)}")
-        if num is not None:
-            if type(num) != int:
-                raise ValueError(f"{type(num)}")
+        index._check_select_parameters(ksize=ksize,
+                                       num=num,
+                                       abund=abund,
+                                       moltype=moltype,
+                                       scaled=scaled)
 
         matching_rows = self.rows
         if ksize:
@@ -320,9 +310,6 @@ class CollectionManifest(BaseCollectionManifest):
         if moltype:
             matching_rows = (row for row in matching_rows if row["moltype"] == moltype)
         if scaled or containment:
-            if containment and not scaled:
-                raise ValueError("'containment' requires 'scaled' in Index.select'")
-
             matching_rows = (
                 row for row in matching_rows if row["scaled"] and not row["num"]
             )

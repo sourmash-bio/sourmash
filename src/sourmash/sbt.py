@@ -238,8 +238,6 @@ class SBT(Index):
 
         # containment requires 'scaled'.
         if containment:
-            if not scaled:
-                raise ValueError("'containment' requires 'scaled' in SBT.select'")
             if not db_mh.scaled:
                 raise ValueError(
                     "cannot search this SBT for containment; signatures are not calculated with scaled"
