@@ -1772,8 +1772,9 @@ def test_sig_extract_1_from_file(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
-@utils.in_tempdir
-def test_sig_extract_2(c):
+def test_sig_extract_2(runtmp):
+    c = runtmp
+
     # extract matches to 47's md5sum from among several
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -1791,8 +1792,9 @@ def test_sig_extract_2(c):
     assert actual_extract_sig == test_extract_sig
 
 
-@utils.in_tempdir
-def test_sig_extract_2_zipfile(c):
+def test_sig_extract_2_zipfile(runtmp):
+    c = runtmp
+
     # extract matches to 47's md5sum from among several in a zipfile
     all_zip = utils.get_test_data("prot/all.zip")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -1811,16 +1813,18 @@ def test_sig_extract_2_zipfile(c):
     assert actual_extract_sig == test_extract_sig
 
 
-@utils.in_tempdir
-def test_sig_extract_3(c):
+def test_sig_extract_3(runtmp):
+    c = runtmp
+
     # extract nothing (no md5 match)
     sig47 = utils.get_test_data("47.fa.sig")
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash("sig", "extract", sig47, "--md5", "FOO")
 
 
-@utils.in_tempdir
-def test_sig_extract_4(c):
+def test_sig_extract_4(runtmp):
+    c = runtmp
+
     # extract matches to 47's name from among several signatures
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -1838,16 +1842,33 @@ def test_sig_extract_4(c):
     assert actual_extract_sig == test_extract_sig
 
 
-@utils.in_tempdir
-def test_sig_extract_5(c):
+def test_sig_extract_5(runtmp):
+    c = runtmp
+
     # extract nothing (no name match)
     sig47 = utils.get_test_data("47.fa.sig")
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash("sig", "extract", sig47, "--name", "FOO")
 
 
-@utils.in_tempdir
-def test_sig_extract_6(c):
+def test_sig_extract_5_to_zip(runtmp):
+    c = runtmp
+
+    # extract nothing (no name match)
+    sig47 = utils.get_test_data("47.fa.sig")
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash("sig", "extract", sig47, "--name", "FOO",
+                       '-o', 'xyz.sig.zip')
+
+    outfile = runtmp.output('xyz.sig.zip')
+
+    assert os.path.exists(outfile)
+    assert list(sourmash.load_file_as_signatures(outfile)) == []
+
+
+def test_sig_extract_6(runtmp):
+    c = runtmp
+
     # extract matches to several names from among several signatures
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -1862,8 +1883,9 @@ def test_sig_extract_6(c):
     assert len(siglist) == 2
 
 
-@utils.in_tempdir
-def test_sig_extract_7(c):
+def test_sig_extract_7(runtmp):
+    c = runtmp
+
     # extract matches based on ksize
     sig2 = utils.get_test_data("2.fa.sig")
     c.run_sourmash("sig", "extract", sig2, "-k", "31")
@@ -1877,8 +1899,9 @@ def test_sig_extract_7(c):
     assert len(siglist) == 1
 
 
-@utils.in_tempdir
-def test_sig_extract_7_no_ksize(c):
+def test_sig_extract_7_no_ksize(runtmp):
+    c = runtmp
+
     # extract all three matches when -k not specified
     sig2 = utils.get_test_data("2.fa.sig")
     c.run_sourmash("sig", "extract", sig2)
