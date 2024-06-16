@@ -146,15 +146,17 @@ class BaseCollectionManifest:
     @classmethod
     def make_manifest_row(cls, ss, location, *, include_signature=True):
         "make a manifest row dictionary."
+        mh = ss.minhash
+
         row = {}
         row["md5"] = ss.md5sum()
         row["md5short"] = row["md5"][:8]
-        row["ksize"] = ss.minhash.ksize
-        row["moltype"] = ss.minhash.moltype
-        row["num"] = ss.minhash.num
-        row["scaled"] = ss.minhash.scaled
-        row["n_hashes"] = len(ss.minhash)
-        row["with_abundance"] = 1 if ss.minhash.track_abundance else 0
+        row["ksize"] = int(mh.ksize)
+        row["moltype"] = mh.moltype
+        row["num"] = int(mh.num)
+        row["scaled"] = int(mh.scaled)
+        row["n_hashes"] = len(mh)
+        row["with_abundance"] = mh.track_abundance
         row["name"] = ss.name
         row["filename"] = ss.filename
         row["internal_location"] = location
@@ -223,6 +225,17 @@ class BaseCollectionManifest:
     @abstractmethod
     def to_picklist(self):
         "Convert manifest to a picklist."
+
+    def _check_row_values(self):
+        "check that manifest rows have legit types/values."
+        for row in self.rows:
+            index._check_select_parameters(
+                num=row["num"],
+                ksize=row["ksize"],
+                moltype=row["moltype"],
+                scaled=row["scaled"],
+                abund=row["with_abundance"],
+            )
 
 
 class CollectionManifest(BaseCollectionManifest):

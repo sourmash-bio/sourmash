@@ -896,7 +896,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                 name=name,
                 filename=filename,
                 n_hashes=n_hashes,
-                with_abundance=0,
+                with_abundance=False,
                 ksize=ksize,
                 md5=md5sum,
                 internal_location=iloc,
