@@ -346,7 +346,7 @@ def test_index_select_basic(index_obj):
 def test_index_select_fail(index_obj):
     # non-int ksize - str
     with pytest.raises(ValueError):
-        index_obj.select(ksize='31')
+        index_obj.select(ksize="31")
 
     # non-int ksize - float
     with pytest.raises(ValueError):
@@ -354,11 +354,11 @@ def test_index_select_fail(index_obj):
 
     # case sensitive moltype
     with pytest.raises(ValueError):
-        index_obj.select(moltype='dna')
+        index_obj.select(moltype="dna")
 
     # unknown moltype
     with pytest.raises(ValueError):
-        index_obj.select(moltype='foo')
+        index_obj.select(moltype="foo")
 
     # non-int scaled
     with pytest.raises(ValueError):

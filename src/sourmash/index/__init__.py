@@ -1229,15 +1229,16 @@ class StandaloneManifestIndex(Index):
 def _check_select_parameters(**kw):
     "Check 'select' parameters for types/conversion."
     params = set(kw)
-    params -= {'ksize', 'num', 'moltype', 'scaled', 'abund', 'picklist',
-               'containment'}
+    params -= {"ksize", "num", "moltype", "scaled", "abund", "picklist", "containment"}
     if params:
         raise ValueError(f"unknown 'select' parameters: {params}")
 
     ksize = kw.get("ksize")
     if ksize is not None:
         if type(ksize) != int:
-            raise ValueError(f"ksize value '{ksize}' must be an integer, is: {type(ksize)}")
+            raise ValueError(
+                f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
+            )
 
     moltype = kw.get("moltype")
     if moltype is not None:
@@ -1247,12 +1248,16 @@ def _check_select_parameters(**kw):
     scaled = kw.get("scaled")
     if scaled is not None:
         if type(scaled) != int:
-            raise ValueError(f"scaled value '{scaled}' must be an integer, is: {type(scaled)}")
+            raise ValueError(
+                f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
+            )
 
     containment = kw.get("containment")
     if containment is not None:
         if type(containment) != bool:
-            raise ValueError(f"containment value '{containment}' must be a bool, is: {type(containment)}")
+            raise ValueError(
+                f"containment value '{containment}' must be a bool, is: {type(containment)}"
+            )
 
     abund = kw.get("abund")
     if abund is not None:

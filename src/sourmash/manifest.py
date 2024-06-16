@@ -298,11 +298,9 @@ class CollectionManifest(BaseCollectionManifest):
 
         Internal method; call `select_to_manifest` instead.
         """
-        index._check_select_parameters(ksize=ksize,
-                                       num=num,
-                                       abund=abund,
-                                       moltype=moltype,
-                                       scaled=scaled)
+        index._check_select_parameters(
+            ksize=ksize, num=num, abund=abund, moltype=moltype, scaled=scaled
+        )
 
         matching_rows = self.rows
         if ksize:
