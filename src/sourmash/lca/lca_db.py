@@ -255,9 +255,16 @@ class LCA_Database(Index):
 
         Will always raise ValueError if a requirement cannot be met.
         """
-        _check_select_parameters(ksize=ksize, num=num, moltype=moltype,
-                                 scaled=scaled, containment=containment,
-                                 abund=abund, picklist=picklist, **kwargs)
+        _check_select_parameters(
+            ksize=ksize,
+            num=num,
+            moltype=moltype,
+            scaled=scaled,
+            containment=containment,
+            abund=abund,
+            picklist=picklist,
+            **kwargs,
+        )
 
         if num:
             raise ValueError("cannot use 'num' MinHashes to search LCA database")
