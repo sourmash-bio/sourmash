@@ -1227,6 +1227,7 @@ class StandaloneManifestIndex(Index):
 
 
 def _check_select_parameters(**kw):
+    "Check 'select' parameters for types/conversion."
     ksize = kw.get("ksize")
     if ksize is not None:
         if type(ksize) != int:
