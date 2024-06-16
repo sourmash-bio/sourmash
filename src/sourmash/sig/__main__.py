@@ -815,11 +815,11 @@ def extract(args):
             save_sigs.add(ss)
 
     notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
+    save_sigs.close()
+
     if not save_sigs:
         error("no matching signatures to save!")
         sys.exit(-1)
-
-    save_sigs.close()
 
     notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 
