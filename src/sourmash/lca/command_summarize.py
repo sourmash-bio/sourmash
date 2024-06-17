@@ -2,6 +2,7 @@
 """
 Summarize the taxonomic content of the given signatures, combined.
 """
+
 import sys
 import csv
 from collections import defaultdict

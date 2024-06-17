@@ -2,6 +2,7 @@
 """
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
+
 import sys
 import os
 import weakref
@@ -367,7 +368,7 @@ def _detect_input_type(data):
         except TypeError:
             if data.find(b"sourmash_signature") > 0:
                 return SigInput.BUFFER
-            elif data.startswith(b"\x1F\x8B"):  # gzip compressed
+            elif data.startswith(b"\x1f\x8b"):  # gzip compressed
                 return SigInput.BUFFER
 
     try:

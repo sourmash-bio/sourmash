@@ -1,6 +1,7 @@
 """
 Tests for `sourmash prefetch` command-line and API functionality.
 """
+
 import os
 import csv
 import gzip

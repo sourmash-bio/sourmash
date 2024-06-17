@@ -4,6 +4,7 @@ sourmash submodule that provides MinHash class and utility functions.
 class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
+
 from .distance_utils import (
     jaccard_to_distance,
     containment_to_distance,

@@ -1,6 +1,7 @@
 """
 Tests for Index classes and subclasses.
 """
+
 import pytest
 import glob
 import os
