@@ -9,6 +9,7 @@ Two key features of picklists is that they can be passed into Index.select
 and operate efficiently on manifests, so when used with e.g. zipfiles,
 only the selected sketches are loaded.
 """
+
 import csv
 import os
 from enum import Enum

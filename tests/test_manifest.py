@@ -1,6 +1,7 @@
 """
 Tests for manifest code in databases, etc.
 """
+
 import pytest
 from io import StringIO
 

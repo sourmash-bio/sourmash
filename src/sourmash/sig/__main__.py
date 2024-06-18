@@ -1,6 +1,7 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+
 __all__ = [
     "cat",
     "split",
@@ -81,9 +82,7 @@ sourmash signature merge -h
 def _check_abundance_compatibility(sig1, sig2):
     if sig1.minhash.track_abundance != sig2.minhash.track_abundance:
         raise ValueError(
-            "incompatible signatures: track_abundance is {} in first sig, {} in second".format(
-                sig1.minhash.track_abundance, sig2.minhash.track_abundance
-            )
+            f"incompatible signatures: track_abundance is {sig1.minhash.track_abundance} in first sig, {sig2.minhash.track_abundance} in second"
         )
 
 
@@ -816,11 +815,11 @@ def extract(args):
             save_sigs.add(ss)
 
     notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
+    save_sigs.close()
+
     if not save_sigs:
         error("no matching signatures to save!")
         sys.exit(-1)
-
-    save_sigs.close()
 
     notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 

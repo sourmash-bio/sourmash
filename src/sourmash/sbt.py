@@ -3,7 +3,6 @@
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 """
 
-
 from collections import namedtuple, Counter
 from collections.abc import Mapping
 
@@ -108,7 +107,7 @@ class _NodesCache(Cache):
             # we just need to select the maximum key/node id
             (key, _) = max(c for c in common if c[1] == count)
         except IndexError:
-            msg = "%s is empty" % self.__class__.__name__
+            msg = f"{self.__class__.__name__} is empty"
             raise KeyError(msg) from None
         else:
             value = self.pop(key)
@@ -1419,11 +1418,7 @@ class Node:
         self.metadata = {}
 
     def __str__(self):
-        return "*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]".format(
-            name=self.name,
-            nb=self.data.n_occupied(),
-            fpr=calc_expected_collisions(self.data, True, 1.1),
-        )
+        return f"*Node:{self.name} [occupied: {self.data.n_occupied()}, fpr: {calc_expected_collisions(self.data, True, 1.1):.2}]"
 
     def save(self, path):
         buf = self.data.to_bytes(compression=1)
@@ -1483,12 +1478,7 @@ class Leaf:
         self._path = path
 
     def __str__(self):
-        return "**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}".format(
-            name=self.name,
-            metadata=self.metadata,
-            nb=self.data.n_occupied(),
-            fpr=calc_expected_collisions(self.data, True, 1.1),
-        )
+        return f"**Leaf:{self.name} [occupied: {self.data.n_occupied()}, fpr: {calc_expected_collisions(self.data, True, 1.1):.2}] -> {self.metadata}"
 
     def make_manifest_row(self, location):
         return None
