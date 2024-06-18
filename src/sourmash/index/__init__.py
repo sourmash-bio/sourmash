@@ -1235,7 +1235,7 @@ def _check_select_parameters(**kw):
 
     ksize = kw.get("ksize")
     if ksize is not None:
-        if type(ksize) != int:
+        if not isinstance(ksize, int):
             raise ValueError(
                 f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
             )
@@ -1247,24 +1247,24 @@ def _check_select_parameters(**kw):
 
     scaled = kw.get("scaled")
     if scaled is not None:
-        if type(scaled) != int:
+        if not isinstance(scaled, int):
             raise ValueError(
                 f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
             )
 
     containment = kw.get("containment")
     if containment is not None:
-        if type(containment) != bool:
+        if not isinstance(containment, bool):
             raise ValueError(
                 f"containment value '{containment}' must be a bool, is: {type(containment)}"
             )
 
     abund = kw.get("abund")
     if abund is not None:
-        if type(abund) != bool:
+        if not isinstance(abund, bool):
             raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
 
     num = kw.get("num")
     if num is not None:
-        if type(num) != int:
+        if not isinstance(num, int):
             raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")
