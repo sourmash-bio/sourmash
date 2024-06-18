@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash lca' command line and high level API.
 """
+
 import os
 import shutil
 import csv

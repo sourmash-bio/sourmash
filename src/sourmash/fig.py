@@ -2,6 +2,7 @@
 """
 Make plots using the distance matrix+labels output by `sourmash compare`.
 """
+
 from .logging import error, notify
 
 try:

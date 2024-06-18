@@ -15,6 +15,7 @@ Please see https://sourmash.readthedocs.io/en/latest/api.html for API docs.
 The sourmash code is available at github.com/sourmash-bio/sourmash/ under the
 BSD 3-Clause license.
 """
+
 from deprecation import deprecated
 from importlib.metadata import version
 
