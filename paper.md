@@ -129,7 +129,7 @@ of DNA, RNA, and amino acid k-mers for biological sequence search, comparison,
 and analysis [@Pierce:2019]. sourmash's FracMinHash sketching supports fast and
 accurate sequence comparisons between datasets of different sizes [@gather],
 including taxonomic profiling [@portik2022evaluation], functional profiling
-[@liu2023fast], and petabase-scale sequence search [@branchwater]. From
+[@hera2023fast], and petabase-scale sequence search [@branchwater]. From
 release 4.x, sourmash is built on top of Rust and provides an experimental
 Rust interface.
 
@@ -150,14 +150,14 @@ and Containment calculations, which enables analysis and comparison of data
 sets of different sizes, including large metagenomic samples. As of v4.4,
 sourmash can convert these to estimated Average Nucleotide Identity (ANI)
 values, which can provide improved biological context to sketch comparisons
-[@hera2022debiasing].
+[@hera2022deriving].
 
 # Statement of Need
 
 Large collections of genomes, transcriptomes, and raw sequencing data sets are
 readily available in biology, and the field needs lightweight computational
 methods for searching and summarizing the content of both public and private
-collections. sourmash provides a flexible set of programmatic functionality
+collections. sourmash provides a flexible set of programmatic tools
 for this purpose, together with a robust and well-tested command-line
 interface. It has been used in over 350 publications (based on citations of
 @Brown:2016 and @Pierce:2019) and it continues to expand in functionality.
