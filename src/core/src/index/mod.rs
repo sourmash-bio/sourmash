@@ -245,7 +245,6 @@ pub fn calculate_gather_stats(
     // // get ANI values
     let ksize = match_mh.ksize() as f64;
     let query_containment_ani = ani_from_containment(f_orig_query, ksize);
-    // trace!("query_containment_ani: {}, {}", f_unique_to_query, query_containment_ani);
     let match_containment_ani = ani_from_containment(f_match_orig, ksize);
     let mut query_containment_ani_ci_low = None;
     let mut query_containment_ani_ci_high = None;
