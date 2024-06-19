@@ -814,6 +814,7 @@ mod test {
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.13096862));
         assert_eq!(match_.unique_intersect_bp, 1920000);
         assert_eq!(match_.remaining_bp, 12740000);
+        assert_eq!(round5(match_.query_containment_ani()), round5(0.90773763));
 
         let match_ = &matches[1];
         let names: Vec<&str> = match_.name().split(' ').take(1).collect();
@@ -822,6 +823,7 @@ mod test {
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.115279));
         assert_eq!(match_.unique_intersect_bp, 1690000);
         assert_eq!(match_.remaining_bp, 11050000);
+        assert_eq!(round5(match_.query_containment_ani()), round5(0.9068280));
 
         let match_ = &matches[2];
         dbg!(match_);
@@ -831,6 +833,7 @@ mod test {
         assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
         assert_eq!(match_.unique_intersect_bp, 920000);
         assert_eq!(match_.remaining_bp, 10130000);
+        assert_eq!(round5(match_.query_containment_ani()), round5(0.90728512));
 
         Ok(())
     }
