@@ -150,7 +150,7 @@ and Containment calculations, which enables analysis and comparison of data
 sets of different sizes, including large metagenomic samples. As of v4.4,
 sourmash can convert these to estimated Average Nucleotide Identity (ANI)
 values, which can provide improved biological context to sketch comparisons
-[@hera2022deriving].
+[@hera2023deriving].
 
 # Statement of Need
 
