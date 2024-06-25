@@ -99,21 +99,21 @@ authors:
    corresponding: true
    affiliation: 1
 affiliations:
- - name: University of California, Davis
+ - name: University of California Davis, Davis, CA, United States of America
    index: 1
- - name: Woods Hole Oceanographic Institution
+ - name: Woods Hole Oceanic Institution, Woods Hole, MA, Unites States of America
    index: 2
- - name: Chan-Zuckerberg Biohub
+ - name: Chan-Zuckerberg Biohub, San Francisco, CA, United States of America
    index: 3
- - name:  Pennsylvania State University
+ - name:  Pennsylvania State University, University Park, PA, United States of America
    index: 4
- - name:  MPI for Evolutionary Biology
+ - name:  Max Plank Institute for Evolutionary Biology, Plön, Germany
    index: 5
- - name: Swedish Defence Research Agency (FOI)
+ - name: Swedish Defence Research Agency (FOI), Stockholm, Sweden
    index: 6
- - name: National Bioforensic Analysis Center
+ - name: National Bioforensic Analysis Center, Fort Detrick, MD, United States of America
    index: 7
- - name: Washington University in St Louis
+ - name: Washington University in St Louis, St Louis, MO, United States of America
    index: 8
  - name: No affiliation
    index: 9
