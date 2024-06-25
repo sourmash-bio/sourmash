@@ -107,7 +107,7 @@ affiliations:
    index: 3
  - name:  Pennsylvania State University, University Park, PA, United States of America
    index: 4
- - name:  Max Plank Institute for Evolutionary Biology, Plön, Germany
+ - name:  Max Planck Institute for Evolutionary Biology, Plön, Germany
    index: 5
  - name: Swedish Defence Research Agency (FOI), Stockholm, Sweden
    index: 6
