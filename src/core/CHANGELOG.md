@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.14.1] - 2024-06-19
+
+MSRV: 1.65
+
+Changes/additions:
+
+* adjust how ANI is calculated in the revindex code. (#3218)
+
+Updates:
+
+* Bump histogram from 0.10.2 to 0.11.0 (#3216)
+* Bump histogram from 0.10.1 to 0.10.2 (#3207)
+* Bump statrs from 0.16.1 to 0.17.1 (#3205)
+* Bump roaring from 0.10.4 to 0.10.5 (#3206)
+* Bump primal-check from 0.3.3 to 0.3.4 (#3208)
+* Bump niffler from 2.5.0 to 2.6.0 (#3204)
+
 ## [0.14.0] - 2024-06-10
 
 MSRV: 1.65
