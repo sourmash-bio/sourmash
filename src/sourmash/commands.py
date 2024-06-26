@@ -1589,7 +1589,7 @@ def prefetch(args):
         if args.linear:
             db = LazyLinearIndex(db)
 
-        db = db.select(ksize=ksize, moltype=moltype, containment=True, scaled=True)
+        db = db.select(ksize=ksize, moltype=moltype, containment=True)
 
         sum_signatures_after_select += len(db)
 

@@ -82,7 +82,7 @@ import itertools
 
 from bitstring import BitArray
 
-from sourmash.index import Index
+from sourmash.index import Index, _check_select_parameters
 from sourmash.exceptions import IndexNotSupported
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult, StandaloneManifestIndex
@@ -429,6 +429,8 @@ class SqliteIndex(Index):
                         yield IndexSearchResult(score, subj, self.location)
 
     def _select(self, *, num=0, track_abundance=False, **kwargs):
+        _check_select_parameters(**kwargs)
+
         "Run a select! This just modifies the manifest."
         # check SqliteIndex specific conditions on the 'select'
         if num:
@@ -895,7 +897,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                 name=name,
                 filename=filename,
                 n_hashes=n_hashes,
-                with_abundance=0,
+                with_abundance=False,
                 ksize=ksize,
                 md5=md5sum,
                 internal_location=iloc,

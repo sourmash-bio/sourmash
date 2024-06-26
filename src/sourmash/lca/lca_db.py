@@ -9,7 +9,7 @@ import functools
 import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
-from sourmash.index import Index, IndexSearchResult
+from sourmash.index import Index, IndexSearchResult, _check_select_parameters
 from sourmash.picklist import passes_all_picklists
 
 
@@ -241,6 +241,7 @@ class LCA_Database(Index):
         abund=None,
         containment=False,
         picklist=None,
+        **kwargs,
     ):
         """Select a subset of signatures to search.
 
@@ -251,6 +252,17 @@ class LCA_Database(Index):
 
         Will always raise ValueError if a requirement cannot be met.
         """
+        _check_select_parameters(
+            ksize=ksize,
+            num=num,
+            moltype=moltype,
+            scaled=scaled,
+            containment=containment,
+            abund=abund,
+            picklist=picklist,
+            **kwargs,
+        )
+
         if num:
             raise ValueError("cannot use 'num' MinHashes to search LCA database")
 

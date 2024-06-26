@@ -343,6 +343,40 @@ def test_index_select_basic(index_obj):
     assert ss63.md5sum() in md5s
 
 
+def test_index_select_fail(index_obj):
+    # non-int ksize - str
+    with pytest.raises(ValueError):
+        index_obj.select(ksize="31")
+
+    # non-int ksize - float
+    with pytest.raises(ValueError):
+        index_obj.select(ksize=31.1)
+
+    # case sensitive moltype
+    with pytest.raises(ValueError):
+        index_obj.select(moltype="dna")
+
+    # unknown moltype
+    with pytest.raises(ValueError):
+        index_obj.select(moltype="foo")
+
+    # non-int scaled
+    with pytest.raises(ValueError):
+        index_obj.select(scaled=1000.1)
+
+    # non-int num
+    with pytest.raises(ValueError):
+        index_obj.select(num=1000.1)
+
+    # non-bool abund
+    with pytest.raises(ValueError):
+        index_obj.select(abund=1)
+
+    # extra parameters
+    with pytest.raises(ValueError):
+        index_obj.select(plausible_extra_parameter=5)
+
+
 def test_index_select_nada(index_obj):
     # select works ok when nothing matches!
 

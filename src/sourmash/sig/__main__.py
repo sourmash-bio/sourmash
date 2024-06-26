@@ -367,6 +367,7 @@ def manifest(args):
         debug("sig manifest: forcing rebuild.")
 
     manifest = sourmash_args.get_manifest(loader, require=True, rebuild=rebuild)
+    manifest._check_row_values()
 
     manifest.write_to_filename(
         args.output, database_format=args.manifest_format, ok_if_exists=args.force
@@ -1381,6 +1382,7 @@ def fileinfo(args):
     manifest = sourmash_args.get_manifest(
         idx, rebuild=args.rebuild_manifest, require=False
     )
+    manifest._check_row_values()
 
     if manifest is None:
         # actually can't find any file type to trigger this, but leaving it
