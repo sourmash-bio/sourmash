@@ -55,7 +55,7 @@ class SourmashParser(ArgumentParser):
         from sourmash.logging import notify
 
         notify(f"\n== This is sourmash version {sourmash.VERSION}. ==")
-        notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
+        notify("== Please cite Irber et. al (2024), doi:10.21105/joss.06830. ==\n")
         cls._citation_printed = True
 
     def _subparser_from_name(self, name):
