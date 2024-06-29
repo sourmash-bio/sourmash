@@ -1,13 +1,200 @@
-cff-version: 1.0.3
-message: If you use this software, please cite it as below.
-title: "sourmash: a library for MinHash sketching of DNA"
-version: 2.0.0
-doi: 10.21105/joss.00027
-date-released: 2019-01-10
+cff-version: "1.2.0"
 authors:
+- family-names: Irber
+  given-names: Luiz
+  orcid: "https://orcid.org/0000-0003-4371-9659"
+- family-names: Pierce-Ward
+  given-names: N. Tessa
+  orcid: "https://orcid.org/0000-0002-2942-5331"
+- family-names: Abuelanin
+  given-names: Mohamed
+  orcid: "https://orcid.org/0000-0002-3419-4785"
+- family-names: Alexander
+  given-names: Harriet
+  orcid: "https://orcid.org/0000-0003-1308-8008"
+- family-names: Anant
+  given-names: Abhishek
+  orcid: "https://orcid.org/0000-0002-5751-2010"
+- family-names: Barve
+  given-names: Keya
+  orcid: "https://orcid.org/0000-0003-3241-2117"
+- family-names: Baumler
+  given-names: Colton
+  orcid: "https://orcid.org/0000-0002-5926-7792"
+- family-names: Botvinnik
+  given-names: Olga
+  orcid: "https://orcid.org/0000-0003-4412-7970"
+- family-names: Brooks
+  given-names: Phillip
+  orcid: "https://orcid.org/0000-0003-3987-244X"
+- family-names: Dsouza
+  given-names: Daniel
+  orcid: "https://orcid.org/0000-0001-7843-8596"
+- family-names: Gautier
+  given-names: Laurent
+  orcid: "https://orcid.org/0000-0003-0638-3391"
+- family-names: Rahman Hera
+  given-names: Mahmudur
+  orcid: "https://orcid.org/0000-0002-5992-9012"
+- family-names: Houts
+  given-names: Hannah Eve
+  orcid: "https://orcid.org/0000-0002-7954-4793"
+- family-names: Johnson
+  given-names: Lisa K.
+  orcid: "https://orcid.org/0000-0002-3600-7218"
+- family-names: Klötzl
+  given-names: Fabian
+  orcid: "https://orcid.org/0000-0002-6930-0592"
+- family-names: Koslicki
+  given-names: David
+  orcid: "https://orcid.org/0000-0002-0640-954X"
+- family-names: Lim
+  given-names: Marisa
+  orcid: "https://orcid.org/0000-0003-2097-8818"
+- family-names: Lim
+  given-names: Ricky
+  orcid: "https://orcid.org/0000-0003-1313-7076"
+- family-names: Nelson
+  given-names: Bradley
+  orcid: "https://orcid.org/0009-0001-1553-932X"
+- family-names: Ogasawara
+  given-names: Ivan
+  orcid: "https://orcid.org/0000-0001-5049-4289"
+- family-names: Reiter
+  given-names: Taylor
+  orcid: "https://orcid.org/0000-0002-7388-421X"
+- family-names: Scott
+  given-names: Camille
+  orcid: "https://orcid.org/0000-0001-8822-8779"
+- family-names: Sjödin
+  given-names: Andreas
+  orcid: "https://orcid.org/0000-0001-5350-4219"
+- family-names: Standage
+  given-names: Daniel
+  orcid: "https://orcid.org/0000-0003-0342-8531"
+- family-names: Swamidass
+  given-names: S. Joshua
+  orcid: "https://orcid.org/0000-0003-2191-0778"
+- family-names: Tiffany
+  given-names: Connor
+  orcid: "https://orcid.org/0000-0001-8188-7720"
+- family-names: Vemuri
+  given-names: Pranathi
+  orcid: "https://orcid.org/0000-0002-5748-9594"
+- family-names: Young
+  given-names: Erik
+  orcid: "https://orcid.org/0000-0002-9195-9801"
+- family-names: Brown
+  given-names: C. Titus
+  orcid: "https://orcid.org/0000-0001-6001-2677"
+contact:
+- family-names: Brown
+  given-names: C. Titus
+  orcid: "https://orcid.org/0000-0001-6001-2677"
+doi: 10.5281/zenodo.11557883
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Irber
+    given-names: Luiz
+    orcid: "https://orcid.org/0000-0003-4371-9659"
+  - family-names: Pierce-Ward
+    given-names: N. Tessa
+    orcid: "https://orcid.org/0000-0002-2942-5331"
+  - family-names: Abuelanin
+    given-names: Mohamed
+    orcid: "https://orcid.org/0000-0002-3419-4785"
+  - family-names: Alexander
+    given-names: Harriet
+    orcid: "https://orcid.org/0000-0003-1308-8008"
+  - family-names: Anant
+    given-names: Abhishek
+    orcid: "https://orcid.org/0000-0002-5751-2010"
+  - family-names: Barve
+    given-names: Keya
+    orcid: "https://orcid.org/0000-0003-3241-2117"
+  - family-names: Baumler
+    given-names: Colton
+    orcid: "https://orcid.org/0000-0002-5926-7792"
+  - family-names: Botvinnik
+    given-names: Olga
+    orcid: "https://orcid.org/0000-0003-4412-7970"
+  - family-names: Brooks
+    given-names: Phillip
+    orcid: "https://orcid.org/0000-0003-3987-244X"
+  - family-names: Dsouza
+    given-names: Daniel
+    orcid: "https://orcid.org/0000-0001-7843-8596"
+  - family-names: Gautier
+    given-names: Laurent
+    orcid: "https://orcid.org/0000-0003-0638-3391"
+  - family-names: Hera
+    given-names: Mahmudur Rahman
+    orcid: "https://orcid.org/0000-0002-5992-9012"
+  - family-names: Houts
+    given-names: Hannah Eve
+    orcid: "https://orcid.org/0000-0002-7954-4793"
+  - family-names: Johnson
+    given-names: Lisa K.
+    orcid: "https://orcid.org/0000-0002-3600-7218"
+  - family-names: Klötzl
+    given-names: Fabian
+    orcid: "https://orcid.org/0000-0002-6930-0592"
+  - family-names: Koslicki
+    given-names: David
+    orcid: "https://orcid.org/0000-0002-0640-954X"
+  - family-names: Lim
+    given-names: Marisa
+    orcid: "https://orcid.org/0000-0003-2097-8818"
+  - family-names: Lim
+    given-names: Ricky
+    orcid: "https://orcid.org/0000-0003-1313-7076"
+  - family-names: Nelson
+    given-names: Bradley
+    orcid: "https://orcid.org/0009-0001-1553-932X"
+  - family-names: Ogasawara
+    given-names: Ivan
+    orcid: "https://orcid.org/0000-0001-5049-4289"
+  - family-names: Reiter
+    given-names: Taylor
+    orcid: "https://orcid.org/0000-0002-7388-421X"
+  - family-names: Scott
+    given-names: Camille
+    orcid: "https://orcid.org/0000-0001-8822-8779"
+  - family-names: Sjödin
+    given-names: Andreas
+    orcid: "https://orcid.org/0000-0001-5350-4219"
+  - family-names: Standage
+    given-names: Daniel
+    orcid: "https://orcid.org/0000-0003-0342-8531"
+  - family-names: Swamidass
+    given-names: S. Joshua
+    orcid: "https://orcid.org/0000-0003-2191-0778"
+  - family-names: Tiffany
+    given-names: Connor
+    orcid: "https://orcid.org/0000-0001-8188-7720"
+  - family-names: Vemuri
+    given-names: Pranathi
+    orcid: "https://orcid.org/0000-0002-5748-9594"
+  - family-names: Young
+    given-names: Erik
+    orcid: "https://orcid.org/0000-0002-9195-9801"
   - family-names: Brown
     given-names: C. Titus
-    orcid: https://orcid.org/0000-0001-6001-2677
-  - family-names: Irber Junior
-    given-names: Luiz Carlos
-    orcid: https://orcid.org/0000-0003-4371-9659
+    orcid: "https://orcid.org/0000-0001-6001-2677"
+  date-published: 2024-06-28
+  doi: 10.21105/joss.06830
+  issn: 2475-9066
+  issue: 98
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 6830
+  title: "sourmash v4: A multitool to quickly search, compare, and
+    analyze genomic and metagenomic data sets"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.06830"
+  volume: 9
+title: "sourmash v4: A multitool to quickly search, compare, and analyze
+  genomic and metagenomic data sets"
