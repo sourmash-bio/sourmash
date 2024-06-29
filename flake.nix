@@ -123,6 +123,7 @@
             cargo-udeps
             cargo-deny
             cargo-wasi
+            cargo-codspeed
             #cargo-semver-checks
             nixpkgs-fmt
           ];
