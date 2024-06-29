@@ -49,7 +49,7 @@ def test_citation_file():
     with open(citation_file) as fp:
         x = yaml.safe_load(fp)
 
-    assert x["title"] == "sourmash: a library for MinHash sketching of DNA", x
+    assert x["title"] == "sourmash v4: A multitool to quickly search, compare, and analyze genomic and metagenomic data sets", x
 
 
 def test_run_sourmash():
