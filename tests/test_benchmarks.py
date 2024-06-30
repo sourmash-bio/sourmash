@@ -74,10 +74,7 @@ def test_add_protein(benchmark, mh_protein, sequences):
 
 
 def test_get_mins(benchmark, populated_mh):
-    @benchmark
-    def bench():
-        for _ in range(GET_MINS_RANGE):
-            populated_mh.get_mins()
+    benchmark(populated_mh.get_mins)
 
 
 def test_add_hash(benchmark, mh):
@@ -92,38 +89,22 @@ def test_add_many(benchmark, mh):
 
 
 def test_similarity(benchmark, mh, populated_mh):
-    @benchmark
-    def bench():
-        for _ in range(SIMILARITY_TIMES):
-            mh.similarity(populated_mh)
+    benchmark(mh.similarity, populated_mh)
 
 def test_count_common(benchmark, mh, populated_mh):
-    @benchmark
-    def bench():
-        for _ in range(COUNT_COMMON_TIMES):
-            mh.count_common(populated_mh)
+    benchmark(mh.count_common, populated_mh)
 
 
 def test_merge(benchmark, mh, populated_mh):
-    @benchmark
-    def bench():
-        for i in range(MERGE_TIMES):
-            mh.merge(populated_mh)
+    benchmark(mh.merge, populated_mh)
 
 
 def test_copy(benchmark, populated_mh):
-    @benchmark
-    def bench():
-        for i in range(COPY_TIMES):
-            populated_mh.__copy__()
+    benchmark(populated_mh.__copy__)
 
 
 def test_concat(benchmark, mh, populated_mh):
-    @benchmark
-    def bench():
-        nonlocal mh
-        for _ in range(CONCAT_TIMES):
-            mh += populated_mh
+    benchmark(mh.__iadd__, populated_mh)
 
 ####################
 
