@@ -39,11 +39,10 @@ def load_sequences():
 def mh():
     return MinHash(MINHASH_NUM, MINHASH_K, track_abundance=False)
 
+
 @pytest.fixture
 def mh_protein():
-    return MinHash(
-        MINHASH_NUM, MINHASH_K, is_protein=True, track_abundance=False
-    )
+    return MinHash(MINHASH_NUM, MINHASH_K, is_protein=True, track_abundance=False)
 
 
 @pytest.fixture
@@ -91,6 +90,7 @@ def test_add_many(benchmark, mh):
 def test_similarity(benchmark, mh, populated_mh):
     benchmark(mh.similarity, populated_mh)
 
+
 def test_count_common(benchmark, mh, populated_mh):
     benchmark(mh.count_common, populated_mh)
 
@@ -106,6 +106,7 @@ def test_copy(benchmark, populated_mh):
 def test_concat(benchmark, mh, populated_mh):
     benchmark(mh.__iadd__, populated_mh)
 
+
 ####################
 
 
@@ -117,16 +118,19 @@ def setup(self):
     for seq in self.sequences:
         self.populated_mh.add_sequence(seq)
 
+
 def time_get_mins_abundance(self):
     mh = self.populated_mh
     for i in range(GET_MINS_RANGE):
         mh.get_mins(with_abundance=True)
+
 
 def time_set_abundances(self):
     mh = self.mh
     mins = self.populated_mh.get_mins(with_abundance=True)
     for i in range(SET_ABUNDANCES_RANGE):
         mh.set_abundances(mins)
+
 
 def time_set_abundances_noclear(self):
     mh = self.mh
@@ -144,9 +148,7 @@ def zipstore():
 
     zf = NamedTemporaryFile()
 
-    with zipfile.ZipFile(
-        zf, mode="w", compression=zipfile.ZIP_STORED
-    ) as storage:
+    with zipfile.ZipFile(zf, mode="w", compression=zipfile.ZIP_STORED) as storage:
         for i in range(ZIP_STORAGE_WRITE):
             # just so we have lots of entries
             storage.writestr(str(i), b"0")
