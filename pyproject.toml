@@ -205,6 +205,11 @@ before-build = [
 # avoid needing a nightly compiler
 RUSTC_BOOTSTRAP=1
 
+[tool.cibuildwheel.pyodide]
+before-build = [
+  "rustup target add wasm32-unknown-emscripten"
+]
+
 [tool.cibuildwheel.linux.environment]
 CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
 PATH="$HOME/.cargo/bin:$PATH"
