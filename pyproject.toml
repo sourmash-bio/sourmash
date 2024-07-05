@@ -193,12 +193,20 @@ PATH="$HOME/.cargo/bin:$PATH"
 before-all = [
   "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
   "cargo update --dry-run",
-  "if [ -f /etc/system-release ]; then yum -y install centos-release-scl; fi",
   "if [ -f /etc/system-release ]; then yum -y install llvm-toolset-7.0; fi",
 ]
 before-build = [
   "if [ -f /etc/system-release ]; then source scl_source enable llvm-toolset-7.0; fi",
   "if [ -f /etc/system-release ]; then source scl_source enable devtoolset-10; fi",
+]
+
+[tool.cibuildwheel.pyodide.environment]
+# avoid needing a nightly compiler
+RUSTC_BOOTSTRAP=1
+
+[tool.cibuildwheel.pyodide]
+before-build = [
+  "rustup target add wasm32-unknown-emscripten"
 ]
 
 [tool.cibuildwheel.linux.environment]
