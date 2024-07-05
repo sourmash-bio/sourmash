@@ -201,6 +201,10 @@ before-build = [
   "if [ -f /etc/system-release ]; then source scl_source enable devtoolset-10; fi",
 ]
 
+[tool.cibuildwheel.pyodide.environment]
+# avoid needing a nightly compiler
+RUSTC_BOOTSTRAP=1
+
 [tool.cibuildwheel.linux.environment]
 CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
 PATH="$HOME/.cargo/bin:$PATH"
