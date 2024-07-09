@@ -165,6 +165,7 @@ impl RevIndex {
                 String::from_utf8(db_spec.unwrap()).map_err(|e| e.utf8_error())?
             }
         };
+        trace!("storage spec: {:?}", spec);
 
         let storage = if spec == "rocksdb://" {
             todo!("init storage from db")
