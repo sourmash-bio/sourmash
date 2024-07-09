@@ -142,14 +142,18 @@ impl RevIndex {
         db: Arc<DB>,
         storage_spec: Option<&str>,
     ) -> Result<CollectionSet> {
+        trace!("loading metadata");
         let cf_metadata = db.cf_handle(METADATA).unwrap();
 
+        trace!("checking database version");
         let rdr = db.get_cf(&cf_metadata, VERSION)?.unwrap();
         assert_eq!(rdr[0], DB_VERSION);
 
+        trace!("obtaining manifest");
         let rdr = db.get_cf(&cf_metadata, MANIFEST)?.unwrap();
         let manifest = Manifest::from_reader(&rdr[..])?;
 
+        trace!("checking storage spec");
         let spec = match storage_spec {
             Some(spec) => spec.into(),
             None => {
@@ -164,6 +168,7 @@ impl RevIndex {
             InnerStorage::from_spec(spec)?
         };
 
+        trace!("done - cerating new collection!");
         Collection::new(manifest, storage).try_into()
     }
 
