@@ -116,7 +116,7 @@ impl RevIndex {
         // prepare column family descriptors
         let cfs = cf_descriptors();
 
-        trace!("opening...");
+        trace!("opening {:?}...", path.as_ref());
         let db = if read_only {
             Arc::new(DB::open_cf_descriptors_read_only(
                 &opts,
@@ -134,6 +134,7 @@ impl RevIndex {
             storage_spec,
         )?);
 
+        trace!("loaded!");
         Ok(module::RevIndex::Plain(Self { db, collection }))
     }
 
