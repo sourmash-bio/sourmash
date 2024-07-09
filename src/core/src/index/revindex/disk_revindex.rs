@@ -155,8 +155,12 @@ impl RevIndex {
 
         trace!("checking storage spec");
         let spec = match storage_spec {
-            Some(spec) => spec.into(),
+            Some(spec) => {
+                trace!("converting storage spec");
+                spec.into()
+            }
             None => {
+                trace!("loading storage spec");
                 let db_spec = db.get_cf(&cf_metadata, STORAGE_SPEC)?;
                 String::from_utf8(db_spec.unwrap()).map_err(|e| e.utf8_error())?
             }
