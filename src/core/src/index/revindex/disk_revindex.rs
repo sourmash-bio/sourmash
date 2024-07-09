@@ -22,6 +22,8 @@ use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Result;
 
+use env_logger::try_init;
+
 const DB_VERSION: u8 = 1;
 
 fn compute_color(idxs: &Datasets) -> Color {
@@ -104,6 +106,8 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
+        let _ = env_logger::try_init();
+
         let mut opts = module::RevIndex::db_options();
         if !read_only {
             opts.prepare_for_bulk_load();
