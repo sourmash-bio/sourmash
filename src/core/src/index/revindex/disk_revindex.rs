@@ -168,7 +168,7 @@ impl RevIndex {
             InnerStorage::from_spec(spec)?
         };
 
-        trace!("done - cerating new collection!");
+        trace!("done - creating new collection!");
         Collection::new(manifest, storage).try_into()
     }
 
