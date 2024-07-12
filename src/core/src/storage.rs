@@ -5,6 +5,8 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
+use log::trace;
+
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 use once_cell::sync::OnceCell;
