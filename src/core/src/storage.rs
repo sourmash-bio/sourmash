@@ -150,7 +150,8 @@ impl InnerStorage {
             x if x.starts_with("zip") => {
                 trace!("InnerStorage::from_spec: opening {x}");
                 let path = x.split("://").last().expect("not a valid path");
-                InnerStorage::new(ZipStorage::from_file(path)?)
+                // InnerStorage::new(ZipStorage::from_file(path)?)
+                InnerStorage::new(MemStorage::new())
             }
             _ => todo!("storage not supported, throw error"),
         })
