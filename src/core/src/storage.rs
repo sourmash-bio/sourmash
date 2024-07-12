@@ -146,6 +146,7 @@ impl InnerStorage {
             }
             x if x.starts_with("memory") => InnerStorage::new(MemStorage::new()),
             x if x.starts_with("zip") => {
+                trace!("InnerStorage::from_spec: opening {x}");
                 let path = x.split("://").last().expect("not a valid path");
                 InnerStorage::new(ZipStorage::from_file(path)?)
             }
