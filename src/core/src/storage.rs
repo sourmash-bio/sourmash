@@ -262,6 +262,7 @@ impl Storage for FSStorage {
 
     fn load(&self, path: &str) -> Result<Vec<u8>> {
         let path = self.fullpath.join(path);
+        trace!("FSStorage::load: {path}");
         let file = File::open(path)?;
         let mut buf_reader = BufReader::new(file);
         let mut contents = Vec::new();
@@ -319,6 +320,7 @@ impl Storage for ZipStorage {
     }
 
     fn load(&self, path: &str) -> Result<Vec<u8>> {
+        trace!("ZipStorage::load: {path}");
         let metadata = self.borrow_metadata();
 
         let entry = lookup(metadata, path).or_else(|_| {
