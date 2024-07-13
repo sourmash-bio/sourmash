@@ -368,9 +368,10 @@ impl Storage for ZipStorage {
 
 impl ZipStorage {
     pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
+        let display_name = location.as_ref().to_path_buf().into_os_string().into_string().unwrap();
         let zip_file = match File::open(location.as_ref()) {
             Ok(zip_file) => zip_file,
-            Err(_) => panic!("cannot open zip file storage containing sketches."),
+            Err(_) => panic!("cannot open zip file storage '{display_name}' containing sketches."),
         };
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
