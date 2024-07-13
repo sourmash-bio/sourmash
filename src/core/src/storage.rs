@@ -368,7 +368,10 @@ impl Storage for ZipStorage {
 
 impl ZipStorage {
     pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
-        let zip_file = File::open(location.as_ref())?;
+        let zip_file = match File::open(location.as_ref()) {
+            Ok(zip_file) => zip_file,
+            Err(_) => panic!("cannot open zip file storage containing sketches."),
+        };
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
         let mut storage = ZipStorageBuilder {
