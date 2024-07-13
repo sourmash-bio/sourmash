@@ -267,7 +267,7 @@ impl Storage for FSStorage {
         let display_path = path.clone();
         let file = match File::open(path) {
             Ok(file) => file,
-            Err(_) => panic!("cannot open file {display_path} containing necessary sketch"),
+            Err(_) => panic!("cannot open file '{display_path}' containing necessary sketch"),
         };
         let mut buf_reader = BufReader::new(file);
         let mut contents = Vec::new();
