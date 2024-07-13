@@ -23,7 +23,7 @@ use crate::sketch::Sketch;
 use crate::HashIntoType;
 use crate::Result;
 
-type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
+pub type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
 
 type QueryColors = HashMap<Color, Datasets>;
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
@@ -198,7 +198,7 @@ impl RevIndex {
         }
     }
 
-    fn db_options() -> rocksdb::Options {
+    pub(crate) fn db_options() -> rocksdb::Options {
         let mut opts = rocksdb::Options::default();
         opts.set_max_open_files(500);
 

@@ -1,5 +1,5 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -19,7 +19,7 @@ use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::storage::{InnerStorage, Storage};
+use crate::storage::{InnerStorage, Storage, STORAGE};
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
@@ -35,6 +35,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 pub struct RevIndex {
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
+    path: PathBuf,
 }
 
 fn merge_datasets(
@@ -79,6 +80,7 @@ impl RevIndex {
         let index = Self {
             db,
             collection: Arc::new(collection),
+            path: path.into(),
         };
 
         index.collection.par_iter().for_each(|(dataset_id, _)| {
@@ -128,7 +130,11 @@ impl RevIndex {
             storage_spec,
         )?);
 
-        Ok(module::RevIndex::Plain(Self { db, collection }))
+        Ok(module::RevIndex::Plain(Self {
+            db,
+            collection,
+            path: path.as_ref().into(),
+        }))
     }
 
     fn load_collection_from_rocksdb(
@@ -498,7 +504,7 @@ impl RevIndexOps for RevIndex {
     }
 }
 
-fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
+pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     let mut cfopts = Options::default();
     cfopts.set_max_write_buffer_number(16);
     cfopts.set_merge_operator_associative("datasets operator", merge_datasets);
@@ -514,7 +520,6 @@ fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     cfopts.set_max_write_buffer_number(16);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
 
     let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
 
@@ -522,7 +527,13 @@ fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
     cfopts.set_max_write_buffer_number(16);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
 
-    vec![cf_hashes, cf_metadata]
+    let cf_storage = ColumnFamilyDescriptor::new(STORAGE, cfopts);
+
+    let mut cfopts = Options::default();
+    cfopts.set_max_write_buffer_number(16);
+    // Updated default
+    cfopts.set_level_compaction_dynamic_level_bytes(true);
+
+    vec![cf_hashes, cf_metadata, cf_storage]
 }
