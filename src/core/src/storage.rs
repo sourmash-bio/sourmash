@@ -263,7 +263,12 @@ impl Storage for FSStorage {
     fn load(&self, path: &str) -> Result<Vec<u8>> {
         let path = self.fullpath.join(path);
         trace!("FSStorage::load: {path}");
-        let file = File::open(path)?;
+
+        let display_path = path.clone();
+        let file = match File::open(path) {
+            Ok(file) => file,
+            Err(_) => panic!("cannot open file {display_path} containing necessary sketch"),
+        };
         let mut buf_reader = BufReader::new(file);
         let mut contents = Vec::new();
         buf_reader.read_to_end(&mut contents)?;
