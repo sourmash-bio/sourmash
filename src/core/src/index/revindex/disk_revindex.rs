@@ -19,7 +19,7 @@ use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::storage::{InnerStorage, Storage, STORAGE};
+use crate::storage::{rocksdb::STORAGE, InnerStorage, Storage};
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
