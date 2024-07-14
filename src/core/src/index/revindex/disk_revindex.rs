@@ -6,20 +6,23 @@ use std::sync::Arc;
 use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
-use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
+use rocksdb::MergeOperands;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DB,
-    HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps,
+    MANIFEST, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::storage::{rocksdb::STORAGE, InnerStorage, Storage};
+use crate::storage::{
+    rocksdb::{cf_descriptors, db_options, DB, HASHES, METADATA, STORAGE},
+    InnerStorage, Storage,
+};
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
@@ -38,7 +41,7 @@ pub struct RevIndex {
     path: PathBuf,
 }
 
-fn merge_datasets(
+pub(crate) fn merge_datasets(
     _: &[u8],
     existing_val: Option<&[u8]>,
     operands: &MergeOperands,
@@ -65,7 +68,7 @@ pub fn repair(path: &Path) {
 
 impl RevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
-        let mut opts = module::RevIndex::db_options();
+        let mut opts = db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
         opts.prepare_for_bulk_load();
@@ -106,7 +109,7 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
-        let mut opts = module::RevIndex::db_options();
+        let mut opts = db_options();
         if !read_only {
             opts.prepare_for_bulk_load();
         }
@@ -502,38 +505,4 @@ impl RevIndexOps for RevIndex {
         }
         */
     }
-}
-
-pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    cfopts.set_merge_operator_associative("datasets operator", merge_datasets);
-    cfopts.set_min_write_buffer_number_to_merge(10);
-
-    // Updated default from
-    // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-
-    let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-
-    let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-
-    let cf_storage = ColumnFamilyDescriptor::new(STORAGE, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-
-    vec![cf_hashes, cf_metadata, cf_storage]
 }

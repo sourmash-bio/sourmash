@@ -20,25 +20,19 @@ use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::storage::rocksdb::{db_options, COLORS, DB};
 use crate::HashIntoType;
 use crate::Result;
-
-pub type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
-
-type QueryColors = HashMap<Color, Datasets>;
-type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
-#[derive(Serialize, Deserialize)]
-pub struct HashToColor(HashToColorT);
-
-// Column families
-const HASHES: &str = "hashes";
-const COLORS: &str = "colors";
-const METADATA: &str = "metadata";
 
 // DB metadata saved in the METADATA column family
 const MANIFEST: &str = "manifest";
 const STORAGE_SPEC: &str = "storage_spec";
 const VERSION: &str = "version";
+
+type QueryColors = HashMap<Color, Datasets>;
+type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
+#[derive(Serialize, Deserialize)]
+pub struct HashToColor(HashToColorT);
 
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
@@ -186,7 +180,7 @@ impl RevIndex {
     }
 
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
-        let opts = Self::db_options();
+        let opts = db_options();
         let cfs = DB::list_cf(&opts, index.as_ref()).unwrap();
 
         if cfs.into_iter().any(|c| c == COLORS) {
@@ -196,29 +190,6 @@ impl RevIndex {
         } else {
             disk_revindex::RevIndex::open(index, read_only, spec)
         }
-    }
-
-    pub(crate) fn db_options() -> rocksdb::Options {
-        let mut opts = rocksdb::Options::default();
-        opts.set_max_open_files(500);
-
-        // Updated defaults from
-        // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
-        opts.set_bytes_per_sync(1048576);
-        let mut block_opts = rocksdb::BlockBasedOptions::default();
-        block_opts.set_block_size(16 * 1024);
-        block_opts.set_cache_index_and_filter_blocks(true);
-        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
-        block_opts.set_format_version(6);
-        opts.set_block_based_table_factory(&block_opts);
-        // End of updated defaults
-
-        opts.increase_parallelism(rayon::current_num_threads() as i32);
-        //opts.max_background_jobs = 6;
-        // opts.optimize_level_style_compaction();
-        // opts.optimize_universal_style_compaction();
-
-        opts
     }
 }
 

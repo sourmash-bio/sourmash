@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
+use cfg_if::cfg_if;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -160,7 +161,14 @@ impl InnerStorage {
             x if x.starts_with("memory") => InnerStorage::new(MemStorage::new()),
             x if x.starts_with("rocksdb") => {
                 let path = x.split("://").last().expect("not a valid path");
-                InnerStorage::new(RocksDBStorage::from_path(path))
+
+                cfg_if! {
+                    if #[cfg(feature = "branchwater")] {
+                        InnerStorage::new(RocksDBStorage::from_path(path))
+                    } else {
+                        todo!("Must enable branchwater feature")
+                    }
+                }
             }
             x if x.starts_with("zip") => {
                 let path = x.split("://").last().expect("not a valid path");
@@ -656,4 +664,3 @@ impl Storage for MemStorage {
         "memory://".into()
     }
 }
-
