@@ -141,12 +141,10 @@ pub struct MemStorage {
     sigs: Arc<RwLock<HashMap<String, SigStore>>>,
 }
 
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-#[cfg(feature = "branchwater")]
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub mod rocksdb;
 
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-#[cfg(feature = "branchwater")]
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub use self::rocksdb::RocksDBStorage;
 
 pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
@@ -169,7 +167,7 @@ impl InnerStorage {
                 let path = x.split("://").last().expect("not a valid path");
 
                 cfg_if! {
-                    if #[cfg(feature = "branchwater")] {
+                    if #[cfg(all( feature = "branchwater", not(target_arch = "wasm32")))] {
                         InnerStorage::new(RocksDBStorage::from_path(path))
                     } else {
                         return Err(StorageError::MissingFeature("branchwater".into(), path.into()).into())
