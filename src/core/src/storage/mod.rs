@@ -63,6 +63,9 @@ pub enum StorageError {
 
     #[error("Error reading data from {0}")]
     DataReadError(String),
+
+    #[error("Storage for path {1} requires the '{0}' feature to be enabled")]
+    MissingFeature(String, String),
 }
 
 #[derive(Clone)]
@@ -166,7 +169,7 @@ impl InnerStorage {
                     if #[cfg(feature = "branchwater")] {
                         InnerStorage::new(RocksDBStorage::from_path(path))
                     } else {
-                        todo!("Must enable branchwater feature")
+                        return Err(StorageError::MissingFeature("branchwater".into(), path.into()).into())
                     }
                 }
             }
