@@ -20,7 +20,7 @@ use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::{
-    rocksdb::{cf_descriptors, db_options, DB, HASHES, METADATA, STORAGE},
+    rocksdb::{cf_descriptors, db_options, DB, HASHES, METADATA},
     InnerStorage, Storage,
 };
 use crate::Result;

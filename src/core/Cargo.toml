@@ -19,10 +19,10 @@ crate-type = ["lib", "staticlib", "cdylib"]
 bench = false
 
 [features]
-from-finch = ["finch"]
-parallel = ["rayon"]
+from-finch = ["dep:finch"]
+parallel = ["dep:rayon"]
 maturin = []
-branchwater = ["rocksdb", "rkyv", "parallel"]
+branchwater = ["dep:rocksdb", "parallel"]
 default = []
 
 [dependencies]

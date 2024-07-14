@@ -53,6 +53,7 @@ pub trait Storage {
     }
 }
 
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum StorageError {
     #[error("Path can't be empty")]
@@ -146,7 +147,7 @@ pub mod rocksdb;
 
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(feature = "branchwater")]
-pub use rocksdb::RocksDBStorage;
+pub use self::rocksdb::RocksDBStorage;
 
 pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
