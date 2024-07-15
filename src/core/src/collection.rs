@@ -64,6 +64,10 @@ impl CollectionSet {
     pub fn selection(&self) -> Selection {
         todo!("Extract selection from first sig")
     }
+
+    pub unsafe fn set_storage_unchecked(&mut self, storage: InnerStorage) {
+        self.storage = storage;
+    }
 }
 
 impl Collection {

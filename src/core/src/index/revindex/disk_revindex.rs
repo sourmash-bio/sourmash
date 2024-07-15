@@ -21,7 +21,7 @@ use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::{
     rocksdb::{cf_descriptors, db_options, DB, HASHES, METADATA},
-    InnerStorage, Storage,
+    InnerStorage, RocksDBStorage, Storage,
 };
 use crate::Result;
 
@@ -459,6 +459,34 @@ impl RevIndexOps for RevIndex {
         for cf_name in [HASHES, METADATA] {
             let cf = self.db.cf_handle(cf_name).unwrap();
             self.db.flush_cf(&cf)?;
+        }
+
+        Ok(())
+    }
+
+    fn collection(&self) -> &CollectionSet {
+        &self.collection
+    }
+
+    fn internalize_storage(&mut self) -> Result<()> {
+        // TODO: check if collection is already internal, if so return
+
+        // build new rocksdb storage from db
+        let new_storage = RocksDBStorage::from_db(self.db.clone());
+
+        // use manifest to copy from current storage to new one
+        self.collection().par_iter().for_each(|(_, record)| {
+            let path = record.internal_location().as_str();
+            let sig_data = self.collection.storage().load(path).unwrap();
+            new_storage.save(path, &sig_data);
+        });
+
+        // Replace storage for collection.
+        // Using unchecked version because we just used the manifest
+        // above to make sure the storage is still consistent
+        unsafe {
+            Arc::get_mut(&mut self.collection)
+                .map(|v| v.set_storage_unchecked(InnerStorage::new(new_storage)));
         }
 
         Ok(())

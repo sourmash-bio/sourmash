@@ -77,6 +77,10 @@ pub trait RevIndexOps {
         query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>>;
+
+    fn collection(&self) -> &CollectionSet;
+
+    fn internalize_storage(&mut self) -> Result<()>;
 }
 
 impl HashToColor {
@@ -866,6 +870,65 @@ mod test {
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
         assert_eq!(matches[0].1, 514);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_internalize_storage() -> Result<()> {
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output = outdir.path().join("index");
+
+        let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
+
+        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+
+        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+
+        let matches_external = index.gather(
+            counter,
+            query_colors,
+            hash_to_color,
+            0,
+            &query,
+            Some(selection.clone()),
+        )?;
+
+        let mut index = index;
+        index
+            .internalize_storage()
+            .expect("Error internalizing storage");
+
+        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+
+        let matches_internal = index.gather(
+            counter,
+            query_colors,
+            hash_to_color,
+            0,
+            &query,
+            Some(selection),
+        )?;
+
+        assert_eq!(matches_external, matches_internal);
 
         Ok(())
     }
