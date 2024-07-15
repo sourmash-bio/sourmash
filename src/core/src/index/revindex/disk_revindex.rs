@@ -161,7 +161,7 @@ impl RevIndex {
         };
 
         let storage = if spec == "rocksdb://" {
-            todo!("init storage from db")
+            InnerStorage::new(RocksDBStorage::from_db(db.clone()))
         } else {
             InnerStorage::from_spec(spec)?
         };
@@ -184,7 +184,7 @@ impl RevIndex {
         }
         self.db.put_cf(&cf_metadata, MANIFEST, &wtr[..])?;
 
-        // write storage spec
+        // write storage specdisk_re
         let spec = self.collection.storage().spec();
 
         // TODO: check if spec if memstorage, would probably have to
@@ -488,6 +488,11 @@ impl RevIndexOps for RevIndex {
             Arc::get_mut(&mut self.collection)
                 .map(|v| v.set_storage_unchecked(InnerStorage::new(new_storage)));
         }
+
+        // write storage spec
+        let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+        let spec = "rocksdb://";
+        self.db.put_cf(&cf_metadata, STORAGE_SPEC, spec)?;
 
         Ok(())
     }

@@ -33,6 +33,8 @@ impl RocksDBStorage {
 
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
+        // TODO: save storage_args
+
         Self { db }
     }
 

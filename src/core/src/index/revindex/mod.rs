@@ -912,23 +912,40 @@ mod test {
             Some(selection.clone()),
         )?;
 
-        let mut index = index;
-        index
-            .internalize_storage()
-            .expect("Error internalizing storage");
+        {
+            let mut index = index;
+            index
+                .internalize_storage()
+                .expect("Error internalizing storage");
+
+            let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+
+            let matches_internal = index.gather(
+                counter,
+                query_colors,
+                hash_to_color,
+                0,
+                &query,
+                Some(selection.clone()),
+            )?;
+            assert_eq!(matches_external, matches_internal);
+        }
+        let new_path = outdir.path().join("new_index_path");
+        std::fs::rename(output.as_path(), new_path.as_path());
+
+        let index = RevIndex::open(new_path, false, None)?;
 
         let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
 
-        let matches_internal = index.gather(
+        let matches_moved = index.gather(
             counter,
             query_colors,
             hash_to_color,
             0,
             &query,
-            Some(selection),
+            Some(selection.clone()),
         )?;
-
-        assert_eq!(matches_external, matches_internal);
+        assert_eq!(matches_external, matches_moved);
 
         Ok(())
     }
