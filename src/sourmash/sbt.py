@@ -700,7 +700,7 @@ class SBT(Index):
                 storage = FSStorage(location, subdir)
                 index_filename = os.path.join(location, index_filename)
 
-            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            backend = [k for (k, v) in STORAGES.items() if v is type(storage)][0]
             storage_args = storage.init_args()
 
         info["storage"] = {"backend": backend, "args": storage_args}
