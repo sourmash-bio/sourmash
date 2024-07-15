@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::fmt::Write as FmtWrite;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
@@ -7,7 +10,8 @@ use getset::{CopyGetters, Getters, Setters};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serde::de;
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
@@ -15,7 +19,7 @@ use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::Result;
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, Eq)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -70,6 +74,16 @@ where
             de::Unexpected::Str(other),
             &"0/1, true/false, True/False are the only supported values",
         )),
+    }
+}
+
+impl PartialEq for Record {
+    fn eq(&self, other: &Self) -> bool {
+        self.ksize == other.ksize
+            && self.moltype == other.moltype
+            && self.num == other.num
+            && self.scaled == other.scaled
+            && self.with_abundance == other.with_abundance
     }
 }
 
@@ -199,6 +213,34 @@ impl Manifest {
     pub fn iter(&self) -> impl Iterator<Item = &Record> {
         self.records.iter()
     }
+
+    pub fn summarize(&self) -> Vec<RecordSummary> {
+        let mut summary_map: HashMap<(u32, String, u32, u64, bool), RecordSummary> = HashMap::new();
+
+        for record in self.iter() {
+            let key = (
+                record.ksize(),
+                record.moltype.clone(),
+                record.num,
+                record.scaled,
+                record.with_abundance(),
+            );
+            let entry = summary_map.entry(key).or_insert_with(|| RecordSummary {
+                ksize: record.ksize(),
+                moltype: record.moltype.clone(),
+                num: record.num,
+                scaled: record.scaled,
+                with_abundance: record.with_abundance(),
+                count: 0,
+                total_n_hashes: 0,
+            });
+
+            entry.count += 1;
+            entry.total_n_hashes += record.n_hashes;
+        }
+
+        summary_map.into_values().collect()
+    }
 }
 
 impl Select for Manifest {
@@ -324,17 +366,79 @@ impl Deref for Manifest {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Deserialize)]
+pub struct RecordSummary {
+    ksize: u32,
+    moltype: String,
+    num: u32,
+    scaled: u64,
+    with_abundance: bool,
+    // Fields for counting and aggregation
+    count: usize,
+    total_n_hashes: usize,
+}
+
+impl Serialize for RecordSummary {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("RecordSummary", 7)?;
+        state.serialize_field("ksize", &self.ksize)?;
+        state.serialize_field("moltype", &self.moltype)?;
+        state.serialize_field("num", &self.num)?;
+        state.serialize_field("scaled", &self.scaled)?;
+        state.serialize_field("with_abundance", &self.with_abundance)?;
+        state.serialize_field("count", &self.count)?;
+        state.serialize_field("total_n_hashes", &self.total_n_hashes)?;
+        state.end()
+    }
+}
+
+impl std::fmt::Display for RecordSummary {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{} sketches with {}, k={}, scaled={}  {} total hashes",
+            self.count, self.moltype, self.ksize, self.scaled, self.total_n_hashes
+        )
+    }
+}
+
+pub fn write_summary(summaries: &[RecordSummary]) -> String {
+    let mut output = String::new();
+    FmtWrite::write_str(&mut output, "num signatures: ").unwrap();
+    writeln!(
+        output,
+        "{}",
+        summaries.iter().map(|s| s.count).sum::<usize>()
+    )
+    .unwrap();
+    FmtWrite::write_str(&mut output, "** examining manifest...\n").unwrap();
+    writeln!(
+        output,
+        "total hashes: {}",
+        summaries.iter().map(|s| s.total_n_hashes).sum::<usize>()
+    )
+    .unwrap();
+    FmtWrite::write_str(&mut output, "summary of sketches:\n").unwrap();
+    for summary in summaries {
+        writeln!(output, "   {}", summary).unwrap();
+    }
+
+    output
+}
+
 #[cfg(test)]
 mod test {
+    use super::{write_summary, Manifest};
+    use crate::collection::Collection;
+    use crate::encodings::HashFunctions;
+    use crate::selection::{Select, Selection};
     use camino::Utf8PathBuf as PathBuf;
     use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
-
-    use super::Manifest;
-    use crate::collection::Collection;
-    use crate::encodings::HashFunctions;
-    use crate::selection::{Select, Selection};
 
     #[test]
     fn manifest_from_pathlist() {
@@ -510,5 +614,35 @@ mod test {
         selection.set_scaled(100);
         let scaled100 = manifest.select(&selection).unwrap();
         assert_eq!(scaled100.len(), 6);
+    }
+
+    #[test]
+    fn manifest_summarize() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![
+            PathBuf::from(
+                "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+            ),
+            PathBuf::from(
+                "../../tests/test-data/prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
+            ),
+        ];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+
+        let summaries = &manifest.summarize();
+        // let summaries = &manifest.summarize();
+        let serialized_summaries = serde_json::to_string(&summaries).unwrap();
+        let output = write_summary(&summaries);
+        let expected_output = "num signatures: 2\n** examining manifest...\ntotal hashes: 8214\nsummary of sketches:\n   2 sketches with protein, k=19, scaled=100  8214 total hashes\n";
+        let expected_serialized = "[{\"ksize\":19,\"moltype\":\"protein\",\"num\":0,\"scaled\":100,\"with_abundance\":false,\"count\":2,\"total_n_hashes\":8214}]";
+        assert_eq!(output, expected_output);
+        assert_eq!(serialized_summaries.trim(), expected_serialized);
     }
 }
