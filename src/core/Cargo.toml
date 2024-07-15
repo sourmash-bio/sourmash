@@ -23,6 +23,7 @@ from-finch = ["dep:finch"]
 parallel = ["dep:rayon"]
 maturin = []
 branchwater = ["dep:rocksdb", "parallel"]
+rkyv = ["dep:rkyv"]
 default = []
 
 [dependencies]
