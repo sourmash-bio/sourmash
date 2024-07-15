@@ -44,7 +44,7 @@ def test_make_jaccard_search_query_best_only():
 
     assert search_obj.score_fn == search_obj.score_jaccard
     assert not search_obj.require_scaled
-    assert type(search_obj) == search.JaccardSearchBestOnly
+    assert type(search_obj) is search.JaccardSearchBestOnly
 
 
 def test_make_jaccard_search_query_no_threshold_none():
