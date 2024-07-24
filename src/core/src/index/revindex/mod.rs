@@ -426,6 +426,7 @@ mod test {
     use crate::collection::Collection;
     use crate::prelude::*;
     use crate::selection::Selection;
+    use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
@@ -931,7 +932,7 @@ mod test {
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
-        std::fs::rename(output.as_path(), new_path.as_path());
+        std::fs::rename(output.as_path(), new_path.as_path())?;
 
         let index = RevIndex::open(new_path, false, None)?;
 
@@ -946,6 +947,77 @@ mod test {
             Some(selection.clone()),
         )?;
         assert_eq!(matches_external, matches_moved);
+
+        Ok(())
+    }
+
+    #[test]
+    fn rocksdb_storage_from_path() -> Result<()> {
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output = outdir.path().join("index");
+
+        // Step 1: create an index
+        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+
+        // Step 2: internalize the storage for the index
+        {
+            let mut index = index;
+            index
+                .internalize_storage()
+                .expect("Error internalizing storage");
+        }
+
+        // Step 3: load rocksdb storage from path
+        // should have the same content as zipfile
+
+        // Iter thru collection, make sure all records are present
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        assert_eq!(collection.len(), 2);
+        let col_storage = collection.storage();
+
+        let spec;
+        {
+            let rdb_storage = RocksDBStorage::from_path(output.as_os_str().to_str().unwrap());
+            spec = rdb_storage.spec();
+            collection.iter().for_each(|(_, r)| {
+                assert_eq!(
+                    rdb_storage.load(r.internal_location().as_str()).unwrap(),
+                    col_storage.load(r.internal_location().as_str()).unwrap()
+                );
+            });
+        }
+
+        // Step 4: verify rocksdb storage spec
+        assert_eq!(
+            spec,
+            format!("rocksdb://{}", output.as_os_str().to_str().unwrap())
+        );
+
+        let storage = InnerStorage::from_spec(spec)?;
+        collection.iter().for_each(|(_, r)| {
+            assert_eq!(
+                storage.load(r.internal_location().as_str()).unwrap(),
+                col_storage.load(r.internal_location().as_str()).unwrap()
+            );
+        });
 
         Ok(())
     }

@@ -1,5 +1,5 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -38,7 +38,6 @@ fn compute_color(idxs: &Datasets) -> Color {
 pub struct RevIndex {
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
-    path: PathBuf,
 }
 
 pub(crate) fn merge_datasets(
@@ -82,7 +81,6 @@ impl RevIndex {
         let index = Self {
             db,
             collection: Arc::new(collection),
-            path: path.into(),
         };
 
         index.collection.par_iter().for_each(|(dataset_id, _)| {
@@ -108,7 +106,7 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
-        let mut opts = db_options();
+        let opts = db_options();
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -129,11 +127,7 @@ impl RevIndex {
             storage_spec,
         )?);
 
-        Ok(module::RevIndex::Plain(Self {
-            db,
-            collection,
-            path: path.as_ref().into(),
-        }))
+        Ok(module::RevIndex::Plain(Self { db, collection }))
     }
 
     fn load_collection_from_rocksdb(
@@ -471,11 +465,14 @@ impl RevIndexOps for RevIndex {
         let new_storage = RocksDBStorage::from_db(self.db.clone());
 
         // use manifest to copy from current storage to new one
-        self.collection().par_iter().for_each(|(_, record)| {
-            let path = record.internal_location().as_str();
-            let sig_data = self.collection.storage().load(path).unwrap();
-            new_storage.save(path, &sig_data);
-        });
+        self.collection()
+            .par_iter()
+            .try_for_each(|(_, record)| -> Result<()> {
+                let path = record.internal_location().as_str();
+                let sig_data = self.collection.storage().load(path).unwrap();
+                new_storage.save(path, &sig_data)?;
+                Ok(())
+            })?;
 
         // Replace storage for collection.
         // Using unchecked version because we just used the manifest

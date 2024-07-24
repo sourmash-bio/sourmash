@@ -33,8 +33,6 @@ impl RocksDBStorage {
 
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
-        // TODO: save storage_args
-
         Self { db }
     }
 
@@ -62,7 +60,7 @@ impl Storage for RocksDBStorage {
     }
 
     fn spec(&self) -> String {
-        "rocksdb://".into()
+        format!("rocksdb://{}", self.db.path().display())
     }
 }
 
