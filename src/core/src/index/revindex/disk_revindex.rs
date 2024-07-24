@@ -71,7 +71,6 @@ impl RevIndex {
         let mut opts = db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
-        opts.prepare_for_bulk_load();
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -110,9 +109,6 @@ impl RevIndex {
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
         let mut opts = db_options();
-        if !read_only {
-            opts.prepare_for_bulk_load();
-        }
 
         // prepare column family descriptors
         let cfs = cf_descriptors();

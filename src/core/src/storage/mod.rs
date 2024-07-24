@@ -98,12 +98,6 @@ impl PartialEq for SigStore {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct StorageInfo {
-    pub backend: String,
-    pub args: StorageArgs,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum StorageArgs {
