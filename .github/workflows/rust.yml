@@ -260,7 +260,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --all-features --tests
+          args: --all-features
 
   check_cbindgen:
     name: "Check if cbindgen runs cleanly for generating the C headers"
