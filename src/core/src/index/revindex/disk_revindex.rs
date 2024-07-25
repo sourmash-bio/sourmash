@@ -174,7 +174,7 @@ impl RevIndex {
         }
         self.db.put_cf(&cf_metadata, MANIFEST, &wtr[..])?;
 
-        // write storage specdisk_re
+        // write storage spec
         let spec = self.collection.storage().spec();
 
         // TODO: check if spec if memstorage, would probably have to
@@ -459,7 +459,10 @@ impl RevIndexOps for RevIndex {
     }
 
     fn internalize_storage(&mut self) -> Result<()> {
-        // TODO: check if collection is already internal, if so return
+        // check if collection is already internal, if so return
+        if self.collection.storage().spec() == "rocksdb://" {
+            return Ok(());
+        }
 
         // build new rocksdb storage from db
         let new_storage = RocksDBStorage::from_db(self.db.clone());

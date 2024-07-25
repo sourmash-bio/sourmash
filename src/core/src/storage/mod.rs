@@ -639,8 +639,16 @@ impl Storage for MemStorage {
         unimplemented!()
     }
 
-    fn load(&self, _path: &str) -> Result<Vec<u8>> {
-        unimplemented!()
+    fn load(&self, path: &str) -> Result<Vec<u8>> {
+        let store = self.sigs.read().unwrap();
+        let sig = store.get(path).unwrap();
+
+        let mut buffer = vec![];
+        {
+            sig.to_writer(&mut buffer).unwrap();
+        }
+
+        Ok(buffer)
     }
 
     fn args(&self) -> StorageArgs {
