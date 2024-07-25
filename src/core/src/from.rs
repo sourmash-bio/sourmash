@@ -16,7 +16,7 @@ impl From<MashSketcher> for KmerMinHash {
 
         let mut new_mh = KmerMinHash::new(
             0,
-            values.get(0).unwrap().kmer.len() as u32,
+            values.first().unwrap().kmer.len() as u32,
             HashFunctions::Murmur64Dna,
             42,
             true,
@@ -65,7 +65,7 @@ mod test {
 
         let b_hashes = b.to_vec();
 
-        let s1: HashSet<_> = a.mins().into_iter().collect();
+        let s1: HashSet<_> = a.iter_mins().copied().collect();
         let s2: HashSet<_> = b_hashes.iter().map(|x| x.hash).collect();
         let i1 = &s1 & &s2;
 
@@ -73,8 +73,7 @@ mod test {
         assert!(i1.len() == b_hashes.len());
 
         if let Some(abunds) = a.abunds() {
-            let mins = a.mins();
-            let smap: HashMap<_, _> = mins.iter().zip(abunds.iter()).collect();
+            let smap: HashMap<_, _> = a.iter_mins().zip(abunds.iter()).collect();
             println!("{:?}", smap);
             for item in b_hashes.iter() {
                 assert!(smap.contains_key(&{ item.hash }));
@@ -101,19 +100,17 @@ mod test {
 
         let c = KmerMinHash::from(b);
 
-        let s1: HashSet<_> = a.mins().into_iter().collect();
-        let s2: HashSet<_> = c.mins().into_iter().collect();
+        let s1: HashSet<_> = a.iter_mins().collect();
+        let s2: HashSet<_> = c.iter_mins().collect();
         let i1 = &s1 & &s2;
 
-        assert!(i1.len() == a.mins().len());
-        assert!(i1.len() == c.mins().len());
+        assert!(i1.len() == a.iter_mins().count());
+        assert!(i1.len() == c.iter_mins().count());
 
         if let Some(a_abunds) = a.abunds() {
             if let Some(c_abunds) = c.abunds() {
-                let a_mins = a.mins();
-                let a_smap: HashMap<_, _> = a_mins.iter().zip(a_abunds.iter()).collect();
-                let c_mins = c.mins();
-                let c_smap: HashMap<_, _> = c_mins.iter().zip(c_abunds.iter()).collect();
+                let a_smap: HashMap<_, _> = a.iter_mins().zip(a_abunds.iter()).collect();
+                let c_smap: HashMap<_, _> = c.iter_mins().zip(c_abunds.iter()).collect();
                 for item in a_smap.iter() {
                     assert!(c_smap.contains_key(*item.0));
                     assert!(c_smap.get(*item.0).unwrap() == item.1);

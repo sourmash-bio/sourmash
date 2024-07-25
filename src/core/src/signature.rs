@@ -475,10 +475,6 @@ impl Signature {
         self.signatures.len()
     }
 
-    pub fn sketches(&self) -> Vec<Sketch> {
-        self.signatures.clone()
-    }
-
     pub fn reset_sketches(&mut self) {
         self.signatures = vec![];
     }

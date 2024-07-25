@@ -50,6 +50,7 @@ fn zipstorage_list_sbts() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
     use rayon::prelude::*;
+
     use sourmash::signature::SigsTrait;
 
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -71,7 +72,7 @@ fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
         let data = zs.load(path).unwrap();
         let sigs: Vec<Signature> = serde_json::from_reader(&data[..]).expect("Loading error");
         sigs.iter()
-            .map(|v| v.sketches().iter().map(|mh| mh.size()).sum::<usize>())
+            .map(|v| v.iter().map(|mh| mh.size()).sum::<usize>())
             .sum::<usize>()
     })
     .sum();

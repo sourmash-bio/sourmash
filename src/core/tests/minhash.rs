@@ -11,7 +11,6 @@ use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{
     max_hash_for_scaled, scaled_for_max_hash, KmerMinHash, KmerMinHashBTree,
 };
-use sourmash::sketch::Sketch;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
@@ -58,11 +57,11 @@ fn invalid_dna() {
     let mut a = KmerMinHash::new(0, 3, HashFunctions::Murmur64Dna, 42, false, 20);
 
     a.add_sequence(b"AAANNCCCTN", true).unwrap();
-    assert_eq!(a.mins().len(), 3);
+    assert_eq!(a.iter_mins().count(), 3);
 
     let mut b = KmerMinHash::new(0, 3, HashFunctions::Murmur64Dna, 42, false, 20);
     b.add_sequence(b"NAAA", true).unwrap();
-    assert_eq!(b.mins().len(), 1);
+    assert_eq!(b.iter_mins().count(), 1);
 }
 
 #[test]
@@ -209,8 +208,8 @@ fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
     d.add_from(&b).unwrap();
     d.remove_many(to_remove.iter().copied()).unwrap();
 
-    assert_eq!(a.mins(), b.mins());
-    assert_eq!(c.mins(), d.mins());
+    assert!(a.iter_mins().zip(b.iter_mins()).all(|(a, b)| a == b));
+    assert!(c.iter_mins().zip(d.iter_mins()).all(|(a, b)| a == b));
 
     assert_eq!(a.count_common(&c, false).unwrap(), b.count_common(&d, false).unwrap());
     assert_eq!(a.count_common(&c, true).unwrap(), b.count_common(&d, true).unwrap());
@@ -242,8 +241,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
         }
     }
 
-    c.add_many(&hashes).unwrap();
-    d.add_many(&hashes).unwrap();
+    c.add_many(hashes.iter().copied()).unwrap();
+    d.add_many(hashes.iter().copied()).unwrap();
 
     c.remove_many(to_remove.iter().copied()).unwrap();
     d.remove_many(to_remove.iter().copied()).unwrap();
@@ -251,8 +250,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     a.remove_hash(hashes[0]);
     b.remove_hash(hashes[0]);
 
-    assert_eq!(a.mins(), b.mins());
-    assert_eq!(c.mins(), d.mins());
+    assert!(a.iter_mins().zip(b.iter_mins()).all(|(a, b)| a == b));
+    assert!(c.iter_mins().zip(d.iter_mins()).all(|(a, b)| a == b));
 
     assert_eq!(a.md5sum(), b.md5sum());
     assert_eq!(c.md5sum(), d.md5sum());
@@ -343,8 +342,8 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     a.merge(&c).unwrap();
     b.merge(&d).unwrap();
 
-    assert_eq!(a.mins(), b.mins());
-    assert_eq!(c.mins(), d.mins());
+    assert!(a.iter_mins().zip(b.iter_mins()).all(|(a, b)| a == b));
+    assert!(c.iter_mins().zip(d.iter_mins()).all(|(a, b)| a == b));
 
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
@@ -386,95 +385,99 @@ fn load_save_minhash_sketches() {
     let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
-    let sketches = sig.sketches();
+    let mh = sig.minhash().unwrap();
     let mut buffer = vec![];
 
-    if let Sketch::MinHash(mh) = &sketches[0] {
-        let bmh: KmerMinHashBTree = mh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
-        }
-
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
-
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
-
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
-
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
-
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
-
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
-
-        buffer.clear();
-        let imh: KmerMinHash = bmh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
-        }
-
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
-
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
-
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
-
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
-
-        assert_eq!(mh.to_vec(), new_mh.to_vec());
-        assert_eq!(bmh.to_vec(), new_bmh.to_vec());
-        assert_eq!(bmh.to_vec(), new_mh.to_vec());
-        assert_eq!(mh.to_vec(), new_bmh.to_vec());
-
-        assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
-
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
-
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    let bmh: KmerMinHashBTree = mh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &bmh).unwrap();
     }
+
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+    assert!(mh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(bmh
+        .iter_mins()
+        .zip(new_bmh.iter_mins())
+        .all(|(a, b)| a == b));
+    assert!(bmh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(mh.iter_mins().zip(new_bmh.iter_mins()).all(|(a, b)| a == b));
+
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
+
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
+
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
+
+    buffer.clear();
+    let imh: KmerMinHash = bmh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &imh).unwrap();
+    }
+
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+    assert!(mh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(bmh
+        .iter_mins()
+        .zip(new_bmh.iter_mins())
+        .all(|(a, b)| a == b));
+    assert!(bmh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(mh.iter_mins().zip(new_bmh.iter_mins()).all(|(a, b)| a == b));
+
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
+
+    assert_eq!(mh.to_vec(), new_mh.to_vec());
+    assert_eq!(bmh.to_vec(), new_bmh.to_vec());
+    assert_eq!(bmh.to_vec(), new_mh.to_vec());
+    assert_eq!(mh.to_vec(), new_bmh.to_vec());
+
+    assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
+
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
+
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 }
 
 #[test]
@@ -487,95 +490,99 @@ fn load_save_minhash_sketches_abund() {
     let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
-    let sketches = sig.sketches();
+    let mh = sig.minhash().unwrap();
     let mut buffer = vec![];
 
-    if let Sketch::MinHash(mh) = &sketches[0] {
-        let bmh: KmerMinHashBTree = mh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
-        }
-
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
-
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
-
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
-
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
-
-        assert_eq!(mh.to_vec(), new_mh.to_vec());
-        assert_eq!(bmh.to_vec(), new_bmh.to_vec());
-        assert_eq!(bmh.to_vec(), new_mh.to_vec());
-        assert_eq!(mh.to_vec(), new_bmh.to_vec());
-
-        assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
-        assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
-        assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
-
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
-
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
-
-        buffer.clear();
-        let imh: KmerMinHash = bmh.clone().into();
-        {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
-        }
-
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
-
-        assert_eq!(mh.md5sum(), new_mh.md5sum());
-        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
-        assert_eq!(bmh.md5sum(), new_mh.md5sum());
-        assert_eq!(mh.md5sum(), new_bmh.md5sum());
-
-        assert_eq!(mh.mins(), new_mh.mins());
-        assert_eq!(bmh.mins(), new_bmh.mins());
-        assert_eq!(bmh.mins(), new_mh.mins());
-        assert_eq!(mh.mins(), new_bmh.mins());
-
-        assert_eq!(mh.abunds(), new_mh.abunds());
-        assert_eq!(bmh.abunds(), new_bmh.abunds());
-        assert_eq!(bmh.abunds(), new_mh.abunds());
-        assert_eq!(mh.abunds(), new_bmh.abunds());
-
-        assert!(
-            (mh.similarity(&new_mh, false, false).unwrap()
-                - bmh.similarity(&new_bmh, false, false).unwrap())
-            .abs()
-                < EPSILON
-        );
-
-        assert!(
-            (mh.similarity(&new_mh, true, false).unwrap()
-                - bmh.similarity(&new_bmh, true, false).unwrap())
-            .abs()
-                < EPSILON
-        );
+    let bmh: KmerMinHashBTree = mh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &bmh).unwrap();
     }
+
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+    assert!(mh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(bmh
+        .iter_mins()
+        .zip(new_bmh.iter_mins())
+        .all(|(a, b)| a == b));
+    assert!(bmh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(mh.iter_mins().zip(new_bmh.iter_mins()).all(|(a, b)| a == b));
+
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
+
+    assert_eq!(mh.to_vec(), new_mh.to_vec());
+    assert_eq!(bmh.to_vec(), new_bmh.to_vec());
+    assert_eq!(bmh.to_vec(), new_mh.to_vec());
+    assert_eq!(mh.to_vec(), new_bmh.to_vec());
+
+    assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
+    assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
+    assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
+
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
+
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
+
+    buffer.clear();
+    let imh: KmerMinHash = bmh.clone().into();
+    {
+        serde_json::to_writer(&mut buffer, &imh).unwrap();
+    }
+
+    let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+    let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+    assert_eq!(mh.md5sum(), new_mh.md5sum());
+    assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+    assert_eq!(bmh.md5sum(), new_mh.md5sum());
+    assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+    assert!(mh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(bmh
+        .iter_mins()
+        .zip(new_bmh.iter_mins())
+        .all(|(a, b)| a == b));
+    assert!(bmh.iter_mins().zip(new_mh.iter_mins()).all(|(a, b)| a == b));
+    assert!(mh.iter_mins().zip(new_bmh.iter_mins()).all(|(a, b)| a == b));
+
+    assert_eq!(mh.abunds(), new_mh.abunds());
+    assert_eq!(bmh.abunds(), new_bmh.abunds());
+    assert_eq!(bmh.abunds(), new_mh.abunds());
+    assert_eq!(mh.abunds(), new_bmh.abunds());
+
+    assert!(
+        (mh.similarity(&new_mh, false, false).unwrap()
+            - bmh.similarity(&new_bmh, false, false).unwrap())
+        .abs()
+            < EPSILON
+    );
+
+    assert!(
+        (mh.similarity(&new_mh, true, false).unwrap()
+            - bmh.similarity(&new_bmh, true, false).unwrap())
+        .abs()
+            < EPSILON
+    );
 }
 
 #[test]
@@ -759,10 +766,12 @@ fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
         }
     }
 
-    mh.mins().sort_unstable();
     hashes.sort_unstable();
-    assert_eq!(mh.mins(), hashes);
+    assert!(mh.iter_mins().zip(hashes.iter()).all(|(a, b)| a == b));
 
+    let mut mins: Vec<_> = mh.iter_mins().copied().collect();
+    mins.sort_unstable();
+    assert!(mins.iter().zip(hashes.iter()).all(|(a, b)| a == b));
 }
 
 #[test]
@@ -782,10 +791,12 @@ fn seq_to_hashes_2(seq in "QRMTHINK") {
         }
     }
 
-    mh.mins().sort_unstable();
     hashes.sort_unstable();
-    assert_eq!(mh.mins(), hashes);
+    assert!(mh.iter_mins().zip(hashes.iter()).all(|(a, b)| a == b));
 
+    let mut mins: Vec<_> = mh.iter_mins().copied().collect();
+    mins.sort_unstable();
+    assert!(mins.iter().zip(hashes.iter()).all(|(a, b)| a == b));
 }
 
 }

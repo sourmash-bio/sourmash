@@ -522,9 +522,9 @@ impl KmerMinHash {
         Ok(())
     }
 
-    pub fn add_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn add_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.add_hash(*min);
+            self.add_hash(min);
         }
         Ok(())
     }
@@ -708,10 +708,6 @@ impl KmerMinHash {
         self.hash_function == HashFunctions::Murmur64Hp
     }
 
-    pub fn mins(&self) -> Vec<u64> {
-        self.mins.clone()
-    }
-
     pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
         self.mins.iter()
     }
@@ -735,7 +731,7 @@ impl KmerMinHash {
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
         } else {
-            new_mh.add_many(&self.mins)?;
+            new_mh.add_many(self.mins.iter().copied())?;
         }
         Ok(new_mh)
     }
@@ -939,6 +935,15 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
                 }
             }
         }
+    }
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let min = match (self.iter.size_hint().1, self.other.size_hint().1) {
+            (Some(a), Some(b)) => Some(std::cmp::min(a, b)),
+            (Some(a), None) | (None, Some(a)) => Some(a),
+            (None, None) => None,
+        };
+        (0, min)
     }
 }
 
@@ -1341,9 +1346,9 @@ impl KmerMinHashBTree {
         Ok(())
     }
 
-    pub fn add_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    pub fn add_many<T: IntoIterator<Item = u64>>(&mut self, hashes: T) -> Result<(), Error> {
         for min in hashes {
-            self.add_hash(*min);
+            self.add_hash(min);
         }
         Ok(())
     }
@@ -1514,10 +1519,6 @@ impl KmerMinHashBTree {
         self.hash_function.clone()
     }
 
-    pub fn mins(&self) -> Vec<u64> {
-        self.mins.iter().cloned().collect()
-    }
-
     pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
         self.mins.iter()
     }
@@ -1543,7 +1544,7 @@ impl KmerMinHashBTree {
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
         } else {
-            new_mh.add_many(&self.mins())?;
+            new_mh.add_many(self.mins.iter().copied())?;
         }
         Ok(new_mh)
     }
@@ -1581,7 +1582,7 @@ impl SigsTrait for KmerMinHashBTree {
     }
 
     fn to_vec(&self) -> Vec<u64> {
-        self.mins()
+        self.iter_mins().copied().collect()
     }
 
     fn ksize(&self) -> usize {

@@ -8,6 +8,7 @@ use crate::ffi::HashFunctions;
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
+use crate::HashIntoType;
 
 pub struct SourmashKmerMinHash;
 
@@ -206,7 +207,7 @@ pub unsafe extern "C" fn kmerminhash_remove_many(
 ffi_fn! {
 unsafe fn kmerminhash_get_mins(ptr: *const SourmashKmerMinHash, size: *mut usize) -> Result<*const u64> {
     let mh = SourmashKmerMinHash::as_rust(ptr);
-    let output = mh.mins();
+    let output: Vec<HashIntoType> = mh.iter_mins().copied().collect();
     *size = output.len();
 
     // FIXME: make a SourmashSlice_u64 type?
@@ -434,7 +435,7 @@ unsafe fn kmerminhash_intersection(ptr: *const SourmashKmerMinHash, other: *cons
     let isect = mh.intersection(other_mh)?;
     let mut new_mh = mh.clone();
     new_mh.clear();
-    new_mh.add_many(&isect.0)?;
+    new_mh.add_many(isect.0.iter().copied())?;
 
     Ok(SourmashKmerMinHash::from_rust(new_mh))
 }
