@@ -64,6 +64,17 @@ impl CollectionSet {
     pub fn selection(&self) -> Selection {
         todo!("Extract selection from first sig")
     }
+
+    /// Replace the storage with a new one.
+    ///
+    /// # Safety
+    ///
+    /// This method doesn't check if the manifest matches what is in the
+    /// storage (which can be expensive). It is up to the caller to
+    /// guarantee the manifest and storage are in sync.
+    pub unsafe fn set_storage_unchecked(&mut self, storage: InnerStorage) {
+        self.storage = storage;
+    }
 }
 
 impl Collection {

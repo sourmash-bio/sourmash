@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.15.0] - 2024-07-27
+
+MSRV: 1.65
+
+Changes/additions:
+
+* RocksDB storage and self-contained RevIndex with internal storage #3250
+* Enable codspeed for Rust perf tracking (#3231)
+
+Updates
+
+* Bump roaring from 0.10.5 to 0.10.6 (#3245)
+* Bump serde from 1.0.203 to 1.0.204 (#3244)
+* Bump counter from 0.5.7 to 0.6.0 (#3235)
+* Bump log from 0.4.21 to 0.4.22 (#3236)
+* Bump serde_json from 1.0.117 to 1.0.120 (#3234)
+* Bump proptest from 1.4.0 to 1.5.0 (#3222)
+
 ## [0.14.1] - 2024-06-19
 
 MSRV: 1.65

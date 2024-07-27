@@ -124,7 +124,7 @@
             cargo-deny
             cargo-wasi
             cargo-codspeed
-            #cargo-semver-checks
+            cargo-semver-checks
             nixpkgs-fmt
           ];
 

@@ -20,25 +20,19 @@ use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::storage::rocksdb::{db_options, COLORS, DB};
 use crate::HashIntoType;
 use crate::Result;
-
-type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
-
-type QueryColors = HashMap<Color, Datasets>;
-type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
-#[derive(Serialize, Deserialize)]
-pub struct HashToColor(HashToColorT);
-
-// Column families
-const HASHES: &str = "hashes";
-const COLORS: &str = "colors";
-const METADATA: &str = "metadata";
 
 // DB metadata saved in the METADATA column family
 const MANIFEST: &str = "manifest";
 const STORAGE_SPEC: &str = "storage_spec";
 const VERSION: &str = "version";
+
+type QueryColors = HashMap<Color, Datasets>;
+type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
+#[derive(Serialize, Deserialize)]
+pub struct HashToColor(HashToColorT);
 
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
@@ -83,6 +77,10 @@ pub trait RevIndexOps {
         query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>>;
+
+    fn collection(&self) -> &CollectionSet;
+
+    fn internalize_storage(&mut self) -> Result<()>;
 }
 
 impl HashToColor {
@@ -186,7 +184,7 @@ impl RevIndex {
     }
 
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
-        let opts = Self::db_options();
+        let opts = db_options();
         let cfs = DB::list_cf(&opts, index.as_ref()).unwrap();
 
         if cfs.into_iter().any(|c| c == COLORS) {
@@ -196,29 +194,6 @@ impl RevIndex {
         } else {
             disk_revindex::RevIndex::open(index, read_only, spec)
         }
-    }
-
-    fn db_options() -> rocksdb::Options {
-        let mut opts = rocksdb::Options::default();
-        opts.set_max_open_files(500);
-
-        // Updated defaults from
-        // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
-        opts.set_bytes_per_sync(1048576);
-        let mut block_opts = rocksdb::BlockBasedOptions::default();
-        block_opts.set_block_size(16 * 1024);
-        block_opts.set_cache_index_and_filter_blocks(true);
-        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
-        block_opts.set_format_version(6);
-        opts.set_block_based_table_factory(&block_opts);
-        // End of updated defaults
-
-        opts.increase_parallelism(rayon::current_num_threads() as i32);
-        //opts.max_background_jobs = 6;
-        // opts.optimize_level_style_compaction();
-        // opts.optimize_universal_style_compaction();
-
-        opts
     }
 }
 
@@ -451,6 +426,7 @@ mod test {
     use crate::collection::Collection;
     use crate::prelude::*;
     use crate::selection::Selection;
+    use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
@@ -895,6 +871,153 @@ mod test {
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
         assert_eq!(matches[0].1, 514);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_internalize_storage() -> Result<()> {
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output = outdir.path().join("index");
+
+        let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
+
+        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+
+        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+
+        let matches_external = index.gather(
+            counter,
+            query_colors,
+            hash_to_color,
+            0,
+            &query,
+            Some(selection.clone()),
+        )?;
+
+        {
+            let mut index = index;
+            index
+                .internalize_storage()
+                .expect("Error internalizing storage");
+
+            let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+
+            let matches_internal = index.gather(
+                counter,
+                query_colors,
+                hash_to_color,
+                0,
+                &query,
+                Some(selection.clone()),
+            )?;
+            assert_eq!(matches_external, matches_internal);
+        }
+        let new_path = outdir.path().join("new_index_path");
+        std::fs::rename(output.as_path(), new_path.as_path())?;
+
+        let index = RevIndex::open(new_path, false, None)?;
+
+        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+
+        let matches_moved = index.gather(
+            counter,
+            query_colors,
+            hash_to_color,
+            0,
+            &query,
+            Some(selection.clone()),
+        )?;
+        assert_eq!(matches_external, matches_moved);
+
+        Ok(())
+    }
+
+    #[test]
+    fn rocksdb_storage_from_path() -> Result<()> {
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output = outdir.path().join("index");
+
+        // Step 1: create an index
+        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+
+        // Step 2: internalize the storage for the index
+        {
+            let mut index = index;
+            index
+                .internalize_storage()
+                .expect("Error internalizing storage");
+        }
+
+        // Step 3: load rocksdb storage from path
+        // should have the same content as zipfile
+
+        // Iter thru collection, make sure all records are present
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        assert_eq!(collection.len(), 2);
+        let col_storage = collection.storage();
+
+        let spec;
+        {
+            let rdb_storage = RocksDBStorage::from_path(output.as_os_str().to_str().unwrap());
+            spec = rdb_storage.spec();
+            collection.iter().for_each(|(_, r)| {
+                assert_eq!(
+                    rdb_storage.load(r.internal_location().as_str()).unwrap(),
+                    col_storage.load(r.internal_location().as_str()).unwrap()
+                );
+            });
+        }
+
+        // Step 4: verify rocksdb storage spec
+        assert_eq!(
+            spec,
+            format!("rocksdb://{}", output.as_os_str().to_str().unwrap())
+        );
+
+        let storage = InnerStorage::from_spec(spec)?;
+        collection.iter().for_each(|(_, r)| {
+            assert_eq!(
+                storage.load(r.internal_location().as_str()).unwrap(),
+                col_storage.load(r.internal_location().as_str()).unwrap()
+            );
+        });
 
         Ok(())
     }

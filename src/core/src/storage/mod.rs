@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
+use cfg_if::cfg_if;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -30,7 +31,14 @@ pub trait Storage {
     fn args(&self) -> StorageArgs;
 
     /// Load signature from internal path
-    fn load_sig(&self, path: &str) -> Result<SigStore>;
+    fn load_sig(&self, path: &str) -> Result<SigStore> {
+        let raw = self.load(path)?;
+        let sig = Signature::from_reader(&mut &raw[..])?
+            // TODO: select the right sig?
+            .swap_remove(0);
+
+        Ok(sig.into())
+    }
 
     /// Return a spec for creating/opening a storage
     fn spec(&self) -> String;
@@ -45,6 +53,7 @@ pub trait Storage {
     }
 }
 
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum StorageError {
     #[error("Path can't be empty")]
@@ -55,6 +64,9 @@ pub enum StorageError {
 
     #[error("Error reading data from {0}")]
     DataReadError(String),
+
+    #[error("Storage for path {1} requires the '{0}' feature to be enabled")]
+    MissingFeature(String, String),
 }
 
 #[derive(Clone)]
@@ -84,12 +96,6 @@ impl PartialEq for SigStore {
             && self.metadata == other.metadata
             && self.data == other.data
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct StorageInfo {
-    pub backend: String,
-    pub args: StorageArgs,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,6 +135,12 @@ pub struct MemStorage {
     sigs: Arc<RwLock<HashMap<String, SigStore>>>,
 }
 
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+pub mod rocksdb;
+
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+pub use self::rocksdb::RocksDBStorage;
+
 pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
 // =========================================
@@ -145,6 +157,17 @@ impl InnerStorage {
                 InnerStorage::new(FSStorage::new("", path))
             }
             x if x.starts_with("memory") => InnerStorage::new(MemStorage::new()),
+            x if x.starts_with("rocksdb") => {
+                let path = x.split("://").last().expect("not a valid path");
+
+                cfg_if! {
+                    if #[cfg(all( feature = "branchwater", not(target_arch = "wasm32")))] {
+                        InnerStorage::new(RocksDBStorage::from_path(path))
+                    } else {
+                        return Err(StorageError::MissingFeature("branchwater".into(), path.into()).into())
+                    }
+                }
+            }
             x if x.starts_with("zip") => {
                 let path = x.split("://").last().expect("not a valid path");
                 InnerStorage::new(ZipStorage::from_file(path)?)
@@ -616,8 +639,16 @@ impl Storage for MemStorage {
         unimplemented!()
     }
 
-    fn load(&self, _path: &str) -> Result<Vec<u8>> {
-        unimplemented!()
+    fn load(&self, path: &str) -> Result<Vec<u8>> {
+        let store = self.sigs.read().unwrap();
+        let sig = store.get(path).unwrap();
+
+        let mut buffer = vec![];
+        {
+            sig.to_writer(&mut buffer).unwrap();
+        }
+
+        Ok(buffer)
     }
 
     fn args(&self) -> StorageArgs {

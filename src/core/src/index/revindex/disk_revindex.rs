@@ -6,20 +6,23 @@ use std::sync::Arc;
 use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
-use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
+use rocksdb::MergeOperands;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DB,
-    HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps,
+    MANIFEST, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::storage::{InnerStorage, Storage};
+use crate::storage::{
+    rocksdb::{cf_descriptors, db_options, DB, HASHES, METADATA},
+    InnerStorage, RocksDBStorage, Storage,
+};
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
@@ -37,7 +40,7 @@ pub struct RevIndex {
     collection: Arc<CollectionSet>,
 }
 
-fn merge_datasets(
+pub(crate) fn merge_datasets(
     _: &[u8],
     existing_val: Option<&[u8]>,
     operands: &MergeOperands,
@@ -64,10 +67,9 @@ pub fn repair(path: &Path) {
 
 impl RevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
-        let mut opts = module::RevIndex::db_options();
+        let mut opts = db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
-        opts.prepare_for_bulk_load();
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -104,10 +106,7 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
-        let mut opts = module::RevIndex::db_options();
-        if !read_only {
-            opts.prepare_for_bulk_load();
-        }
+        let opts = db_options();
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -152,7 +151,7 @@ impl RevIndex {
         };
 
         let storage = if spec == "rocksdb://" {
-            todo!("init storage from db")
+            InnerStorage::new(RocksDBStorage::from_db(db.clone()))
         } else {
             InnerStorage::from_spec(spec)?
         };
@@ -455,6 +454,45 @@ impl RevIndexOps for RevIndex {
         Ok(())
     }
 
+    fn collection(&self) -> &CollectionSet {
+        &self.collection
+    }
+
+    fn internalize_storage(&mut self) -> Result<()> {
+        // check if collection is already internal, if so return
+        if self.collection.storage().spec() == "rocksdb://" {
+            return Ok(());
+        }
+
+        // build new rocksdb storage from db
+        let new_storage = RocksDBStorage::from_db(self.db.clone());
+
+        // use manifest to copy from current storage to new one
+        self.collection()
+            .par_iter()
+            .try_for_each(|(_, record)| -> Result<()> {
+                let path = record.internal_location().as_str();
+                let sig_data = self.collection.storage().load(path).unwrap();
+                new_storage.save(path, &sig_data)?;
+                Ok(())
+            })?;
+
+        // Replace storage for collection.
+        // Using unchecked version because we just used the manifest
+        // above to make sure the storage is still consistent
+        unsafe {
+            Arc::get_mut(&mut self.collection)
+                .map(|v| v.set_storage_unchecked(InnerStorage::new(new_storage)));
+        }
+
+        // write storage spec
+        let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+        let spec = "rocksdb://";
+        self.db.put_cf(&cf_metadata, STORAGE_SPEC, spec)?;
+
+        Ok(())
+    }
+
     fn convert(&self, _output_db: module::RevIndex) -> Result<()> {
         todo!()
         /*
@@ -496,33 +534,4 @@ impl RevIndexOps for RevIndex {
         }
         */
     }
-}
-
-fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    cfopts.set_merge_operator_associative("datasets operator", merge_datasets);
-    cfopts.set_min_write_buffer_number_to_merge(10);
-
-    // Updated default from
-    // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-
-    let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
-
-    let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
-
-    vec![cf_hashes, cf_metadata]
 }
