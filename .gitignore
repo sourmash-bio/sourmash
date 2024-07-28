@@ -37,3 +37,6 @@ wasm-pack.log
 # nix
 .direnv/
 result
+
+# pixi
+.pixi/
