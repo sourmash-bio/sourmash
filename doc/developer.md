@@ -71,7 +71,7 @@ to start an environment ready for [running tests and checks](#running-tests-and-
 :::{tab-item} General instructions
 
 As long as you have `tox` and a Rust compiler available,
-you can skip `pixi` or `Nix`.
+you can skip `conda`, `pixi`, or `nix`.
 
 For Rust, we suggest using `rustup` to install the Rust environment:
 ```
