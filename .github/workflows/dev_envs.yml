@@ -61,6 +61,7 @@ jobs:
       uses: actions/cache@v4
       env:
         CACHE_NUMBER: 0
+      with:
         path: ~/conda_pkgs_dir
         key:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
