@@ -15,10 +15,10 @@ jobs:
   benchmarks-rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup rust toolchain, cache and cargo-codspeed binary
-        uses: moonrepo/setup-rust@v0
+        uses: moonrepo/setup-rust@v1
         with:
           channel: stable
           cache-target: release
@@ -28,7 +28,7 @@ jobs:
         run: cargo codspeed build -p sourmash
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v2
+        uses: CodSpeedHQ/action@v3
         with:
           run: "cd src/core && cargo codspeed run"
           token: ${{ secrets.CODSPEED_TOKEN }}
