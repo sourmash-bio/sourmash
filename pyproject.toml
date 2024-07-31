@@ -122,7 +122,7 @@ doc = [
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
-  "sphinx-design==0.5.0",
+  "sphinx-design==0.6.0",
   "ipython",
   "docutils>=0.17.1,<0.22",
 ]
