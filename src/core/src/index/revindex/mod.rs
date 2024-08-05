@@ -28,6 +28,7 @@ use crate::Result;
 const MANIFEST: &str = "manifest";
 const STORAGE_SPEC: &str = "storage_spec";
 const VERSION: &str = "version";
+const PROCESSED: &str = "processed";
 
 type QueryColors = HashMap<Color, Datasets>;
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
@@ -351,7 +352,6 @@ impl Datasets {
         }
     }
 
-    /*
     fn contains(&self, value: &Idx) -> bool {
         match self {
             Self::Empty => false,
@@ -359,7 +359,6 @@ impl Datasets {
             Self::Many(ref v) => v.contains(*value),
         }
     }
-    */
 }
 
 #[derive(Getters, Setters, Debug)]
