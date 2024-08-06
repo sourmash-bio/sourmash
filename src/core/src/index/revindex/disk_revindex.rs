@@ -93,14 +93,14 @@ impl RevIndex {
         };
 
         index.collection.par_iter().for_each(|(dataset_id, _)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
-
             // check if this dataset_id was processed already
             // call map_hashes_colors only if not already processed
             if !processed.read().unwrap().contains(&dataset_id) {
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 {
+                    info!("Processed {} reference sigs", i);
+                }
+
                 index.map_hashes_colors(dataset_id as Idx);
 
                 // if cached in a new field in the RevIndex,
