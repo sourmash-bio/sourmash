@@ -86,8 +86,6 @@ impl RevIndex {
             true,
         )?));
 
-        dbg!(processed.read().unwrap().len());
-
         let index = Self {
             db,
             collection,
@@ -152,8 +150,6 @@ impl RevIndex {
             collection.clone(),
             false,
         )?));
-
-        dbg!(processed.read().unwrap().len());
 
         Ok(module::RevIndex::Plain(Self {
             db,
