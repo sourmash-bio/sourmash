@@ -117,7 +117,7 @@ demo = [
 ]
 doc = [
   "sphinx>=6,<8",
-  "myst-parser==3.0.1",
+  "myst-parser==4.0.0",
   "Jinja2",
   "alabaster",
   "sphinxcontrib-napoleon",
