@@ -56,7 +56,7 @@ rkyv = { version = "0.7.44", optional = true }
 roaring = "0.10.6"
 roots = "0.0.8"
 serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.121"
+serde_json = "1.0.122"
 statrs = "0.17.1"
 streaming-stats = "0.2.3"
 thiserror = "1.0"
@@ -68,7 +68,7 @@ vec-collections = "0.4.3"
 codspeed-criterion-compat = "2.6.0"
 proptest = { version = "1.5.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
-tempfile = "3.10.1"
+tempfile = "3.11.0"
 
 [[bench]]
 name = "compute"
