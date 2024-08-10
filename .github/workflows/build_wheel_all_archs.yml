@@ -80,9 +80,8 @@ jobs:
           path: 'wheels/'
 
       # if it matches a Python release tag, upload to github releases
-      # TODO: In the future, use the create-release and upload-release-assets actions
       - name: Release
-        uses: fnkr/github-action-ghr@v1
-        env:
-          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{steps.fetch_artifacts.outputs.download-path}}/wheel-*/*
