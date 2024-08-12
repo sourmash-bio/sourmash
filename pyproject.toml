@@ -9,7 +9,7 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.8.11-dev"
+version = "4.8.11"
 
 authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
@@ -117,12 +117,12 @@ demo = [
 ]
 doc = [
   "sphinx>=6,<9",
-  "myst-parser==3.0.1",
+  "myst-parser",
   "Jinja2",
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
-  "sphinx-design==0.5.0",
+  "sphinx-design==0.6.1",
   "ipython",
   "docutils>=0.17.1,<0.22",
 ]
