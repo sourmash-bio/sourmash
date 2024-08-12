@@ -2375,7 +2375,7 @@ provides faster and lower memory versions of `search`, `gather`, and
 (used for [petabyte-scale sequence search](https://www.biorxiv.org/content/10.1101/2022.11.02.514947v1))
 and large-scale clustering.
 
-Read [the branchwater plugin docs](https://github.com/sourmash-bio/sourmash_plugin_branchwater/tree/main/doc/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/dib-lab/sourmash/issues)
+Read [the branchwater plugin docs](https://github.com/sourmash-bio/sourmash_plugin_branchwater/tree/main/doc/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues)
 
 ### The `betterplot` plugin - improved plotting and visualization
 
@@ -2383,4 +2383,4 @@ Read [the branchwater plugin docs](https://github.com/sourmash-bio/sourmash_plug
 
 The [`betterplot` plugin](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) provides a variety of new plotting outputs for sourmash, including improved distance matrices, MDS plots, tSNE plots, upset plots, and Venn diagrams. It also supports cluster-cutting and extraction, as well as improved labeling and coloring by category.
 
-Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/dib-lab/sourmash/issues).
+Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues).
