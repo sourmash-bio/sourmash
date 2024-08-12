@@ -2324,7 +2324,7 @@ fast selection and lazy loading of sketches in many situations.
 The `sig check` command can also be used to create standalone manifests
 from collections using a picklist, with the `-m/--save-manifest-matching`
 option. This is useful for commands that don't support picklists natively,
-e.g. plugins and extensions.
+such as commands in plugins.
 
 Note that `sig collect` and `sig check` will generate manifests containing the
 pathnames given to them - so if you use relative paths, the references
@@ -2345,7 +2345,7 @@ file.
 You can read more about the details of zip files and manifests in
 [the advanced usage information for databases](databases-advanced.md).
 
-### Using sourmash plugins
+## Using sourmash plugins
 
 As of sourmash v4.7.0, sourmash has an experimental plugins interface!
 The plugin interface supports extending sourmash to load and save
@@ -2359,4 +2359,28 @@ is installed in.
 In the future, we will include a list of available sourmash plugins in
 the documentation, and also provide a way to list available plugins.
 
-You can list all installed plugins with `sourmash info -v`.
+You can list all installed plugins and their versions with `sourmash info -v`.
+
+Below are some useful plugins that the sourmash team uses regularly
+and supports!
+
+### The `branchwater` plugin - multithreaded and optimized sourmash operations
+
+(Installable via conda and pip as `sourmash_plugin_branchwater`.)
+
+The
+[`branchwater` plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
+provides faster and lower memory versions of `search`, `gather`, and
+`sketch`, as well as large-scale metagenome search
+(used for [petabyte-scale sequence search](https://www.biorxiv.org/content/10.1101/2022.11.02.514947v1))
+and large-scale clustering.
+
+Read [the branchwater plugin docs](https://github.com/sourmash-bio/sourmash_plugin_branchwater/tree/main/doc/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues)
+
+### The `betterplot` plugin - improved plotting and visualization
+
+(Installable via pip as `sourmash_plugin_betterplot`.)
+
+The [`betterplot` plugin](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) provides a variety of new plotting outputs for sourmash, including improved distance matrices, MDS plots, tSNE plots, upset plots, and Venn diagrams. It also supports cluster-cutting and extraction, as well as improved labeling and coloring by category.
+
+Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues).
