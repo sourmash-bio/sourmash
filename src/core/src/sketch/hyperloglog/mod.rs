@@ -280,11 +280,10 @@ mod test {
         const N_UNIQUE_H2: usize = 995845;
         const N_UNIQUE_U: usize = 995845;
         const INTERSECTION: usize = 500838;
-        
+
         const SIMILARITY: f64 = 0.502783;
         const CONTAINMENT_H1: f64 = 1.;
         const CONTAINMENT_H2: f64 = 0.502783;
-
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/genome-s10.fa.gz");
