@@ -30,6 +30,7 @@ use estimators::CounterType;
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct HyperLogLog {
     registers: Vec<CounterType>,
     p: usize,

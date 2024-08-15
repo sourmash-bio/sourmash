@@ -38,6 +38,7 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct KmerMinHash {
     num: u32,
     ksize: u32,
