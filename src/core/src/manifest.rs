@@ -80,12 +80,15 @@ where
     }
 }
 
+/// A description of a collection of sketches.
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Manifest {
     records: Vec<Record>,
 }
 
 impl Record {
+    /// Build a Record from a Signature
     pub fn from_sig(sig: &Signature, path: &str) -> Vec<Self> {
         sig.iter()
             .map(|sketch| {
@@ -228,6 +231,7 @@ impl Select for Manifest {
                 valid
             };
             valid = if let Some(scaled) = selection.scaled() {
+                dbg!("foo: {row.scaled}, {scaled}");
                 // num sigs have row.scaled = 0, don't include them
                 valid && row.scaled != 0 && row.scaled <= scaled as u64
             } else {
