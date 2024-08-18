@@ -134,19 +134,17 @@ impl Collection {
             storage: InnerStorage::new(storage),
         })
     }
-    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+/*    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
     pub fn from_rocksdb<P: AsRef<Path>>(dirname: P) -> Result<Self> {
-        // @CTB: is this right?
-        let path = dirname.as_ref().as_os_str().to_str().unwrap();
-        let storage = RocksDBStorage::from_path(path);
-        // Load manifest from standard location in zipstorage
-        let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
+        let index = RevIndex::open(dirname, true, None)?;
+        let collection = db.collection();
+
         Ok(Self {
             manifest,
             storage: InnerStorage::new(storage),
         })
     }
-
+*/
     pub fn from_sigs(sigs: Vec<Signature>) -> Result<Self> {
         let storage = MemStorage::new();
 
