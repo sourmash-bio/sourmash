@@ -179,7 +179,7 @@ pub fn joint_mle(
 /// Calculate the joint maximum likelihood of A and B.
 ///
 /// Returns a tuple (only in A, only in B, intersection)
-fn joint_mle_dispatch<M: MulteplicityInteger>(
+fn joint_mle_dispatch<M: MultiplicityInteger>(
     k1: &[CounterType],
     k2: &[CounterType],
     p: usize,
