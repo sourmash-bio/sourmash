@@ -402,7 +402,7 @@ mod test {
     /// that may happen at resolutions 16, 17 or 18, i.e.
     /// cases with 2^16 == 65536, 2^17 == 131072, 2^18 == 262144.
     ///
-    /// In such cases, the MLE multeplicities which were earlier
+    /// In such cases, the MLE multiplicities which were earlier
     /// implemented always using a u16 type, may overflow.
     fn test_mle_corner_cases() {
         for precision in [16, 17, 18] {
