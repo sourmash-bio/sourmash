@@ -234,7 +234,7 @@ where
         counts_axb_half[_q] = cg1[_q] + ceq[_q] + cg2[_q + 1];
         debug_assert!(counts_axb_half[q] >= counts_axb_half[_q]);
         let multiplicity_q = counts_axb_half[_q];
-        counts_axb_half[q] -= multeplicity_q;
+        counts_axb_half[q] -= multiplicity_q;
 
         counts_bxa_half[_q] = cg2[_q] + ceq[_q] + cg1[_q + 1];
         debug_assert!(counts_bxa_half[q] >= counts_bxa_half[_q]);
