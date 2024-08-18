@@ -30,8 +30,13 @@ pub struct Record {
 
     moltype: String,
 
+    #[getset(get = "pub")]
     num: u32,
+
+    #[getset(get = "pub")]
     scaled: u64,
+
+    #[getset(get = "pub")]
     n_hashes: usize,
 
     #[getset(get_copy = "pub", set = "pub")]
