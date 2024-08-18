@@ -306,7 +306,15 @@ impl Storage for FSStorage {
                     .into();
                 sig
             }
-            _ => todo!("cannot load from path {path}"),
+            x if x.ends_with(".zip") => {
+                let store = ZipStorage::from_file(path)?;
+                let fnames = store.filenames().unwrap();
+                eprintln!("ZYZ {}", fnames.len());
+                todo!("fail here, now")
+                // @CTB
+                    
+            }
+            _ => todo!("cannot load from path '{path}'"),
         };
 
         Ok(sig)
