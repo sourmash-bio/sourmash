@@ -29,7 +29,7 @@ pub trait MultiplicityInteger:
 macro_rules! impl_multiplicity_integer {
     ($($t:ty),*) => {
         $(
-            impl MulteplicityInteger for $t {
+            impl MultiplicityInteger for $t {
                 const ONE: Self = 1;
                 const ZERO: Self = 0;
 
