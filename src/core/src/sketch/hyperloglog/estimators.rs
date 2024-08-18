@@ -26,7 +26,7 @@ pub trait MultiplicityInteger:
     fn to_f64(self) -> f64;
 }
 
-macro_rules! impl_multeplicity_integer {
+macro_rules! impl_multiplicity_integer {
     ($($t:ty),*) => {
         $(
             impl MulteplicityInteger for $t {
