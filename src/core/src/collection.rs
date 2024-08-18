@@ -8,7 +8,7 @@ use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
-use crate::storage::rocksdb::RocksDBStorage;
+use crate::index::revindex::{ RevIndex, RevIndexOps };
 use crate::{Error, Result};
 
 #[cfg(feature = "parallel")]
@@ -16,6 +16,7 @@ use rayon::prelude::*;
 
 /// a Manifest and Storage, combined. Can contain any collection of signatures.
 
+#[derive(Clone)]
 pub struct Collection {
     manifest: Manifest,
     storage: InnerStorage,
@@ -23,6 +24,7 @@ pub struct Collection {
 
 /// A consistent collection of signatures. Can be created using `select`.
 
+#[derive(Clone)]
 pub struct CollectionSet {
     collection: Collection,
 }
@@ -134,17 +136,16 @@ impl Collection {
             storage: InnerStorage::new(storage),
         })
     }
-/*    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
-    pub fn from_rocksdb<P: AsRef<Path>>(dirname: P) -> Result<Self> {
-        let index = RevIndex::open(dirname, true, None)?;
-        let collection = db.collection();
 
-        Ok(Self {
-            manifest,
-            storage: InnerStorage::new(storage),
-        })
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    pub fn from_rocksdb<P: AsRef<Path>>(dirname: P) -> Result<Self> {
+        let path = dirname.as_ref().as_str().to_string();
+        let index = RevIndex::open(path, true, None)?;
+        let collection: Collection = index.collection().clone().into_inner();
+
+        Ok(collection)
     }
-*/
+
     pub fn from_sigs(sigs: Vec<Signature>) -> Result<Self> {
         let storage = MemStorage::new();
 
