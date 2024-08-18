@@ -41,7 +41,7 @@ macro_rules! impl_multiplicity_integer {
     };
 }
 
-impl_multeplicity_integer!(u8, u16, u32);
+impl_multiplicity_integer!(u8, u16, u32);
 
 pub fn counts<M: MulteplicityInteger>(registers: &[CounterType], q: usize) -> Vec<M> {
     let mut counts = vec![M::ZERO; q + 2];
