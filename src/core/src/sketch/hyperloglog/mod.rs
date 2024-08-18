@@ -86,6 +86,13 @@ impl HyperLogLog {
         estimators::mle(&counts, self.p, self.q, 0.01) as usize
     }
 
+    pub fn union(&self, other: &HyperLogLog) -> usize {
+        let (only_a, only_b, intersection) =
+            estimators::joint_mle(&self.registers, &other.registers, self.p, self.q);
+
+        only_a + only_b + intersection
+    }
+
     pub fn similarity(&self, other: &HyperLogLog) -> f64 {
         let (only_a, only_b, intersection) =
             estimators::joint_mle(&self.registers, &other.registers, self.p, self.q);
@@ -272,12 +279,11 @@ mod test {
         const N_UNIQUE_H1: usize = 500741;
         const N_UNIQUE_H2: usize = 995845;
         const N_UNIQUE_U: usize = 995845;
+        const INTERSECTION: usize = 500838;
 
         const SIMILARITY: f64 = 0.502783;
         const CONTAINMENT_H1: f64 = 1.;
         const CONTAINMENT_H2: f64 = 0.502783;
-
-        const INTERSECTION: usize = 500838;
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/genome-s10.fa.gz");
@@ -319,6 +325,9 @@ mod test {
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
         let abs_error = (1. - (hll2.cardinality() as f64 / N_UNIQUE_H2 as f64)).abs();
+        assert!(abs_error < ERR_RATE, "{}", abs_error);
+
+        let abs_error = (1. - (hll1.union(&hll2) as f64 / N_UNIQUE_U as f64)).abs();
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
         let similarity = hll1.similarity(&hll2);
