@@ -54,7 +54,7 @@ pub fn counts<M: MultiplicityInteger>(registers: &[CounterType], q: usize) -> Ve
 }
 
 #[allow(clippy::many_single_char_names)]
-pub fn mle<M: MulteplicityInteger>(counts: &[M], p: usize, q: usize, relerr: f64) -> f64 {
+pub fn mle<M: MultiplicityInteger>(counts: &[M], p: usize, q: usize, relerr: f64) -> f64 {
     let m: M = M::ONE << p;
 
     // If all of the registers are equal to zero, then we return zero.
