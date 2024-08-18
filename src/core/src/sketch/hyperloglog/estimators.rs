@@ -6,7 +6,7 @@ use core::{
 pub type CounterType = u8;
 
 /// Trait for types that can be used as multiplicity integers.
-pub trait MulteplicityInteger:
+pub trait MultiplicityInteger:
     Shl<usize, Output = Self>
     + Copy
     + AddAssign
