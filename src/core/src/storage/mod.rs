@@ -297,6 +297,7 @@ impl Storage for FSStorage {
     }
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
+        eprintln!("FSStorage: load_sig {path}");
         let raw = self.load(path)?;
         let sig = Signature::from_reader(&mut &raw[..])?
             // TODO: select the right sig?
