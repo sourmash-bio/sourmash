@@ -137,8 +137,8 @@ impl Collection {
 
     #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
     pub fn from_rocksdb<P: AsRef<Path>>(dirname: P) -> Result<Self> {
-        use crate::index::revindex::{ RevIndex, RevIndexOps };
-    
+        use crate::index::revindex::{RevIndex, RevIndexOps};
+
         let path = dirname.as_ref().as_str().to_string();
         let index = RevIndex::open(path, true, None)?;
         let collection: Collection = index.collection().clone().into_inner();
