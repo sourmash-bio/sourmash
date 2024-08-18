@@ -81,9 +81,29 @@ impl HyperLogLog {
     }
 
     pub fn cardinality(&self) -> usize {
-        let counts = estimators::counts(&self.registers, self.q);
-
-        estimators::mle(&counts, self.p, self.q, 0.01) as usize
+        if self.p < 8 {
+            estimators::mle(
+                &estimators::counts::<u8>(&self.registers, self.q),
+                self.p,
+                self.q,
+                0.01,
+            ) as usize
+        } else if self.p < 16 {
+            estimators::mle(
+                &estimators::counts::<u16>(&self.registers, self.q),
+                self.p,
+                self.q,
+                0.05,
+            ) as usize
+        } else {
+            assert!(self.p == 16 || self.p == 17 || self.p == 18);
+            estimators::mle(
+                &estimators::counts::<u32>(&self.registers, self.q),
+                self.p,
+                self.q,
+                0.1,
+            ) as usize
+        }
     }
 
     pub fn union(&self, other: &HyperLogLog) -> usize {
@@ -231,6 +251,8 @@ impl Update<HyperLogLog> for KmerMinHash {
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;
+    use std::hash::Hasher;
+    use std::hash::{DefaultHasher, Hash};
     use std::io::{BufReader, BufWriter, Read};
     use std::path::PathBuf;
 
@@ -382,5 +404,54 @@ mod test {
         assert_eq!(hll_new.q, hll.q);
         assert_eq!(hll_new.registers, hll.registers);
         assert_eq!(hll_new.ksize, hll.ksize);
+    }
+
+    #[test]
+    /// Test to cover corner cases in the MLE calculation
+    /// that may happen at resolutions 16, 17 or 18, i.e.
+    /// cases with 2^16 == 65536, 2^17 == 131072, 2^18 == 262144.
+    ///
+    /// In such cases, the MLE multiplicities which were earlier
+    /// implemented always using a u16 type, may overflow.
+    fn test_mle_corner_cases() {
+        for precision in [16, 17, 18] {
+            let mut hll = HyperLogLog::new(precision, 21).unwrap();
+            for i in 1..5000 {
+                let mut hasher = DefaultHasher::new();
+                i.hash(&mut hasher);
+                let hash = hasher.finish();
+                hll.add_hash(hash)
+            }
+
+            let cardinality = hll.cardinality();
+
+            assert!(cardinality > 4500 && cardinality < 5500);
+
+            // We build a second hll to check whether the union of the two
+            // hlls is consistent with the cardinality of the union.
+            let mut hll2 = HyperLogLog::new(precision, 21).unwrap();
+
+            for i in 5000..10000 {
+                let mut hasher = DefaultHasher::new();
+                i.hash(&mut hasher);
+                let hash = hasher.finish();
+                hll2.add_hash(hash)
+            }
+
+            let mut hll_union = hll.clone();
+            hll_union.merge(&hll2).unwrap();
+            let cardinality_union = hll_union.cardinality();
+
+            assert!(
+                cardinality_union > 9500 && cardinality_union < 10500,
+                "precision: {}, cardinality_union: {}",
+                precision,
+                cardinality_union
+            );
+
+            let intersection = hll.intersection(&hll2);
+
+            assert!(intersection < 500);
+        }
     }
 }
