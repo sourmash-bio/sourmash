@@ -251,10 +251,10 @@ impl Update<HyperLogLog> for KmerMinHash {
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;
+    use std::hash::Hasher;
     use std::hash::{DefaultHasher, Hash};
     use std::io::{BufReader, BufWriter, Read};
     use std::path::PathBuf;
-    use std::hash::Hasher;
 
     use crate::signature::SigsTrait;
     use needletail::{parse_fastx_file, parse_fastx_reader, Sequence};

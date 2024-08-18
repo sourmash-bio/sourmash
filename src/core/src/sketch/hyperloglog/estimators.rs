@@ -164,8 +164,7 @@ pub fn joint_mle(
     k2: &[CounterType],
     p: usize,
     q: usize,
-) -> (usize, usize, usize)
-{
+) -> (usize, usize, usize) {
     if p < 8 {
         joint_mle_dispatch::<u8>(k1, k2, p, q)
     } else if p < 16 {
