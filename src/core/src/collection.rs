@@ -7,8 +7,6 @@ use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
-#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
-use crate::index::revindex::{ RevIndex, RevIndexOps };
 use crate::{Error, Result};
 
 #[cfg(feature = "parallel")]
