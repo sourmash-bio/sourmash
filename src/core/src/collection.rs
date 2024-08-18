@@ -7,6 +7,8 @@ use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+use crate::storage::rocksdb::RocksDBStorage;
 use crate::{Error, Result};
 
 #[cfg(feature = "parallel")]
@@ -125,6 +127,18 @@ impl Collection {
 
     pub fn from_zipfile<P: AsRef<Path>>(zipfile: P) -> Result<Self> {
         let storage = ZipStorage::from_file(zipfile)?;
+        // Load manifest from standard location in zipstorage
+        let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
+        Ok(Self {
+            manifest,
+            storage: InnerStorage::new(storage),
+        })
+    }
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    pub fn from_rocksdb<P: AsRef<Path>>(dirname: P) -> Result<Self> {
+        // @CTB: is this right?
+        let path = dirname.as_ref().as_os_str().to_str().unwrap();
+        let storage = RocksDBStorage::from_path(path);
         // Load manifest from standard location in zipstorage
         let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
         Ok(Self {
