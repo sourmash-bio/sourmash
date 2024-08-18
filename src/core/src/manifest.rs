@@ -231,7 +231,7 @@ impl Select for Manifest {
                 valid
             };
             valid = if let Some(scaled) = selection.scaled() {
-                dbg!("foo: {row.scaled}, {scaled}");
+                eprintln!("foo: {0}, {scaled}", row.scaled);
                 // num sigs have row.scaled = 0, don't include them
                 valid && row.scaled != 0 && row.scaled <= scaled as u64
             } else {
