@@ -12,10 +12,14 @@ use crate::{Error, Result};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+/// a Manifest and Storage, combined. Can contain any collection of signatures.
+
 pub struct Collection {
     manifest: Manifest,
     storage: InnerStorage,
 }
+
+/// A consistent collection of signatures. Can be created using `select`.
 
 pub struct CollectionSet {
     collection: Collection,
