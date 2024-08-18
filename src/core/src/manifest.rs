@@ -15,6 +15,8 @@ use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::Result;
 
+/// Individual manifest record, containing information about sketches.
+
 #[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
