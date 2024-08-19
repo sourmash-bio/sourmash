@@ -124,7 +124,9 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
-        let opts = db_options();
+        let mut opts = db_options();
+        opts.create_if_missing(true);
+        opts.create_missing_column_families(true);
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
