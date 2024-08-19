@@ -1,7 +1,7 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
@@ -12,7 +12,7 @@ use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
     self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps,
-    MANIFEST, STORAGE_SPEC, VERSION,
+    MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
@@ -20,7 +20,7 @@ use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::{
-    rocksdb::{cf_descriptors, db_options, DB, HASHES, METADATA},
+    rocksdb::{cf_descriptors, db_options, ALL_CFS, DB, HASHES, METADATA},
     InnerStorage, RocksDBStorage, Storage,
 };
 use crate::Result;
@@ -38,6 +38,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 pub struct RevIndex {
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
+    processed: Arc<RwLock<Datasets>>,
 }
 
 pub(crate) fn merge_datasets(
@@ -78,18 +79,35 @@ impl RevIndex {
 
         let processed_sigs = AtomicUsize::new(0);
 
+        let collection = Arc::new(collection);
+        let processed = Arc::new(RwLock::new(Self::load_processed(
+            db.clone(),
+            collection.clone(),
+            true,
+        )?));
+
         let index = Self {
             db,
-            collection: Arc::new(collection),
+            collection,
+            processed: processed.clone(),
         };
 
         index.collection.par_iter().for_each(|(dataset_id, _)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
+            // check if this dataset_id was processed already
+            // call map_hashes_colors only if not already processed
+            if !processed.read().unwrap().contains(&dataset_id) {
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 {
+                    info!("Processed {} reference sigs", i);
+                }
 
-            index.map_hashes_colors(dataset_id as Idx);
+                index.map_hashes_colors(dataset_id as Idx);
+
+                // if cached in a new field in the RevIndex,
+                // then update the cache too
+
+                processed.write().unwrap().extend([dataset_id]);
+            }
         });
 
         index.save_collection().expect("Error saving collection");
@@ -106,7 +124,9 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
-        let opts = db_options();
+        let mut opts = db_options();
+        opts.create_if_missing(true);
+        opts.create_missing_column_families(true);
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -127,7 +147,35 @@ impl RevIndex {
             storage_spec,
         )?);
 
-        Ok(module::RevIndex::Plain(Self { db, collection }))
+        let processed = Arc::new(RwLock::new(Self::load_processed(
+            db.clone(),
+            collection.clone(),
+            false,
+        )?));
+
+        Ok(module::RevIndex::Plain(Self {
+            db,
+            collection,
+            processed,
+        }))
+    }
+
+    fn load_processed(
+        db: Arc<DB>,
+        collection: Arc<CollectionSet>,
+        assume_empty: bool,
+    ) -> Result<Datasets> {
+        let cf_metadata = db.cf_handle(METADATA).unwrap();
+        if let Some(rdr) = db.get_pinned_cf(&cf_metadata, PROCESSED)? {
+            // convert rdr to Datasets
+            Datasets::from_slice(&rdr)
+                .ok_or_else(|| todo!("throw error from deserializing Datasets"))
+        } else if assume_empty {
+            Ok(Datasets::default())
+        } else {
+            let all_datasets: Vec<_> = (0..collection.manifest().len()).map(|v| v as Idx).collect();
+            Ok(Datasets::new(&all_datasets))
+        }
     }
 
     fn load_collection_from_rocksdb(
@@ -211,6 +259,14 @@ impl RevIndex {
                 .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
                 .expect("error merging");
         }
+
+        // finished processing this dataset,
+        // do a merge_cf in the PROCESSED key in metadata
+        // to account for that.
+        let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+        self.db
+            .merge_cf(&cf_metadata, PROCESSED, colors.as_slice())
+            .expect("error merging");
     }
 }
 
@@ -400,24 +456,41 @@ impl RevIndexOps for RevIndex {
     fn update(mut self, collection: CollectionSet) -> Result<module::RevIndex> {
         // TODO: verify new collection manifest is a superset of current one,
         //       and the initial chunk is the same
-        let to_skip = self.collection.check_superset(&collection)?;
+        self.collection.check_superset(&collection)?;
+        info!("sigs in the original index: {}", self.collection.len());
+
+        self.collection = Arc::new(collection);
+        info!(
+            "sigs in the new index once finished: {}",
+            self.collection.len()
+        );
+
+        let processed = self.processed.clone();
+        info!(
+            "sigs left to process: {}",
+            self.collection.len() - processed.read().unwrap().len()
+        );
 
         // process the remainder
         let processed_sigs = AtomicUsize::new(0);
 
-        self.collection = Arc::new(collection);
-
-        self.collection
-            .par_iter()
-            .skip(to_skip)
-            .for_each(|(dataset_id, _)| {
+        self.collection.par_iter().for_each(|(dataset_id, _)| {
+            // check if this dataset_id was processed already
+            // call map_hashes_colors only if not already processed
+            if !processed.read().unwrap().contains(&dataset_id) {
                 let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
                 if i % 1000 == 0 {
                     info!("Processed {} reference sigs", i);
                 }
 
                 self.map_hashes_colors(dataset_id as Idx);
-            });
+
+                // if cached in a new field in the RevIndex,
+                // then update the cache too
+
+                processed.write().unwrap().extend([dataset_id]);
+            }
+        });
 
         self.save_collection().expect("Error saving collection");
 
@@ -437,7 +510,7 @@ impl RevIndexOps for RevIndex {
     }
 
     fn compact(&self) {
-        for cf_name in [HASHES, METADATA] {
+        for cf_name in ALL_CFS {
             let cf = self.db.cf_handle(cf_name).unwrap();
             self.db.compact_range_cf(&cf, None::<&[u8]>, None::<&[u8]>)
         }
