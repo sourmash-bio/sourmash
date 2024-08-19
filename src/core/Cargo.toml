@@ -96,7 +96,7 @@ skip_feature_sets = [
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies]
-js-sys = "0.3.68"
+js-sys = "0.3.70"
 web-sys = { version = "0.3.69", features = ["console", "File", "FileReaderSync"] }
 wasm-bindgen = "0.2.89"
 getrandom = { version = "0.2", features = ["js"] }
