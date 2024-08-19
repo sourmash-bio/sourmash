@@ -236,6 +236,7 @@ mod test {
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
+    use crate::Result;
 
     #[test]
     fn sigstore_selection_with_downsample() {
@@ -432,5 +433,55 @@ mod test {
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 100);
         }
+    }
+
+    #[test]
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    fn collection_from_rocksdb_storage() -> Result<()> {
+        use crate::index::revindex::{RevIndex, RevIndexOps};
+        use camino::Utf8PathBuf as PathBuf;
+        use tempfile::TempDir;
+
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output: PathBuf = outdir.path().join("index").try_into().unwrap();
+
+        // Step 1: create an index
+        let index = RevIndex::create(output.as_path(), collection.clone().try_into()?, false)?;
+
+        // Step 2: internalize the storage for the index
+        {
+            let mut index = index;
+            index
+                .internalize_storage()
+                .expect("Error internalizing storage");
+        }
+
+        // Step 3: Create a new collection from rocksdb
+        let new_collection = Collection::from_rocksdb(output.as_path())?;
+
+        // Step 4: assert all content is the same
+        for (a, b) in collection.iter().zip(new_collection.iter()) {
+            assert_eq!(a, b);
+        }
+
+        Ok(())
     }
 }
