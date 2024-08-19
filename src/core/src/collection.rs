@@ -216,6 +216,20 @@ impl Collection {
         assert_eq!(sig.signatures.len(), 1);
         Ok(sig)
     }
+
+    pub fn sig_from_record2(&self, record: &Record) -> Result<SigStore> {
+        eprintln!("fetching: {:?}", record);
+        let match_path = record.internal_location().as_str();
+        Ok(match match_path {
+            x if x.ends_with(".sig") || x.ends_with(".sig.gz") => {
+                let selection = Selection::from_record(record)?;
+                let sig = self.storage.load_sig(x)?.select(&selection)?;
+                assert_eq!(sig.signatures.len(), 1);
+                sig
+            }
+            _ => todo!("unknown, dying now")
+        })
+    }
 }
 
 impl Select for Collection {
