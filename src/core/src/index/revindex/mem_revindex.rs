@@ -204,7 +204,7 @@ impl RevIndex {
         threshold: usize,
         query: &KmerMinHash,
     ) -> Result<Vec<GatherResult>> {
-        let mut match_size = usize::max_value();
+        let mut match_size = usize::MAX;
         let mut matches = vec![];
 
         while match_size > threshold && !counter.is_empty() {

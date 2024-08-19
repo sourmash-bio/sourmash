@@ -364,7 +364,7 @@ impl RevIndexOps for RevIndex {
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
-        let mut match_size = usize::max_value();
+        let mut match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
@@ -554,8 +554,7 @@ impl RevIndexOps for RevIndex {
         // Using unchecked version because we just used the manifest
         // above to make sure the storage is still consistent
         unsafe {
-            Arc::get_mut(&mut self.collection)
-                .map(|v| v.set_storage_unchecked(InnerStorage::new(new_storage)));
+            if let Some(v) = Arc::get_mut(&mut self.collection) { v.set_storage_unchecked(InnerStorage::new(new_storage)) }
         }
 
         // write storage spec
