@@ -209,6 +209,7 @@ impl Collection {
     }
 
     pub fn sig_from_record(&self, record: &Record) -> Result<SigStore> {
+        eprintln!("fetching: {:?}", record);
         let match_path = record.internal_location().as_str();
         let selection = Selection::from_record(record)?;
         let sig = self.storage.load_sig(match_path)?.select(&selection)?;
