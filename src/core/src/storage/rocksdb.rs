@@ -13,6 +13,8 @@ pub(crate) const METADATA: &str = "metadata";
 // Column family for using rocksdb as a Storage
 pub(crate) const STORAGE: &str = "storage";
 
+pub(crate) const ALL_CFS: [&str; 3] = [HASHES, METADATA, STORAGE];
+
 pub type DB = rocksdb::DBWithThreadMode<rocksdb::MultiThreaded>;
 
 /// Store data in RocksDB
@@ -81,6 +83,10 @@ pub(crate) fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
 
     let mut cfopts = Options::default();
     cfopts.set_max_write_buffer_number(16);
+    cfopts.set_merge_operator_associative(
+        "datasets operator",
+        crate::index::revindex::disk_revindex::merge_datasets,
+    );
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
 
