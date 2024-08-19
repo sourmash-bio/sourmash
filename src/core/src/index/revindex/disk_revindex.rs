@@ -554,7 +554,9 @@ impl RevIndexOps for RevIndex {
         // Using unchecked version because we just used the manifest
         // above to make sure the storage is still consistent
         unsafe {
-            if let Some(v) = Arc::get_mut(&mut self.collection) { v.set_storage_unchecked(InnerStorage::new(new_storage)) }
+            if let Some(v) = Arc::get_mut(&mut self.collection) {
+                v.set_storage_unchecked(InnerStorage::new(new_storage))
+            }
         }
 
         // write storage spec
