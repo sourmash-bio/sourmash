@@ -16,7 +16,7 @@ impl From<MashSketcher> for KmerMinHash {
 
         let mut new_mh = KmerMinHash::new(
             0,
-            values.get(0).unwrap().kmer.len() as u32,
+            values.first().unwrap().kmer.len() as u32,
             HashFunctions::Murmur64Dna,
             42,
             true,

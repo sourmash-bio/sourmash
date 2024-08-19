@@ -112,6 +112,7 @@ pub struct FSStorage {
     subdir: String,
 }
 
+/// Store files in a zip file.
 #[ouroboros::self_referencing]
 pub struct ZipStorage {
     mapping: Option<memmap2::Mmap>,

@@ -47,7 +47,7 @@ impl Storage for RocksDBStorage {
     fn save(&self, path: &str, content: &[u8]) -> Result<String> {
         let cf_storage = self.db.cf_handle(STORAGE).unwrap();
         // TODO(lirber): deal with conflict for path?
-        self.db.put_cf(&cf_storage, path.as_bytes(), &content[..])?;
+        self.db.put_cf(&cf_storage, path.as_bytes(), content)?;
         Ok(path.into())
     }
 

@@ -15,6 +15,8 @@ use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::Result;
 
+/// Individual manifest record, containing information about sketches.
+
 #[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
@@ -30,8 +32,13 @@ pub struct Record {
 
     moltype: String,
 
+    #[getset(get = "pub")]
     num: u32,
+
+    #[getset(get = "pub")]
     scaled: u64,
+
+    #[getset(get = "pub")]
     n_hashes: usize,
 
     #[getset(get_copy = "pub", set = "pub")]
@@ -73,12 +80,15 @@ where
     }
 }
 
+/// A description of a collection of sketches.
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Manifest {
     records: Vec<Record>,
 }
 
 impl Record {
+    /// Build a Record from a Signature
     pub fn from_sig(sig: &Signature, path: &str) -> Vec<Self> {
         sig.iter()
             .map(|sketch| {
