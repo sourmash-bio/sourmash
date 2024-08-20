@@ -228,18 +228,17 @@ impl Collection {
                 sig
             }
             x if x.ends_with(".zip") => {
-                // let selection = Selection::from_record(record)?;
                 let zipcoll = Collection::from_zipfile(x)?;
 
                 let ziprec = zipcoll.manifest().iter().find(|r| {
                     r.md5() == record.md5() && r.name() == record.name()
                 }).unwrap();
                 eprintln!("ziprec: {}", ziprec.md5());
-                
-                     
-                // let zipcoll = zipcoll.select(&selection)?;
-                
-                todo!("more zip better")
+
+                let sig = zipcoll.sig_from_record(ziprec)?;
+                sig
+
+//                todo!("more zip better")
             }
             _ => todo!("unknown, dying now")
         })
