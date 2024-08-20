@@ -227,6 +227,10 @@ impl Collection {
                 assert_eq!(sig.signatures.len(), 1);
                 sig
             }
+            x if x.ends_with(".zip") => {
+                let zipcoll = Collection::from_zipfile(x);
+                todo!("more zip better")
+            }
             _ => todo!("unknown, dying now")
         })
     }
