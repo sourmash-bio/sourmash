@@ -228,7 +228,10 @@ impl Collection {
                 sig
             }
             x if x.ends_with(".zip") => {
-                let zipcoll = Collection::from_zipfile(x);
+                let selection = Selection::from_record(record)?;
+                let zipcoll = Collection::from_zipfile(x)?;
+                let zipmf = zipcoll.manifest().clone().select(&selection)?;
+
                 todo!("more zip better")
             }
             _ => todo!("unknown, dying now")
