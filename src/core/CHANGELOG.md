@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.15.1] - 2024-08-20
+
+MSRV: 1.65
+
+Changes/additions:
+
+* Misc Rust updates to core (#3297)
+* Implement resumability for revindex (#3275)
+* Resolve issue for high precision MLE estimation (#3296)
+* Added union method to HLL (#3293)
+
+Updates:
+
+* Bump camino from 1.1.7 to 1.1.9 (#3301)
+* Bump web-sys from 0.3.69 to 0.3.70 (#3299)
+* Bump serde_json from 1.0.120 to 1.0.125 (#3288) (#3280) (#3267) (#3302)
+* Bump serde from 1.0.204 to 1.0.208 (#3289) (#3298)
+* Bump tempfile from 3.10.1 to 3.12.0 (#3279) (#3287)
+
 ## [0.15.0] - 2024-07-27
 
 MSRV: 1.65
