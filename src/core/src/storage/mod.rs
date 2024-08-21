@@ -660,7 +660,7 @@ impl Storage for MemStorage {
         let x = self.sigs.read().unwrap();
         match x.get(path) {
             Some(path) => Ok(path.clone()),
-            None => panic!("cannot get path")
+            None => panic!("cannot get path '{path}'")
         }
     }
 
