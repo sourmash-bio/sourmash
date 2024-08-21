@@ -657,8 +657,11 @@ impl Storage for MemStorage {
     }
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
-        let x = self.sigs.read().unwrap(); // @CTB this is causing a problem
-        Ok(x.get(path).unwrap().clone())
+        let x = self.sigs.read().unwrap();
+        match x.get(path) {
+            Some(path) => Ok(path.clone()),
+            None => panic!("cannot get path")
+        }
     }
 
     fn save_sig(&self, path: &str, sig: Signature) -> Result<String> {
