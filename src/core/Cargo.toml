@@ -1,6 +1,6 @@
 [package]
 name = "sourmash"
-version = "0.15.0"
+version = "0.15.1"
 authors = ["Luiz Irber <luiz@sourmash.bio>", "N. Tessa Pierce-Ward <tessa@sourmash.bio>"]
 description = "tools for comparing biological sequences with k-mer sketches"
 repository = "https://github.com/sourmash-bio/sourmash"
