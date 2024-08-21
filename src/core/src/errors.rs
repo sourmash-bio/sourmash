@@ -49,6 +49,9 @@ pub enum SourmashError {
     #[error("error while calculating ANI confidence intervals: {message}")]
     ANIEstimationError { message: String },
 
+    #[error("collection is not a superset")]
+    CollectionNotSuperset,
+
     #[error(transparent)]
     ReadDataError(#[from] ReadDataError),
 
@@ -104,6 +107,7 @@ pub enum SourmashErrorCode {
     NonEmptyMinHash = 1_06,
     MismatchNum = 1_07,
     NeedsAbundanceTracking = 1_08,
+    CollectionNotSuperset = 1_09,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -155,6 +159,7 @@ impl SourmashErrorCode {
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
             SourmashError::CsvError { .. } => SourmashErrorCode::CsvError,
+            SourmashError::CollectionNotSuperset { .. } => SourmashErrorCode::CollectionNotSuperset,
 
             #[cfg(not(target_arch = "wasm32"))]
             #[cfg(feature = "branchwater")]

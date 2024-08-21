@@ -121,8 +121,7 @@ impl Collection {
             .zip(other.iter())
             .all(|((id1, rec1), (id2, rec2))| id1 == id2 && rec1 == rec2)
             .then(|| self.len())
-            // TODO: right error here
-            .ok_or(Error::MismatchKSizes)
+            .ok_or(Error::CollectionNotSuperset)
     }
 
     pub fn from_zipfile<P: AsRef<Path>>(zipfile: P) -> Result<Self> {
