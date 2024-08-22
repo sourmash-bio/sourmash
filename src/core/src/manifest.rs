@@ -288,8 +288,10 @@ impl From<Vec<Record>> for Manifest {
     }
 }
 
-impl From<&[PathBuf]> for Manifest {
-    fn from(paths: &[PathBuf]) -> Self {
+impl TryFrom<&[PathBuf]> for Manifest {
+    type Error = crate::Error;
+
+    fn try_from(paths: &[PathBuf]) -> Result<Self> {
         #[cfg(feature = "parallel")]
         let iter = paths.par_iter();
 
@@ -298,21 +300,30 @@ impl From<&[PathBuf]> for Manifest {
 
         let records: Vec<Record> = iter
             .flat_map(|p| {
-                let recs: Vec<Record> = Signature::from_path(p)
-                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
-                    .into_iter()
+                let sigs: Result<Vec<Signature>> = Signature::from_path(p);
+                // @CTB need to get this error out :think:
+                let sigs: Vec<Signature> = sigs.unwrap();
+                let recs: Vec<Record> = sigs
+                    .iter()
                     .flat_map(|v| Record::from_sig(&v, p.as_str()))
                     .collect();
                 recs
             })
             .collect();
 
-        Manifest { records }
+        let records: Result<Vec<Record>> = Ok(records);
+
+        match records {
+            Ok(records) => Ok(Manifest { records }),
+            Err(x) => Err(crate::Error::MismatchKSizes)
+        }
     }
 }
 
-impl From<&PathBuf> for Manifest {
-    fn from(pathlist: &PathBuf) -> Self {
+impl TryFrom<&PathBuf> for Manifest {
+    type Error = crate::Error;
+
+    fn try_from(pathlist: &PathBuf) -> Result<Self> {
         let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
         let reader = BufReader::new(file);
 
@@ -322,7 +333,7 @@ impl From<&PathBuf> for Manifest {
             .map(PathBuf::from)
             .collect();
 
-        paths.as_slice().into()
+        paths.as_slice().try_into()
     }
 }
 
