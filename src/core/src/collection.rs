@@ -178,10 +178,8 @@ impl Collection {
         // TODO:
         // - figure out if there is a common path between sigs for FSStorage?
 
-        let manifest: Manifest = paths.try_into()?;
-
         Ok(Self {
-            manifest,
+            manifest: paths.into(),
             storage: InnerStorage::new(
                 FSStorage::builder()
                     .fullpath("".into())
