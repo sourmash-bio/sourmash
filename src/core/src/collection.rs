@@ -217,7 +217,7 @@ impl Collection {
         Ok(sig)
     }
 
-    pub fn select_picklist(&self, pick: HashSet<(&str, &str)>) -> Self {
+    pub fn select_picklist(&self, pick: HashSet<(String, String)>) -> Self {
         // @CTB: why do we need this clone here?
         let manifest = self.manifest.clone().select_picklist(pick);
         Self { manifest, storage: self.storage.clone() }
