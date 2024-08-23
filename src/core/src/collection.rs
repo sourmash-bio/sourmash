@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
+use std::collections::HashSet;
 
 use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
@@ -214,6 +215,12 @@ impl Collection {
         let sig = self.storage.load_sig(match_path)?.select(&selection)?;
         assert_eq!(sig.signatures.len(), 1);
         Ok(sig)
+    }
+
+    pub fn select_picklist(&self, pick: HashSet<(&str, &str)>) -> Self {
+        // @CTB: why do we need this clone here?
+        let manifest = self.manifest.clone().select_picklist(pick);
+        Self { manifest, storage: self.storage.clone() }
     }
 }
 

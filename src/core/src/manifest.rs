@@ -215,12 +215,12 @@ impl Manifest {
         self.records.len()
     }
 
-    pub fn match_picklist(self, pick: HashSet<(&str, &str)>) -> Result<Self> {
-        let rows = self.records.iter().filter(|row| {
-            pick.contains((row.name().as_str(), row.md5().as_str()))
-        }).collect();
+    pub fn select_picklist(self, pick: HashSet<(&str, &str)>) -> Self {
+        let records = self.records.iter().filter(|row| {
+            pick.contains(&(row.name().as_str(), row.md5().as_str()))
+        }).cloned().collect();
         
-        Ok(Self { rows })    
+        Self { records }
     }
 }
 
