@@ -8,6 +8,7 @@ use getset::{CopyGetters, Getters, Setters};
 use rayon::prelude::*;
 use serde::de;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
@@ -208,6 +209,18 @@ impl Manifest {
 
     pub fn iter(&self) -> impl Iterator<Item = &Record> {
         self.records.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.records.len()
+    }
+
+    pub fn match_picklist(self, pick: HashSet<(&str, &str)>) -> Result<Self> {
+        let rows = self.records.iter().filter(|row| {
+            pick.contains((row.name().as_str(), row.md5().as_str()))
+        }).collect();
+        
+        Ok(Self { rows })    
     }
 }
 
