@@ -215,6 +215,10 @@ impl Manifest {
         self.records.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.records.len() == 0
+    }
+
     pub fn select_picklist(self, pick: &HashSet<(String, String)>) -> Self {
         let records = self.records.iter().filter(|row| {
             pick.contains(&(row.name().clone(), row.md5().clone()))
