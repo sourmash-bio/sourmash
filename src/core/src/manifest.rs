@@ -215,7 +215,7 @@ impl Manifest {
         self.records.len()
     }
 
-    pub fn select_picklist(self, pick: HashSet<(String, String)>) -> Self {
+    pub fn select_picklist(self, pick: &HashSet<(String, String)>) -> Self {
         let records = self.records.iter().filter(|row| {
             pick.contains(&(row.name().clone(), row.md5().clone()))
         }).cloned().collect();
