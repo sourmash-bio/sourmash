@@ -186,7 +186,7 @@ impl RevIndex {
 
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
         let opts = db_options();
-        let cfs = DB::list_cf(&opts, index.as_ref()).unwrap();
+        let cfs = DB::list_cf(&opts, index.as_ref())?;
 
         if cfs.into_iter().any(|c| c == COLORS) {
             // TODO: ColorRevIndex can't be read-only for now,
@@ -1019,5 +1019,15 @@ mod test {
         });
 
         Ok(())
+    }
+
+    #[test]
+    fn rocksdb_storage_fail_bad_directory() -> Result<()> {
+        let testdir = TempDir::new()?;
+
+        match RevIndex::open(testdir, true, None) {
+            Err(_) => Ok(()),
+            Ok(_) => panic!("test should not reach here"),
+        }
     }
 }
