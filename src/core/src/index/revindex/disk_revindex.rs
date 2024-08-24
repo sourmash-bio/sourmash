@@ -114,7 +114,7 @@ impl RevIndex {
 
         info!("Compact SSTs");
         index.compact();
-        info!("Processed {} reference sigs", processed_sigs.into_inner());
+        info!("Done! Processed {} reference sigs", processed_sigs.into_inner());
 
         Ok(module::RevIndex::Plain(index))
     }
