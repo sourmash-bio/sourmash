@@ -657,11 +657,7 @@ impl Storage for MemStorage {
     }
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
-        let x = self.sigs.read().unwrap();
-        match x.get(path) {
-            Some(path) => Ok(path.clone()),
-            None => panic!("cannot get path '{path}'")
-        }
+        Ok(self.sigs.read().unwrap().get(path).unwrap().clone())
     }
 
     fn save_sig(&self, path: &str, sig: Signature) -> Result<String> {
