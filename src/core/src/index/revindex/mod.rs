@@ -1020,4 +1020,14 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn rocksdb_storage_fail_bad_directory() -> Result<()> {
+        let testdir = TempDir::new()?;
+
+        match RevIndex::open(testdir, true, None) {
+            Err(_) => Ok(()),
+            Ok(_) => panic!("test should not reach here"),
+        }
+    }
 }
