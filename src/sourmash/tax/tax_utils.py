@@ -1124,7 +1124,9 @@ def write_summary(
     w = None
     for q_res in query_gather_results:
         header, summary = q_res.make_full_summary(
-            limit_float=limit_float_decimals, classification=classification, lingroups=lingroups
+            limit_float=limit_float_decimals,
+            classification=classification,
+            lingroups=lingroups,
         )
         if w is None:
             w = csv.DictWriter(csv_fp, header, delimiter=sep)
@@ -2080,7 +2082,11 @@ class SummarizedGatherResult:
         # if lingroups, convert lingroup number to lingroup name
         if lingroups is not None and sD["lineage"] in lingroups.keys():
             sD["lineage"] = lingroups[sD["lineage"]]
-        elif lingroups and sD["lineage"] != "unclassified" and sD["lineage"] not in lingroups.keys():
+        elif (
+            lingroups
+            and sD["lineage"] != "unclassified"
+            and sD["lineage"] not in lingroups.keys()
+        ):
             return None
             # import pdb;pdb.set_trace()
         sD["query_name"] = query_info.query_name
@@ -2560,7 +2566,9 @@ class QueryTaxResult:
             results.append(res.as_human_friendly_dict(query_info=self.query_info))
         return results
 
-    def make_full_summary(self, classification=False, limit_float=False, lingroups=None):
+    def make_full_summary(
+        self, classification=False, limit_float=False, lingroups=None
+    ):
         results = []
         rD = {}
         if classification:
@@ -2601,7 +2609,7 @@ class QueryTaxResult:
             if lingroups is not None:
                 for lin in lingroups.keys():
                     # e.g. "14;1;0;0;0;0;0;0;0;0" => 9
-                    lin_rank = len(lin.split(';')) - 1
+                    lin_rank = len(lin.split(";")) - 1
                     lingroup_ranks.add(lin_rank)
 
             for rank in self.summarized_ranks[::-1]:  # descending
@@ -2616,7 +2624,9 @@ class QueryTaxResult:
                 )  # v5?: f_weighted_at_rank)
                 for res in rank_results:
                     rD = res.as_summary_dict(
-                        query_info=self.query_info, limit_float=limit_float, lingroups=lingroups,
+                        query_info=self.query_info,
+                        limit_float=limit_float,
+                        lingroups=lingroups,
                     )
                     if rD is None:
                         continue

@@ -6094,9 +6094,10 @@ def test_metagenome_LIN_lingroups_summary(runtmp):
         lg_file,
         "-o",
         csv_base,
-        '--output-dir',
+        "--output-dir",
         outdir,
-        "-F", "csv_summary"
+        "-F",
+        "csv_summary",
     )
 
     print(c.last_result.status)

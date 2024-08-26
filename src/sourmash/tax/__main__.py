@@ -155,7 +155,7 @@ def metagenome(args):
             sys.exit(-1)
 
     # if lingroup file is passed in, read it
-    lingroups=None
+    lingroups = None
     if args.lingroup is not None:
         try:
             lingroups = tax_utils.read_lingroups(args.lingroup)
@@ -211,7 +211,10 @@ def metagenome(args):
         )
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(
-                query_gather_results, out_fp, limit_float_decimals=limit_float, lingroups=lingroups,
+                query_gather_results,
+                out_fp,
+                limit_float_decimals=limit_float,
+                lingroups=lingroups,
             )
 
     # write summarized --> kreport output tsv
