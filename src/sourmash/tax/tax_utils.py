@@ -1116,6 +1116,7 @@ def write_summary(
     sep=",",
     limit_float_decimals=False,
     classification=False,
+    lingroups=None,
 ):
     """
     Write taxonomy-summarized gather results for each rank.
@@ -1123,7 +1124,7 @@ def write_summary(
     w = None
     for q_res in query_gather_results:
         header, summary = q_res.make_full_summary(
-            limit_float=limit_float_decimals, classification=classification
+            limit_float=limit_float_decimals, classification=classification, lingroups=lingroups
         )
         if w is None:
             w = csv.DictWriter(csv_fp, header, delimiter=sep)
@@ -2073,9 +2074,15 @@ class SummarizedGatherResult:
             lD[rank] = lin_name
         return lD
 
-    def as_summary_dict(self, query_info, limit_float=False):
+    def as_summary_dict(self, query_info, limit_float=False, lingroups=None):
         sD = asdict(self)
         sD["lineage"] = self.lineage.display_lineage(null_as_unclassified=True)
+        # if lingroups, convert lingroup number to lingroup name
+        if lingroups is not None and sD["lineage"] in lingroups.keys():
+            sD["lineage"] = lingroups[sD["lineage"]]
+        elif lingroups and sD["lineage"] != "unclassified" and sD["lineage"] not in lingroups.keys():
+            return None
+            # import pdb;pdb.set_trace()
         sD["query_name"] = query_info.query_name
         sD["query_md5"] = query_info.query_md5
         sD["query_filename"] = query_info.query_filename
@@ -2553,7 +2560,7 @@ class QueryTaxResult:
             results.append(res.as_human_friendly_dict(query_info=self.query_info))
         return results
 
-    def make_full_summary(self, classification=False, limit_float=False):
+    def make_full_summary(self, classification=False, limit_float=False, lingroups=None):
         results = []
         rD = {}
         if classification:
@@ -2590,7 +2597,18 @@ class QueryTaxResult:
                 "total_weighted_hashes",
             ]
 
+            lingroup_ranks = set()
+            if lingroups is not None:
+                for lin in lingroups.keys():
+                    # e.g. "14;1;0;0;0;0;0;0;0;0" => 9
+                    lin_rank = len(lin.split(';')) - 1
+                    lingroup_ranks.add(lin_rank)
+
             for rank in self.summarized_ranks[::-1]:  # descending
+                # if lingroups are provided, only report summary for specified lingroups
+                if lingroup_ranks:
+                    if int(rank) not in lingroup_ranks:
+                        continue
                 unclassified = []
                 rank_results = self.summarized_lineage_results[rank]
                 rank_results.sort(
@@ -2598,8 +2616,10 @@ class QueryTaxResult:
                 )  # v5?: f_weighted_at_rank)
                 for res in rank_results:
                     rD = res.as_summary_dict(
-                        query_info=self.query_info, limit_float=limit_float
+                        query_info=self.query_info, limit_float=limit_float, lingroups=lingroups,
                     )
+                    if rD is None:
+                        continue
                     # save unclassified for the end
                     if rD["lineage"] == "unclassified":
                         unclassified.append(rD)
