@@ -6061,6 +6061,91 @@ def test_metagenome_LIN_lingroups(runtmp):
     )
 
 
+def test_metagenome_LIN_lingroups_summary(runtmp):
+    # test lingroups summary file. Can no longer output stdout, b/c will produce 2 files
+    c = runtmp
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.LIN-taxonomy.csv")
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, "w") as out:
+        out.write("lin,name\n")
+        out.write("0;0;0,lg1\n")
+        out.write("1;0;0,lg2\n")
+        out.write("2;0;0,lg3\n")
+        out.write("1;0;1,lg3\n")
+        # write a 19 so we can check the end
+        out.write("1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "--lins",
+        "--lingroup",
+        lg_file,
+        "-o",
+        csv_base,
+        '--output-dir',
+        outdir,
+        "-F", "csv_summary"
+    )
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert (
+        "Read 5 lingroup rows and found 5 distinct lingroup prefixes."
+        in c.last_result.err
+    )
+    assert os.path.exists(csvout)
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
+    print(sum_gather_results)
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    assert (
+        "test1,2,0.08815317112086159,lg1,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.05815279361459521,442000,0.9246458342627294,6139"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test1,2,0.07778220981252493,lg2,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.050496823586903404,390000,0.920920083987624,6139"
+        in sum_gather_results[2]
+    )
+    assert (
+        "test1,2,0.027522935779816515,lg3,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.015637726014008795,138000,0.8905689983332759,6139"
+        in sum_gather_results[3]
+    )
+    assert (
+        "test1,2,0.010769844435580374,lg3,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139"
+        in sum_gather_results[4]
+    )
+    assert (
+        "test1,2,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in sum_gather_results[5]
+    )
+    assert (
+        "test1,19,0.010769844435580374,lg4,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139"
+        in sum_gather_results[6]
+    )
+    assert (
+        "test1,19,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in sum_gather_results[7]
+    )
+
+
 def test_metagenome_LIN_human_summary_no_lin_position(runtmp):
     c = runtmp
 
