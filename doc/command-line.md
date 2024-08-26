@@ -637,13 +637,16 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-The possible output formats are:
-- `human`
-- `csv_summary`
-- `lineage_summary`
-- `krona`
-- `kreport`
-- `lingroup_report`
+The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
+
+- `human`: ".human.txt",
+- `csv_summary`: ".summarized.csv",
+- `lineage_summary`: ".lineage_summary.tsv",
+- `krona`: ".krona.tsv",
+- `kreport`: ".kreport.txt",
+- `lingroup`: ".lingroup.tsv",
+- `bioboxes`: ".bioboxes.profile",
+
 
 #### `csv_summary` output format
 
@@ -671,6 +674,9 @@ HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
 o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
 ```
 The `query_md5` and `query_filename` columns are omitted here for brevity.
+
+Note: When using `--lins` with a `--lingroup` file, the `csv_summary` file will report
+summarization for each specified `lingroup`, rather than all possible `lin` ranks (v4.8.12+).
 
 #### `krona` output format
 
@@ -971,7 +977,12 @@ sourmash tax genome
 > This command uses the default classification strategy, which uses a
 containment threshold of 0.1 (10%).
 
-There are two possible output formats, `csv_summary` and `krona`.
+`sourmash tax genome` can produce the following output formats:
+
+- `human`: ".human.txt",
+- `csv_summary`: ".classifications.csv",
+- `krona`: ".krona.tsv",
+- `lineage_summary`: ".lineage_summary.tsv",
 
 #### `csv_summary` output format
 
