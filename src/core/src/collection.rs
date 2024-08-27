@@ -2,7 +2,6 @@ use std::ops::{Deref, DerefMut};
 
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
-use std::collections::HashSet;
 
 use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
@@ -217,8 +216,8 @@ impl Collection {
         Ok(sig)
     }
 
-    pub fn select_picklist(&self, pick: &HashSet<(String, String)>) -> Self {
-        let manifest = self.manifest.select_picklist(pick);
+    pub fn intersect_manifest(&self, mf: &Manifest) -> Self {
+        let manifest = self.manifest.intersect_manifest(mf);
         Self { manifest, storage: self.storage.clone() }
     }
 }

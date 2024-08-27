@@ -211,9 +211,18 @@ impl Manifest {
         self.records.iter()
     }
 
-    pub fn select_picklist(&self, pick: &HashSet<(String, String)>) -> Self {
+    pub fn intersect_manifest(&self, other: &Manifest) -> Self {
+        // @CTB: do we want to key on other things, like ksize, moltype, hash?
+        // As long as we avoid internal_location we should be fine...
+
+        // extract tuples from other mf:
+        let pairs: HashSet<_> = other
+            .iter()
+            .map(|r| (r.name(), r.md5()))
+            .collect();
+
         let records = self.records.iter().filter(|row| {
-            pick.contains(&(row.name().clone(), row.md5().clone()))
+            pairs.contains(&(row.name(), row.md5()))
         }).cloned().collect();
         
         Self { records }
