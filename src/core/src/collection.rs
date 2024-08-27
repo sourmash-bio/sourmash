@@ -218,7 +218,10 @@ impl Collection {
 
     pub fn intersect_manifest(&self, mf: &Manifest) -> Self {
         let manifest = self.manifest.intersect_manifest(mf);
-        Self { manifest, storage: self.storage.clone() }
+        Self {
+            manifest,
+            storage: self.storage.clone(),
+        }
     }
 }
 

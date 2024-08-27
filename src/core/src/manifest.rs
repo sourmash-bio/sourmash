@@ -216,15 +216,16 @@ impl Manifest {
         // As long as we avoid internal_location we should be fine...
 
         // extract tuples from other mf:
-        let pairs: HashSet<_> = other
+        let pairs: HashSet<_> = other.iter().map(|r| (r.name(), r.md5())).collect();
+
+        // @CTB use par_iter here, optionally?
+        let records = self
+            .records
             .iter()
-            .map(|r| (r.name(), r.md5()))
+            .filter(|row| pairs.contains(&(row.name(), row.md5())))
+            .cloned()
             .collect();
 
-        let records = self.records.iter().filter(|row| {
-            pairs.contains(&(row.name(), row.md5()))
-        }).cloned().collect();
-        
         Self { records }
     }
 }
