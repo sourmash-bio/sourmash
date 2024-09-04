@@ -848,6 +848,8 @@ lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
 
 Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
+Note: this output format requires a single sample only. For a similar output with multiple query samples, provide the `lingroup` file and use the 'csv_summary' output format.
+
 #### `bioboxes` output format
 
 When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.

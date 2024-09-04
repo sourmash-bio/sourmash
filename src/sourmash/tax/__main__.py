@@ -126,7 +126,7 @@ def metagenome(args):
         notify("No gather results loaded. Exiting.")
         sys.exit(-1)
 
-    single_query_output_formats = ["csv_summary", "kreport"]
+    single_query_output_formats = ["kreport", "lingroup", "bioboxes"]
     desired_single_outputs = []
     if len(query_gather_results) > 1:  # working with multiple queries
         desired_single_outputs = [
