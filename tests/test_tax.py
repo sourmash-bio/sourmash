@@ -1979,7 +1979,7 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
             line = line.replace("test1", "test2") + "\n"
             fp.write(line)
 
-    csv_summary_out = runtmp.output("tst.summarized.csv")
+    runtmp.output("tst.summarized.csv")
     bioboxes_out = runtmp.output("tst.bioboxes.out")
     kreport_out = runtmp.output("tst.kreport.txt")
 
@@ -2063,8 +2063,13 @@ def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
         in c.last_result.err
     )
 
-    assert f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'" in runtmp.last_result.err
-    sum_gather_results = [x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()]
+    assert (
+        f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'"
+        in runtmp.last_result.err
+    )
+    sum_gather_results = [
+        x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()
+    ]
     assert (
         "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
         in sum_gather_results[0]
@@ -2078,7 +2083,6 @@ def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
         "test2,superkingdom,0.2042281611487834,d__Bacteria,md5,test2.sig,0.13080306238801107,1024000,0.9500482567175479,0"
         in sum_gather_results[23]
     )
-
 
 
 def test_metagenome_two_queries_krona(runtmp):
