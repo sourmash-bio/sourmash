@@ -2001,13 +2001,18 @@ def test_metagenome_two_queries_csv_summary_output(runtmp):
 
     assert c.last_result.status == 0
     assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
-    assert f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'" in runtmp.last_result.err
-    sum_gather_results = [x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()]
+    assert (
+        f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'"
+        in runtmp.last_result.err
+    )
+    sum_gather_results = [
+        x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()
+    ]
     assert (
         "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
         in sum_gather_results[0]
     )
-    # check both queries exist in csv_summary results; check several 
+    # check both queries exist in csv_summary results; check several
     assert (
         "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000,0.9500482567175479,0"
         in sum_gather_results[1]
