@@ -540,4 +540,62 @@ mod test {
         let scaled100 = manifest.select(&selection).unwrap();
         assert_eq!(scaled100.len(), 6);
     }
+
+    #[test]
+    fn manifest_intersect() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let filename = utf8_output.join("sig-pathlist.txt");
+        // build sig filenames
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/63.fa.sig",
+        ];
+
+        let full_paths: Vec<_> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // write a file in test directory with a filename on each line
+        let mut pathfile = File::create(&filename).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile, "{}", sigfile).unwrap();
+        }
+
+        // load into manifest
+        let manifest = Manifest::from(&filename);
+        assert_eq!(manifest.len(), 2);
+
+        // now do just one sketch -
+        let test_sigs2 = vec![
+            "../../tests/test-data/63.fa.sig",
+        ];
+
+        let filename2 = utf8_output.join("sig-pathlist-single.txt");
+
+        let full_paths: Vec<_> = test_sigs2
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let mut pathfile2 = File::create(&filename2).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile2, "{}", sigfile).unwrap();
+        }
+
+        // load into another manifest
+        let manifest2 = Manifest::from(&filename2);
+        assert_eq!(manifest2.len(), 1);
+
+        // intersect with itself => same.
+        let new_mf = manifest2.intersect_manifest(&manifest);
+        assert_eq!(new_mf.len(), 1);
+
+        // intersect with other => single.
+        let new_mf = manifest.intersect_manifest(&manifest2);
+        assert_eq!(new_mf.len(), 1);
+    }
 }
