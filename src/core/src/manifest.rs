@@ -18,7 +18,7 @@ use crate::Result;
 
 /// Individual manifest record, containing information about sketches.
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -176,6 +176,21 @@ impl Record {
         Ok(())
     }
 }
+
+impl PartialEq for Record {
+    // match everything but internal_location
+    fn eq(&self, other: &Self) -> bool {
+        self.md5 == other.md5 &&
+            self.ksize == other.ksize &&
+            self.scaled == other.scaled &&
+            self.n_hashes == other.n_hashes &&
+            self.with_abundance == other.with_abundance &&
+            self.name == other.name &&
+            self.filename == other.filename
+    }
+}
+
+impl Eq for Record {}
 
 impl Manifest {
     pub fn from_reader<R: Read>(rdr: R) -> Result<Self> {
