@@ -245,7 +245,7 @@ impl Manifest {
 
     pub fn intersect_manifest(&self, other: &Manifest) -> Self {
         // extract tuples from other mf:
-        let pairs: HashSet<_> = other.iter().map(|r| r).collect();
+        let pairs: HashSet<_> = other.iter().collect();
 
         let records = self
             .records
