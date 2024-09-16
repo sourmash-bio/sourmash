@@ -1,8 +1,8 @@
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
-use std::collections::HashSet;
-use std::hash::{Hash, Hasher};
 
 use camino::Utf8PathBuf as PathBuf;
 use getset::{CopyGetters, Getters, Setters};
@@ -181,15 +181,15 @@ impl Record {
 impl PartialEq for Record {
     // match everything but internal_location
     fn eq(&self, other: &Self) -> bool {
-        self.md5 == other.md5 &&
-            self.ksize == other.ksize &&
-            self.moltype == other.moltype &&
-            self.scaled == other.scaled &&
-            self.num == other.num &&
-            self.n_hashes == other.n_hashes &&
-            self.with_abundance == other.with_abundance &&
-            self.name == other.name &&
-            self.filename == other.filename
+        self.md5 == other.md5
+            && self.ksize == other.ksize
+            && self.moltype == other.moltype
+            && self.scaled == other.scaled
+            && self.num == other.num
+            && self.n_hashes == other.n_hashes
+            && self.with_abundance == other.with_abundance
+            && self.name == other.name
+            && self.filename == other.filename
     }
 }
 
@@ -598,9 +598,7 @@ mod test {
         assert_eq!(manifest.len(), 2);
 
         // now do just one sketch -
-        let test_sigs2 = vec![
-            "../../tests/test-data/63.fa.sig",
-        ];
+        let test_sigs2 = vec!["../../tests/test-data/63.fa.sig"];
 
         let filename2 = utf8_output.join("sig-pathlist-single.txt");
 
