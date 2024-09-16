@@ -65,7 +65,7 @@ typed-builder = "0.18.0"
 vec-collections = "0.4.3"
 
 [dev-dependencies]
-codspeed-criterion-compat = "2.6.0"
+codspeed-criterion-compat = "2.7.2"
 proptest = { version = "1.5.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
 tempfile = "3.12.0"
