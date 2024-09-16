@@ -469,6 +469,7 @@ impl Select for SigStore {
     fn select(mut self, selection: &Selection) -> Result<Self> {
         // TODO: find better error
         let sig = self.data.take().ok_or(Error::MismatchKSizes)?;
+        eprintln!("YYY {:?}", sig);
         self.data = OnceCell::with_value(sig.select(selection)?);
         Ok(self)
     }
