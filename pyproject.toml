@@ -160,6 +160,9 @@ macos-deployment-target = "10.14"
 [tool.maturin.target.aarch64-apple-darwin]
 macos-deployment-target = "11.0"
 
+[tool.ruff]
+extend-exclude = ["*.ipynb"]
+
 [tool.ruff.lint]
 extend-select = [
   "UP",  # pyupgrade
