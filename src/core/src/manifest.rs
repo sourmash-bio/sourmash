@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 use camino::Utf8PathBuf as PathBuf;
 use getset::{CopyGetters, Getters, Setters};
@@ -8,7 +10,6 @@ use getset::{CopyGetters, Getters, Setters};
 use rayon::prelude::*;
 use serde::de;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
@@ -192,6 +193,16 @@ impl PartialEq for Record {
 
 impl Eq for Record {}
 
+impl Hash for Record { // @CTB moltype, other things? test compare empty.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.md5.hash(state);
+        self.scaled.hash(state);
+        self.with_abundance.hash(state);
+        self.name.hash(state);
+        self.filename.hash(state);
+    }
+}
+
 impl Manifest {
     pub fn from_reader<R: Read>(rdr: R) -> Result<Self> {
         let mut records = vec![];
@@ -227,17 +238,14 @@ impl Manifest {
     }
 
     pub fn intersect_manifest(&self, other: &Manifest) -> Self {
-        // @CTB: do we want to key on other things, like ksize, moltype, hash?
-        // As long as we avoid internal_location we should be fine...
-
         // extract tuples from other mf:
-        let pairs: HashSet<_> = other.iter().map(|r| (r.name(), r.md5())).collect();
+        let pairs: HashSet<_> = other.iter().map(|r| r).collect();
 
         // @CTB use par_iter here, optionally?
         let records = self
             .records
             .iter()
-            .filter(|row| pairs.contains(&(row.name(), row.md5())))
+            .filter(|row| pairs.contains(row))
             .cloned()
             .collect();
 
