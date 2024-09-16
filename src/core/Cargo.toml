@@ -52,7 +52,7 @@ ouroboros = "0.18.4"
 piz = "0.5.0"
 primal-check = "0.3.4"
 rayon = { version = "1.10.0", optional = true }
-rkyv = { version = "0.7.44", optional = true }
+rkyv = { version = "0.8.4", optional = true }
 roaring = "0.10.6"
 roots = "0.0.8"
 serde = { version = "1.0.210", features = ["derive"] }
