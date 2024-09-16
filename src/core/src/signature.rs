@@ -795,6 +795,7 @@ impl ToWriter for Signature {
 
 impl Select for Signature {
     fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+        eprintln!("ZZZ: {}", self.signatures.len());
         self.signatures.retain(|s| {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
