@@ -20,7 +20,7 @@ jobs:
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@v14
     - name: Run the Magic Nix Cache
-      uses: DeterminateSystems/magic-nix-cache-action@v7
+      uses: DeterminateSystems/magic-nix-cache-action@v8
 
     - run: nix run .# -- --version
 
