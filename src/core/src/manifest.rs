@@ -183,7 +183,9 @@ impl PartialEq for Record {
     fn eq(&self, other: &Self) -> bool {
         self.md5 == other.md5 &&
             self.ksize == other.ksize &&
+            self.moltype == other.moltype &&
             self.scaled == other.scaled &&
+            self.num == other.num &&
             self.n_hashes == other.n_hashes &&
             self.with_abundance == other.with_abundance &&
             self.name == other.name &&
@@ -193,10 +195,14 @@ impl PartialEq for Record {
 
 impl Eq for Record {}
 
-impl Hash for Record { // @CTB moltype, other things? test compare empty.
+impl Hash for Record {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.md5.hash(state);
+        self.ksize.hash(state);
+        self.moltype.hash(state);
         self.scaled.hash(state);
+        self.num.hash(state);
+        self.n_hashes.hash(state);
         self.with_abundance.hash(state);
         self.name.hash(state);
         self.filename.hash(state);
@@ -241,7 +247,6 @@ impl Manifest {
         // extract tuples from other mf:
         let pairs: HashSet<_> = other.iter().map(|r| r).collect();
 
-        // @CTB use par_iter here, optionally?
         let records = self
             .records
             .iter()
