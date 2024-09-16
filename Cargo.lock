@@ -934,6 +934,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
+name = "mem_dbg"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfd7536481f50e36a48185e622c9643919a0fca99422069424c214e67d8ed264"
+dependencies = [
+ "bitflags 2.4.1",
+ "mem_dbg-derive",
+]
+
+[[package]]
+name = "mem_dbg-derive"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f31df6bf503386c041c631223d4eb77ee55912d7e75645c960a24512aded0d89"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.46",
+]
+
+[[package]]
 name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1669,6 +1690,7 @@ dependencies = [
  "js-sys",
  "log",
  "md5",
+ "mem_dbg",
  "memmap2",
  "murmurhash3",
  "needletail",

@@ -26,6 +26,7 @@ type ColorToIdx = HashMap<Color, IdxTracker, BuildNoHashHasher<Color>>;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[non_exhaustive]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub enum HashFunctions {
     Murmur64Dna,
     Murmur64Protein,
