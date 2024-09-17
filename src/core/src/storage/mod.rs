@@ -298,9 +298,10 @@ impl Storage for FSStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 { panic!("more than one sig."); }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
