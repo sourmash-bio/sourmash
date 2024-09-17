@@ -2088,7 +2088,6 @@ class SummarizedGatherResult:
             and sD["lineage"] not in lingroups.keys()
         ):
             return None
-            # import pdb;pdb.set_trace()
         sD["query_name"] = query_info.query_name
         sD["query_md5"] = query_info.query_md5
         sD["query_filename"] = query_info.query_filename
