@@ -245,6 +245,7 @@ mod test {
     use crate::selection::Selection;
     use crate::signature::Signature;
     use crate::Result;
+    use crate::manifest::Manifest;
 
     #[test]
     fn sigstore_selection_with_downsample() {
@@ -364,6 +365,33 @@ mod test {
             .unwrap();
         // no sigs should remain
         assert_eq!(cl.len(), 0);
+    }
+
+    #[test]
+    fn collection_intersect_manifest() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // four num=500 sigs
+        filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        assert_eq!(sigs.len(), 4);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs)
+            .unwrap();
+        // all sigs should remain
+        assert_eq!(cl.len(), 4);
+
+        // grab first record
+        let manifest = cl.manifest();
+        let record = manifest.iter().next().unwrap().clone();
+        let vr = vec![record];
+
+        // now intersect:
+        let manifest2 = Manifest::from(vr);
+        let cl2 = cl.intersect_manifest(&manifest2);
+        assert_eq!(cl2.len(), 1);
     }
 
     #[test]
