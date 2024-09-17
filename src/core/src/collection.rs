@@ -241,11 +241,11 @@ mod test {
     use super::Collection;
 
     use crate::encodings::HashFunctions;
+    use crate::manifest::Manifest;
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
     use crate::Result;
-    use crate::manifest::Manifest;
 
     #[test]
     fn sigstore_selection_with_downsample() {
@@ -378,8 +378,7 @@ mod test {
         let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
         assert_eq!(sigs.len(), 4);
         // load sigs into collection + select compatible signatures
-        let cl = Collection::from_sigs(sigs)
-            .unwrap();
+        let cl = Collection::from_sigs(sigs).unwrap();
         // all sigs should remain
         assert_eq!(cl.len(), 4);
 
