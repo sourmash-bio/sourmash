@@ -216,7 +216,7 @@ impl Collection {
         Ok(sig)
     }
 
-    pub fn intersect_manifest(&mut self, mf: &Manifest) -> () {
+    pub fn intersect_manifest(&mut self, mf: &Manifest) {
         self.manifest = self.manifest.intersect_manifest(mf);
     }
 }
