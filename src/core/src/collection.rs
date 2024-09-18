@@ -216,12 +216,8 @@ impl Collection {
         Ok(sig)
     }
 
-    pub fn intersect_manifest(self, mf: &Manifest) -> Self {
-        let manifest = self.manifest.intersect_manifest(mf);
-        Self {
-            manifest,
-            storage: self.storage.clone(),
-        }
+    pub fn intersect_manifest(&mut self, mf: &Manifest) -> () {
+        self.manifest = self.manifest.intersect_manifest(mf);
     }
 }
 
@@ -378,7 +374,7 @@ mod test {
         let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
         assert_eq!(sigs.len(), 4);
         // load sigs into collection + select compatible signatures
-        let cl = Collection::from_sigs(sigs).unwrap();
+        let mut cl = Collection::from_sigs(sigs).unwrap();
         // all sigs should remain
         assert_eq!(cl.len(), 4);
 
@@ -389,8 +385,8 @@ mod test {
 
         // now intersect:
         let manifest2 = Manifest::from(vr);
-        let cl2 = cl.intersect_manifest(&manifest2);
-        assert_eq!(cl2.len(), 1);
+        cl.intersect_manifest(&manifest2);
+        assert_eq!(cl.len(), 1);
     }
 
     #[test]
