@@ -237,8 +237,6 @@ mod test {
     use super::Collection;
 
     use crate::encodings::HashFunctions;
-    use crate::manifest::Manifest;
-    use crate::manifest::Manifest;
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
