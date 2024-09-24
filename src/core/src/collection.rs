@@ -238,11 +238,11 @@ mod test {
 
     use crate::encodings::HashFunctions;
     use crate::manifest::Manifest;
+    use crate::manifest::Manifest;
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
     use crate::Result;
-    use crate::manifest::Manifest;
 
     #[test]
     fn sigstore_selection_with_downsample() {
