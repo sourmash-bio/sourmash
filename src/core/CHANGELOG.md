@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.15.2] - 2024-09-25
+
+MSRV: 1.65
+
+Changes/additions:
+* add `Manifest::intersect_manifest` to Rust core (#3305)
+* propagate error from `RocksDB::open` on bad directory (#3306, #3307)
+
+Updates:
+
+* Bump getset from 0.1.2 to 0.1.3 (#3328)
+* Bump memmap2 from 0.9.4 to 0.9.5 (#3326)
+* Bump codspeed-criterion-compat from 2.6.0 to 2.7.2 (#3324)
+* Bump serde_json from 1.0.127 to 1.0.128 (#3316)
+* Bump serde from 1.0.209 to 1.0.210 (#3318)
+* Bump serde from 1.0.208 to 1.0.209 (#3310)
+* Bump serde_json from 1.0.125 to 1.0.127 (#3309)
+
 ## [0.15.1] - 2024-08-20
 
 MSRV: 1.65
