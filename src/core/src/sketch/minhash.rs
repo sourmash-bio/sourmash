@@ -723,21 +723,7 @@ impl KmerMinHash {
     // create a downsampled copy of self
     pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
         let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHash::new(
-            scaled,
-            self.ksize,
-            self.hash_function.clone(),
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-        } else {
-            new_mh.add_many(&self.mins)?;
-        }
-        Ok(new_mh)
+        self.downsample_scaled(scaled)
     }
 
     pub fn sum_abunds(&self) -> u64 {
@@ -783,8 +769,25 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
+        // @CTB shouldn't we check that new scaled > old scaled?
+        if self.scaled() == scaled {
+            Ok(self.clone()) // avoid clone CTB
+        } else {
+            let mut new_mh = KmerMinHash::new(
+                scaled,
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+            if self.abunds.is_some() {
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+            } else {
+                new_mh.add_many(&self.mins)?;
+            }
+            Ok(new_mh)
+        }
     }
 
     pub fn inflate(&mut self, abunds_from: &KmerMinHash) -> Result<(), Error> {
@@ -1531,27 +1534,30 @@ impl KmerMinHashBTree {
     // create a downsampled copy of self
     pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
         let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHashBTree::new(
-            scaled,
-            self.ksize,
-            self.hash_function.clone(),
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-        } else {
-            new_mh.add_many(&self.mins())?;
-        }
-        Ok(new_mh)
+        self.downsample_scaled(scaled)
     }
 
     // create a downsampled copy of self
     pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
+        // @CTB shouldn't we check that new scaled > old scaled?
+        if self.scaled() == scaled {
+            Ok(self.clone()) // CTB avoid clone...
+        } else {
+            let mut new_mh = KmerMinHashBTree::new(
+                scaled,
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+            if self.abunds.is_some() {
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+            } else {
+                new_mh.add_many(&self.mins())?;
+            }
+            Ok(new_mh)
+        }
     }
 
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
