@@ -537,13 +537,13 @@ impl KmerMinHash {
     }
 
     pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.clone().downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
@@ -685,13 +685,14 @@ impl KmerMinHash {
         ignore_abundance: bool,
         downsample: bool,
     ) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to larger of two scaled
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.clone().downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(other)
@@ -771,7 +772,7 @@ impl KmerMinHash {
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHash, Error> {
         // @CTB shouldn't we check that new scaled > old scaled?
         if self.scaled() == scaled {
-            Ok(self.clone()) // avoid clone CTB
+            Ok(self)
         } else {
             let mut new_mh = KmerMinHash::new(
                 scaled,
@@ -1359,13 +1360,14 @@ impl KmerMinHashBTree {
     }
 
     pub fn count_common(&self, other: &KmerMinHashBTree, downsample: bool) -> Result<u64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to the larger of the two scaled values
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.clone().downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
@@ -1490,13 +1492,14 @@ impl KmerMinHashBTree {
         ignore_abundance: bool,
         downsample: bool,
     ) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to larger of two scaled
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.clone().downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(other)
@@ -1541,7 +1544,7 @@ impl KmerMinHashBTree {
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
         // @CTB shouldn't we check that new scaled > old scaled?
         if self.scaled() == scaled {
-            Ok(self.clone()) // CTB avoid clone...
+            Ok(self)
         } else {
             let mut new_mh = KmerMinHashBTree::new(
                 scaled,
