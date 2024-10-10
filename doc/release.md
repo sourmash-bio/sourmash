@@ -46,7 +46,7 @@ conda version with `conda --version` and update with `conda update conda`.
 Create the basic build environment:
 
 ```
-mamba create -y -n sourmash-rc python=3.10 pip \
+mamba create -y -n sourmash-rc python=3.11 pip \
     cxx-compiler make twine tox tox-conda rust
 ```
 

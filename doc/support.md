@@ -98,7 +98,7 @@ sourmash v3.x supports Python 2.7 as well as Python 3.x, through Python 3.8.
 
 sourmash v4.0 dropped support for versions of Python before Python 3.7,
 and our intent is that it will support as-yet unreleased versions of Python 3.x
-(e.g. 3.10) moving forward.
+(e.g. 3.14) moving forward.
 
 For future versions of sourmash, we plan to follow the
 [Scientific Python SPEC 0](https://scientific-python.org/specs/spec-0000/)

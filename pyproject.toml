@@ -67,9 +67,9 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
   "Programming Language :: Rust",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -84,7 +84,7 @@ dependencies = [
   "bitstring>=3.1.9,<5",
 ]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -178,7 +178,7 @@ line_length = 88
 known_first_party = ["sourmash"]
 
 [tool.cibuildwheel]
-build = "cp310-*"
+build = "cp311-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_* *-ppc64le *-s390x"
 before-all = [
   "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
@@ -264,7 +264,7 @@ cxx-compiler = ">=1.7.0,<1.8"
 git = "2.41.0.*"
 libclang = ">=16.0.6,<16.1"
 pandoc = "3.1.3.*"
-python = "3.10.*"
+python = "3.11.*"
 rust = ">=1.80.0,<1.81"
 tox = ">=4.11.0,<5"
 # prefer conda deps over PyPI

@@ -18,7 +18,7 @@ dist: FORCE
 	$(PYTHON) -m build --sdist
 
 test: .PHONY
-	tox -e py310
+	tox -e py311
 	cargo test
 
 doc: .PHONY

@@ -10,7 +10,7 @@ You can get the latest development branch with:
 ```
 git clone https://github.com/sourmash-bio/sourmash.git
 ```
-sourmash runs under Python 3.10 and later.
+sourmash runs under Python 3.11 and later.
 
 We recommend using `conda` for setting up an environment for developing
 new features, running tests and code quality checks.
@@ -113,7 +113,7 @@ running tests and checks during development.
 `tox -l` lists available tasks.
 
 You can run tests by invoking `make test` in the sourmash directory;
-`tox -e py310` will run the Python tests with Python 3.10,
+`tox -e py311` will run the Python tests with Python 3.11,
 and `cargo test` will run the Rust tests.
 
 ## Adding new changes
