@@ -774,9 +774,10 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHash, Error> {
-        // @CTB: check that new scaled > old scaled
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
+        } else if self.scaled() > scaled { // cannot upsample
+            Err(Error::MismatchScaled) // @CTB new error
         } else {
             let mut new_mh = KmerMinHash::new(
                 scaled,
@@ -1550,9 +1551,10 @@ impl KmerMinHashBTree {
 
     // create a downsampled copy of self
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
-        // @CTB TODO: check that new scaled > old scaled
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
+        } else if self.scaled() > scaled { // cannot upsample
+            Err(Error::MismatchScaled) // @CTB new error
         } else {
             let mut new_mh = KmerMinHashBTree::new(
                 scaled,
