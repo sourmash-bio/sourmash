@@ -20,7 +20,7 @@ use crate::Error;
 
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
-        0 => 0,
+        0 => 0,                 // scaled == 0 indicates this is a num minhash
         1 => u64::MAX,
         _ => (u64::MAX as f64 / scaled as f64) as u64,
     }
@@ -28,7 +28,7 @@ pub fn max_hash_for_scaled(scaled: u64) -> u64 {
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
-        0 => 0,
+        0 => 0,                 // scaled == 0 indicates this is a num minhash
         _ => (u64::MAX as f64 / max_hash as f64) as u64,
     }
 }
@@ -723,8 +723,12 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHash, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-        self.downsample_scaled(scaled)
+        if self.max_hash == 0 {
+            Ok(self)
+        } else {
+            let scaled = scaled_for_max_hash(max_hash);
+            self.downsample_scaled(scaled)
+        }
     }
 
     pub fn sum_abunds(&self) -> u64 {
@@ -770,8 +774,8 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHash, Error> {
-        // @CTB shouldn't we check that new scaled > old scaled?
-        if self.scaled() == scaled {
+        // @CTB: check that new scaled > old scaled
+        if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
         } else {
             let mut new_mh = KmerMinHash::new(
@@ -1536,14 +1540,18 @@ impl KmerMinHashBTree {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-        self.downsample_scaled(scaled)
+        if self.max_hash == 0 {
+            Ok(self)
+        } else {
+            let scaled = scaled_for_max_hash(max_hash);
+            self.downsample_scaled(scaled)
+        }
     }
 
     // create a downsampled copy of self
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
-        // @CTB shouldn't we check that new scaled > old scaled?
-        if self.scaled() == scaled {
+        // @CTB TODO: check that new scaled > old scaled
+        if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
         } else {
             let mut new_mh = KmerMinHashBTree::new(
