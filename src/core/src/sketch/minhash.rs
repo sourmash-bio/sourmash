@@ -723,7 +723,8 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHash, Error> {
-        if self.max_hash == 0 { // does this make sense? @CTB
+        if self.max_hash == 0 {
+            // does this make sense? @CTB
             Ok(self)
         } else {
             let scaled = scaled_for_max_hash(max_hash);

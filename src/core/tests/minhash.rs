@@ -891,7 +891,6 @@ fn test_n_unique_kmers() {
     assert_eq!(mh.n_unique_kmers(), 30)
 }
 
-
 #[test]
 fn test_scaled_downsampling() {
     let mh = KmerMinHash::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
