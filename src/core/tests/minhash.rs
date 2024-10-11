@@ -281,6 +281,7 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     let mut e = a.downsample_max_hash(100).unwrap();
     let scaled = scaled_for_max_hash(100);
     let mut f = b.downsample_scaled(scaled).unwrap();
+    assert_eq!(f.scaled(), scaled);
 
     // Can't compare different scaled without explicit downsample
     assert!(c.similarity(&e, false, false).is_err());
@@ -888,4 +889,17 @@ fn test_n_unique_kmers() {
     mh.add_hash(20);
     mh.add_hash(30);
     assert_eq!(mh.n_unique_kmers(), 30)
+}
+
+
+#[test]
+fn test_scaled_downsampling() {
+    let mh = KmerMinHash::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+
+    // downsampling is OK:
+    let new_mh = mh.clone().downsample_scaled(100).unwrap();
+    assert_eq!(new_mh.scaled(), 100);
+
+    // upsampling not ok
+    assert!(mh.clone().downsample_scaled(1).is_err());
 }
