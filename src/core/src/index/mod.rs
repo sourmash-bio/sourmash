@@ -13,6 +13,7 @@ pub mod search;
 
 use std::path::Path;
 
+use std::cmp::max;
 use getset::{CopyGetters, Getters, Setters};
 use log::trace;
 use serde::{Deserialize, Serialize};
@@ -220,10 +221,17 @@ pub fn calculate_gather_stats(
     confidence: Option<f64>,
 ) -> Result<GatherResult> {
     // get match_mh
-    let match_mh = match_sig.minhash().unwrap();
+    let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
+    let match_mh = match_mh.clone();
+
+    eprintln!("XXX 2 {}, {}", match_mh.scaled(), query.scaled());
+
+    let max_scaled = max(match_mh.scaled(), query.scaled());
+    let query = query.downsample_scaled(max_scaled).expect("cannot downsample query");
+    let match_mh = match_mh.downsample_scaled(max_scaled).expect("cannot downsample match");
 
     // calculate intersection
-    let isect = match_mh.intersection(&query)?;
+    let isect = match_mh.intersection(&query).expect("could not do intersection");
     let isect_size = isect.0.len();
     trace!("isect_size: {}", isect_size);
     trace!("query.size: {}", query.size());

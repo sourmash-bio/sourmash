@@ -910,7 +910,7 @@ mod test {
             0,
             &query,
             Some(selection.clone()),
-        )?;
+        ).expect("failed to gather!");
 
         {
             let mut index = index;

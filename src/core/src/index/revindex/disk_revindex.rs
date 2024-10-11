@@ -1,4 +1,5 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
+use std::cmp::max;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
@@ -398,8 +399,14 @@ impl RevIndexOps for RevIndex {
 
             // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap().clone();
-            query = query.downsample_scaled(match_mh.scaled())?;
-            orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
+
+            let max_scaled = max(query.scaled(), match_mh.scaled());
+
+            let match_mh = match_mh.downsample_scaled(max_scaled).expect("cannot downsample match");
+
+            eprintln!("XXX {}, {}, {}", query.scaled(), match_mh.scaled(), orig_query_ds.scaled());
+            query = query.downsample_scaled(max_scaled)?;
+            orig_query_ds = orig_query_ds.downsample_scaled(max_scaled)?;
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
@@ -407,7 +414,7 @@ impl RevIndexOps for RevIndex {
             let query_mh = KmerMinHash::from(query.clone());
 
             // grab the specific intersection:
-            let isect = match_mh.intersection(&query_mh)?;
+            let isect = match_mh.intersection(&query_mh).expect("failed to intersect");
             let mut isect_mh = match_mh.clone();
             isect_mh.clear();
             isect_mh.add_many(&isect.0)?;
@@ -415,7 +422,7 @@ impl RevIndexOps for RevIndex {
             // Calculate stats
             let gather_result = calculate_gather_stats(
                 &orig_query_ds,
-                KmerMinHash::from(query.clone()),
+                query_mh,
                 match_sig,
                 match_size,
                 gather_result_rank,
@@ -424,7 +431,7 @@ impl RevIndexOps for RevIndex {
                 calc_abund_stats,
                 calc_ani_ci,
                 ani_confidence_interval_fraction,
-            )?;
+            ).expect("could not calculate gather stats");
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);
