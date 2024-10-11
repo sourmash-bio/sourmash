@@ -1,5 +1,4 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
-use std::cmp::max;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
@@ -373,7 +372,7 @@ impl RevIndexOps for RevIndex {
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
-        let mut orig_query_ds = orig_query.clone();
+        let orig_query_ds = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
@@ -399,14 +398,11 @@ impl RevIndexOps for RevIndex {
 
             // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap().clone();
+            let scaled = query.scaled();
 
-            let max_scaled = max(query.scaled(), match_mh.scaled());
-
-            let match_mh = match_mh.downsample_scaled(max_scaled).expect("cannot downsample match");
-
-            eprintln!("XXX {}, {}, {}", query.scaled(), match_mh.scaled(), orig_query_ds.scaled());
-            query = query.downsample_scaled(max_scaled)?;
-            orig_query_ds = orig_query_ds.downsample_scaled(max_scaled)?;
+            let match_mh = match_mh
+                .downsample_scaled(scaled)
+                .expect("cannot downsample match");
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
@@ -414,7 +410,9 @@ impl RevIndexOps for RevIndex {
             let query_mh = KmerMinHash::from(query.clone());
 
             // grab the specific intersection:
-            let isect = match_mh.intersection(&query_mh).expect("failed to intersect");
+            let isect = match_mh
+                .intersection(&query_mh)
+                .expect("failed to intersect");
             let mut isect_mh = match_mh.clone();
             isect_mh.clear();
             isect_mh.add_many(&isect.0)?;
@@ -431,7 +429,8 @@ impl RevIndexOps for RevIndex {
                 calc_abund_stats,
                 calc_ani_ci,
                 ani_confidence_interval_fraction,
-            ).expect("could not calculate gather stats");
+            )
+            .expect("could not calculate gather stats");
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);

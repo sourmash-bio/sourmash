@@ -903,14 +903,16 @@ mod test {
 
         let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
 
-        let matches_external = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection.clone()),
-        ).expect("failed to gather!");
+        let matches_external = index
+            .gather(
+                counter,
+                query_colors,
+                hash_to_color,
+                0,
+                &query,
+                Some(selection.clone()),
+            )
+            .expect("failed to gather!");
 
         {
             let mut index = index;

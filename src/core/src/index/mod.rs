@@ -13,11 +13,11 @@ pub mod search;
 
 use std::path::Path;
 
-use std::cmp::max;
 use getset::{CopyGetters, Getters, Setters};
 use log::trace;
 use serde::{Deserialize, Serialize};
 use stats::{median, stddev};
+use std::cmp::max;
 use typed_builder::TypedBuilder;
 
 use crate::ani_utils::{ani_ci_from_containment, ani_from_containment};
@@ -227,11 +227,17 @@ pub fn calculate_gather_stats(
     eprintln!("XXX 2 {}, {}", match_mh.scaled(), query.scaled());
 
     let max_scaled = max(match_mh.scaled(), query.scaled());
-    let query = query.downsample_scaled(max_scaled).expect("cannot downsample query");
-    let match_mh = match_mh.downsample_scaled(max_scaled).expect("cannot downsample match");
+    let query = query
+        .downsample_scaled(max_scaled)
+        .expect("cannot downsample query");
+    let match_mh = match_mh
+        .downsample_scaled(max_scaled)
+        .expect("cannot downsample match");
 
     // calculate intersection
-    let isect = match_mh.intersection(&query).expect("could not do intersection");
+    let isect = match_mh
+        .intersection(&query)
+        .expect("could not do intersection");
     let isect_size = isect.0.len();
     trace!("isect_size: {}", isect_size);
     trace!("query.size: {}", query.size());
