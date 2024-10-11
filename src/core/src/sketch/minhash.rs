@@ -20,7 +20,7 @@ use crate::Error;
 
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
-        0 => 0,                 // scaled == 0 indicates this is a num minhash
+        0 => 0, // scaled == 0 indicates this is a num minhash
         1 => u64::MAX,
         _ => (u64::MAX as f64 / scaled as f64) as u64,
     }
@@ -28,7 +28,7 @@ pub fn max_hash_for_scaled(scaled: u64) -> u64 {
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
-        0 => 0,                 // scaled == 0 indicates this is a num minhash
+        0 => 0, // scaled == 0 indicates this is a num minhash
         _ => (u64::MAX as f64 / max_hash as f64) as u64,
     }
 }
@@ -776,8 +776,8 @@ impl KmerMinHash {
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHash, Error> {
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
-        } else if self.scaled() > scaled { // cannot upsample
-            Err(Error::MismatchScaled) // @CTB new error
+        } else if self.scaled() > scaled {
+            Err(Error::CannotUpsample)
         } else {
             let mut new_mh = KmerMinHash::new(
                 scaled,
@@ -1553,8 +1553,8 @@ impl KmerMinHashBTree {
     pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
-        } else if self.scaled() > scaled { // cannot upsample
-            Err(Error::MismatchScaled) // @CTB new error
+        } else if self.scaled() > scaled {
+            Err(Error::CannotUpsample)
         } else {
             let mut new_mh = KmerMinHashBTree::new(
                 scaled,

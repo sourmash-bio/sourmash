@@ -7,6 +7,9 @@ pub enum SourmashError {
     #[error("internal error: {message:?}")]
     Internal { message: String },
 
+    #[error("new scaled smaller than previous; cannot upsample")]
+    CannotUpsample,
+
     #[error("must have same num: {n1} != {n2}")]
     MismatchNum { n1: u32, n2: u32 },
 
@@ -104,6 +107,7 @@ pub enum SourmashErrorCode {
     NonEmptyMinHash = 1_06,
     MismatchNum = 1_07,
     NeedsAbundanceTracking = 1_08,
+    CannotUpsample = 1_09,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -132,6 +136,7 @@ impl SourmashErrorCode {
         match error {
             SourmashError::Internal { .. } => SourmashErrorCode::Internal,
             SourmashError::Panic { .. } => SourmashErrorCode::Panic,
+            SourmashError::CannotUpsample { .. } => SourmashErrorCode::CannotUpsample,
             SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
             SourmashError::NeedsAbundanceTracking { .. } => {
                 SourmashErrorCode::NeedsAbundanceTracking
