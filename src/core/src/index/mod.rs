@@ -222,15 +222,13 @@ pub fn calculate_gather_stats(
 ) -> Result<GatherResult> {
     // get match_mh
     let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
-    let match_mh = match_mh.clone();
-
-    eprintln!("XXX 2 {}, {}", match_mh.scaled(), query.scaled());
 
     let max_scaled = max(match_mh.scaled(), query.scaled());
     let query = query
         .downsample_scaled(max_scaled)
         .expect("cannot downsample query");
     let match_mh = match_mh
+        .clone()
         .downsample_scaled(max_scaled)
         .expect("cannot downsample match");
 
