@@ -901,5 +901,6 @@ fn test_scaled_downsampling() {
     assert_eq!(new_mh.scaled(), 100);
 
     // upsampling not ok
-    assert!(mh.clone().downsample_scaled(1).is_err());
+    let e = mh.clone().downsample_scaled(1).unwrap_err();
+    assert!(matches!(e, sourmash::Error::CannotUpsampleScaled));
 }

@@ -723,7 +723,7 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHash, Error> {
-        if self.max_hash == 0 {
+        if self.max_hash == 0 { // does this make sense? @CTB
             Ok(self)
         } else {
             let scaled = scaled_for_max_hash(max_hash);
@@ -777,7 +777,7 @@ impl KmerMinHash {
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
         } else if self.scaled() > scaled {
-            Err(Error::CannotUpsample)
+            Err(Error::CannotUpsampleScaled)
         } else {
             let mut new_mh = KmerMinHash::new(
                 scaled,
@@ -1554,7 +1554,7 @@ impl KmerMinHashBTree {
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
         } else if self.scaled() > scaled {
-            Err(Error::CannotUpsample)
+            Err(Error::CannotUpsampleScaled)
         } else {
             let mut new_mh = KmerMinHashBTree::new(
                 scaled,
