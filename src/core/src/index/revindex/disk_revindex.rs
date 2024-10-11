@@ -406,7 +406,7 @@ impl RevIndexOps for RevIndex {
 
             eprintln!("XXX {}, {}, {}", query.scaled(), match_mh.scaled(), orig_query_ds.scaled());
             query = query.downsample_scaled(max_scaled)?;
-            // orig_query_ds = orig_query_ds.downsample_scaled(max_scaled)?;
+            orig_query_ds = orig_query_ds.downsample_scaled(max_scaled)?;
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
