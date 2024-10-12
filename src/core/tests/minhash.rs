@@ -892,8 +892,29 @@ fn test_n_unique_kmers() {
 }
 
 #[test]
-fn test_scaled_downsampling() {
+fn test_scaled_downsampling_kmerminhash() {
     let mh = KmerMinHash::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+
+    // downsampling to same scaled is OK:
+    let new_mh = mh.clone().downsample_scaled(10).unwrap();
+    assert_eq!(new_mh.scaled(), 10);
+
+    // downsampling is OK:
+    let new_mh = mh.clone().downsample_scaled(100).unwrap();
+    assert_eq!(new_mh.scaled(), 100);
+
+    // upsampling not ok
+    let e = mh.clone().downsample_scaled(1).unwrap_err();
+    assert!(matches!(e, sourmash::Error::CannotUpsampleScaled));
+}
+
+#[test]
+fn test_scaled_downsampling_kmerminhashbtree() {
+    let mh = KmerMinHashBTree::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+
+    // downsampling to same scaled is OK:
+    let new_mh = mh.clone().downsample_scaled(10).unwrap();
+    assert_eq!(new_mh.scaled(), 10);
 
     // downsampling is OK:
     let new_mh = mh.clone().downsample_scaled(100).unwrap();
