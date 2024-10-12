@@ -241,7 +241,6 @@ mod test {
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
-    use crate::Result;
 
     #[test]
     fn sigstore_selection_with_downsample() {

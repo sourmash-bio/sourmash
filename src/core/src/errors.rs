@@ -31,6 +31,15 @@ pub enum SourmashError {
     #[error("sketch needs abundance for this operation")]
     NeedsAbundanceTracking,
 
+    #[error("Expected a MinHash sketch in this signature")]
+    NoMinHashFound,
+
+    #[error("Empty signature")]
+    EmptySignature,
+
+    #[error("Multiple sketches found, expected one")]
+    MultipleSketchesFound,
+
     #[error("Invalid hash function: {function:?}")]
     InvalidHashFunction { function: String },
 
@@ -108,6 +117,9 @@ pub enum SourmashErrorCode {
     MismatchNum = 1_07,
     NeedsAbundanceTracking = 1_08,
     CannotUpsampleScaled = 1_09,
+    NoMinHashFound = 1_10,
+    EmptySignature = 1_11,
+    MultipleSketchesFound = 1_12,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -147,6 +159,9 @@ impl SourmashErrorCode {
             SourmashError::MismatchSeed => SourmashErrorCode::MismatchSeed,
             SourmashError::MismatchSignatureType => SourmashErrorCode::MismatchSignatureType,
             SourmashError::NonEmptyMinHash { .. } => SourmashErrorCode::NonEmptyMinHash,
+            SourmashError::NoMinHashFound => SourmashErrorCode::NoMinHashFound,
+            SourmashError::EmptySignature => SourmashErrorCode::EmptySignature,
+            SourmashError::MultipleSketchesFound => SourmashErrorCode::MultipleSketchesFound,
             SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
             SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
             SourmashError::InvalidCodonLength { .. } => SourmashErrorCode::InvalidCodonLength,

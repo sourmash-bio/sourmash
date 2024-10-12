@@ -888,9 +888,9 @@ impl PartialEq for Signature {
 }
 
 impl TryInto<KmerMinHash> for Signature {
-    type Error = crate::Error;
+    type Error = Error;
 
-    fn try_into(self) -> Result<KmerMinHash, Self::Error> {
+    fn try_into(self) -> Result<KmerMinHash, Error> {
         match self.signatures.len() {
             1 => self
                 .signatures
@@ -902,9 +902,9 @@ impl TryInto<KmerMinHash> for Signature {
                         None
                     }
                 })
-                .ok_or_else(|| todo!("error, no minhash found")),
-            0 => todo!("error, empty signature"),
-            2.. => todo!("Multiple sketches found! Please run select first."),
+                .ok_or_else(|| Error::NoMinHashFound),
+            0 => Err(Error::EmptySignature),
+            2.. => Err(Error::MultipleSketchesFound),
         }
     }
 }
