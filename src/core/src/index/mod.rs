@@ -206,7 +206,6 @@ where
     }
 }
 
-// note all mh should be selected/downsampled prior to being passed in here.
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_gather_stats(
     orig_query: &KmerMinHash,

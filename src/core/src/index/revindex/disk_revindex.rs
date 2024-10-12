@@ -372,7 +372,6 @@ impl RevIndexOps for RevIndex {
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
-        let orig_query_ds = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
@@ -393,7 +392,6 @@ impl RevIndexOps for RevIndex {
                 break;
             }
 
-            // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
 
             // get downsampled minhashes for comparison.
@@ -419,7 +417,7 @@ impl RevIndexOps for RevIndex {
 
             // Calculate stats
             let gather_result = calculate_gather_stats(
-                &orig_query_ds,
+                &orig_query,
                 query_mh,
                 match_sig,
                 match_size,
