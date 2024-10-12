@@ -724,7 +724,7 @@ impl KmerMinHash {
     // create a downsampled copy of self
     pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHash, Error> {
         if self.max_hash == 0 {
-            // does this make sense? @CTB
+            // CTB: this is a num minhash. Should we just blithely return?
             Ok(self)
         } else {
             let scaled = scaled_for_max_hash(max_hash);
@@ -1543,6 +1543,7 @@ impl KmerMinHashBTree {
     // create a downsampled copy of self
     pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
         if self.max_hash == 0 {
+            // CTB: this is a num minhash. Just blithely return.
             Ok(self)
         } else {
             let scaled = scaled_for_max_hash(max_hash);
