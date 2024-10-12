@@ -887,6 +887,28 @@ impl PartialEq for Signature {
     }
 }
 
+impl TryInto<KmerMinHash> for Signature {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<KmerMinHash, Self::Error> {
+        match self.signatures.len() {
+            1 => self
+                .signatures
+                .into_iter()
+                .find_map(|sk| {
+                    if let Sketch::MinHash(mh) = sk {
+                        Some(mh)
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| todo!("error, no minhash found")),
+            0 => todo!("error, empty signature"),
+            2.. => todo!("Multiple sketches found! Please run select first."),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::fs::File;
