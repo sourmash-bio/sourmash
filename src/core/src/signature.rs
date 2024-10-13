@@ -904,7 +904,7 @@ impl TryInto<KmerMinHash> for Signature {
                 })
                 .ok_or_else(|| Error::NoMinHashFound),
             0 => Err(Error::EmptySignature),
-            2.. => Err(Error::MultipleSketchesFound),
+            _ => Err(Error::MultipleSketchesFound),
         }
     }
 }

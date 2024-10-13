@@ -241,6 +241,8 @@ mod test {
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    use crate::Result;
 
     #[test]
     fn sigstore_selection_with_downsample() {
