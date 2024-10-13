@@ -887,6 +887,28 @@ impl PartialEq for Signature {
     }
 }
 
+impl TryInto<KmerMinHash> for Signature {
+    type Error = Error;
+
+    fn try_into(self) -> Result<KmerMinHash, Error> {
+        match self.signatures.len() {
+            1 => self
+                .signatures
+                .into_iter()
+                .find_map(|sk| {
+                    if let Sketch::MinHash(mh) = sk {
+                        Some(mh)
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| Error::NoMinHashFound),
+            0 => Err(Error::EmptySignature),
+            2.. => Err(Error::MultipleSketchesFound),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::fs::File;
