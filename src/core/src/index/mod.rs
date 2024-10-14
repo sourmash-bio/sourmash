@@ -209,7 +209,7 @@ where
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_gather_stats(
     orig_query: &KmerMinHash,
-    query_foo: KmerMinHash,
+    remaining_query: KmerMinHash,
     match_sig: SigStore,
     match_size: usize,
     gather_result_rank: usize,
@@ -224,25 +224,25 @@ pub fn calculate_gather_stats(
 
     // it's ok to downsample match, but query is often big and repeated,
     // so we do not allow downsampling of query in this function.
-    if match_mh.scaled() > query_foo.scaled() {
+    if match_mh.scaled() > remaining_query.scaled() {
         return Err(CannotUpsampleScaled);
     }
 
     let match_mh = match_mh
         .clone()
-        .downsample_scaled(query_foo.scaled())
+        .downsample_scaled(remaining_query.scaled())
         .expect("cannot downsample match");
 
     // calculate intersection
     let isect = match_mh
-        .intersection(&query_foo)
+        .intersection(&remaining_query)
         .expect("could not do intersection");
     let isect_size = isect.0.len();
     trace!("isect_size: {}", isect_size);
-    trace!("query.size: {}", query_foo.size());
+    trace!("query.size: {}", remaining_query.size());
 
     //bp remaining in subtracted query
-    let remaining_bp = (query_foo.size() - isect_size) * query_foo.scaled() as usize;
+    let remaining_bp = (remaining_query.size() - isect_size) * remaining_query.scaled() as usize;
 
     // stats for this match vs original query
     let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
@@ -302,7 +302,7 @@ pub fn calculate_gather_stats(
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // take abunds from subtracted query
-        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&query_foo) {
+        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&remaining_query) {
             Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
             Err(e) => {
                 return Err(e);
