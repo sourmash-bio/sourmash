@@ -27,8 +27,8 @@ use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
-use crate::Result;
 use crate::Error::CannotUpsampleScaled;
+use crate::Result;
 
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
@@ -223,7 +223,7 @@ pub fn calculate_gather_stats(
     let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
 
     // it's ok to downsample match, but query is often big and repeated,
-    // so we do not allow downsampling here.
+    // so we do not allow downsampling of query in this function.
     if match_mh.scaled() > query_foo.scaled() {
         return Err(CannotUpsampleScaled);
     }
