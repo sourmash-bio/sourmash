@@ -65,9 +65,6 @@ pub struct GatherResult {
     #[getset(get = "pub")]
     md5: String,
 
-    #[serde(skip)]
-    match_: SigStore,
-
     #[getset(get_copy = "pub")]
     f_match_orig: f64,
 
@@ -116,12 +113,6 @@ pub struct GatherResult {
 
     #[getset(get_copy = "pub")]
     max_containment_ani: f64,
-}
-
-impl GatherResult {
-    pub fn get_match(&self) -> Signature {
-        self.match_.clone().into()
-    }
 }
 
 type SigCounter = counter::Counter<Idx>;
@@ -219,8 +210,11 @@ pub fn calculate_gather_stats(
     calc_ani_ci: bool,
     confidence: Option<f64>,
 ) -> Result<(GatherResult, (Vec<u64>, u64))> {
+    let match_filename = match_sig.filename();
+    let match_name = match_sig.name();
+    let match_md5 = match_sig.md5sum();
     // get match_mh
-    let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
+    let match_mh: KmerMinHash = match_sig.try_into()?;
 
     // it's ok to downsample match, but query is often big and repeated,
     // so we do not allow downsampling of query in this function.
@@ -330,10 +324,9 @@ pub fn calculate_gather_stats(
         .average_abund(average_abund)
         .median_abund(median_abund)
         .std_abund(std_abund)
-        .filename(match_sig.filename())
-        .name(match_sig.name())
-        .md5(match_sig.md5sum())
-        .match_(match_sig)
+        .filename(match_filename)
+        .name(match_name)
+        .md5(match_md5)
         .f_match_orig(f_match_orig)
         .unique_intersect_bp(unique_intersect_bp)
         .gather_result_rank(gather_result_rank)
