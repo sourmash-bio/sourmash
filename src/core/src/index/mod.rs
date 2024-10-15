@@ -17,7 +17,6 @@ use getset::{CopyGetters, Getters, Setters};
 use log::trace;
 use serde::{Deserialize, Serialize};
 use stats::{median, stddev};
-use std::cmp::max;
 use typed_builder::TypedBuilder;
 
 use crate::ani_utils::{ani_ci_from_containment, ani_from_containment};

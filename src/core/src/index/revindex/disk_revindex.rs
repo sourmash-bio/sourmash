@@ -395,12 +395,20 @@ impl RevIndexOps for RevIndex {
 
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
             let match_mh = match_sig.minhash().unwrap().clone();
-            let scaled = query.scaled();
+
+            // make downsampled minhashes
+            let max_scaled = max(match_mh.scaled(), query.scaled());
 
             let match_mh = match_mh
-                .downsample_scaled(scaled)
+                .downsample_scaled(max_scaled)
                 .expect("cannot downsample match");
->>>>>>> 7d111732d66faa0f957f7612d39f50e0d05aff01
+
+            // repeatedly downsample query, then extract to KmerMinHash
+            // => calculate_gather_stats
+            query = query
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample query");
+            let query_mh = KmerMinHash::from(query.clone());
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
