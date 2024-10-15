@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.16.0] - 2024-10-15
+
+MSRV: 1.65
+
+Changes/additions:
+
+* refactor `calculate_gather_stats` to disallow repeated downsampling (#3352)
+* improve downsampling behavior on `KmerMinHash`; fix `RevIndex::gather` bug around `scaled`. (#3342)
+* derive Hash for `HashFunctions` (#3344)
+
+Updates:
+
+* Bump web-sys from 0.3.70 to 0.3.72 (#3354)
+* Bump tempfile from 3.12.0 to 3.13.0 (#3340)
+
+
 ## [0.15.2] - 2024-09-25
 
 MSRV: 1.65
