@@ -20,7 +20,7 @@ use crate::Error;
 
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
-        0 => 0,
+        0 => 0, // scaled == 0 indicates this is a num minhash
         1 => u64::MAX,
         _ => (u64::MAX as f64 / scaled as f64) as u64,
     }
@@ -28,7 +28,7 @@ pub fn max_hash_for_scaled(scaled: u64) -> u64 {
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
-        0 => 0,
+        0 => 0, // scaled == 0 indicates this is a num minhash
         _ => (u64::MAX as f64 / max_hash as f64) as u64,
     }
 }
@@ -537,13 +537,13 @@ impl KmerMinHash {
     }
 
     pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
@@ -685,13 +685,14 @@ impl KmerMinHash {
         ignore_abundance: bool,
         downsample: bool,
     ) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to larger of two scaled
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(other)
@@ -721,23 +722,14 @@ impl KmerMinHash {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHash::new(
-            scaled,
-            self.ksize,
-            self.hash_function.clone(),
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+    pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHash, Error> {
+        if self.max_hash == 0 {
+            // CTB: this is a num minhash. Should we just blithely return?
+            Ok(self)
         } else {
-            new_mh.add_many(&self.mins)?;
+            let scaled = scaled_for_max_hash(max_hash);
+            self.downsample_scaled(scaled)
         }
-        Ok(new_mh)
     }
 
     pub fn sum_abunds(&self) -> u64 {
@@ -782,9 +774,27 @@ impl KmerMinHash {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
+    pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHash, Error> {
+        if self.scaled() == scaled || self.scaled() == 0 {
+            Ok(self)
+        } else if self.scaled() > scaled {
+            Err(Error::CannotUpsampleScaled)
+        } else {
+            let mut new_mh = KmerMinHash::new(
+                scaled,
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+            if self.abunds.is_some() {
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+            } else {
+                new_mh.add_many(&self.mins)?;
+            }
+            Ok(new_mh)
+        }
     }
 
     pub fn inflate(&mut self, abunds_from: &KmerMinHash) -> Result<(), Error> {
@@ -1356,13 +1366,14 @@ impl KmerMinHashBTree {
     }
 
     pub fn count_common(&self, other: &KmerMinHashBTree, downsample: bool) -> Result<u64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to the larger of the two scaled values
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
@@ -1487,13 +1498,14 @@ impl KmerMinHashBTree {
         ignore_abundance: bool,
         downsample: bool,
     ) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to larger of two scaled
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(other)
@@ -1529,29 +1541,38 @@ impl KmerMinHashBTree {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHashBTree::new(
-            scaled,
-            self.ksize,
-            self.hash_function.clone(),
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+    pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
+        if self.max_hash == 0 {
+            // CTB: this is a num minhash. Just blithely return.
+            Ok(self)
         } else {
-            new_mh.add_many(&self.mins())?;
+            let scaled = scaled_for_max_hash(max_hash);
+            self.downsample_scaled(scaled)
         }
-        Ok(new_mh)
     }
 
     // create a downsampled copy of self
-    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
+    pub fn downsample_scaled(self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
+        if self.scaled() == scaled || self.scaled() == 0 {
+            Ok(self)
+        } else if self.scaled() > scaled {
+            Err(Error::CannotUpsampleScaled)
+        } else {
+            let mut new_mh = KmerMinHashBTree::new(
+                scaled,
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+            if self.abunds.is_some() {
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+            } else {
+                new_mh.add_many(&self.mins())?;
+            }
+            Ok(new_mh)
+        }
     }
 
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {

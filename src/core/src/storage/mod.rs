@@ -16,6 +16,7 @@ use typed_builder::TypedBuilder;
 use crate::errors::ReadDataError;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::{Error, Result};
 
@@ -547,6 +548,15 @@ impl From<Signature> for SigStore {
             .metadata("")
             .storage(None)
             .build()
+    }
+}
+
+impl TryInto<KmerMinHash> for SigStore {
+    type Error = crate::Error;
+
+    fn try_into(self) -> std::result::Result<KmerMinHash, Self::Error> {
+        let sig: Signature = self.into();
+        sig.try_into()
     }
 }
 

@@ -842,7 +842,7 @@ impl Select for Signature {
                 // TODO: also account for LargeMinHash
                 if let Sketch::MinHash(mh) = sketch {
                     if (mh.scaled() as u32) < sel_scaled {
-                        *sketch = Sketch::MinHash(mh.downsample_scaled(sel_scaled as u64)?);
+                        *sketch = Sketch::MinHash(mh.clone().downsample_scaled(sel_scaled as u64)?);
                     }
                 }
             }
@@ -884,6 +884,28 @@ impl PartialEq for Signature {
             unimplemented!()
         }
         metadata
+    }
+}
+
+impl TryInto<KmerMinHash> for Signature {
+    type Error = Error;
+
+    fn try_into(self) -> Result<KmerMinHash, Error> {
+        match self.signatures.len() {
+            1 => self
+                .signatures
+                .into_iter()
+                .find_map(|sk| {
+                    if let Sketch::MinHash(mh) = sk {
+                        Some(mh)
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| Error::NoMinHashFound),
+            0 => Err(Error::EmptySignature),
+            _ => Err(Error::MultipleSketchesFound),
+        }
     }
 }
 
