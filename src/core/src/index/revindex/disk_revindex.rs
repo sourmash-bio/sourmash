@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -393,30 +394,28 @@ impl RevIndexOps for RevIndex {
             }
 
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-
-            // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap().clone();
-            let scaled = query.scaled();
+
+            // make downsampled minhashes
+            let max_scaled = max(match_mh.scaled(), query.scaled());
 
             let match_mh = match_mh
-                .downsample_scaled(scaled)
+                .downsample_scaled(max_scaled)
                 .expect("cannot downsample match");
+
+            // repeatedly downsample query, then extract to KmerMinHash
+            // => calculate_gather_stats
+            query = query
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample query");
+            let query_mh = KmerMinHash::from(query.clone());
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
 
-            let query_mh = KmerMinHash::from(query.clone());
-
             // grab the specific intersection:
-            let isect = match_mh
-                .intersection(&query_mh)
-                .expect("failed to intersect");
-            let mut isect_mh = match_mh.clone();
-            isect_mh.clear();
-            isect_mh.add_many(&isect.0)?;
-
             // Calculate stats
-            let gather_result = calculate_gather_stats(
+            let (gather_result, isect) = calculate_gather_stats(
                 &orig_query,
                 query_mh,
                 match_sig,
@@ -429,6 +428,12 @@ impl RevIndexOps for RevIndex {
                 ani_confidence_interval_fraction,
             )
             .expect("could not calculate gather stats");
+
+            // use intersection from calc_gather_stats to make a KmerMinHash.
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0)?;
+
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);

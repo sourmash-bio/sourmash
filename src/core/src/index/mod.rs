@@ -17,7 +17,6 @@ use getset::{CopyGetters, Getters, Setters};
 use log::trace;
 use serde::{Deserialize, Serialize};
 use stats::{median, stddev};
-use std::cmp::max;
 use typed_builder::TypedBuilder;
 
 use crate::ani_utils::{ani_ci_from_containment, ani_from_containment};
@@ -28,6 +27,7 @@ use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
+use crate::Error::CannotUpsampleScaled;
 use crate::Result;
 
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
@@ -209,7 +209,7 @@ where
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_gather_stats(
     orig_query: &KmerMinHash,
-    query: KmerMinHash,
+    remaining_query: KmerMinHash,
     match_sig: SigStore,
     match_size: usize,
     gather_result_rank: usize,
@@ -218,29 +218,31 @@ pub fn calculate_gather_stats(
     calc_abund_stats: bool,
     calc_ani_ci: bool,
     confidence: Option<f64>,
-) -> Result<GatherResult> {
+) -> Result<(GatherResult, (Vec<u64>, u64))> {
     // get match_mh
     let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
 
-    let max_scaled = max(match_mh.scaled(), query.scaled());
-    let query = query
-        .downsample_scaled(max_scaled)
-        .expect("cannot downsample query");
+    // it's ok to downsample match, but query is often big and repeated,
+    // so we do not allow downsampling of query in this function.
+    if match_mh.scaled() > remaining_query.scaled() {
+        return Err(CannotUpsampleScaled);
+    }
+
     let match_mh = match_mh
         .clone()
-        .downsample_scaled(max_scaled)
+        .downsample_scaled(remaining_query.scaled())
         .expect("cannot downsample match");
 
     // calculate intersection
     let isect = match_mh
-        .intersection(&query)
+        .intersection(&remaining_query)
         .expect("could not do intersection");
     let isect_size = isect.0.len();
     trace!("isect_size: {}", isect_size);
-    trace!("query.size: {}", query.size());
+    trace!("query.size: {}", remaining_query.size());
 
     //bp remaining in subtracted query
-    let remaining_bp = (query.size() - isect_size) * query.scaled() as usize;
+    let remaining_bp = (remaining_query.size() - isect_size) * remaining_query.scaled() as usize;
 
     // stats for this match vs original query
     let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
@@ -300,7 +302,7 @@ pub fn calculate_gather_stats(
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // take abunds from subtracted query
-        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&query) {
+        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&remaining_query) {
             Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
             Err(e) => {
                 return Err(e);
@@ -347,7 +349,7 @@ pub fn calculate_gather_stats(
         .sum_weighted_found(sum_total_weighted_found)
         .total_weighted_hashes(total_weighted_hashes)
         .build();
-    Ok(result)
+    Ok((result, isect))
 }
 
 #[cfg(test)]
@@ -403,7 +405,7 @@ mod test_calculate_gather_stats {
         let gather_result_rank = 0;
         let calc_abund_stats = true;
         let calc_ani_ci = false;
-        let result = calculate_gather_stats(
+        let (result, _isect) = calculate_gather_stats(
             &orig_query,
             query,
             match_sig.into(),
@@ -416,6 +418,7 @@ mod test_calculate_gather_stats {
             None,
         )
         .unwrap();
+
         // first, print all results
         assert_eq!(result.filename(), "match-filename");
         assert_eq!(result.name(), "match-name");
