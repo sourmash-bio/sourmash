@@ -637,13 +637,16 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-The possible output formats are:
-- `human`
-- `csv_summary`
-- `lineage_summary`
-- `krona`
-- `kreport`
-- `lingroup_report`
+The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
+
+- `human`: ".human.txt",
+- `csv_summary`: ".summarized.csv",
+- `lineage_summary`: ".lineage_summary.tsv",
+- `krona`: ".krona.tsv",
+- `kreport`: ".kreport.txt",
+- `lingroup`: ".lingroup.tsv",
+- `bioboxes`: ".bioboxes.profile",
+
 
 #### `csv_summary` output format
 
@@ -671,6 +674,9 @@ HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
 o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
 ```
 The `query_md5` and `query_filename` columns are omitted here for brevity.
+
+Note: When using `--lins` with a `--lingroup` file, the `csv_summary` file will report
+summarization for each specified `lingroup`, rather than all possible `lin` ranks (v4.8.12+).
 
 #### `krona` output format
 
@@ -842,6 +848,8 @@ lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
 
 Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
+Note: this output format requires a single sample only. For a similar output with multiple query samples, provide the `lingroup` file and use the 'csv_summary' output format.
+
 #### `bioboxes` output format
 
 When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.
@@ -971,7 +979,12 @@ sourmash tax genome
 > This command uses the default classification strategy, which uses a
 containment threshold of 0.1 (10%).
 
-There are two possible output formats, `csv_summary` and `krona`.
+`sourmash tax genome` can produce the following output formats:
+
+- `human`: ".human.txt",
+- `csv_summary`: ".classifications.csv",
+- `krona`: ".krona.tsv",
+- `lineage_summary`: ".lineage_summary.tsv",
 
 #### `csv_summary` output format
 
