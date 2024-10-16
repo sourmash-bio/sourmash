@@ -34,9 +34,11 @@ pub trait Storage {
     /// Load signature from internal path
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -299,9 +301,12 @@ impl Storage for FSStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -369,9 +374,11 @@ impl Storage for ZipStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
