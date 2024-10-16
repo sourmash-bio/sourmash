@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -372,7 +373,6 @@ impl RevIndexOps for RevIndex {
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
-        let mut orig_query_ds = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
@@ -393,29 +393,31 @@ impl RevIndexOps for RevIndex {
                 break;
             }
 
-            // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-
-            // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap().clone();
-            query = query.downsample_scaled(match_mh.scaled())?;
-            orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
+
+            // make downsampled minhashes
+            let max_scaled = max(match_mh.scaled(), query.scaled());
+
+            let match_mh = match_mh
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample match");
+
+            // repeatedly downsample query, then extract to KmerMinHash
+            // => calculate_gather_stats
+            query = query
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample query");
+            let query_mh = KmerMinHash::from(query.clone());
 
             // just calculate essentials here
             let gather_result_rank = matches.len();
 
-            let query_mh = KmerMinHash::from(query.clone());
-
             // grab the specific intersection:
-            let isect = match_mh.intersection(&query_mh)?;
-            let mut isect_mh = match_mh.clone();
-            isect_mh.clear();
-            isect_mh.add_many(&isect.0)?;
-
             // Calculate stats
-            let gather_result = calculate_gather_stats(
-                &orig_query_ds,
-                KmerMinHash::from(query.clone()),
+            let (gather_result, isect) = calculate_gather_stats(
+                &orig_query,
+                query_mh,
                 match_sig,
                 match_size,
                 gather_result_rank,
@@ -424,7 +426,14 @@ impl RevIndexOps for RevIndex {
                 calc_abund_stats,
                 calc_ani_ci,
                 ani_confidence_interval_fraction,
-            )?;
+            )
+            .expect("could not calculate gather stats");
+
+            // use intersection from calc_gather_stats to make a KmerMinHash.
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0)?;
+
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);
