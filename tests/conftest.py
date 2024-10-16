@@ -13,6 +13,24 @@ from sourmash_tst_utils import TempDirectory, RunnerContext
 sys.stdout = sys.stderr
 
 
+# behavior is default behavior, present in both sourmash v4 and sourmash v5.
+@pytest.fixture(params=["v4", "v5", "(default)"])
+def cli_v4_and_v5(request):
+    return request.param
+
+
+# behavior is default behavior in v4, and maybe will be invoked by --v4 in v5.
+@pytest.fixture(params=["v4", "(default)"])
+def cli_v4_only(request):
+    return request.param
+
+
+# behavior is available with --v5 and will be default in sourmash v5.
+@pytest.fixture(params=["v5"])
+def cli_v5_only(request):
+    return request.param
+
+
 @pytest.fixture
 def runtmp():
     with TempDirectory() as location:
