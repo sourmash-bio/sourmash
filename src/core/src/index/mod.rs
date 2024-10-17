@@ -193,7 +193,7 @@ pub trait Index<'a> {
     */
 }
 
-impl<'a, N, L> Comparable<L> for &'a N
+impl<N, L> Comparable<L> for &N
 where
     N: Comparable<L>,
 {

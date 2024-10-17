@@ -18,7 +18,6 @@ use crate::storage::SigStore;
 use crate::Result;
 
 /// Supports parallel search without a particular index.
-
 pub struct LinearIndex {
     collection: CollectionSet,
     template: Sketch,
@@ -313,7 +312,7 @@ impl Select for LinearIndex {
     }
 }
 
-impl<'a> Index<'a> for LinearIndex {
+impl Index<'_> for LinearIndex {
     type Item = SigStore;
 
     fn insert(&mut self, _node: Self::Item) -> Result<()> {

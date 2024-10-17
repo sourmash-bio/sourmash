@@ -416,7 +416,7 @@ impl RevIndexOps for RevIndex {
             // grab the specific intersection:
             // Calculate stats
             let (gather_result, isect) = calculate_gather_stats(
-                &orig_query,
+                orig_query,
                 query_mh,
                 match_sig,
                 match_size,
