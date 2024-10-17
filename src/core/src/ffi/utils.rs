@@ -273,7 +273,7 @@ impl From<String> for SourmashStr {
     }
 }
 
-impl<'a> From<&'a str> for SourmashStr {
+impl From<&str> for SourmashStr {
     fn from(string: &str) -> SourmashStr {
         SourmashStr::new(string)
     }
