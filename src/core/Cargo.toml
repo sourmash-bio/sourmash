@@ -60,7 +60,7 @@ serde_json = "1.0.132"
 statrs = "0.17.1"
 streaming-stats = "0.2.3"
 thiserror = "1.0"
-twox-hash = "1.6.0"
+twox-hash = "2.0.0"
 typed-builder = "0.18.0"
 vec-collections = "0.4.3"
 
