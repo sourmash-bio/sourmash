@@ -277,7 +277,10 @@ impl Select for Manifest {
             } else {
                 valid
             };
-            eprintln!("BBB: mf={} req={}", row.scaled, selection.scaled().unwrap());
+            let foo = selection.scaled();
+            if let Some(scaled) = foo {
+                eprintln!("BBB: mf={} req={}", row.scaled, scaled);
+            }
             valid = if let Some(scaled) = selection.scaled() {
                 // num sigs have row.scaled = 0, don't include them
                 valid && row.scaled != 0 && row.scaled <= scaled as u64
