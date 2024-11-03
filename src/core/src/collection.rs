@@ -92,6 +92,10 @@ impl Collection {
         self.manifest.iter().enumerate().map(|(i, r)| (i as Idx, r))
     }
 
+    pub fn into_iter(self) -> impl IntoIterator<Item = (Idx, Record)> {
+        self.manifest.into_iter().enumerate().map(|(i, r)| (i as Idx, r))
+    }
+
     #[cfg(feature = "parallel")]
     pub fn par_iter(&self) -> impl IndexedParallelIterator<Item = (Idx, &Record)> {
         self.manifest

@@ -243,6 +243,10 @@ impl Manifest {
         self.records.iter()
     }
 
+    pub fn into_iter(self) -> impl Iterator<Item = Record> {
+        self.records.into_iter()
+    }
+
     pub fn intersect_manifest(&self, other: &Manifest) -> Self {
         // extract tuples from other mf:
         let pairs: HashSet<_> = other.iter().collect();
