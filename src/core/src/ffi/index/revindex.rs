@@ -233,7 +233,7 @@ unsafe fn revindex_gather(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u64 {
+pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
     let revindex = SourmashRevIndex::as_rust(ptr);
     if let Sketch::MinHash(mh) = revindex.template() {
         mh.scaled()
