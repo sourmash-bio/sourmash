@@ -100,6 +100,21 @@ impl Collection {
             .map(|(i, r)| (i as Idx, r))
     }
 
+    #[cfg(feature = "parallel")]
+    pub fn into_par_iter(self) -> impl IndexedParallelIterator<Item = (Idx, Record)> {
+        let Self {
+            manifest,
+            storage: _,
+        } = self;
+
+        let Manifest { records } = manifest;
+
+        records
+            .into_par_iter()
+            .enumerate()
+            .map(|(i, r)| (i as Idx, r))
+    }
+
     pub fn len(&self) -> usize {
         self.manifest.len()
     }

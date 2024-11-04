@@ -86,7 +86,7 @@ where
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Manifest {
-    records: Vec<Record>,
+    pub(crate) records: Vec<Record>,
 }
 
 impl Record {
