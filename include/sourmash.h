@@ -104,7 +104,7 @@ uint32_t computeparams_num_hashes(const SourmashComputeParameters *ptr);
 
 bool computeparams_protein(const SourmashComputeParameters *ptr);
 
-uint64_t computeparams_scaled(const SourmashComputeParameters *ptr);
+uint32_t computeparams_scaled(const SourmashComputeParameters *ptr);
 
 uint64_t computeparams_seed(const SourmashComputeParameters *ptr);
 
@@ -122,7 +122,7 @@ void computeparams_set_num_hashes(SourmashComputeParameters *ptr, uint32_t num);
 
 void computeparams_set_protein(SourmashComputeParameters *ptr, bool v);
 
-void computeparams_set_scaled(SourmashComputeParameters *ptr, uint64_t scaled);
+void computeparams_set_scaled(SourmashComputeParameters *ptr, uint32_t scaled);
 
 void computeparams_set_seed(SourmashComputeParameters *ptr, uint64_t new_seed);
 
@@ -230,7 +230,7 @@ SourmashStr kmerminhash_md5sum(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_merge(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
-SourmashKmerMinHash *kmerminhash_new(uint64_t scaled,
+SourmashKmerMinHash *kmerminhash_new(uint32_t scaled,
                                      uint32_t k,
                                      HashFunctions hash_function,
                                      uint64_t seed,
@@ -342,7 +342,7 @@ SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_
                                          const SourmashKmerMinHash *const *queries_ptr,
                                          uintptr_t inqueries);
 
-uint64_t revindex_scaled(const SourmashRevIndex *ptr);
+uint32_t revindex_scaled(const SourmashRevIndex *ptr);
 
 const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
                                                    const SourmashSignature *sig_ptr,
