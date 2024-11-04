@@ -47,8 +47,8 @@ pub struct ComputeParameters {
     singleton: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = 0u64)]
-    scaled: u64,
+    #[builder(default = 0u32)]
+    scaled: u32,
 
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = false)]

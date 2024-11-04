@@ -38,7 +38,7 @@ pub struct Record {
     num: u32,
 
     #[getset(get = "pub")]
-    scaled: u64,
+    scaled: u32,
 
     #[getset(get = "pub")]
     n_hashes: usize,

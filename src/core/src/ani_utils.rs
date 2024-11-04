@@ -93,7 +93,7 @@ pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
 pub fn ani_ci_from_containment(
     containment: f64,
     ksize: f64,
-    scaled: u64,
+    scaled: u32,
     n_unique_kmers: u64,
     confidence: Option<f64>,
 ) -> Result<(f64, f64), Error> {

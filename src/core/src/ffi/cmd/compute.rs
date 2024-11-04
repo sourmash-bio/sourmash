@@ -155,7 +155,7 @@ pub unsafe extern "C" fn computeparams_set_num_hashes(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> u64 {
+pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> u32 {
     let cp = SourmashComputeParameters::as_rust(ptr);
     cp.scaled()
 }
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParamet
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_set_scaled(
     ptr: *mut SourmashComputeParameters,
-    scaled: u64,
+    scaled: u32,
 ) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
     cp.set_scaled(scaled);

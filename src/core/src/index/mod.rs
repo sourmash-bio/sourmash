@@ -242,17 +242,17 @@ pub fn calculate_gather_stats(
     trace!("query.size: {}", remaining_query.size());
 
     //bp remaining in subtracted query
-    let remaining_bp = (remaining_query.size() - isect_size) as u64 * remaining_query.scaled();
+    let remaining_bp = (remaining_query.size() - isect_size) as u64 * remaining_query.scaled() as u64;
 
     // stats for this match vs original query
     let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
-    let intersect_bp = match_mh.scaled() * intersect_orig;
+    let intersect_bp = match_mh.scaled() as u64 * intersect_orig;
     let f_orig_query = intersect_orig as f64 / orig_query.size() as f64;
     let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
 
     // stats for this match vs current (subtracted) query
     let f_match = match_size as f64 / match_mh.size() as f64;
-    let unique_intersect_bp = match_mh.scaled() * isect_size as u64;
+    let unique_intersect_bp = match_mh.scaled() as u64 * isect_size as u64;
     let f_unique_to_query = isect_size as f64 / orig_query.size() as f64;
 
     // // get ANI values

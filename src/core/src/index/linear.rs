@@ -180,7 +180,7 @@ impl LinearIndex {
         let unique_intersect_bp = (match_mh.scaled() as usize * match_size) as u64;
 
         let (intersect_orig, _) = match_mh.intersection_size(query)?;
-        let intersect_bp = match_mh.scaled() * intersect_orig;
+        let intersect_bp: u64 = match_mh.scaled() as u64 * intersect_orig;
 
         let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
         let match_ = match_sig;
