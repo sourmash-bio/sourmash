@@ -242,7 +242,8 @@ pub fn calculate_gather_stats(
     trace!("query.size: {}", remaining_query.size());
 
     //bp remaining in subtracted query
-    let remaining_bp = (remaining_query.size() - isect_size) as u64 * remaining_query.scaled() as u64;
+    let remaining_bp =
+        (remaining_query.size() - isect_size) as u64 * remaining_query.scaled() as u64;
 
     // stats for this match vs original query
     let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
