@@ -34,9 +34,11 @@ pub trait Storage {
     /// Load signature from internal path
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -69,6 +71,16 @@ pub enum StorageError {
     #[error("Storage for path {1} requires the '{0}' feature to be enabled")]
     MissingFeature(String, String),
 }
+
+/// InnerStorage: a catch-all type that allows using any Storage in
+/// parallel contexts.
+///
+/// Arc allows ref counting to share it between threads;
+/// RwLock makes sure there is only one writer possible (and a lot of readers);
+/// dyn Storage so we can init with anything that implements the Storage trait.
+
+// Send + Sync + 'static is kind of a cheat to avoid lifetimes issues: we
+//    should get rid of that 'static if possible... -- Luiz.
 
 #[derive(Clone)]
 pub struct InnerStorage(Arc<RwLock<dyn Storage + Send + Sync + 'static>>);
@@ -299,9 +311,12 @@ impl Storage for FSStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed when using 'load_sig'");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -369,9 +384,11 @@ impl Storage for ZipStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
