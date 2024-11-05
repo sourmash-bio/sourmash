@@ -603,7 +603,7 @@ dependencies = [
  "capnp",
  "memmap",
  "murmurhash3",
- "needletail",
+ "needletail 0.5.1",
  "rayon",
  "serde",
  "serde_json",
@@ -935,9 +935,9 @@ checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"
-version = "2.4.1"
+version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
+checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "memmap"
@@ -1030,6 +1030,17 @@ dependencies = [
  "flate2",
  "memchr",
  "xz2",
+]
+
+[[package]]
+name = "needletail"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f29a3c5015d6985f33318d154fa0c41315eb2e7df29432c844c74a83434bfe21"
+dependencies = [
+ "buffer-redux",
+ "bytecount",
+ "memchr",
 ]
 
 [[package]]
@@ -1669,7 +1680,7 @@ dependencies = [
  "md5",
  "memmap2",
  "murmurhash3",
- "needletail",
+ "needletail 0.6.0",
  "niffler",
  "nohash-hasher",
  "num-iter",
