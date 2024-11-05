@@ -12,13 +12,13 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::_hash_murmur;
+use crate::{_hash_murmur, ScaledType};
 use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
 
-pub fn max_hash_for_scaled(scaled: u32) -> u64 {
+pub fn max_hash_for_scaled(scaled: ScaledType) -> u64 {
     match scaled {
         0 => 0, // scaled == 0 indicates this is a num minhash
         1 => u64::MAX,
@@ -26,10 +26,10 @@ pub fn max_hash_for_scaled(scaled: u32) -> u64 {
     }
 }
 
-pub fn scaled_for_max_hash(max_hash: u64) -> u32 {
+pub fn scaled_for_max_hash(max_hash: u64) -> ScaledType {
     match max_hash {
         0 => 0, // scaled == 0 indicates this is a num minhash
-        _ => (u64::MAX as f64 / max_hash as f64) as u32,
+        _ => (u64::MAX as f64 / max_hash as f64) as ScaledType,
     }
 }
 
@@ -230,7 +230,7 @@ impl KmerMinHash {
         self.max_hash
     }
 
-    pub fn scaled(&self) -> u32 {
+    pub fn scaled(&self) -> ScaledType {
         scaled_for_max_hash(self.max_hash)
     }
 
@@ -774,7 +774,7 @@ impl KmerMinHash {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_scaled(self, scaled: u32) -> Result<KmerMinHash, Error> {
+    pub fn downsample_scaled(self, scaled: ScaledType) -> Result<KmerMinHash, Error> {
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
         } else if self.scaled() > scaled {
@@ -1157,7 +1157,7 @@ impl KmerMinHashBTree {
         self.max_hash
     }
 
-    pub fn scaled(&self) -> u32 {
+    pub fn scaled(&self) -> ScaledType {
         scaled_for_max_hash(self.max_hash)
     }
 
@@ -1552,7 +1552,7 @@ impl KmerMinHashBTree {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_scaled(self, scaled: u32) -> Result<KmerMinHashBTree, Error> {
+    pub fn downsample_scaled(self, scaled: ScaledType) -> Result<KmerMinHashBTree, Error> {
         if self.scaled() == scaled || self.scaled() == 0 {
             Ok(self)
         } else if self.scaled() > scaled {
