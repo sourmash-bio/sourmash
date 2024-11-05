@@ -68,6 +68,8 @@ typedef struct SourmashSignature SourmashSignature;
 
 typedef struct SourmashZipStorage SourmashZipStorage;
 
+typedef uint32_t ScaledType;
+
 /**
  * Represents a string.
  */
@@ -104,7 +106,7 @@ uint32_t computeparams_num_hashes(const SourmashComputeParameters *ptr);
 
 bool computeparams_protein(const SourmashComputeParameters *ptr);
 
-uint32_t computeparams_scaled(const SourmashComputeParameters *ptr);
+ScaledType computeparams_scaled(const SourmashComputeParameters *ptr);
 
 uint64_t computeparams_seed(const SourmashComputeParameters *ptr);
 
@@ -342,7 +344,7 @@ SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_
                                          const SourmashKmerMinHash *const *queries_ptr,
                                          uintptr_t inqueries);
 
-uint32_t revindex_scaled(const SourmashRevIndex *ptr);
+ScaledType revindex_scaled(const SourmashRevIndex *ptr);
 
 const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
                                                    const SourmashSignature *sig_ptr,
