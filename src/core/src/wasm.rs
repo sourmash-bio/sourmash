@@ -12,6 +12,7 @@ use crate::encodings::HashFunctions;
 use crate::signature::Signature as _Signature;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash as _KmerMinHash;
+use crate::ScaledType;
 
 #[wasm_bindgen]
 pub struct KmerMinHash(_KmerMinHash);
@@ -48,7 +49,7 @@ impl KmerMinHash {
         };
 
         KmerMinHash(_KmerMinHash::new(
-            scaled as u64,
+            scaled,
             ksize,
             hash_function,
             seed as u64,
