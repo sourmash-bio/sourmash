@@ -12,11 +12,11 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::{_hash_murmur, ScaledType};
 use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
+use crate::{ScaledType, _hash_murmur};
 
 pub fn max_hash_for_scaled(scaled: ScaledType) -> u64 {
     match scaled {

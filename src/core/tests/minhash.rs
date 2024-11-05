@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
-use sourmash::ScaledType;
 use sourmash::encodings::HashFunctions;
 use sourmash::signature::SeqToHashes;
 use sourmash::signature::{Signature, SigsTrait};
@@ -13,6 +12,7 @@ use sourmash::sketch::minhash::{
     max_hash_for_scaled, scaled_for_max_hash, KmerMinHash, KmerMinHashBTree,
 };
 use sourmash::sketch::Sketch;
+use sourmash::ScaledType;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
