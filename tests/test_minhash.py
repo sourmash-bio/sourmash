@@ -473,20 +473,20 @@ def test_size_limit(track_abundance):
 
 
 def test_scaled(track_abundance):
-    # test behavior with scaled
-    scaled = _get_scaled_for_max_hash(35)
+    # test behavior with scaled: cannot add hashes above max hash.
+    scaled = 2**3
     print("XX", scaled, _get_max_hash_for_scaled(scaled))
     mh = MinHash(0, 4, track_abundance=track_abundance, scaled=scaled)
-    assert mh._max_hash == 35
+    assert mh._max_hash == 2**61 # 2**64 / 2**3
 
     mh.add_hash(10)
     mh.add_hash(20)
     mh.add_hash(30)
 
     assert list(sorted(mh.hashes)) == [10, 20, 30]
-    mh.add_hash(40)
+    mh.add_hash(2**62)
     assert list(sorted(mh.hashes)) == [10, 20, 30]
-    mh.add_hash(36)
+    mh.add_hash(2**63)
     assert list(sorted(mh.hashes)) == [10, 20, 30]
 
 
