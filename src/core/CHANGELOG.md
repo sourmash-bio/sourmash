@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.17.0] - 2024-11-05
+
+Changes/additions:
+* standardize on u32 for scaled, and introduce `ScaledType` (#3364)
+* panic when `FSStorage::load_sig` encounters more than one `Signature` in a JSON record (#3333)
+
+Updates:
+
+* Bump needletail from 0.5.1 to 0.6.0 (#3376)
+* Bump histogram from 0.11.0 to 0.11.1 (#3377)
+* Bump serde from 1.0.210 to 1.0.214 (#3368)
+* Bump serde_json from 1.0.128 to 1.0.132 (#3358)
+* Fix clippy lints from 1.83 beta (#3357)
+
 ## [0.16.0] - 2024-10-15
 
 MSRV: 1.65
