@@ -12,6 +12,7 @@ use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::ScaledType;
 
 pub struct SourmashRevIndex;
 
@@ -233,7 +234,7 @@ unsafe fn revindex_gather(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
+pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> ScaledType {
     let revindex = SourmashRevIndex::as_rust(ptr);
     if let Sketch::MinHash(mh) = revindex.template() {
         mh.scaled()

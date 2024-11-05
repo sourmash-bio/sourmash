@@ -1,6 +1,7 @@
 use std::slice;
 
 use crate::cmd::ComputeParameters;
+use crate::ScaledType;
 
 use crate::ffi::utils::ForeignObject;
 
@@ -155,7 +156,7 @@ pub unsafe extern "C" fn computeparams_set_num_hashes(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> u32 {
+pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> ScaledType {
     let cp = SourmashComputeParameters::as_rust(ptr);
     cp.scaled()
 }
