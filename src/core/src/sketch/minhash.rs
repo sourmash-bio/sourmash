@@ -185,7 +185,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
 
 impl KmerMinHash {
     pub fn new(
-        scaled: u32,
+        scaled: ScaledType,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
@@ -1115,7 +1115,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
 
 impl KmerMinHashBTree {
     pub fn new(
-        scaled: u32,
+        scaled: ScaledType,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,

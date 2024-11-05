@@ -15,7 +15,7 @@ use crate::encodings::HashFunctions;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
-use crate::Result;
+use crate::{Result, ScaledType};
 
 /// Individual manifest record, containing information about sketches.
 
@@ -38,7 +38,7 @@ pub struct Record {
     num: u32,
 
     #[getset(get = "pub")]
-    scaled: u32,
+    scaled: ScaledType,
 
     #[getset(get = "pub")]
     n_hashes: usize,

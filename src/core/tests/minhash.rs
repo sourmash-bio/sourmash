@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
+use sourmash::ScaledType;
 use sourmash::encodings::HashFunctions;
 use sourmash::signature::SeqToHashes;
 use sourmash::signature::{Signature, SigsTrait};
@@ -328,7 +329,7 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
 proptest! {
 #[test]
 fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
-    let scaled: u32 = 10;
+    let scaled: ScaledType = 10;
     let mut a = KmerMinHash::new(scaled, 6, HashFunctions::Murmur64Dna, 42, true, 0);
     let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::Murmur64Dna, 42, true, 0);
 

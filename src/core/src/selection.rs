@@ -91,7 +91,7 @@ impl Selection {
         self.scaled
     }
 
-    pub fn set_scaled(&mut self, scaled: u32) {
+    pub fn set_scaled(&mut self, scaled: ScaledType) {
         self.scaled = Some(scaled);
     }
 

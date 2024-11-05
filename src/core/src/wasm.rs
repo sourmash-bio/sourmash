@@ -32,7 +32,7 @@ impl KmerMinHash {
         dayhoff: bool,
         hp: bool,
         seed: u32,
-        scaled: u32,
+        scaled: ScaledType,
         track_abundance: bool,
     ) -> KmerMinHash {
         // TODO: at most one of (prot, dayhoff, hp) should be true
@@ -84,8 +84,8 @@ impl ComputeParameters {
     }
 
     #[wasm_bindgen]
-    pub fn set_scaled(&mut self, scaled: u32) {
-        self.0.set_scaled(scaled as u64);
+    pub fn set_scaled(&mut self, scaled: ScaledType) {
+        self.0.set_scaled(scaled);
     }
 
     #[wasm_bindgen]
