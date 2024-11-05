@@ -480,7 +480,7 @@ def test_scaled(track_abundance):
     scaled = 2**3
     print("XX", scaled, _get_max_hash_for_scaled(scaled))
     mh = MinHash(0, 4, track_abundance=track_abundance, scaled=scaled)
-    assert mh._max_hash == 2**61 # 2**64 / 2**3
+    assert mh._max_hash == 2**61  # 2**64 / 2**3
 
     mh.add_hash(10)
     mh.add_hash(20)
@@ -1184,13 +1184,9 @@ def test_mh_similarity_diff_seed(track_abundance):
 
 
 def test_mh_compare_diff_max_hash(track_abundance):
-    a = MinHash(
-        0, 5, track_abundance=track_abundance, scaled=scaled2
-    )
+    a = MinHash(0, 5, track_abundance=track_abundance, scaled=scaled2)
 
-    b = MinHash(
-        0, 5, track_abundance=track_abundance, scaled=scaled4
-    )
+    b = MinHash(0, 5, track_abundance=track_abundance, scaled=scaled4)
 
     with pytest.raises(ValueError):
         a.similarity(b)
@@ -1213,12 +1209,8 @@ def test_mh_concat_diff_ksize(track_abundance):
 
 
 def test_mh_concat_diff_max_hash(track_abundance):
-    a = MinHash(
-        0, 5, track_abundance=track_abundance, scaled=scaled8
-    )
-    b = MinHash(
-        0, 5, track_abundance=track_abundance, scaled=scaled4
-    )
+    a = MinHash(0, 5, track_abundance=track_abundance, scaled=scaled8)
+    b = MinHash(0, 5, track_abundance=track_abundance, scaled=scaled4)
 
     with pytest.raises(ValueError):
         a += b
@@ -1517,9 +1509,7 @@ def test_mh_copy_and_clear(track_abundance):
 
 def test_mh_copy_and_clear_with_max_hash(track_abundance):
     # test basic creation of new, empty MinHash w/max_hash param set
-    a = MinHash(
-        0, 10, track_abundance=track_abundance, scaled=scaled8
-    )
+    a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled8)
     for i in range(44, 64):
         a.add_hash(2**i)
 
@@ -1620,9 +1610,7 @@ def test_pickle_hp(track_abundance):
 
 
 def test_pickle_max_hash(track_abundance):
-    a = MinHash(
-        0, 10, track_abundance=track_abundance, scaled=scaled8
-    )
+    a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled8)
     for i in range(44, 64):
         a.add_hash(2**i)
 
@@ -1773,9 +1761,9 @@ def test_remove_minhash(track_abundance):
     added_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled8)
     tested_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled8)
 
-    original_mh.add_many([ 2**i for i in range(62) ])
-    added_mh.add_many([ 2**63 ] )  # contains original in it
-    tested_mh.add_many([ 2**i for i in range(63) ])  # original + added
+    original_mh.add_many([2**i for i in range(62)])
+    added_mh.add_many([2**63])  # contains original in it
+    tested_mh.add_many([2**i for i in range(63)])  # original + added
 
     # Now we should expect tested_minhash == original_minhash
     # Note we are passing a MinHash object instead of an iterable object
@@ -1813,7 +1801,7 @@ def test_set_abundances_huge():
     max_hash = _get_max_hash_for_scaled(2**31)
     a = MinHash(0, 10, track_abundance=True, scaled=_get_scaled_for_max_hash(max_hash))
 
-    hashes = [ 2**i for i in range(64) ]
+    hashes = [2**i for i in range(64)]
     abundances = itertools.repeat(2)
 
     a.set_abundances(dict(zip(hashes, abundances)))
