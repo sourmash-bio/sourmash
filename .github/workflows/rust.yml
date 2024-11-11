@@ -179,6 +179,13 @@ jobs:
         working-directory: pkg
         run: npm pack
 
+      - name: Publish to NPM
+        if: startsWith(github.ref, 'refs/tags/r')
+        working-directory: pkg
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - uses: actions/upload-artifact@v4
         with:
           path: 'pkg/sourmash*.tgz'
@@ -216,7 +223,7 @@ jobs:
           args: test
 
   publish:
-    name: Publish (dry-run)
+    name: Publish (on tags, dry-run otherwise)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -242,6 +249,22 @@ jobs:
         with:
           command: publish
           args: --dry-run --manifest-path src/core/Cargo.toml
+
+      # Login to crates.io on tags
+      - name: login to crates.io
+        uses: actions-rs/cargo@v1
+        if: startsWith(github.ref, 'refs/tags/r')
+        with:
+          command: login
+          args: ${{ secrets.CRATES_IO_TOKEN }}
+
+      # Publish to crates.io on tags
+      - name: Publish to crates.io
+        if: startsWith(github.ref, 'refs/tags/r')
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --manifest-path src/core/Cargo.toml
 
   minimum_rust_version:
     runs-on: ubuntu-latest
