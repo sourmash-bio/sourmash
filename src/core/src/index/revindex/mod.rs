@@ -75,7 +75,7 @@ pub trait RevIndexOps {
         query_colors: QueryColors,
         hash_to_color: HashToColor,
         threshold: usize,
-        query: &KmerMinHash,
+        query: KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>>;
 
@@ -553,7 +553,7 @@ mod test {
             query_colors,
             hash_to_color,
             0,
-            &query,
+            query,
             Some(selection),
         )?;
 
@@ -620,7 +620,7 @@ mod test {
             query_colors,
             hash_to_color,
             5, // 50kb threshold
-            &query,
+            query,
             Some(selection),
         )?;
 
@@ -770,7 +770,7 @@ mod test {
             query_colors,
             hash_to_color,
             0,
-            &query,
+            query,
             Some(selection),
         )?;
 
@@ -909,7 +909,7 @@ mod test {
                 query_colors,
                 hash_to_color,
                 0,
-                &query,
+                query.clone(),
                 Some(selection.clone()),
             )
             .expect("failed to gather!");
@@ -927,7 +927,7 @@ mod test {
                 query_colors,
                 hash_to_color,
                 0,
-                &query,
+                query.clone(),
                 Some(selection.clone()),
             )?;
             assert_eq!(matches_external, matches_internal);
@@ -944,7 +944,7 @@ mod test {
             query_colors,
             hash_to_color,
             0,
-            &query,
+            query,
             Some(selection.clone()),
         )?;
         assert_eq!(matches_external, matches_moved);

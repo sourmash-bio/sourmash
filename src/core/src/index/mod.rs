@@ -25,7 +25,8 @@ use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
 use crate::selection::Selection;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::KmerMinHashBTree;
+use crate::sketch::Sketch;
 use crate::storage::SigStore;
 use crate::Error::CannotUpsampleScaled;
 use crate::Result;
@@ -208,8 +209,8 @@ where
 
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_gather_stats(
-    orig_query: &KmerMinHash,
-    remaining_query: KmerMinHash,
+    orig_query: &KmerMinHashBTree,
+    remaining_query: KmerMinHashBTree,
     match_sig: SigStore,
     match_size: usize,
     gather_result_rank: u32,
@@ -220,7 +221,12 @@ pub fn calculate_gather_stats(
     confidence: Option<f64>,
 ) -> Result<(GatherResult, (Vec<u64>, u64))> {
     // get match_mh
-    let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
+    let match_mh: &KmerMinHashBTree = match match_sig.get_sketch() {
+        Some(Sketch::LargeMinHash(mh)) => mh,
+        Some(Sketch::MinHash(mh)) => &mh.clone().into(),
+        None => unimplemented!("cannot retrieve sketch"),
+        _ => todo!("got another sketch type?"),
+    };
 
     // it's ok to downsample match, but query is often big and repeated,
     // so we do not allow downsampling of query in this function.
@@ -399,6 +405,7 @@ mod test_calculate_gather_stats {
         orig_query.add_hash_with_abundance(8, 1);
         orig_query.add_hash_with_abundance(10, 1); // Non-matching hash
 
+        let orig_query: KmerMinHashBTree = orig_query.into();
         let query = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 
