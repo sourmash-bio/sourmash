@@ -409,8 +409,8 @@ mod test {
         // no sigs should remain
         assert_eq!(cl.len(), 6);
         for (_idx, rec) in cl.iter() {
-            // need to pass select again here so we actually downsample
-            let this_sig = cl.sig_from_record(rec).unwrap().select(&selection).unwrap();
+            eprintln!("record scaled is: {}", rec.scaled());
+            let this_sig = cl.sig_from_record(rec).unwrap();
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 2000);
         }
@@ -450,8 +450,7 @@ mod test {
         // count collection length
         assert_eq!(cl.len(), 2);
         for (idx, _rec) in cl.iter() {
-            // need to pass select again here so we actually downsample
-            let this_sig = cl.sig_for_dataset(idx).unwrap().select(&selection).unwrap();
+            let this_sig = cl.sig_for_dataset(idx).unwrap();
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 100);
         }
