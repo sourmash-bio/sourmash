@@ -1006,7 +1006,7 @@ impl Clone for KmerMinHashBTree {
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
             current_max: self.current_max,
-            md5sum: Mutex::new(Some(self.md5sum())),
+            md5sum: Mutex::new(self.md5sum.lock().unwrap().clone()),
         }
     }
 }
@@ -1667,6 +1667,8 @@ impl From<KmerMinHashBTree> for KmerMinHash {
         new_mh.mins = mins;
         new_mh.abunds = abunds;
 
+        new_mh.md5sum = other.md5sum;
+
         new_mh
     }
 }
@@ -1691,6 +1693,8 @@ impl From<&KmerMinHashBTree> for KmerMinHash {
         new_mh.mins = mins;
         new_mh.abunds = abunds;
 
+        new_mh.md5sum = Mutex::new(other.md5sum.lock().unwrap().clone());
+
         new_mh
     }
 }
@@ -1713,6 +1717,8 @@ impl From<KmerMinHash> for KmerMinHashBTree {
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
+
+        new_mh.md5sum = other.md5sum;
 
         new_mh
     }
