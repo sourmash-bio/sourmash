@@ -260,7 +260,7 @@ impl Manifest {
 
 impl Select for Manifest {
     fn select(self, selection: &Selection) -> Result<Self> {
-        let rows = self.records.iter().filter(|row| {
+        let rows: Vec<_> = self.records.iter().filter(|row| {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
                 row.ksize == ksize
@@ -289,10 +289,22 @@ impl Select for Manifest {
                 valid
             };
             valid
-        });
+        }).cloned().collect();
+
+        // if scaled is set, update!
+        let rows: Vec<_> = if let Some(scaled) = selection.scaled() {
+            rows.iter().map(|r| {
+                let mut r = r.clone();
+                r.scaled = scaled;
+                r
+            }).collect()
+        } else {
+            rows
+        };
+        // TODO: with num as well?
 
         Ok(Manifest {
-            records: rows.cloned().collect(),
+            records: rows
         })
 
         /*
