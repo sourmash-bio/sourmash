@@ -260,52 +260,57 @@ impl Manifest {
 
 impl Select for Manifest {
     fn select(self, selection: &Selection) -> Result<Self> {
-        let rows: Vec<_> = self.records.iter().filter(|row| {
-            let mut valid = true;
-            valid = if let Some(ksize) = selection.ksize() {
-                row.ksize == ksize
-            } else {
+        let rows: Vec<_> = self
+            .records
+            .iter()
+            .filter(|row| {
+                let mut valid = true;
+                valid = if let Some(ksize) = selection.ksize() {
+                    row.ksize == ksize
+                } else {
+                    valid
+                };
+                valid = if let Some(abund) = selection.abund() {
+                    valid && row.with_abundance() == abund
+                } else {
+                    valid
+                };
+                valid = if let Some(moltype) = selection.moltype() {
+                    valid && row.moltype() == moltype
+                } else {
+                    valid
+                };
+                valid = if let Some(scaled) = selection.scaled() {
+                    // num sigs have row.scaled = 0, don't include them
+                    valid && row.scaled != 0 && row.scaled <= scaled
+                } else {
+                    valid
+                };
+                valid = if let Some(num) = selection.num() {
+                    valid && row.num == num
+                } else {
+                    valid
+                };
                 valid
-            };
-            valid = if let Some(abund) = selection.abund() {
-                valid && row.with_abundance() == abund
-            } else {
-                valid
-            };
-            valid = if let Some(moltype) = selection.moltype() {
-                valid && row.moltype() == moltype
-            } else {
-                valid
-            };
-            valid = if let Some(scaled) = selection.scaled() {
-                // num sigs have row.scaled = 0, don't include them
-                valid && row.scaled != 0 && row.scaled <= scaled
-            } else {
-                valid
-            };
-            valid = if let Some(num) = selection.num() {
-                valid && row.num == num
-            } else {
-                valid
-            };
-            valid
-        }).cloned().collect();
+            })
+            .cloned()
+            .collect();
 
         // if scaled is set, update!
         let rows: Vec<_> = if let Some(scaled) = selection.scaled() {
-            rows.iter().map(|r| {
-                let mut r = r.clone();
-                r.scaled = scaled;
-                r
-            }).collect()
+            rows.iter()
+                .map(|r| {
+                    let mut r = r.clone();
+                    r.scaled = scaled;
+                    r
+                })
+                .collect()
         } else {
             rows
         };
         // TODO: with num as well?
 
-        Ok(Manifest {
-            records: rows
-        })
+        Ok(Manifest { records: rows })
 
         /*
         matching_rows = self.rows
