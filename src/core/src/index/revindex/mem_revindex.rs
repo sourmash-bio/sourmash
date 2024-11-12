@@ -208,26 +208,29 @@ impl RevIndex {
         let mut matches = vec![];
 
         while match_size > threshold && !counter.is_empty() {
-            let (dataset_id, size) = counter.most_common()[0];
+            let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
             match_size = if size >= threshold { size } else { break };
             let result = self
                 .linear
                 .gather_round(dataset_id, match_size, query, matches.len())?;
-            if let Some(Sketch::MinHash(match_mh)) =
-                result.match_.select_sketch(self.linear.template())
-            {
-                // Prepare counter for finding the next match by decrementing
-                // all hashes found in the current match in other datasets
-                for hash in match_mh.iter_mins() {
-                    if let Some(color) = self.hash_to_color.get(hash) {
-                        counter.subtract(self.colors.indices(color).cloned());
-                    }
-                }
-                counter.remove(&dataset_id);
-                matches.push(result);
-            } else {
-                unimplemented!()
+
+            // handle special case where threshold was set to 0
+            if match_size == 0 {
+                break;
             }
+
+            let match_sig = self.linear.collection().sig_for_dataset(dataset_id)?;
+            let match_mh = match_sig.minhash().unwrap().clone();
+
+            // Prepare counter for finding the next match by decrementing
+            // all hashes found in the current match in other datasets
+            for hash in match_mh.iter_mins() {
+                if let Some(color) = self.hash_to_color.get(hash) {
+                    counter.subtract(self.colors.indices(color).cloned());
+                }
+            }
+            counter.remove(&dataset_id);
+            matches.push(result);
         }
         Ok(matches)
     }

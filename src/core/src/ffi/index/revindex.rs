@@ -207,16 +207,13 @@ unsafe fn revindex_gather(
     let threshold: usize = (threshold * (mh.size() as f64)) as _;
 
     let counter = revindex.counter_for_query(mh);
-    dbg!(&counter);
 
     let results: Vec<(f64, Signature, String)> = revindex
         .gather(counter, threshold, mh)
         .unwrap() // TODO: proper error handling
         .into_iter()
         .map(|r| {
-            let filename = r.filename().to_owned();
-            let sig = r.get_match();
-            (r.f_match(), sig, filename)
+            todo!()
         })
         .collect();
 
