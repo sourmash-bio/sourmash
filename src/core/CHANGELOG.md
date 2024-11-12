@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.17.1] - 2024-11-11
+
+Changes/additions:
+* fix: Avoid re-calculating md5sum on clone and conversion to KmerMinHashBTree (#3385)
+* build: simplify Rust release (#3392)
+
 ## [0.17.0] - 2024-11-05
 
 Changes/additions:
