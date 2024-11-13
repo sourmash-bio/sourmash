@@ -12,6 +12,7 @@ use crate::encodings::HashFunctions;
 use crate::signature::Signature as _Signature;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash as _KmerMinHash;
+use crate::ScaledType;
 
 #[wasm_bindgen]
 pub struct KmerMinHash(_KmerMinHash);
@@ -32,7 +33,7 @@ impl KmerMinHash {
         dayhoff: bool,
         hp: bool,
         seed: u32,
-        scaled: u32,
+        scaled: ScaledType,
         track_abundance: bool,
     ) -> KmerMinHash {
         // TODO: at most one of (prot, dayhoff, hp) should be true
@@ -48,7 +49,7 @@ impl KmerMinHash {
         };
 
         KmerMinHash(_KmerMinHash::new(
-            scaled as u64,
+            scaled,
             ksize,
             hash_function,
             seed as u64,
@@ -84,8 +85,8 @@ impl ComputeParameters {
     }
 
     #[wasm_bindgen]
-    pub fn set_scaled(&mut self, scaled: u32) {
-        self.0.set_scaled(scaled as u64);
+    pub fn set_scaled(&mut self, scaled: ScaledType) {
+        self.0.set_scaled(scaled);
     }
 
     #[wasm_bindgen]

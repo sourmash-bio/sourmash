@@ -17,7 +17,7 @@ impl ForeignObject for SourmashKmerMinHash {
 
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
-    scaled: u64,
+    scaled: u32,
     k: u32,
     hash_function: HashFunctions,
     seed: u64,

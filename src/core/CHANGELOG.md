@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.17.1] - 2024-11-11
+
+Changes/additions:
+* fix: Avoid re-calculating md5sum on clone and conversion to KmerMinHashBTree (#3385)
+* build: simplify Rust release (#3392)
+
+## [0.17.0] - 2024-11-05
+
+Changes/additions:
+* standardize on u32 for scaled, and introduce `ScaledType` (#3364)
+* panic when `FSStorage::load_sig` encounters more than one `Signature` in a JSON record (#3333)
+
+Updates:
+
+* Bump needletail from 0.5.1 to 0.6.0 (#3376)
+* Bump histogram from 0.11.0 to 0.11.1 (#3377)
+* Bump serde from 1.0.210 to 1.0.214 (#3368)
+* Bump serde_json from 1.0.128 to 1.0.132 (#3358)
+* Fix clippy lints from 1.83 beta (#3357)
+
+## [0.16.0] - 2024-10-15
+
+MSRV: 1.65
+
+Changes/additions:
+
+* refactor `calculate_gather_stats` to disallow repeated downsampling (#3352)
+* improve downsampling behavior on `KmerMinHash`; fix `RevIndex::gather` bug around `scaled`. (#3342)
+* derive Hash for `HashFunctions` (#3344)
+
+Updates:
+
+* Bump web-sys from 0.3.70 to 0.3.72 (#3354)
+* Bump tempfile from 3.12.0 to 3.13.0 (#3340)
+
+
 ## [0.15.2] - 2024-09-25
 
 MSRV: 1.65

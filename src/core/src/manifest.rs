@@ -15,7 +15,7 @@ use crate::encodings::HashFunctions;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
-use crate::Result;
+use crate::{Result, ScaledType};
 
 /// Individual manifest record, containing information about sketches.
 
@@ -38,7 +38,7 @@ pub struct Record {
     num: u32,
 
     #[getset(get = "pub")]
-    scaled: u64,
+    scaled: ScaledType,
 
     #[getset(get = "pub")]
     n_hashes: usize,
@@ -279,7 +279,7 @@ impl Select for Manifest {
             };
             valid = if let Some(scaled) = selection.scaled() {
                 // num sigs have row.scaled = 0, don't include them
-                valid && row.scaled != 0 && row.scaled <= scaled as u64
+                valid && row.scaled != 0 && row.scaled <= scaled
             } else {
                 valid
             };

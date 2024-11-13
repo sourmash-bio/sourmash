@@ -126,7 +126,7 @@ def metagenome(args):
         notify("No gather results loaded. Exiting.")
         sys.exit(-1)
 
-    single_query_output_formats = ["csv_summary", "kreport"]
+    single_query_output_formats = ["kreport", "lingroup", "bioboxes"]
     desired_single_outputs = []
     if len(query_gather_results) > 1:  # working with multiple queries
         desired_single_outputs = [
@@ -150,6 +150,15 @@ def metagenome(args):
     for queryResult in query_gather_results:
         try:
             queryResult.build_summarized_result()
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
+
+    # if lingroup file is passed in, read it
+    lingroups = None
+    if args.lingroup is not None:
+        try:
+            lingroups = tax_utils.read_lingroups(args.lingroup)
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
@@ -202,7 +211,10 @@ def metagenome(args):
         )
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(
-                query_gather_results, out_fp, limit_float_decimals=limit_float
+                query_gather_results,
+                out_fp,
+                limit_float_decimals=limit_float,
+                lingroups=lingroups,
             )
 
     # write summarized --> kreport output tsv
@@ -218,13 +230,7 @@ def metagenome(args):
             )
 
     # write summarized --> LINgroup output tsv
-    if "lingroup" in args.output_format:
-        try:
-            lingroups = tax_utils.read_lingroups(args.lingroup)
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
-
+    if "lingroup" in args.output_format and lingroups is not None:
         lingroupfile, limit_float = make_outfile(
             args.output_base, "lingroup", output_dir=args.output_dir
         )

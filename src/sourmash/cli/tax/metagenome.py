@@ -114,14 +114,14 @@ def subparser(subparsers):
         "--lingroups",
         metavar="FILE",
         default=None,
-        help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will produce a 'lingroup' report containing taxonomic summarization for each group.",
+        help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. For 'tax metagenome' runs with a single 'gather' file (single query), providing this file will allow us to output a 'lingroup' report containing taxonomic summarization for each group. For multiple queries, we recommend the 'csv_summary' output format.",
     )
     subparser.add_argument(
         "--ictv",
         "--ictv-taxonomy",
         action="store_true",
         default=False,
-        help="use ICTV taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain ICTV ranks.",
+        help="use ICTV taxonomy in place of standard taxonomic ranks. Note that the taxonomy CSV must contain ICTV ranks.",
     )
     add_rank_arg(subparser)
 

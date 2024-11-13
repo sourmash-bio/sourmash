@@ -30,6 +30,10 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NON_EMPTY_MIN_HASH = 106,
   SOURMASH_ERROR_CODE_MISMATCH_NUM = 107,
   SOURMASH_ERROR_CODE_NEEDS_ABUNDANCE_TRACKING = 108,
+  SOURMASH_ERROR_CODE_CANNOT_UPSAMPLE_SCALED = 109,
+  SOURMASH_ERROR_CODE_NO_MIN_HASH_FOUND = 110,
+  SOURMASH_ERROR_CODE_EMPTY_SIGNATURE = 111,
+  SOURMASH_ERROR_CODE_MULTIPLE_SKETCHES_FOUND = 112,
   SOURMASH_ERROR_CODE_INVALID_DNA = 1101,
   SOURMASH_ERROR_CODE_INVALID_PROT = 1102,
   SOURMASH_ERROR_CODE_INVALID_CODON_LENGTH = 1103,
@@ -63,6 +67,8 @@ typedef struct SourmashSearchResult SourmashSearchResult;
 typedef struct SourmashSignature SourmashSignature;
 
 typedef struct SourmashZipStorage SourmashZipStorage;
+
+typedef uint32_t ScaledType;
 
 /**
  * Represents a string.
@@ -100,7 +106,7 @@ uint32_t computeparams_num_hashes(const SourmashComputeParameters *ptr);
 
 bool computeparams_protein(const SourmashComputeParameters *ptr);
 
-uint64_t computeparams_scaled(const SourmashComputeParameters *ptr);
+ScaledType computeparams_scaled(const SourmashComputeParameters *ptr);
 
 uint64_t computeparams_seed(const SourmashComputeParameters *ptr);
 
@@ -118,7 +124,7 @@ void computeparams_set_num_hashes(SourmashComputeParameters *ptr, uint32_t num);
 
 void computeparams_set_protein(SourmashComputeParameters *ptr, bool v);
 
-void computeparams_set_scaled(SourmashComputeParameters *ptr, uint64_t scaled);
+void computeparams_set_scaled(SourmashComputeParameters *ptr, uint32_t scaled);
 
 void computeparams_set_seed(SourmashComputeParameters *ptr, uint64_t new_seed);
 
@@ -226,7 +232,7 @@ SourmashStr kmerminhash_md5sum(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_merge(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
-SourmashKmerMinHash *kmerminhash_new(uint64_t scaled,
+SourmashKmerMinHash *kmerminhash_new(uint32_t scaled,
                                      uint32_t k,
                                      HashFunctions hash_function,
                                      uint64_t seed,
@@ -338,7 +344,7 @@ SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_
                                          const SourmashKmerMinHash *const *queries_ptr,
                                          uintptr_t inqueries);
 
-uint64_t revindex_scaled(const SourmashRevIndex *ptr);
+ScaledType revindex_scaled(const SourmashRevIndex *ptr);
 
 const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
                                                    const SourmashSignature *sig_ptr,

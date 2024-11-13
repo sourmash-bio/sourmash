@@ -12,6 +12,7 @@ use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::ScaledType;
 
 pub struct SourmashRevIndex;
 
@@ -22,8 +23,8 @@ impl ForeignObject for SourmashRevIndex {
 // TODO: remove this when it is possible to pass Selection thru the FFI
 fn from_template(template: &Sketch) -> Selection {
     let (num, scaled) = match template {
-        Sketch::MinHash(mh) => (mh.num(), mh.scaled() as u32),
-        Sketch::LargeMinHash(mh) => (mh.num(), mh.scaled() as u32),
+        Sketch::MinHash(mh) => (mh.num(), mh.scaled()),
+        Sketch::LargeMinHash(mh) => (mh.num(), mh.scaled()),
         _ => unimplemented!(),
     };
 
@@ -233,7 +234,7 @@ unsafe fn revindex_gather(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u64 {
+pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> ScaledType {
     let revindex = SourmashRevIndex::as_rust(ptr);
     if let Sketch::MinHash(mh) = revindex.template() {
         mh.scaled()

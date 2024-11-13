@@ -18,7 +18,6 @@ use crate::storage::SigStore;
 use crate::Result;
 
 /// Supports parallel search without a particular index.
-
 pub struct LinearIndex {
     collection: CollectionSet,
     template: Sketch,
@@ -152,7 +151,8 @@ impl LinearIndex {
             .internal_location()
             .into();
         let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-        let result = self.stats_for_match(match_sig, query, match_size, match_path, round)?;
+        let result =
+            self.stats_for_match(match_sig, query, match_size, match_path, round as u32)?;
         Ok(result)
     }
 
@@ -162,7 +162,7 @@ impl LinearIndex {
         query: &KmerMinHash,
         match_size: usize,
         match_path: PathBuf,
-        gather_result_rank: usize,
+        gather_result_rank: u32,
     ) -> Result<GatherResult> {
         let template = self.template();
 
@@ -177,10 +177,10 @@ impl LinearIndex {
         let f_match = match_size as f64 / match_mh.size() as f64;
         let filename = match_path.into_string();
         let name = match_sig.name();
-        let unique_intersect_bp = match_mh.scaled() as usize * match_size;
+        let unique_intersect_bp = (match_mh.scaled() as usize * match_size) as u64;
 
         let (intersect_orig, _) = match_mh.intersection_size(query)?;
-        let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
+        let intersect_bp: u64 = match_mh.scaled() as u64 * intersect_orig;
 
         let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
         let match_ = match_sig;
@@ -313,7 +313,7 @@ impl Select for LinearIndex {
     }
 }
 
-impl<'a> Index<'a> for LinearIndex {
+impl Index<'_> for LinearIndex {
     type Item = SigStore;
 
     fn insert(&mut self, _node: Self::Item) -> Result<()> {

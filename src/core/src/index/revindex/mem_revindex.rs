@@ -299,7 +299,7 @@ impl RevIndex {
     }
 }
 
-impl<'a> Index<'a> for RevIndex {
+impl Index<'_> for RevIndex {
     type Item = Signature;
 
     fn insert(&mut self, _node: Self::Item) -> Result<()> {

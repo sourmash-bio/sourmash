@@ -53,6 +53,7 @@ cfg_if! {
 }
 
 type HashIntoType = u64;
+pub type ScaledType = u32;
 
 pub fn _hash_murmur(kmer: &[u8], seed: u64) -> u64 {
     murmurhash3_x64_128(kmer, seed).0

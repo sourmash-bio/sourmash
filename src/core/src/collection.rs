@@ -241,6 +241,7 @@ mod test {
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
     use crate::Result;
 
     #[test]
@@ -413,6 +414,23 @@ mod test {
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 2000);
         }
+    }
+
+    #[test]
+    #[should_panic] // for now...
+    fn sigstore_sig_from_record_2() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/short.sig.gz");
+        let v = [filename];
+        let collection = Collection::from_paths(&v).expect("no sigs!?");
+
+        // pull off first record
+        let v: Vec<_> = collection.iter().collect();
+        let (_idx, rec) = v.first().expect("no records in collection?!");
+
+        // this will panic with "unimplemented" because there are two
+        // sketches and that is not supported.
+        let _first_sig = collection.sig_from_record(rec).expect("no sig!?");
     }
 
     #[test]
