@@ -259,90 +259,49 @@ impl Manifest {
 }
 
 impl Select for Manifest {
+    // select only records that satisfy selection conditions; also update
+    // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
-        let rows: Vec<_> = self
-            .records
-            .iter()
-            .filter(|row| {
-                let mut valid = true;
-                valid = if let Some(ksize) = selection.ksize() {
-                    row.ksize == ksize
-                } else {
-                    valid
-                };
-                valid = if let Some(abund) = selection.abund() {
-                    valid && row.with_abundance() == abund
-                } else {
-                    valid
-                };
-                valid = if let Some(moltype) = selection.moltype() {
-                    valid && row.moltype() == moltype
-                } else {
-                    valid
-                };
-                valid = if let Some(scaled) = selection.scaled() {
-                    // num sigs have row.scaled = 0, don't include them
-                    valid && row.scaled != 0 && row.scaled <= scaled
-                } else {
-                    valid
-                };
-                valid = if let Some(num) = selection.num() {
-                    valid && row.num == num
-                } else {
-                    valid
-                };
-                valid
-            })
-            .cloned()
-            .collect();
+        let Manifest { mut records } = self;
 
-        // if scaled is set, update!
-        let rows: Vec<_> = if let Some(scaled) = selection.scaled() {
-            rows.iter()
-                .map(|r| {
-                    let mut r = r.clone();
-                    r.scaled = scaled;
-                    r
-                })
-                .collect()
-        } else {
-            rows
-        };
         // TODO: with num as well?
+        records.retain_mut(|row| {
+            let mut valid = true;
+            valid = if let Some(ksize) = selection.ksize() {
+                row.ksize == ksize
+            } else {
+                valid
+            };
+            valid = if let Some(abund) = selection.abund() {
+                valid && row.with_abundance() == abund
+            } else {
+                valid
+            };
+            valid = if let Some(moltype) = selection.moltype() {
+                valid && row.moltype() == moltype
+            } else {
+                valid
+            };
+            valid = if let Some(scaled) = selection.scaled() {
+                // num sigs have row.scaled = 0, don't include them
+                let v = valid && row.scaled != 0 && row.scaled <= scaled;
+                // if scaled is set, update!
+                if v {
+                    row.scaled = scaled
+                };
+                v
+            } else {
+                valid
+            };
+            valid = if let Some(num) = selection.num() {
+                valid && row.num == num
+            } else {
+                valid
+            };
+            valid
+        });
 
-        Ok(Manifest { records: rows })
-
-        /*
-        matching_rows = self.rows
-        if ksize:
-            matching_rows = ( row for row in matching_rows
-                              if row['ksize'] == ksize )
-        if moltype:
-            matching_rows = ( row for row in matching_rows
-                              if row['moltype'] == moltype )
-        if scaled or containment:
-            if containment and not scaled:
-                raise ValueError("'containment' requires 'scaled' in Index.select'")
-
-            matching_rows = ( row for row in matching_rows
-                              if row['scaled'] and not row['num'] )
-        if num:
-            matching_rows = ( row for row in matching_rows
-                              if row['num'] and not row['scaled'] )
-
-        if abund:
-            # only need to concern ourselves if abundance is _required_
-            matching_rows = ( row for row in matching_rows
-                              if row['with_abundance'] )
-
-        if picklist:
-            matching_rows = ( row for row in matching_rows
-                              if picklist.matches_manifest_row(row) )
-
-        # return only the internal filenames!
-        for row in matching_rows:
-            yield row
-        */
+        Ok(Manifest { records })
     }
 }
 
@@ -584,6 +543,19 @@ mod test {
         selection.set_scaled(100);
         let scaled100 = manifest.select(&selection).unwrap();
         assert_eq!(scaled100.len(), 6);
+
+        // check that 'scaled' is updated
+        let manifest = collection.manifest().clone();
+        selection = Selection::default();
+        selection.set_scaled(400);
+        let scaled400 = manifest.select(&selection).unwrap();
+        assert_eq!(scaled400.len(), 6);
+        let max_scaled = scaled400
+            .iter()
+            .map(|r| r.scaled())
+            .max()
+            .expect("no records?!");
+        assert_eq!(*max_scaled, 400);
     }
 
     #[test]
