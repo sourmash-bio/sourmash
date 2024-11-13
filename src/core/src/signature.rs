@@ -43,6 +43,7 @@ pub trait SigsTrait {
             false,
             self.hash_function(),
             self.seed(),
+            false,
         );
 
         for hash_value in ready_hashes {
@@ -65,6 +66,7 @@ pub trait SigsTrait {
             true,
             self.hash_function(),
             self.seed(),
+            false,
         );
 
         for hash_value in ready_hashes {
@@ -174,6 +176,7 @@ pub struct SeqToHashes {
     hash_function: HashFunctions,
     seed: u64,
     hashes_buffer: Vec<u64>,
+    is_skipmer: bool,
 
     dna_configured: bool,
     dna_rc: Vec<u8>,
@@ -194,6 +197,7 @@ impl SeqToHashes {
         is_protein: bool,
         hash_function: HashFunctions,
         seed: u64,
+        is_skipmer: bool,
     ) -> SeqToHashes {
         let mut ksize: usize = k_size;
 
@@ -220,6 +224,7 @@ impl SeqToHashes {
             hash_function,
             seed,
             hashes_buffer: Vec::with_capacity(1000),
+            is_skipmer,
             dna_configured: false,
             dna_rc: Vec::with_capacity(1000),
             dna_ksize: 0,
@@ -266,8 +271,24 @@ impl Iterator for SeqToHashes {
 
                 // Processing DNA
                 if self.hash_function.dna() {
-                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
+                    // Generate skipmer: skip every third base
+                    let kmer: Vec<u8> = if self.is_skipmer {
+                        // Adjust length to capture enough bases even with skipping
+                        let extended_length = self.dna_ksize + self.dna_ksize / 2; // extend by half to compensate
+                        self.sequence[self.kmer_index..self.kmer_index + extended_length]
+                            .iter()
+                            .enumerate()
+                            .filter(|&(i, _)| i % 3 != 2) // skip every third letter
+                            .take(self.dna_ksize) // limit to the desired final length
+                            .map(|(_, &base)| base)
+                            .collect()
+                    } else {
+                        // Regular k-mer
+                        self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize].to_vec()
+                    };
+                    // let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
 
+                    // validate k-mer
                     for j in std::cmp::max(self.kmer_index, self.dna_last_position_check)
                         ..self.kmer_index + self.dna_ksize
                     {
@@ -299,9 +320,28 @@ impl Iterator for SeqToHashes {
                     // (leaving this table here because I had to draw to
                     //  get the indices correctly)
 
-                    let krc = &self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
-                        ..self.dna_len - self.kmer_index];
-                    let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
+                    // let krc = &self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
+                    //     ..self.dna_len - self.kmer_index];
+
+                    let krc: Vec<u8> = if self.is_skipmer {
+                        // Generate skipmer for reverse complement
+                        let extended_length = self.dna_ksize + self.dna_ksize / 2; // extend by half to compensate
+                        self.dna_rc[self.dna_len - extended_length - self.kmer_index
+                            ..self.dna_len - self.kmer_index]
+                            .iter()
+                            .enumerate()
+                            .filter(|&(i, _)| i % 3 != 2) // skip every third letter
+                            .take(self.dna_ksize) // limit to the desired final length
+                            .map(|(_, &base)| base)
+                            .collect()
+                    } else {
+                        // reg revcomp
+                        self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
+                            ..self.dna_len - self.kmer_index]
+                            .to_vec()
+                    };
+
+                    let hash = crate::_hash_murmur(std::cmp::min(&kmer, &krc), self.seed);
                     self.kmer_index += 1;
                     Some(Ok(hash))
                 } else if self.hashes_buffer.is_empty() && self.translate_iter_step == 0 {
