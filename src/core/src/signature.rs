@@ -43,7 +43,6 @@ pub trait SigsTrait {
             false,
             self.hash_function(),
             self.seed(),
-            false,
         );
 
         for hash_value in ready_hashes {
@@ -66,7 +65,6 @@ pub trait SigsTrait {
             true,
             self.hash_function(),
             self.seed(),
-            false,
         );
 
         for hash_value in ready_hashes {
@@ -176,7 +174,6 @@ pub struct SeqToHashes {
     hash_function: HashFunctions,
     seed: u64,
     hashes_buffer: Vec<u64>,
-    is_skipmer: bool,
 
     dna_configured: bool,
     dna_rc: Vec<u8>,
@@ -197,12 +194,11 @@ impl SeqToHashes {
         is_protein: bool,
         hash_function: HashFunctions,
         seed: u64,
-        is_skipmer: bool,
     ) -> SeqToHashes {
         let mut ksize: usize = k_size;
 
         // Divide the kmer size by 3 if protein
-        if is_protein || !hash_function.dna() {
+        if is_protein || hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
             ksize = k_size / 3;
         }
 
@@ -224,7 +220,6 @@ impl SeqToHashes {
             hash_function,
             seed,
             hashes_buffer: Vec::with_capacity(1000),
-            is_skipmer,
             dna_configured: false,
             dna_rc: Vec::with_capacity(1000),
             dna_ksize: 0,
@@ -260,7 +255,11 @@ impl Iterator for SeqToHashes {
                     self.dna_ksize = self.k_size;
                     self.dna_len = self.sequence.len();
                     if self.dna_len < self.dna_ksize
-                        || (!self.hash_function.dna() && self.dna_len < self.k_size * 3)
+                        || (self.hash_function.protein() && self.dna_len < self.k_size * 3)
+                        || (self.hash_function.dayhoff() && self.dna_len < self.k_size * 3)
+                        || (self.hash_function.hp() && self.dna_len < self.k_size * 3)
+                        || (self.hash_function.skipmer()
+                            && self.dna_len < (self.k_size + self.k_size / 2))
                     {
                         return None;
                     }
@@ -271,24 +270,9 @@ impl Iterator for SeqToHashes {
 
                 // Processing DNA
                 if self.hash_function.dna() {
-                    // Generate skipmer: skip every third base
-                    let kmer: Vec<u8> = if self.is_skipmer {
-                        // Adjust length to capture enough bases even with skipping
-                        let extended_length = self.dna_ksize + self.dna_ksize / 2; // extend by half to compensate
-                        self.sequence[self.kmer_index..self.kmer_index + extended_length]
-                            .iter()
-                            .enumerate()
-                            .filter(|&(i, _)| i % 3 != 2) // skip every third letter
-                            .take(self.dna_ksize) // limit to the desired final length
-                            .map(|(_, &base)| base)
-                            .collect()
-                    } else {
-                        // Regular k-mer
-                        self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize].to_vec()
-                    };
-                    // let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
+                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
 
-                    // validate k-mer
+                    // validate the bases
                     for j in std::cmp::max(self.kmer_index, self.dna_last_position_check)
                         ..self.kmer_index + self.dna_ksize
                     {
@@ -320,26 +304,44 @@ impl Iterator for SeqToHashes {
                     // (leaving this table here because I had to draw to
                     //  get the indices correctly)
 
-                    // let krc = &self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
-                    //     ..self.dna_len - self.kmer_index];
+                    let krc = &self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
+                        ..self.dna_len - self.kmer_index];
+                    let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
+                    self.kmer_index += 1;
+                    Some(Ok(hash))
+                } else if self.hash_function.skipmer() {
+                    let extended_length = self.dna_ksize + self.dna_ksize / 2;
+                    // Build skipmer
+                    let kmer: Vec<u8> = self.sequence
+                        [self.kmer_index..self.kmer_index + extended_length]
+                        .iter()
+                        .enumerate()
+                        .filter(|&(i, _)| i % 3 != 2)
+                        .take(self.dna_ksize)
+                        .map(|(_, &base)| base)
+                        .collect();
 
-                    let krc: Vec<u8> = if self.is_skipmer {
-                        // Generate skipmer for reverse complement
-                        let extended_length = self.dna_ksize + self.dna_ksize / 2; // extend by half to compensate
-                        self.dna_rc[self.dna_len - extended_length - self.kmer_index
-                            ..self.dna_len - self.kmer_index]
-                            .iter()
-                            .enumerate()
-                            .filter(|&(i, _)| i % 3 != 2) // skip every third letter
-                            .take(self.dna_ksize) // limit to the desired final length
-                            .map(|(_, &base)| base)
-                            .collect()
-                    } else {
-                        // reg revcomp
-                        self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
-                            ..self.dna_len - self.kmer_index]
-                            .to_vec()
-                    };
+                    // check the bases are DNA
+                    if kmer.iter().any(|&base| !VALID[base as usize]) {
+                        if !self.force {
+                            return Some(Err(Error::InvalidDNA {
+                                message: String::from_utf8(kmer).unwrap(),
+                            }));
+                        } else {
+                            self.kmer_index += 1; // Move to the next position if forced
+                            return Some(Ok(0));
+                        }
+                    }
+
+                    // Generate reverse complement skipmer
+                    let krc: Vec<u8> = self.dna_rc[self.dna_len - extended_length - self.kmer_index
+                        ..self.dna_len - self.kmer_index]
+                        .iter()
+                        .enumerate()
+                        .filter(|&(i, _)| i % 3 != 2)
+                        .take(self.dna_ksize)
+                        .map(|(_, &base)| base)
+                        .collect();
 
                     let hash = crate::_hash_murmur(std::cmp::min(&kmer, &krc), self.seed);
                     self.kmer_index += 1;
@@ -958,6 +960,8 @@ mod test {
     use needletail::parse_fastx_reader;
 
     use crate::cmd::ComputeParameters;
+    use crate::encodings::HashFunctions;
+    use crate::signature::SeqToHashes;
     use crate::signature::SigsTrait;
 
     use super::Signature;
@@ -1314,6 +1318,44 @@ mod test {
         for sig in &sigs {
             let modified_sig = sig.clone().select(&selection).unwrap();
             assert_eq!(modified_sig.size(), 0);
+        }
+    }
+
+    #[test]
+    fn test_seqtohashes_skipmer() {
+        let sequence = b"AGTCGTCAGTCG";
+        let k_size = 7;
+        let seed = 42;
+        let force = true; // Force skip over invalid bases if needed
+
+        // Initialize SeqToHashes iterator using the new constructor
+        let mut seq_to_hashes = SeqToHashes::new(
+            sequence,
+            k_size,
+            force,
+            false,
+            HashFunctions::Murmur64Skip,
+            seed,
+        );
+
+        // Define expected hashes for the skipmer configuration.
+        let expected_kmers = ["AGCGTAG", "GTGTCGT", "TCTCATC", "CGCAGCG"];
+        let expected_krc = ["CTACGCT", "ACGACAC", "GATGAGA", "CGCTGCG"];
+
+        // Compute expected hashes by hashing each k-mer with its reverse complement
+        let expected_hashes: Vec<u64> = expected_kmers
+            .iter()
+            .zip(expected_krc.iter())
+            .map(|(kmer, krc)| {
+                // Convert both kmer and krc to byte slices and pass to _hash_murmur
+                crate::_hash_murmur(std::cmp::min(kmer.as_bytes(), krc.as_bytes()), seed)
+            })
+            .collect();
+
+        // Compare each produced hash from the iterator with the expected hash
+        for expected_hash in expected_hashes {
+            let hash = seq_to_hashes.next().unwrap().ok().unwrap();
+            assert_eq!(hash, expected_hash, "Mismatch in skipmer hash");
         }
     }
 }
