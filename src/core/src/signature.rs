@@ -1322,9 +1322,48 @@ mod test {
     }
 
     #[test]
-    fn test_seqtohashes_skipmer() {
-        let sequence = b"AGTCGTCAGTCG";
+    fn test_seqtohashes_dna() {
+        let sequence = b"AGTCGTCA";
         let k_size = 7;
+        let seed = 42;
+        let force = true; // Force skip over invalid bases if needed
+
+        // Initialize SeqToHashes iterator using the new constructor
+        let mut seq_to_hashes = SeqToHashes::new(
+            sequence,
+            k_size,
+            force,
+            false,
+            HashFunctions::Murmur64Dna,
+            seed,
+        );
+
+        // Define expected hashes for the kmer configuration.
+        let expected_kmers = ["AGTCGTC", "GTCGTCA"];
+        let expected_krc = ["GACGACT", "TGACGAC"];
+
+        // Compute expected hashes by hashing each k-mer with its reverse complement
+        let expected_hashes: Vec<u64> = expected_kmers
+            .iter()
+            .zip(expected_krc.iter())
+            .map(|(kmer, krc)| {
+                // Convert both kmer and krc to byte slices and pass to _hash_murmur
+                crate::_hash_murmur(std::cmp::min(kmer.as_bytes(), krc.as_bytes()), seed)
+            })
+            .collect();
+
+        // Compare each produced hash from the iterator with the expected hash
+        for expected_hash in expected_hashes {
+            let hash = seq_to_hashes.next().unwrap().ok().unwrap();
+            assert_eq!(hash, expected_hash, "Mismatch in skipmer hash");
+        }
+    }
+
+    #[test]
+    fn test_seqtohashes_skipmer() {
+        let sequence = b"AGTCGTCA";
+        // let rc_seq = b"TGACGACT";
+        let k_size = 5;
         let seed = 42;
         let force = true; // Force skip over invalid bases if needed
 
@@ -1339,8 +1378,9 @@ mod test {
         );
 
         // Define expected hashes for the skipmer configuration.
-        let expected_kmers = ["AGCGTAG", "GTGTCGT", "TCTCATC", "CGCAGCG"];
-        let expected_krc = ["CTACGCT", "ACGACAC", "GATGAGA", "CGCTGCG"];
+        let expected_kmers = ["AGCGC", "GTGTA"];
+        // rc of the k-mer, not of the sequence, then skipmerized. Correct?
+        let expected_krc = ["GCGCT", "TACAC"];
 
         // Compute expected hashes by hashing each k-mer with its reverse complement
         let expected_hashes: Vec<u64> = expected_kmers
