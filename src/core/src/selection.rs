@@ -125,7 +125,7 @@ impl Selection {
             abund: Some(row.with_abundance()),
             moltype: Some(row.moltype()),
             num: None,
-            scaled: None,
+            scaled: Some(*row.scaled()),
             containment: None,
             picklist: None,
         })
