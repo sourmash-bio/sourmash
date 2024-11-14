@@ -237,6 +237,11 @@ pub fn calculate_gather_stats(
         .expect("cannot downsample match");
 
     // calculate intersection
+    // Using Intersection directly here has a pretty big requirement:
+    // the sketches MUST BE COMPATIBLE
+    // (as in: same ksize, max_hash, hash_function, seed)
+    // this should be covered by the call to downsample_scaled above,
+    // but important to keep in mind in the future if code changes
     let isect_values: Vec<_> = Intersection::new(match_mh.iter_mins(), remaining_query.iter_mins())
         .copied()
         .collect();
@@ -252,6 +257,11 @@ pub fn calculate_gather_stats(
         (remaining_query.size() - isect_size) as u64 * remaining_query.scaled() as u64;
 
     // stats for this match vs original query
+    // Using Intersection directly here has a pretty big requirement:
+    // the sketches MUST BE COMPATIBLE
+    // (as in: same ksize, max_hash, hash_function, seed)
+    // this should be covered by the call to downsample_scaled above,
+    // but important to keep in mind in the future if code changes
     let intersect_orig =
         Intersection::new(match_mh.iter_mins(), orig_query.iter_mins()).count() as u64;
 
