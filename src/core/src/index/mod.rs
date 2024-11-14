@@ -26,7 +26,6 @@ use crate::prelude::*;
 use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHashBTree;
-use crate::sketch::Sketch;
 use crate::storage::SigStore;
 use crate::Error::CannotUpsampleScaled;
 use crate::Result;

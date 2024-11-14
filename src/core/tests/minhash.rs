@@ -831,7 +831,7 @@ fn test_inflated_abundances() {
     // Attempt to inflate minhash_a using minhash_b's abundances
     assert!(a.inflate(&b).is_ok());
 
-    let (abunds, total_abund) = a.inflated_abundances(&b).unwrap();
+    let (abunds, total_abund) = a.inflated_abundances(b.iter_mins(), b.iter_abunds()).unwrap();
     assert_eq!(abunds, vec![2, 4]);
     assert_eq!(total_abund, 6);
 }
@@ -858,7 +858,7 @@ fn test_inflated_abunds_noabund() {
     a.add_hash(10);
     a.add_hash(20);
     a.add_hash(30);
-    let result = a.inflated_abundances(&a);
+    let result = a.inflated_abundances(a.iter_mins(), a.iter_abunds());
     assert!(matches!(
         result,
         Err(sourmash::Error::NeedsAbundanceTracking)
