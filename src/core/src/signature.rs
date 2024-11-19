@@ -324,6 +324,11 @@ impl Iterator for SeqToHashes {
                     self.kmer_index += 1;
                     Some(Ok(hash))
                 } else if self.hash_function.skipmer() {
+                    // check that we can actually build skipmers
+                    if self.k_size < 3 {
+                        unimplemented!()
+                        // return None
+                    }
                     let extended_length = self.dna_ksize + ((self.dna_ksize + 1) / 2) - 1; // add 1 to round up rather than down
 
                     // Check bounds to ensure we don't exceed the sequence length
@@ -1100,7 +1105,7 @@ mod test {
     #[test]
     fn signature_skipmer_add_sequence() {
         let params = ComputeParameters::builder()
-            .ksizes(vec![3, 6])
+            .ksizes(vec![3, 4, 5, 6])
             .num_hashes(3u32)
             .dna(false)
             .skipmer(true)
@@ -1109,10 +1114,26 @@ mod test {
         let mut sig = Signature::from_params(&params);
         sig.add_sequence(b"ATGCATGA", false).unwrap();
 
-        assert_eq!(sig.signatures.len(), 2);
+        assert_eq!(sig.signatures.len(), 4);
         dbg!(&sig.signatures);
         assert_eq!(sig.signatures[0].size(), 3);
-        assert_eq!(sig.signatures[1].size(), 1);
+        assert_eq!(sig.signatures[1].size(), 3);
+        assert_eq!(sig.signatures[2].size(), 2);
+        assert_eq!(sig.signatures[3].size(), 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn signature_skipmer_add_sequence_too_small() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![2])
+            .num_hashes(3u32)
+            .dna(false)
+            .skipmer(true)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGCATGA", false).unwrap();
     }
 
     #[test]
