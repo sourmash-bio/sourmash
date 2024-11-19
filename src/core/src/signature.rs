@@ -230,6 +230,19 @@ impl SeqToHashes {
             translate_iter_step: 0,
         }
     }
+
+    fn validate_base(&self, base: u8, kmer: &Vec<u8>) -> Option<Result<u64, Error>> {
+        if !VALID[base as usize] {
+            if !self.force {
+                return Some(Err(Error::InvalidDNA {
+                    message: String::from_utf8(kmer.clone()).unwrap_or_default(),
+                }));
+            } else {
+                return Some(Ok(0)); // Skip this position if forced
+            }
+        }
+        None // Base is valid, so return None to continue
+    }
 }
 
 /*
@@ -311,26 +324,22 @@ impl Iterator for SeqToHashes {
                     Some(Ok(hash))
                 } else if self.hash_function.skipmer() {
                     let extended_length = self.dna_ksize + self.dna_ksize / 2;
-                    // Build skipmer
-                    let kmer: Vec<u8> = self.sequence
+
+                    // Build skipmer with DNA base validation
+                    let mut kmer: Vec<u8> = Vec::with_capacity(self.dna_ksize);
+                    for (_i, &base) in self.sequence
                         [self.kmer_index..self.kmer_index + extended_length]
                         .iter()
                         .enumerate()
                         .filter(|&(i, _)| i % 3 != 2)
                         .take(self.dna_ksize)
-                        .map(|(_, &base)| base)
-                        .collect();
-
-                    // check the bases are DNA
-                    if kmer.iter().any(|&base| !VALID[base as usize]) {
-                        if !self.force {
-                            return Some(Err(Error::InvalidDNA {
-                                message: String::from_utf8(kmer).unwrap(),
-                            }));
-                        } else {
-                            self.kmer_index += 1; // Move to the next position if forced
-                            return Some(Ok(0));
+                    {
+                        // Use the validate_base method to check the base
+                        if let Some(result) = self.validate_base(base, &kmer) {
+                            self.kmer_index += 1; // Move to the next position if skipping is forced
+                            return Some(result);
                         }
+                        kmer.push(base);
                     }
 
                     // Generate reverse complement skipmer
@@ -1373,7 +1382,7 @@ mod test {
             k_size,
             force,
             false,
-            HashFunctions::Murmur64Skip,
+            HashFunctions::Murmur64Skipmer,
             seed,
         );
 
