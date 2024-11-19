@@ -44,6 +44,10 @@ pub struct ComputeParameters {
 
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = false)]
+    skipmer: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default = false)]
     singleton: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
@@ -154,6 +158,23 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                         .num(params.num_hashes)
                         .ksize(*k)
                         .hash_function(HashFunctions::Murmur64Hp)
+                        .max_hash(max_hash)
+                        .seed(params.seed)
+                        .abunds(if params.track_abundance {
+                            Some(Default::default())
+                        } else {
+                            None
+                        })
+                        .build(),
+                ));
+            }
+
+            if params.skipmer {
+                ksigs.push(Sketch::LargeMinHash(
+                    KmerMinHashBTree::builder()
+                        .num(params.num_hashes)
+                        .ksize(*k)
+                        .hash_function(HashFunctions::Murmur64Skipmer)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {

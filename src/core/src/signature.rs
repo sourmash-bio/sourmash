@@ -272,7 +272,8 @@ impl Iterator for SeqToHashes {
                         || (self.hash_function.dayhoff() && self.dna_len < self.k_size * 3)
                         || (self.hash_function.hp() && self.dna_len < self.k_size * 3)
                         || (self.hash_function.skipmer()
-                            && self.dna_len < (self.k_size + self.k_size / 2))
+                            // add 1 to round up rather than down
+                            && self.dna_len < (self.k_size + ((self.k_size + 1) / 2) - 1))
                     {
                         return None;
                     }
@@ -323,7 +324,12 @@ impl Iterator for SeqToHashes {
                     self.kmer_index += 1;
                     Some(Ok(hash))
                 } else if self.hash_function.skipmer() {
-                    let extended_length = self.dna_ksize + self.dna_ksize / 2;
+                    let extended_length = self.dna_ksize + ((self.dna_ksize + 1) / 2) - 1; // add 1 to round up rather than down
+
+                    // Check bounds to ensure we don't exceed the sequence length
+                    if self.kmer_index + extended_length > self.sequence.len() {
+                        return None;
+                    }
 
                     // Build skipmer with DNA base validation
                     let mut kmer: Vec<u8> = Vec::with_capacity(self.dna_ksize);
@@ -1092,6 +1098,24 @@ mod test {
     }
 
     #[test]
+    fn signature_skipmer_add_sequence() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3, 6])
+            .num_hashes(3u32)
+            .dna(false)
+            .skipmer(true)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGCATGA", false).unwrap();
+
+        assert_eq!(sig.signatures.len(), 2);
+        dbg!(&sig.signatures);
+        assert_eq!(sig.signatures[0].size(), 3);
+        assert_eq!(sig.signatures[1].size(), 1);
+    }
+
+    #[test]
     fn signature_add_sequence_cp() {
         let mut cp = ComputeParameters::default();
         cp.set_dayhoff(true);
@@ -1364,7 +1388,7 @@ mod test {
         // Compare each produced hash from the iterator with the expected hash
         for expected_hash in expected_hashes {
             let hash = seq_to_hashes.next().unwrap().ok().unwrap();
-            assert_eq!(hash, expected_hash, "Mismatch in skipmer hash");
+            assert_eq!(hash, expected_hash, "Mismatch in DNA hash");
         }
     }
 
