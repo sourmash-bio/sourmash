@@ -231,11 +231,11 @@ impl SeqToHashes {
         }
     }
 
-    fn validate_base(&self, base: u8, kmer: &Vec<u8>) -> Option<Result<u64, Error>> {
+    fn validate_base(&self, base: u8, kmer: &[u8]) -> Option<Result<u64, Error>> {
         if !VALID[base as usize] {
             if !self.force {
                 return Some(Err(Error::InvalidDNA {
-                    message: String::from_utf8(kmer.clone()).unwrap_or_default(),
+                    message: String::from_utf8(kmer.to_owned()).unwrap_or_default(),
                 }));
             } else {
                 return Some(Ok(0)); // Skip this position if forced
