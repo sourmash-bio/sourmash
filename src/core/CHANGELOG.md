@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.17.2] - 2024-11-15
+
+MSRV: 1.66
+
+Changes/additions:
+
+* enforce a single scaled on a `CollectionSet` (#3397)
+* change `sig_from_record` to use scaled from `Record` to downsample (#3387)
+
+Updates:
+
+* Upgrade rocksdb to 0.22.0, bump MSRV to 1.66  (#3383)
+* Bump thiserror from 1.0.68 to 2.0.3 (#3389)
+* Bump csv from 1.3.0 to 1.3.1 (#3390)
+* Bump tempfile from 3.13.0 to 3.14.0 (#3391)
+
 ## [0.17.1] - 2024-11-11
 
 Changes/additions:

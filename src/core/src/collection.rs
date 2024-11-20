@@ -7,7 +7,7 @@ use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
-use crate::{Error, Result};
+use crate::{Error, Result, ScaledType};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -51,6 +51,11 @@ impl TryFrom<Collection> for CollectionSet {
             // empty collection is consistent ¯\_(ツ)_/¯
             return Ok(Self { collection });
         };
+
+        let (min_scaled, max_scaled) = collection.min_max_scaled().expect("empty collection!?");
+        if min_scaled != max_scaled {
+            return Err(Error::MismatchScaled);
+        }
 
         collection
             .manifest
@@ -218,6 +223,17 @@ impl Collection {
 
     pub fn intersect_manifest(&mut self, mf: &Manifest) {
         self.manifest = self.manifest.intersect_manifest(mf);
+    }
+
+    // CTB: question, should we do something about num here?
+    pub fn min_max_scaled(&self) -> Option<(&ScaledType, &ScaledType)> {
+        self.manifest.first().map(|first| {
+            self.manifest
+                .iter()
+                .fold((first.scaled(), first.scaled()), |f, r| {
+                    (f.0.min(r.scaled()), f.1.max(r.scaled()))
+                })
+        })
     }
 }
 
@@ -481,6 +497,50 @@ mod test {
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 100);
         }
+    }
+
+    #[test]
+    fn collection_from_collectionset() -> () {
+        use crate::collection::CollectionSet;
+
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let collection = Collection::from_zipfile(&full_paths[0]).unwrap();
+
+        let mut selection = Selection::default();
+        selection.set_moltype(HashFunctions::Murmur64Protein);
+        selection.set_scaled(200);
+
+        let collection = collection.select(&selection).expect("should pass");
+        let (min_scaled, max_scaled) = collection.min_max_scaled().expect("not empty");
+        assert_eq!(*min_scaled, *max_scaled);
+        assert_eq!(*min_scaled, 200);
+        let _cs: CollectionSet = collection.try_into().expect("should pass");
+    }
+
+    #[test]
+    #[should_panic]
+    fn collection_from_collectionset_fail() -> () {
+        use crate::collection::CollectionSet;
+
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let collection = Collection::from_zipfile(&full_paths[0]).unwrap();
+        let _cs: CollectionSet = collection.try_into().expect("should fail");
     }
 
     #[test]
