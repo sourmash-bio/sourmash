@@ -31,7 +31,8 @@ pub enum HashFunctions {
     Murmur64Protein,
     Murmur64Dayhoff,
     Murmur64Hp,
-    Murmur64Skipmer,
+    Murmur64Skipm1n3,
+    Murmur64Skipm2n3,
     Custom(String),
 }
 
@@ -51,8 +52,11 @@ impl HashFunctions {
     pub fn hp(&self) -> bool {
         *self == HashFunctions::Murmur64Hp
     }
-    pub fn skipmer(&self) -> bool {
-        *self == HashFunctions::Murmur64Skipmer
+    pub fn skipm1n3(&self) -> bool {
+        *self == HashFunctions::Murmur64Skipm1n3
+    }
+    pub fn skipm2n3(&self) -> bool {
+        *self == HashFunctions::Murmur64Skipm2n3
     }
 }
 
@@ -66,7 +70,8 @@ impl std::fmt::Display for HashFunctions {
                 HashFunctions::Murmur64Protein => "protein",
                 HashFunctions::Murmur64Dayhoff => "dayhoff",
                 HashFunctions::Murmur64Hp => "hp",
-                HashFunctions::Murmur64Skipmer => "skipmer",
+                HashFunctions::Murmur64Skipm1n3 => "skipm1n3",
+                HashFunctions::Murmur64Skipm2n3 => "skipm2n3",
                 HashFunctions::Custom(v) => v,
             }
         )
@@ -82,7 +87,8 @@ impl TryFrom<&str> for HashFunctions {
             "dayhoff" => Ok(HashFunctions::Murmur64Dayhoff),
             "hp" => Ok(HashFunctions::Murmur64Hp),
             "protein" => Ok(HashFunctions::Murmur64Protein),
-            "skipmer" => Ok(HashFunctions::Murmur64Skipmer),
+            "skipm1n3" => Ok(HashFunctions::Murmur64Skipm1n3),
+            "skipm2n3" => Ok(HashFunctions::Murmur64Skipm2n3),
             v => unimplemented!("{v}"),
         }
     }

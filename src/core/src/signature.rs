@@ -184,6 +184,11 @@ pub struct SeqToHashes {
     prot_configured: bool,
     aa_seq: Vec<u8>,
     translate_iter_step: usize,
+
+    skipmer_configured: bool,
+    skip_m: usize,
+    skip_n: usize,
+    skip_len: usize,
 }
 
 impl SeqToHashes {
@@ -228,6 +233,10 @@ impl SeqToHashes {
             prot_configured: false,
             aa_seq: Vec::new(),
             translate_iter_step: 0,
+            skipmer_configured: false,
+            skip_m: 2,
+            skip_n: 3,
+            skip_len: 0,
         }
     }
 
@@ -267,13 +276,33 @@ impl Iterator for SeqToHashes {
                 if !self.dna_configured {
                     self.dna_ksize = self.k_size;
                     self.dna_len = self.sequence.len();
+
+                    if self.hash_function.skipm1n3()
+                        || self.hash_function.skipm2n3() && !self.skipmer_configured
+                    {
+                        if self.hash_function.skipm1n3() {
+                            self.skip_m = 1
+                        };
+                        if self.hash_function.skipm2n3() {
+                            self.skip_m = 2
+                        };
+                        // eqn from skipmer paper. might want to add one to dna_ksize to round up?
+                        self.skip_len =
+                            self.skip_n * (((self.dna_ksize) / self.skip_m) - 1) + self.skip_m;
+                        // my prior eqn
+                        // self.skip_len = self.dna_ksize + ((self.dna_ksize + 1) / self.skip_m) - 1; // add 1 to round up rather than down
+
+                        // check that we can actually build skipmers
+                        if self.k_size < self.skip_n {
+                            unimplemented!()
+                        }
+                    }
+                    // have enough sequence to kmerize?
                     if self.dna_len < self.dna_ksize
                         || (self.hash_function.protein() && self.dna_len < self.k_size * 3)
                         || (self.hash_function.dayhoff() && self.dna_len < self.k_size * 3)
                         || (self.hash_function.hp() && self.dna_len < self.k_size * 3)
-                        || (self.hash_function.skipmer()
-                            // add 1 to round up rather than down
-                            && self.dna_len < (self.k_size + ((self.k_size + 1) / 2) - 1))
+                        || (self.skipmer_configured && self.dna_len < self.skip_len)
                     {
                         return None;
                     }
@@ -323,26 +352,19 @@ impl Iterator for SeqToHashes {
                     let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
                     self.kmer_index += 1;
                     Some(Ok(hash))
-                } else if self.hash_function.skipmer() {
-                    // check that we can actually build skipmers
-                    if self.k_size < 3 {
-                        unimplemented!()
-                        // return None
-                    }
-                    let extended_length = self.dna_ksize + ((self.dna_ksize + 1) / 2) - 1; // add 1 to round up rather than down
-
+                } else if self.skipmer_configured {
                     // Check bounds to ensure we don't exceed the sequence length
-                    if self.kmer_index + extended_length > self.sequence.len() {
+                    if self.kmer_index + self.skip_len > self.sequence.len() {
                         return None;
                     }
 
                     // Build skipmer with DNA base validation
                     let mut kmer: Vec<u8> = Vec::with_capacity(self.dna_ksize);
                     for (_i, &base) in self.sequence
-                        [self.kmer_index..self.kmer_index + extended_length]
+                        [self.kmer_index..self.kmer_index + self.skip_len]
                         .iter()
                         .enumerate()
-                        .filter(|&(i, _)| i % 3 != 2)
+                        .filter(|&(i, _)| i % self.skip_n < self.skip_m)
                         .take(self.dna_ksize)
                     {
                         // Use the validate_base method to check the base
@@ -354,11 +376,11 @@ impl Iterator for SeqToHashes {
                     }
 
                     // Generate reverse complement skipmer
-                    let krc: Vec<u8> = self.dna_rc[self.dna_len - extended_length - self.kmer_index
+                    let krc: Vec<u8> = self.dna_rc[self.dna_len - self.skip_len - self.kmer_index
                         ..self.dna_len - self.kmer_index]
                         .iter()
                         .enumerate()
-                        .filter(|&(i, _)| i % 3 != 2)
+                        .filter(|&(i, _)| i % self.skip_n < self.skip_m)
                         .take(self.dna_ksize)
                         .map(|(_, &base)| base)
                         .collect();
@@ -1103,12 +1125,32 @@ mod test {
     }
 
     #[test]
-    fn signature_skipmer_add_sequence() {
+    fn signature_skipm2n3_add_sequence() {
         let params = ComputeParameters::builder()
             .ksizes(vec![3, 4, 5, 6])
             .num_hashes(3u32)
             .dna(false)
-            .skipmer(true)
+            .skipm2n3(true)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGCATGA", false).unwrap();
+
+        assert_eq!(sig.signatures.len(), 4);
+        dbg!(&sig.signatures);
+        assert_eq!(sig.signatures[0].size(), 3);
+        assert_eq!(sig.signatures[1].size(), 3);
+        assert_eq!(sig.signatures[2].size(), 2);
+        assert_eq!(sig.signatures[3].size(), 1);
+    }
+
+    #[test]
+    fn signature_skipm1n3_add_sequence() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3, 4, 5, 6])
+            .num_hashes(3u32)
+            .dna(false)
+            .skipm1n3(true)
             .build();
 
         let mut sig = Signature::from_params(&params);
@@ -1124,12 +1166,26 @@ mod test {
 
     #[test]
     #[should_panic(expected = "not implemented")]
-    fn signature_skipmer_add_sequence_too_small() {
+    fn signature_skipm2n3_add_sequence_too_small() {
         let params = ComputeParameters::builder()
             .ksizes(vec![2])
             .num_hashes(3u32)
             .dna(false)
-            .skipmer(true)
+            .skipm2n3(true)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGCATGA", false).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn signature_skipm1n3_add_sequence_too_small() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![2])
+            .num_hashes(3u32)
+            .dna(false)
+            .skipm1n3(true)
             .build();
 
         let mut sig = Signature::from_params(&params);
@@ -1414,7 +1470,7 @@ mod test {
     }
 
     #[test]
-    fn test_seqtohashes_skipmer() {
+    fn test_seqtohashes_skipm2n3() {
         let sequence = b"AGTCGTCA";
         // let rc_seq = b"TGACGACT";
         let k_size = 5;
@@ -1427,7 +1483,7 @@ mod test {
             k_size,
             force,
             false,
-            HashFunctions::Murmur64Skipmer,
+            HashFunctions::Murmur64Skipm2n3,
             seed,
         );
 

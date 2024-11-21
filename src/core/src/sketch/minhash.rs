@@ -153,7 +153,8 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             "dayhoff" => HashFunctions::Murmur64Dayhoff,
             "hp" => HashFunctions::Murmur64Hp,
             "dna" => HashFunctions::Murmur64Dna,
-            "skipmer" => HashFunctions::Murmur64Skipmer,
+            "skipm1n3" => HashFunctions::Murmur64Skipm1n3,
+            "skipm2n3" => HashFunctions::Murmur64Skipm2n3,
             _ => unimplemented!(), // TODO: throw error here
         };
 

@@ -44,7 +44,11 @@ pub struct ComputeParameters {
 
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = false)]
-    skipmer: bool,
+    skipm1n3: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default = false)]
+    skipm2n3: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = false)]
@@ -169,12 +173,29 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                 ));
             }
 
-            if params.skipmer {
+            if params.skipm1n3 {
                 ksigs.push(Sketch::LargeMinHash(
                     KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
-                        .hash_function(HashFunctions::Murmur64Skipmer)
+                        .hash_function(HashFunctions::Murmur64Skipm1n3)
+                        .max_hash(max_hash)
+                        .seed(params.seed)
+                        .abunds(if params.track_abundance {
+                            Some(Default::default())
+                        } else {
+                            None
+                        })
+                        .build(),
+                ));
+            }
+
+            if params.skipm2n3 {
+                ksigs.push(Sketch::LargeMinHash(
+                    KmerMinHashBTree::builder()
+                        .num(params.num_hashes)
+                        .ksize(*k)
+                        .hash_function(HashFunctions::Murmur64Skipm2n3)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
