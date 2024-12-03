@@ -287,8 +287,12 @@ impl Iterator for SeqToHashes {
                             self.skip_m = 2
                         };
                         // eqn from skipmer paper. might want to add one to dna_ksize to round up?
-                        self.skip_len =
-                            self.skip_n * (((self.dna_ksize) / self.skip_m) - 1) + self.skip_m;
+                        // to do - check if we need to enforce k = multiple of n for revcomp k-mers to work
+                        // , or if we can keep the round up trick I'm using here.
+                        eprintln!("setting skipmer extended length");
+                        self.skip_len = (self.skip_n * (((self.dna_ksize + 1) / self.skip_m) - 1))
+                            + self.skip_m;
+                        eprintln!("skipmer extended length: {}", self.skip_len);
                         // my prior eqn
                         // self.skip_len = self.dna_ksize + ((self.dna_ksize + 1) / self.skip_m) - 1; // add 1 to round up rather than down
 
@@ -296,8 +300,10 @@ impl Iterator for SeqToHashes {
                         if self.k_size < self.skip_n {
                             unimplemented!()
                         }
+                        self.skipmer_configured = true;
                     }
                     // have enough sequence to kmerize?
+                    eprintln!("checking seq len");
                     if self.dna_len < self.dna_ksize
                         || (self.hash_function.protein() && self.dna_len < self.k_size * 3)
                         || (self.hash_function.dayhoff() && self.dna_len < self.k_size * 3)
@@ -307,12 +313,15 @@ impl Iterator for SeqToHashes {
                         return None;
                     }
                     // pre-calculate the reverse complement for the full sequence...
+                    eprintln!("precalculating revcomp");
+                    // NOTE: Shall we precalc skipmer seq here too? + maybe translated frames?
                     self.dna_rc = revcomp(&self.sequence);
                     self.dna_configured = true;
                 }
 
                 // Processing DNA
                 if self.hash_function.dna() {
+                    eprintln!("processing DNA");
                     let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
 
                     // validate the bases
@@ -353,6 +362,7 @@ impl Iterator for SeqToHashes {
                     self.kmer_index += 1;
                     Some(Ok(hash))
                 } else if self.skipmer_configured {
+                    eprintln!("processing skipmer");
                     // Check bounds to ensure we don't exceed the sequence length
                     if self.kmer_index + self.skip_len > self.sequence.len() {
                         return None;
@@ -372,8 +382,10 @@ impl Iterator for SeqToHashes {
                             self.kmer_index += 1; // Move to the next position if skipping is forced
                             return Some(result);
                         }
+                        eprintln!("base {}", base);
                         kmer.push(base);
                     }
+                    // eprintln!("skipmer kmer: {:?}", kmer);
 
                     // Generate reverse complement skipmer
                     let krc: Vec<u8> = self.dna_rc[self.dna_len - self.skip_len - self.kmer_index
@@ -387,6 +399,7 @@ impl Iterator for SeqToHashes {
 
                     let hash = crate::_hash_murmur(std::cmp::min(&kmer, &krc), self.seed);
                     self.kmer_index += 1;
+                    eprintln!("built skipmer hash");
                     Some(Ok(hash))
                 } else if self.hashes_buffer.is_empty() && self.translate_iter_step == 0 {
                     // Processing protein by translating DNA

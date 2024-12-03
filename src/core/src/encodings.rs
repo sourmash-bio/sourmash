@@ -94,6 +94,21 @@ impl TryFrom<&str> for HashFunctions {
     }
 }
 
+#[derive(Debug)]
+pub struct ReadingFrames {
+    forward: [Vec<u8>; 3],
+    revcomp: [Vec<u8>; 3],
+}
+
+impl ReadingFrames {
+    pub fn new(forward: [Vec<u8>; 3], rc: [Vec<u8>; 3]) -> Self {
+        ReadingFrames {
+            forward,
+            revcomp: rc,
+        }
+    }
+}
+
 const COMPLEMENT: [u8; 256] = {
     let mut lookup = [0; 256];
     lookup[b'A' as usize] = b'T';
@@ -110,6 +125,84 @@ pub fn revcomp(seq: &[u8]) -> Vec<u8> {
         .rev()
         .map(|nt| COMPLEMENT[*nt as usize])
         .collect()
+}
+
+/// Generate a single translated frame from a DNA sequence
+///
+/// * `sequence`: The DNA sequence as a slice of bytes.
+/// * `frame_number`: The frame to translate (0, 1, or 2).
+/// * `dayhoff`: Whether to use the Dayhoff amino acid alphabet.
+/// * `hp`: Whether to use the hydrophobic-polar amino acid alphabet.
+///
+/// Returns a translated frame as a `Vec<u8>`.
+pub fn translated_frame(sequence: &[u8], frame_number: usize, dayhoff: bool, hp: bool) -> Vec<u8> {
+    if frame_number > 2 {
+        panic!("Frame number must be 0, 1, or 2");
+    }
+
+    sequence
+        .iter()
+        .cloned()
+        .skip(frame_number) // Skip the initial bases for the frame
+        .take(sequence.len() - frame_number) // Adjust length based on skipped bases
+        .collect::<Vec<u8>>() // Collect the DNA subsequence
+        .chunks(3) // Group into codons (triplets)
+        .filter_map(|codon| to_aa(codon, dayhoff, hp).ok()) // Translate each codon
+        .flatten() // Flatten the nested results into a single sequence
+        .collect()
+}
+
+pub fn make_translated_frames(
+    sequence: &[u8],
+    dna_rc: &[u8],
+    dayhoff: bool,
+    hp: bool,
+) -> ReadingFrames {
+    // Generate forward frames
+    let forward = [
+        translated_frame(sequence, 0, dayhoff, hp),
+        translated_frame(sequence, 1, dayhoff, hp),
+        translated_frame(sequence, 2, dayhoff, hp),
+    ];
+
+    // Generate reverse complement frames
+    let revcomp = [
+        translated_frame(dna_rc, 0, dayhoff, hp),
+        translated_frame(dna_rc, 1, dayhoff, hp),
+        translated_frame(dna_rc, 2, dayhoff, hp),
+    ];
+
+    // Return a ReadingFrames object
+    ReadingFrames::new(forward, revcomp)
+}
+
+fn skipmer_frame(seq: &[u8], start: usize, n: usize, m: usize) -> Vec<u8> {
+    seq.iter()
+        .skip(start)
+        .enumerate()
+        .filter_map(|(i, &base)| if i % n < m { Some(base) } else { None })
+        .collect()
+}
+
+pub fn make_skipmer_frames(seq: &[u8], n: usize, m: usize) -> ReadingFrames {
+    if m >= n {
+        panic!("m must be less than n");
+    }
+    // Generate the first three forward frames
+    let forward: [Vec<u8>; 3] = [
+        skipmer_frame(seq, 0, n, m),
+        skipmer_frame(seq, 1, n, m),
+        skipmer_frame(seq, 2, n, m),
+    ];
+    // Generate the reverse complement frames
+    let reverse_complement: [Vec<u8>; 3] = [
+        revcomp(&forward[0]),
+        revcomp(&forward[1]),
+        revcomp(&forward[2]),
+    ];
+
+    // Return the frames in a structured format
+    ReadingFrames::new(forward, reverse_complement)
 }
 
 static CODONTABLE: Lazy<HashMap<&'static str, u8>> = Lazy::new(|| {
