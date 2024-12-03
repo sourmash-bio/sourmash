@@ -95,17 +95,162 @@ impl TryFrom<&str> for HashFunctions {
 }
 
 #[derive(Debug)]
-pub struct ReadingFrames {
-    forward: [Vec<u8>; 3],
-    revcomp: [Vec<u8>; 3],
+pub struct ReadingFrame {
+    fw: Vec<u8>,         // Forward frame
+    rc: Option<Vec<u8>>, // Reverse complement (optional, not used for protein input)
 }
 
+impl ReadingFrame {
+    /// Create a k-mer iterator for this reading frame
+    pub fn kmer_iter(&self, ksize: usize, seed: u64, force: bool) -> KmerIterator {
+        KmerIterator::new(&self.fw, self.rc.as_deref(), ksize, seed, force)
+    }
+}
+
+#[derive(Debug)]
+pub struct ReadingFrames(Vec<ReadingFrame>);
+
 impl ReadingFrames {
-    pub fn new(forward: [Vec<u8>; 3], rc: [Vec<u8>; 3]) -> Self {
-        ReadingFrames {
-            forward,
-            revcomp: rc,
+    /// Create ReadingFrames based on the input sequence, moltype, and protein flag
+    pub fn new(sequence: &[u8], is_protein: bool, hash_function: &HashFunctions) -> Self {
+        if is_protein {
+            // for protein input, return one forward frame
+            let frames = vec![ReadingFrame {
+                fw: sequence.to_vec(),
+                rc: None,
+            }];
+            Self(frames)
+        } else if hash_function.dna() {
+            // DNA: just forward + rc
+            let dna_rc = revcomp(sequence);
+            let frames = vec![ReadingFrame {
+                fw: sequence.to_vec(),
+                rc: Some(dna_rc),
+            }];
+            Self(frames)
+        } else if hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
+            // translation: build 6 frames
+            let dna_rc = revcomp(sequence); // Compute reverse complement for translation
+            let dayhoff = hash_function.dayhoff();
+            let hp = hash_function.hp();
+            Self::translate_frames(sequence, &dna_rc, dayhoff, hp)
+        } else if hash_function.skipm1n3() || hash_function.skipm2n3() {
+            // Skipmers: build 6 frames, following skip pattern
+            let (m, n) = if hash_function.skipm1n3() {
+                (1, 3)
+            } else {
+                (2, 3)
+            };
+            Self::skipmer_frames(sequence, n, m)
+        } else {
+            panic!("Unsupported moltype: {}", hash_function);
         }
+    }
+
+    /// Generate translated frames
+    fn translate_frames(sequence: &[u8], dna_rc: &[u8], dayhoff: bool, hp: bool) -> Self {
+        let frames: Vec<ReadingFrame> = (0..3)
+            .map(|frame_number| ReadingFrame {
+                fw: translated_frame(sequence, frame_number, dayhoff, hp),
+                rc: Some(translated_frame(dna_rc, frame_number, dayhoff, hp)),
+            })
+            .collect();
+        Self(frames)
+    }
+
+    /// Generate skipmer frames
+    fn skipmer_frames(sequence: &[u8], n: usize, m: usize) -> Self {
+        let frames: Vec<ReadingFrame> = (0..3)
+            .map(|frame_number| {
+                let fw = skipmer_frame(sequence, frame_number, n, m);
+                ReadingFrame {
+                    fw: fw.clone(),
+                    rc: Some(revcomp(&fw)),
+                }
+            })
+            .collect();
+        Self(frames)
+    }
+
+    /// Access the frames
+    pub fn frames(&self) -> &Vec<ReadingFrame> {
+        &self.0
+    }
+}
+
+pub struct KmerIterator<'a> {
+    fw: &'a [u8],
+    rc: Option<&'a [u8]>,
+    ksize: usize,
+    index: usize,
+    len: usize,
+    seed: u64,
+    force: bool,
+}
+
+impl<'a> KmerIterator<'a> {
+    pub fn new(fw: &'a [u8], rc: Option<&'a [u8]>, ksize: usize, seed: u64, force: bool) -> Self {
+        Self {
+            fw,
+            rc,
+            ksize,
+            index: 0,
+            len: fw.len(),
+            seed,
+            force,
+        }
+    }
+}
+
+impl<'a> Iterator for KmerIterator<'a> {
+    type Item = Result<u64, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index + self.ksize > self.len {
+            return None; // End of iteration
+        }
+
+        // Forward k-mer
+        let kmer = &self.fw[self.index..self.index + self.ksize];
+
+        // Validate the k-mer
+        for j in self.index..self.index + self.ksize {
+            if !VALID[self.fw[j] as usize] {
+                if !self.force {
+                    return Some(Err(Error::InvalidDNA {
+                        message: String::from_utf8(kmer.to_vec()).unwrap(),
+                    }));
+                } else {
+                    self.index += 1;
+                    return Some(Ok(0)); // Skip invalid k-mer
+                }
+            }
+        }
+
+        // Reverse complement k-mer (if rc exists)
+
+        // ... and then while moving the k-mer window forward for the sequence
+        // we move another window backwards for the RC.
+        //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+        //                   +-+---------+---------------+-------+
+        //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+        //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+        //  +->         +->  |0|    2    |       3       |   6   |
+        //   +->       +->   |1|    3    |       2       |   5   |
+        //    +->     +->    |2|    4    |       1       |   4   |
+        //     +->   +->     |3|    5    |       0       |   3   |
+        //                   +-+---------+---------------+-------+
+        // (leaving this table here because I had to draw to
+        //  get the indices correctly)
+        let hash = if let Some(rc) = self.rc {
+            let krc = &rc[self.len - self.ksize - self.index..self.len - self.index];
+            crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed)
+        } else {
+            crate::_hash_murmur(kmer, self.seed) // Use only forward k-mer if rc is None
+        };
+
+        self.index += 1;
+        Some(Ok(hash))
     }
 }
 
@@ -152,57 +297,12 @@ pub fn translated_frame(sequence: &[u8], frame_number: usize, dayhoff: bool, hp:
         .collect()
 }
 
-pub fn make_translated_frames(
-    sequence: &[u8],
-    dna_rc: &[u8],
-    dayhoff: bool,
-    hp: bool,
-) -> ReadingFrames {
-    // Generate forward frames
-    let forward = [
-        translated_frame(sequence, 0, dayhoff, hp),
-        translated_frame(sequence, 1, dayhoff, hp),
-        translated_frame(sequence, 2, dayhoff, hp),
-    ];
-
-    // Generate reverse complement frames
-    let revcomp = [
-        translated_frame(dna_rc, 0, dayhoff, hp),
-        translated_frame(dna_rc, 1, dayhoff, hp),
-        translated_frame(dna_rc, 2, dayhoff, hp),
-    ];
-
-    // Return a ReadingFrames object
-    ReadingFrames::new(forward, revcomp)
-}
-
 fn skipmer_frame(seq: &[u8], start: usize, n: usize, m: usize) -> Vec<u8> {
     seq.iter()
         .skip(start)
         .enumerate()
         .filter_map(|(i, &base)| if i % n < m { Some(base) } else { None })
         .collect()
-}
-
-pub fn make_skipmer_frames(seq: &[u8], n: usize, m: usize) -> ReadingFrames {
-    if m >= n {
-        panic!("m must be less than n");
-    }
-    // Generate the first three forward frames
-    let forward: [Vec<u8>; 3] = [
-        skipmer_frame(seq, 0, n, m),
-        skipmer_frame(seq, 1, n, m),
-        skipmer_frame(seq, 2, n, m),
-    ];
-    // Generate the reverse complement frames
-    let reverse_complement: [Vec<u8>; 3] = [
-        revcomp(&forward[0]),
-        revcomp(&forward[1]),
-        revcomp(&forward[2]),
-    ];
-
-    // Return the frames in a structured format
-    ReadingFrames::new(forward, reverse_complement)
 }
 
 static CODONTABLE: Lazy<HashMap<&'static str, u8>> = Lazy::new(|| {

@@ -15,7 +15,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
+use crate::encodings::{HashFunctions, ReadingFrames};
 use crate::prelude::*;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
@@ -163,7 +163,6 @@ impl SigsTrait for Sketch {
     }
 }
 
-// Iterator for converting sequence to hashes
 pub struct SeqToHashes {
     sequence: Vec<u8>,
     kmer_index: usize,
@@ -174,21 +173,7 @@ pub struct SeqToHashes {
     hash_function: HashFunctions,
     seed: u64,
     hashes_buffer: Vec<u64>,
-
-    dna_configured: bool,
-    dna_rc: Vec<u8>,
-    dna_ksize: usize,
-    dna_len: usize,
-    dna_last_position_check: usize,
-
-    prot_configured: bool,
-    aa_seq: Vec<u8>,
-    translate_iter_step: usize,
-
-    skipmer_configured: bool,
-    skip_m: usize,
-    skip_n: usize,
-    skip_len: usize,
+    reading_frames: ReadingFrames,
 }
 
 impl SeqToHashes {
@@ -200,298 +185,79 @@ impl SeqToHashes {
         hash_function: HashFunctions,
         seed: u64,
     ) -> SeqToHashes {
-        let mut ksize: usize = k_size;
+        // Adjust kmer size for protein-based hash functions
+        let adjusted_k_size =
+            if hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
+                k_size / 3
+            } else {
+                k_size
+            };
 
-        // Divide the kmer size by 3 if protein
-        if is_protein || hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
-            ksize = k_size / 3;
-        }
-
-        // By setting _max_index to 0, the iterator will return None and exit
-        let _max_index = if seq.len() >= ksize {
-            seq.len() - ksize + 1
+        // Determine the maximum index for k-mer generation
+        let max_index = if seq.len() >= adjusted_k_size {
+            seq.len() - adjusted_k_size + 1
         } else {
             0
         };
 
+        // Initialize ReadingFrames based on the sequence and hash function
+        let reading_frames =
+            ReadingFrames::new(&seq.to_ascii_uppercase(), is_protein, &hash_function);
+
         SeqToHashes {
-            // Here we convert the sequence to upper case
             sequence: seq.to_ascii_uppercase(),
-            k_size: ksize,
             kmer_index: 0,
-            max_index: _max_index,
+            k_size: adjusted_k_size,
+            max_index,
             force,
             is_protein,
             hash_function,
             seed,
             hashes_buffer: Vec::with_capacity(1000),
-            dna_configured: false,
-            dna_rc: Vec::with_capacity(1000),
-            dna_ksize: 0,
-            dna_len: 0,
-            dna_last_position_check: 0,
-            prot_configured: false,
-            aa_seq: Vec::new(),
-            translate_iter_step: 0,
-            skipmer_configured: false,
-            skip_m: 2,
-            skip_n: 3,
-            skip_len: 0,
+            reading_frames,
         }
     }
+    // some helper functions. If we remove, we could probably just rm 
+    // these fields from SeqToHashes, since ReadingFrames handles this now
+    pub fn get_sequence(&self) -> &[u8] {
+        &self.sequence
+    }
 
-    fn validate_base(&self, base: u8, kmer: &[u8]) -> Option<Result<u64, Error>> {
-        if !VALID[base as usize] {
-            if !self.force {
-                return Some(Err(Error::InvalidDNA {
-                    message: String::from_utf8(kmer.to_owned()).unwrap_or_default(),
-                }));
-            } else {
-                return Some(Ok(0)); // Skip this position if forced
-            }
-        }
-        None // Base is valid, so return None to continue
+    pub fn get_hash_function(&self) -> &HashFunctions {
+        &self.hash_function
+    }
+
+    pub fn is_protein(&self) -> bool {
+        self.is_protein
     }
 }
-
-/*
-Iterator that return a kmer hash for all modes except translate.
-In translate mode:
-    - all the frames are processed at once and converted to hashes.
-    - all the hashes are stored in `hashes_buffer`
-    - after processing all the kmers, `translate_iter_step` is incremented
-      per iteration to iterate over all the indeces of the `hashes_buffer`.
-    - the iterator will die once `translate_iter_step` == length(hashes_buffer)
-More info https://github.com/sourmash-bio/sourmash/pull/1946
-*/
 
 impl Iterator for SeqToHashes {
     type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if (self.kmer_index < self.max_index) || !self.hashes_buffer.is_empty() {
-            // Processing DNA or Translated DNA
-            if !self.is_protein {
-                // Setting the parameters only in the first iteration
-                if !self.dna_configured {
-                    self.dna_ksize = self.k_size;
-                    self.dna_len = self.sequence.len();
+        // Check if we've processed all k-mers
+        if self.kmer_index >= self.max_index {
+            return None;
+        }
 
-                    if self.hash_function.skipm1n3()
-                        || self.hash_function.skipm2n3() && !self.skipmer_configured
-                    {
-                        if self.hash_function.skipm1n3() {
-                            self.skip_m = 1
-                        };
-                        if self.hash_function.skipm2n3() {
-                            self.skip_m = 2
-                        };
-                        // eqn from skipmer paper. might want to add one to dna_ksize to round up?
-                        // to do - check if we need to enforce k = multiple of n for revcomp k-mers to work
-                        // , or if we can keep the round up trick I'm using here.
-                        eprintln!("setting skipmer extended length");
-                        self.skip_len = (self.skip_n * (((self.dna_ksize + 1) / self.skip_m) - 1))
-                            + self.skip_m;
-                        eprintln!("skipmer extended length: {}", self.skip_len);
-                        // my prior eqn
-                        // self.skip_len = self.dna_ksize + ((self.dna_ksize + 1) / self.skip_m) - 1; // add 1 to round up rather than down
-
-                        // check that we can actually build skipmers
-                        if self.k_size < self.skip_n {
-                            unimplemented!()
+        // Iterate over the frames
+        for frame in self.reading_frames.frames().iter() {
+            let kmer_iter = frame.kmer_iter(self.k_size, self.seed, self.force);
+            for result in kmer_iter {
+                match result {
+                    Ok(hash) => self.hashes_buffer.push(hash),
+                    Err(e) => {
+                        if !self.force {
+                            return Some(Err(e));
                         }
-                        self.skipmer_configured = true;
                     }
-                    // have enough sequence to kmerize?
-                    eprintln!("checking seq len");
-                    if self.dna_len < self.dna_ksize
-                        || (self.hash_function.protein() && self.dna_len < self.k_size * 3)
-                        || (self.hash_function.dayhoff() && self.dna_len < self.k_size * 3)
-                        || (self.hash_function.hp() && self.dna_len < self.k_size * 3)
-                        || (self.skipmer_configured && self.dna_len < self.skip_len)
-                    {
-                        return None;
-                    }
-                    // pre-calculate the reverse complement for the full sequence...
-                    eprintln!("precalculating revcomp");
-                    // NOTE: Shall we precalc skipmer seq here too? + maybe translated frames?
-                    self.dna_rc = revcomp(&self.sequence);
-                    self.dna_configured = true;
-                }
-
-                // Processing DNA
-                if self.hash_function.dna() {
-                    eprintln!("processing DNA");
-                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
-
-                    // validate the bases
-                    for j in std::cmp::max(self.kmer_index, self.dna_last_position_check)
-                        ..self.kmer_index + self.dna_ksize
-                    {
-                        if !VALID[self.sequence[j] as usize] {
-                            if !self.force {
-                                return Some(Err(Error::InvalidDNA {
-                                    message: String::from_utf8(kmer.to_vec()).unwrap(),
-                                }));
-                            } else {
-                                self.kmer_index += 1;
-                                // Move the iterator to the next step
-                                return Some(Ok(0));
-                            }
-                        }
-                        self.dna_last_position_check += 1;
-                    }
-
-                    // ... and then while moving the k-mer window forward for the sequence
-                    // we move another window backwards for the RC.
-                    //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                    //                   +-+---------+---------------+-------+
-                    //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                    //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                    //  +->         +->  |0|    2    |       3       |   6   |
-                    //   +->       +->   |1|    3    |       2       |   5   |
-                    //    +->     +->    |2|    4    |       1       |   4   |
-                    //     +->   +->     |3|    5    |       0       |   3   |
-                    //                   +-+---------+---------------+-------+
-                    // (leaving this table here because I had to draw to
-                    //  get the indices correctly)
-
-                    let krc = &self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
-                        ..self.dna_len - self.kmer_index];
-                    let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
-                    self.kmer_index += 1;
-                    Some(Ok(hash))
-                } else if self.skipmer_configured {
-                    eprintln!("processing skipmer");
-                    // Check bounds to ensure we don't exceed the sequence length
-                    if self.kmer_index + self.skip_len > self.sequence.len() {
-                        return None;
-                    }
-
-                    // Build skipmer with DNA base validation
-                    let mut kmer: Vec<u8> = Vec::with_capacity(self.dna_ksize);
-                    for (_i, &base) in self.sequence
-                        [self.kmer_index..self.kmer_index + self.skip_len]
-                        .iter()
-                        .enumerate()
-                        .filter(|&(i, _)| i % self.skip_n < self.skip_m)
-                        .take(self.dna_ksize)
-                    {
-                        // Use the validate_base method to check the base
-                        if let Some(result) = self.validate_base(base, &kmer) {
-                            self.kmer_index += 1; // Move to the next position if skipping is forced
-                            return Some(result);
-                        }
-                        eprintln!("base {}", base);
-                        kmer.push(base);
-                    }
-                    // eprintln!("skipmer kmer: {:?}", kmer);
-
-                    // Generate reverse complement skipmer
-                    let krc: Vec<u8> = self.dna_rc[self.dna_len - self.skip_len - self.kmer_index
-                        ..self.dna_len - self.kmer_index]
-                        .iter()
-                        .enumerate()
-                        .filter(|&(i, _)| i % self.skip_n < self.skip_m)
-                        .take(self.dna_ksize)
-                        .map(|(_, &base)| base)
-                        .collect();
-
-                    let hash = crate::_hash_murmur(std::cmp::min(&kmer, &krc), self.seed);
-                    self.kmer_index += 1;
-                    eprintln!("built skipmer hash");
-                    Some(Ok(hash))
-                } else if self.hashes_buffer.is_empty() && self.translate_iter_step == 0 {
-                    // Processing protein by translating DNA
-                    // TODO: Implement iterator over frames instead of hashes_buffer.
-
-                    for frame_number in 0..3 {
-                        let substr: Vec<u8> = self
-                            .sequence
-                            .iter()
-                            .cloned()
-                            .skip(frame_number)
-                            .take(self.sequence.len() - frame_number)
-                            .collect();
-
-                        let aa = to_aa(
-                            &substr,
-                            self.hash_function.dayhoff(),
-                            self.hash_function.hp(),
-                        )
-                        .unwrap();
-
-                        aa.windows(self.k_size).for_each(|n| {
-                            let hash = crate::_hash_murmur(n, self.seed);
-                            self.hashes_buffer.push(hash);
-                        });
-
-                        let rc_substr: Vec<u8> = self
-                            .dna_rc
-                            .iter()
-                            .cloned()
-                            .skip(frame_number)
-                            .take(self.dna_rc.len() - frame_number)
-                            .collect();
-                        let aa_rc = to_aa(
-                            &rc_substr,
-                            self.hash_function.dayhoff(),
-                            self.hash_function.hp(),
-                        )
-                        .unwrap();
-
-                        aa_rc.windows(self.k_size).for_each(|n| {
-                            let hash = crate::_hash_murmur(n, self.seed);
-                            self.hashes_buffer.push(hash);
-                        });
-                    }
-                    Some(Ok(0))
-                } else {
-                    if self.translate_iter_step == self.hashes_buffer.len() {
-                        self.hashes_buffer.clear();
-                        self.kmer_index = self.max_index;
-                        return Some(Ok(0));
-                    }
-                    let curr_idx = self.translate_iter_step;
-                    self.translate_iter_step += 1;
-                    Some(Ok(self.hashes_buffer[curr_idx]))
-                }
-            } else {
-                // Processing protein
-                // The kmer size is already divided by 3
-
-                if self.hash_function.protein() {
-                    let aa_kmer = &self.sequence[self.kmer_index..self.kmer_index + self.k_size];
-                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
-                    self.kmer_index += 1;
-                    Some(Ok(hash))
-                } else {
-                    if !self.prot_configured {
-                        self.aa_seq = match &self.hash_function {
-                            HashFunctions::Murmur64Dayhoff => {
-                                self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
-                            }
-                            HashFunctions::Murmur64Hp => {
-                                self.sequence.iter().cloned().map(aa_to_hp).collect()
-                            }
-                            invalid => {
-                                return Some(Err(Error::InvalidHashFunction {
-                                    function: format!("{}", invalid),
-                                }));
-                            }
-                        };
-                    }
-
-                    let aa_kmer = &self.aa_seq[self.kmer_index..self.kmer_index + self.k_size];
-                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
-                    self.kmer_index += 1;
-                    Some(Ok(hash))
                 }
             }
-        } else {
-            // End the iterator
-            None
         }
+
+        self.kmer_index += 1;
+        Some(Ok(0)) // Return 0 to indicate progress; actual hashes are stored in `hashes_buffer`
     }
 }
 
@@ -1450,13 +1216,13 @@ mod test {
         let k_size = 7;
         let seed = 42;
         let force = true; // Force skip over invalid bases if needed
-
+        let is_protein = false;
         // Initialize SeqToHashes iterator using the new constructor
         let mut seq_to_hashes = SeqToHashes::new(
             sequence,
             k_size,
             force,
-            false,
+            is_protein,
             HashFunctions::Murmur64Dna,
             seed,
         );
@@ -1489,13 +1255,14 @@ mod test {
         let k_size = 5;
         let seed = 42;
         let force = true; // Force skip over invalid bases if needed
+        let is_protein = false;
 
         // Initialize SeqToHashes iterator using the new constructor
         let mut seq_to_hashes = SeqToHashes::new(
             sequence,
             k_size,
             force,
-            false,
+            is_protein,
             HashFunctions::Murmur64Skipm2n3,
             seed,
         );
