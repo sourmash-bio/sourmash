@@ -12,6 +12,83 @@ readme = "README.md"
 version = "4.8.11"
 
 authors = [
+  { name="Luiz Irber" },
+  { name="N. Tessa Pierce-Ward" },
+  { name="Mohamed Abuelanin" },
+  { name="Harriet Alexander" },
+  { name="Abhishek Anant" },
+  { name="Keya Barve" },
+  { name="Colton Baumler" },
+  { name="Olga Botvinnik" },
+  { name="Phillip Brooks" },
+  { name="Luca Cappelletti" },
+  { name="Peter Cock" },
+  { name="Daniel Dsouza" },
+  { name="Jade Gardner" },
+  { name="Laurent Gautier" },
+  { name="Tim Head" },
+  { name="Mahmudur Rahman Hera" },
+  { name="Hannah Eve Houts" },
+  { name="Lisa K. Johnson" },
+  { name="Fabian Klötzl" },
+  { name="David Koslicki" },
+  { name="Katrin Leinweber" },
+  { name="Marisa Lim" },
+  { name="Ricky Lim" },
+  { name="Bradley Nelson" },
+  { name="Ivan Ogasawara" },
+  { name="Taylor Reiter" },
+  { name="Camille Scott" },
+  { name="Andreas Sjödin" },
+  { name="Connor T. Skennerton" },
+  { name="Jason Stajich" },
+  { name="Daniel Standage" },
+  { name="S. Joshua Swamidass" },
+  { name="Connor Tiffany" },
+  { name="Pranathi Vemuri" },
+  { name="Erik Young" },
+  { name="Nick H" },
+  { name="C. Titus Brown" },
+]
+
+maintainers = [
+  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio" },
+  { name="C. Titus Brown", email="titus@idyll.org" },
+  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu" },
+]
+
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: MacOS X",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+  "screed>=1.1.3,<2",
+  "cffi>=1.14.0",
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "deprecation>=2.0.6",
+  "cachetools>=4,<6",
+  "bitstring>=3.1.9,<5",
+]
+
+requires-python = ">=3.10"
+
+[metadata]
+license = { text = "BSD 3-Clause License" }
+authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
   { name="N. Tessa Pierce-Ward", orcid="0000-0002-2942-5331" },
   { name="Mohamed Abuelanin", orcid="0000-0002-3419-4785" },
@@ -50,44 +127,6 @@ authors = [
   { name="Nick H", orcid="0000-0002-1685-302X" },
   { name="C. Titus Brown", orcid="0000-0001-6001-2677" },
 ]
-
-maintainers = [
-  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
-  { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
-  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu", orcid="0000-0002-2942-5331" },
-]
-
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Environment :: Console",
-  "Environment :: MacOS X",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
-  "Natural Language :: English",
-  "Operating System :: POSIX :: Linux",
-  "Operating System :: MacOS :: MacOS X",
-  "Programming Language :: Rust",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.10",
-  "Topic :: Scientific/Engineering :: Bio-Informatics",
-]
-
-dependencies = [
-  "screed>=1.1.3,<2",
-  "cffi>=1.14.0",
-  "numpy",
-  "matplotlib",
-  "scipy",
-  "deprecation>=2.0.6",
-  "cachetools>=4,<6",
-  "bitstring>=3.1.9,<5",
-]
-
-requires-python = ">=3.10"
-
-[metadata]
-license = { text = "BSD 3-Clause License" }
 
 [project.urls]
 "Homepage" = "https://sourmash.bio/"
@@ -254,11 +293,10 @@ run.parallel = true
 run.plugins = ["covdefaults"]
 
 [tool.pixi.project]
-name = "sourmash"
 channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
-[tool.pixi.dependencies]
+[tool.pixi.feature.dev.dependencies]
 clangdev = ">=16.0.6,<16.1"
 cxx-compiler = ">=1.7.0,<1.8"
 git = "2.41.0.*"
@@ -276,6 +314,9 @@ scipy = "*"
 deprecation = ">=2.0.6"
 cachetools = ">=4,<6"
 bitstring = ">=3.1.9,<5"
+
+[tool.pixi.environments]
+default = { features = ["dev", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
 
 [tool.pixi.system-requirements]
 macos = "11.0"
