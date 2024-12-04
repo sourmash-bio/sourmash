@@ -717,6 +717,10 @@ impl KmerMinHash {
         self.mins.iter()
     }
 
+    pub fn iter_abunds(&self) -> Option<impl Iterator<Item = &u64>> {
+        self.abunds.as_ref().map(|abunds| abunds.iter())
+    }
+
     pub fn abunds(&self) -> Option<Vec<u64>> {
         self.abunds.clone()
     }
@@ -828,33 +832,21 @@ impl KmerMinHash {
         Ok(())
     }
 
-    pub fn inflated_abundances(&self, abunds_from: &KmerMinHash) -> Result<(Vec<u64>, u64), Error> {
-        self.check_compatible(abunds_from)?;
+    pub fn inflated_abundances<'a, 'b, M: Iterator<Item = &'a u64>, A: Iterator<Item = &'a u64>>(
+        &'b self,
+        mins_from: M,
+        abunds_from: Option<A>,
+    ) -> Result<(Vec<u64>, u64), Error> {
+        //self.check_compatible(abunds_from)?;
+
         // check that abunds_from has abundances
-        if abunds_from.abunds.is_none() {
+        if abunds_from.is_none() {
             return Err(Error::NeedsAbundanceTracking);
         }
 
         let self_iter = self.mins.iter();
-        let abunds_iter = abunds_from.abunds.as_ref().unwrap().iter();
-        let abunds_from_iter = abunds_from.mins.iter().zip(abunds_iter);
 
-        let (abundances, total_abundance): (Vec<u64>, u64) = self_iter
-            .merge_join_by(abunds_from_iter, |&self_val, &(other_val, _)| {
-                self_val.cmp(other_val)
-            })
-            .filter_map(|either| match either {
-                itertools::EitherOrBoth::Both(_self_val, (_other_val, other_abund)) => {
-                    Some(*other_abund)
-                }
-                _ => None,
-            })
-            .fold((Vec::new(), 0u64), |(mut acc_vec, acc_sum), abund| {
-                acc_vec.push(abund);
-                (acc_vec, acc_sum + abund)
-            });
-
-        Ok((abundances, total_abundance))
+        inflated_abundances(self_iter, mins_from, abunds_from)
     }
 }
 
@@ -912,13 +904,13 @@ impl SigsTrait for KmerMinHash {
     }
 }
 
-struct Intersection<T, I: Iterator<Item = T>> {
+pub(crate) struct Intersection<T, I: Iterator<Item = T>, J: Iterator<Item = T>> {
     iter: Peekable<I>,
-    other: Peekable<I>,
+    other: Peekable<J>,
 }
 
-impl<T, I: Iterator<Item = T>> Intersection<T, I> {
-    pub fn new(left: I, right: I) -> Self {
+impl<T, I: Iterator<Item = T>, J: Iterator<Item = T>> Intersection<T, I, J> {
+    pub fn new(left: I, right: J) -> Self {
         Intersection {
             iter: left.peekable(),
             other: right.peekable(),
@@ -926,7 +918,7 @@ impl<T, I: Iterator<Item = T>> Intersection<T, I> {
     }
 }
 
-impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
+impl<T: Ord, I: Iterator<Item = T>, J: Iterator<Item = T>> Iterator for Intersection<T, I, J> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
@@ -1534,6 +1526,10 @@ impl KmerMinHashBTree {
         self.mins.iter()
     }
 
+    pub fn iter_abunds(&self) -> Option<impl Iterator<Item = &u64>> {
+        self.abunds.as_ref().map(|abunds| abunds.values())
+    }
+
     pub fn abunds(&self) -> Option<Vec<u64>> {
         self.abunds
             .as_ref()
@@ -1549,6 +1545,13 @@ impl KmerMinHashBTree {
             let scaled = scaled_for_max_hash(max_hash);
             self.downsample_scaled(scaled)
         }
+    }
+
+    // Approximate total number of kmers
+    // this could be improved by generating an HLL estimate while sketching instead
+    // (for scaled minhashes)
+    pub fn n_unique_kmers(&self) -> u64 {
+        self.size() as u64 * self.scaled() as u64 // + (self.ksize - 1) for bp estimation
     }
 
     // create a downsampled copy of self
@@ -1594,6 +1597,53 @@ impl KmerMinHashBTree {
             self.size() as u64
         }
     }
+
+    pub fn inflated_abundances<'a, 'b, M: Iterator<Item = &'a u64>, A: Iterator<Item = &'a u64>>(
+        &'b self,
+        mins_from: M,
+        abunds_from: Option<A>,
+    ) -> Result<(Vec<u64>, u64), Error> {
+        // check that abunds_from has abundances
+        if abunds_from.is_none() {
+            return Err(Error::NeedsAbundanceTracking);
+        }
+
+        let self_iter = self.mins.iter();
+
+        inflated_abundances(self_iter, mins_from, abunds_from)
+    }
+}
+
+fn inflated_abundances<
+    'a,
+    'b,
+    M: Iterator<Item = &'b u64>,
+    N: Iterator<Item = &'a u64>,
+    A: Iterator<Item = &'a u64>,
+>(
+    self_iter: M,
+    mins_from: N,
+    abunds_from: Option<A>,
+) -> Result<(Vec<u64>, u64), Error> {
+    let abunds_iter = abunds_from.unwrap();
+    let abunds_from_iter = mins_from.zip(abunds_iter);
+
+    let (abundances, total_abundance): (Vec<u64>, u64) = self_iter
+        .merge_join_by(abunds_from_iter, |&self_val, &(other_val, _)| {
+            self_val.cmp(other_val)
+        })
+        .filter_map(|either| match either {
+            itertools::EitherOrBoth::Both(_self_val, (_other_val, other_abund)) => {
+                Some(*other_abund)
+            }
+            _ => None,
+        })
+        .fold((Vec::new(), 0u64), |(mut acc_vec, acc_sum), abund| {
+            acc_vec.push(abund);
+            (acc_vec, acc_sum + abund)
+        });
+
+    Ok((abundances, total_abundance))
 }
 
 impl SigsTrait for KmerMinHashBTree {

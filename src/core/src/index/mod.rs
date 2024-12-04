@@ -25,7 +25,7 @@ use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
 use crate::selection::Selection;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::KmerMinHashBTree;
 use crate::storage::SigStore;
 use crate::Error::CannotUpsampleScaled;
 use crate::Result;
@@ -208,8 +208,8 @@ where
 
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_gather_stats(
-    orig_query: &KmerMinHash,
-    remaining_query: KmerMinHash,
+    orig_query: &KmerMinHashBTree,
+    remaining_query: KmerMinHashBTree,
     match_sig: SigStore,
     match_size: usize,
     gather_result_rank: u32,
@@ -219,6 +219,8 @@ pub fn calculate_gather_stats(
     calc_ani_ci: bool,
     confidence: Option<f64>,
 ) -> Result<(GatherResult, (Vec<u64>, u64))> {
+    use crate::sketch::minhash::Intersection;
+
     // get match_mh
     let match_mh = match_sig.minhash().expect("cannot retrieve sketch");
 
@@ -234,10 +236,18 @@ pub fn calculate_gather_stats(
         .expect("cannot downsample match");
 
     // calculate intersection
-    let isect = match_mh
-        .intersection(&remaining_query)
-        .expect("could not do intersection");
-    let isect_size = isect.0.len();
+    // Using Intersection directly here has a pretty big requirement:
+    // the sketches MUST BE COMPATIBLE
+    // (as in: same ksize, max_hash, hash_function, seed)
+    // this should be covered by the call to downsample_scaled above,
+    // but important to keep in mind in the future if code changes
+    let isect_values: Vec<_> = Intersection::new(match_mh.iter_mins(), remaining_query.iter_mins())
+        .copied()
+        .collect();
+
+    let isect_size = isect_values.len();
+    let isect = (isect_values, isect_size as u64);
+
     trace!("isect_size: {}", isect_size);
     trace!("query.size: {}", remaining_query.size());
 
@@ -246,7 +256,14 @@ pub fn calculate_gather_stats(
         (remaining_query.size() - isect_size) as u64 * remaining_query.scaled() as u64;
 
     // stats for this match vs original query
-    let (intersect_orig, _) = match_mh.intersection_size(orig_query).unwrap();
+    // Using Intersection directly here has a pretty big requirement:
+    // the sketches MUST BE COMPATIBLE
+    // (as in: same ksize, max_hash, hash_function, seed)
+    // this should be covered by the call to downsample_scaled above,
+    // but important to keep in mind in the future if code changes
+    let intersect_orig =
+        Intersection::new(match_mh.iter_mins(), orig_query.iter_mins()).count() as u64;
+
     let intersect_bp = match_mh.scaled() as u64 * intersect_orig;
     let f_orig_query = intersect_orig as f64 / orig_query.size() as f64;
     let f_match_orig = intersect_orig as f64 / match_mh.size() as f64;
@@ -303,12 +320,8 @@ pub fn calculate_gather_stats(
     // If abundance, calculate abund-related metrics (vs current query)
     if calc_abund_stats {
         // take abunds from subtracted query
-        let (abunds, unique_weighted_found) = match match_mh.inflated_abundances(&remaining_query) {
-            Ok((abunds, unique_weighted_found)) => (abunds, unique_weighted_found),
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        let (abunds, unique_weighted_found) = match_mh
+            .inflated_abundances(remaining_query.iter_mins(), remaining_query.iter_abunds())?;
 
         n_unique_weighted_found = unique_weighted_found;
         sum_total_weighted_found = sum_weighted_found + n_unique_weighted_found;
@@ -399,6 +412,7 @@ mod test_calculate_gather_stats {
         orig_query.add_hash_with_abundance(8, 1);
         orig_query.add_hash_with_abundance(10, 1); // Non-matching hash
 
+        let orig_query: KmerMinHashBTree = orig_query.into();
         let query = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 

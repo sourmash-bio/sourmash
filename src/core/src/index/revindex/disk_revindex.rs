@@ -365,12 +365,13 @@ impl RevIndexOps for RevIndex {
         query_colors: QueryColors,
         hash_to_color: HashToColor,
         threshold: usize,
-        orig_query: &KmerMinHash,
+        orig_query: KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::MAX;
         let mut matches = vec![];
-        let mut query = KmerMinHashBTree::from(orig_query.clone());
+        let orig_query: KmerMinHashBTree = orig_query.into();
+        let mut query = orig_query.clone();
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let total_weighted_hashes = orig_query.sum_abunds();
@@ -405,10 +406,10 @@ impl RevIndexOps for RevIndex {
 
             // repeatedly downsample query, then extract to KmerMinHash
             // => calculate_gather_stats
-            query = query
+            let query_mh = query
+                .clone()
                 .downsample_scaled(max_scaled)
                 .expect("cannot downsample query");
-            let query_mh = KmerMinHash::from(query.clone());
 
             // just calculate essentials here
             let gather_result_rank = matches.len() as u32;
@@ -416,7 +417,7 @@ impl RevIndexOps for RevIndex {
             // grab the specific intersection:
             // Calculate stats
             let (gather_result, isect) = calculate_gather_stats(
-                orig_query,
+                &orig_query,
                 query_mh,
                 match_sig,
                 match_size,
