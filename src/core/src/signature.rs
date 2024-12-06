@@ -10,12 +10,13 @@ use std::path::Path;
 use std::str;
 
 use cfg_if::cfg_if;
+use needletail::sequence;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::encodings::{HashFunctions, ReadingFrames};
+use crate::encodings::{revcomp, to_aa, HashFunctions, VALID};
 use crate::prelude::*;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
@@ -163,17 +164,202 @@ impl SigsTrait for Sketch {
     }
 }
 
-pub struct SeqToHashes {
-    sequence: Vec<u8>,
-    kmer_index: usize,
-    k_size: usize,
-    max_index: usize,
-    force: bool,
-    is_protein: bool,
-    hash_function: HashFunctions,
+#[derive(Debug)]
+pub enum ReadingFrame {
+    DNA {
+        fw: Vec<u8>,
+        rc: Vec<u8>, // Reverse complement is required
+        len: usize,
+    },
+    Protein {
+        fw: Vec<u8>, // Only forward frame
+        len: usize,
+    },
+}
+
+impl std::fmt::Display for ReadingFrame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReadingFrame::DNA { fw, rc, len } => {
+                let fw_str = String::from_utf8(fw.clone()).expect("Invalid UTF-8 sequence in fw");
+                let rc_str = String::from_utf8(rc.clone()).expect("Invalid UTF-8 sequence in rc");
+                write!(
+                    f,
+                    "Type: DNA ({}bp), Forward: {}, Reverse Complement: {}",
+                    len, fw_str, rc_str
+                )
+            }
+            ReadingFrame::Protein { fw, len } => {
+                let fw_str = String::from_utf8(fw.clone()).expect("Invalid UTF-8 sequence in fw");
+                write!(f, "Type: Protein ({}aa), Forward: {}", len, fw_str)
+            }
+        }
+    }
+}
+
+impl ReadingFrame {
+    pub fn new_dna(sequence: &[u8]) -> Self {
+        let fw = sequence.to_vec();
+        let rc = revcomp(sequence);
+        let len = sequence.len();
+        ReadingFrame::DNA { fw, rc, len }
+    }
+
+    pub fn new_protein(sequence: &[u8]) -> Self {
+        let fw = sequence.to_vec();
+        let len = fw.len();
+        ReadingFrame::Protein { fw, len }
+    }
+
+    pub fn new_skipmer(seq: &[u8], start: usize, m: usize, n: usize) -> Self {
+        if start > n {
+            panic!("Skipmer frame number must be <= n ({})", n);
+        }
+        // Generate forward skipmer frame
+        let fw: Vec<u8> = seq
+            .iter()
+            .skip(start)
+            .enumerate()
+            .filter_map(|(i, &base)| if i % n < m { Some(base) } else { None })
+            .collect();
+
+        let len = fw.len();
+        let rc = revcomp(&fw);
+        ReadingFrame::DNA { fw, rc, len }
+    }
+
+    pub fn new_translated(sequence: &[u8], frame_number: usize, dayhoff: bool, hp: bool) -> Self {
+        if frame_number > 2 {
+            panic!("Frame number must be 0, 1, or 2");
+        }
+
+        // Translate the forward frame
+        let fw: Vec<u8> = sequence
+            .iter()
+            .cloned()
+            .skip(frame_number) // Skip the initial bases for the frame
+            .take(sequence.len() - frame_number) // Adjust length based on skipped bases
+            .collect::<Vec<u8>>() // Collect the DNA subsequence
+            .chunks(3) // Group into codons (triplets)
+            .filter_map(|codon| to_aa(codon, dayhoff, hp).ok()) // Translate each codon
+            .flatten() // Flatten the nested results into a single sequence
+            .collect();
+
+        let len = fw.len();
+
+        // Return a Protein reading frame (no reverse complement for translated frames)
+        ReadingFrame::Protein { fw, len }
+    }
+
+    pub fn kmer_iter<'a>(&'a self, ksize: usize, seed: u64, force: bool) -> KmerIterator<'a> {
+        match self {
+            ReadingFrame::DNA { fw, rc, len } => KmerIterator::new(self, ksize, seed, force),
+            ReadingFrame::Protein { fw, len } => KmerIterator::new(self, ksize, seed, force),
+        }
+    }
+}
+
+pub struct KmerIterator<'a> {
+    frame: &'a ReadingFrame, // Reference to the ReadingFrame
+    ksize: usize,
+    index: usize,
     seed: u64,
-    hashes_buffer: Vec<u64>,
-    reading_frames: ReadingFrames,
+    force: bool,
+}
+
+impl<'a> KmerIterator<'a> {
+    pub fn new(frame: &'a ReadingFrame, ksize: usize, seed: u64, force: bool) -> Self {
+        Self {
+            frame,
+            ksize,
+            index: 0,
+            seed,
+            force,
+        }
+    }
+
+    fn out_of_bounds(&self, length: usize) -> bool {
+        self.index + self.ksize > length
+    }
+
+    fn validate_dna_kmer(&self, kmer: &[u8]) -> Result<(), Error> {
+        for &nt in kmer {
+            if !VALID[nt as usize] {
+                return Err(Error::InvalidDNA {
+                    message: String::from_utf8_lossy(kmer).to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    fn get_dna_hash(&mut self, fw: &[u8], rc: &[u8]) -> Option<Result<u64, Error>> {
+        let kmer = &fw[self.index..self.index + self.ksize];
+
+        if !self.force {
+            if let Err(e) = self.validate_dna_kmer(kmer) {
+                self.index += 1;
+                return Some(Err(e));
+            }
+        }
+
+        let krc = &rc[rc.len() - self.ksize - self.index..rc.len() - self.index];
+        let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
+        // NTP TESTING
+        eprintln!(
+            "Forward DNA k-mer: {}, Reverse Complement k-mer: {}, hash: {}",
+            String::from_utf8_lossy(kmer),
+            String::from_utf8_lossy(krc),
+            hash,
+        );
+
+        self.index += 1;
+        Some(Ok(hash))
+    }
+
+    fn get_protein_hash(&mut self, fw: &[u8]) -> Option<Result<u64, Error>> {
+        let kmer = &fw[self.index..self.index + self.ksize];
+
+        let hash = crate::_hash_murmur(kmer, self.seed);
+        // NTP TESTING
+        eprintln!(
+            "Protein k-mer: {}, hash: {}",
+            String::from_utf8_lossy(kmer),
+            hash
+        );
+
+        self.index += 1;
+        Some(Ok(hash))
+    }
+}
+
+impl<'a> Iterator for KmerIterator<'a> {
+    type Item = Result<u64, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.frame {
+            ReadingFrame::DNA { fw, rc, len } => {
+                if self.out_of_bounds(*len) {
+                    return None;
+                }
+                self.get_dna_hash(fw, rc)
+            }
+            ReadingFrame::Protein { fw, len } => {
+                if self.out_of_bounds(*len) {
+                    return None;
+                }
+                self.get_protein_hash(fw)
+            }
+        }
+    }
+}
+
+pub struct SeqToHashes {
+    k_size: usize,
+    force: bool,
+    seed: u64,
+    frames: Vec<ReadingFrame>,
+    frame_index: usize, // Index of the current frame
 }
 
 impl SeqToHashes {
@@ -184,51 +370,84 @@ impl SeqToHashes {
         is_protein: bool,
         hash_function: HashFunctions,
         seed: u64,
-    ) -> SeqToHashes {
-        // Adjust kmer size for protein-based hash functions
-        let adjusted_k_size =
-            if hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
-                k_size / 3
-            } else {
-                k_size
-            };
+    ) -> Self {
+        let mut ksize: usize = k_size;
 
-        // Determine the maximum index for k-mer generation
-        let max_index = if seq.len() >= adjusted_k_size {
-            seq.len() - adjusted_k_size + 1
+        // Adjust kmer size for protein-based hash functions
+        if is_protein || hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
+            ksize = k_size / 3;
+        }
+
+        // uppercase the sequence
+        let sequence = seq.to_ascii_uppercase();
+
+        // Generate frames based on sequence type and hash function
+        let frames = if is_protein {
+            Self::protein_frames(&sequence)
+        } else if hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
+            Self::translated_frames(&sequence, &hash_function)
+        } else if hash_function.skipm1n3() || hash_function.skipm2n3() {
+            Self::skipmer_frames(&sequence, &hash_function)
         } else {
-            0
+            Self::dna_frames(&sequence)
         };
 
-        // Initialize ReadingFrames based on the sequence and hash function
-        let reading_frames =
-            ReadingFrames::new(&seq.to_ascii_uppercase(), is_protein, &hash_function);
-
         SeqToHashes {
-            sequence: seq.to_ascii_uppercase(),
-            kmer_index: 0,
-            k_size: adjusted_k_size,
-            max_index,
+            k_size: ksize,
             force,
-            is_protein,
-            hash_function,
             seed,
-            hashes_buffer: Vec::with_capacity(1000),
-            reading_frames,
+            frames,
+            frame_index: 0,
         }
     }
-    // some helper functions. If we remove, we could probably just rm 
-    // these fields from SeqToHashes, since ReadingFrames handles this now
-    pub fn get_sequence(&self) -> &[u8] {
-        &self.sequence
+
+    /// Generate DNA frames (forward + reverse complement)
+    fn dna_frames(seq: &[u8]) -> Vec<ReadingFrame> {
+        vec![ReadingFrame::new_dna(&seq.to_ascii_uppercase())]
     }
 
-    pub fn get_hash_function(&self) -> &HashFunctions {
-        &self.hash_function
+    fn protein_frames(seq: &[u8]) -> Vec<ReadingFrame> {
+        vec![ReadingFrame::new_protein(&seq.to_ascii_uppercase())]
     }
 
-    pub fn is_protein(&self) -> bool {
-        self.is_protein
+    fn translated_frames(seq: &[u8], hash_function: &HashFunctions) -> Vec<ReadingFrame> {
+        let revcomp_sequence = revcomp(&seq.to_ascii_uppercase());
+        (0..3)
+            .flat_map(|frame_number| {
+                vec![
+                    ReadingFrame::new_translated(
+                        &seq.to_ascii_uppercase(),
+                        frame_number,
+                        hash_function.dayhoff(),
+                        hash_function.hp(),
+                    ),
+                    ReadingFrame::new_translated(
+                        &revcomp_sequence,
+                        frame_number,
+                        hash_function.dayhoff(),
+                        hash_function.hp(),
+                    ),
+                ]
+            })
+            .collect()
+    }
+
+    fn skipmer_frames(seq: &[u8], hash_function: &HashFunctions) -> Vec<ReadingFrame> {
+        let (m, n) = if hash_function.skipm1n3() {
+            (1, 3)
+        } else {
+            (2, 3)
+        };
+        (0..3)
+            .flat_map(|frame_number| {
+                vec![ReadingFrame::new_skipmer(
+                    &seq.to_ascii_uppercase(),
+                    frame_number,
+                    m,
+                    n,
+                )]
+            })
+            .collect()
     }
 }
 
@@ -236,28 +455,24 @@ impl Iterator for SeqToHashes {
     type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // Check if we've processed all k-mers
-        if self.kmer_index >= self.max_index {
-            return None;
-        }
+        // Iterate over the frames using frame_index
+        while self.frame_index < self.frames.len() {
+            let frame = &self.frames[self.frame_index];
 
-        // Iterate over the frames
-        for frame in self.reading_frames.frames().iter() {
-            let kmer_iter = frame.kmer_iter(self.k_size, self.seed, self.force);
-            for result in kmer_iter {
-                match result {
-                    Ok(hash) => self.hashes_buffer.push(hash),
-                    Err(e) => {
-                        if !self.force {
-                            return Some(Err(e));
-                        }
-                    }
-                }
+            // Create a KmerIterator for the current frame
+            let mut kmer_iter = frame.kmer_iter(self.k_size, self.seed, self.force);
+
+            // Process k-mers in the current frame
+            if let Some(hash_result) = kmer_iter.next() {
+                return Some(hash_result); // Return the next hash
             }
+
+            // Move to the next frame if the current one is exhausted
+            self.frame_index += 1;
         }
 
-        self.kmer_index += 1;
-        Some(Ok(0)) // Return 0 to indicate progress; actual hashes are stored in `hashes_buffer`
+        // All frames exhausted
+        None
     }
 }
 
@@ -1288,4 +1503,321 @@ mod test {
             assert_eq!(hash, expected_hash, "Mismatch in skipmer hash");
         }
     }
+
+    // #[test]
+    // fn test_reading_frames_new_dna() {
+    //     let sequence = b"AGTCGT";
+    //     let hash_function = HashFunctions::Murmur64Dna;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+
+    //     assert_eq!(frames.frames().len(), 1); // Only one fw/rc readingframe for DNA
+    //     assert_eq!(frames.frames()[0].fw, sequence.to_vec());
+    //     assert_eq!(frames.frames()[0].rc, Some(b"ACGACT".to_vec()));
+    // }
+
+    // #[test]
+    // fn test_reading_frames_new_is_protein() {
+    //     let sequence = b"MVLSPADKTNVKAAW";
+    //     let hash_function = HashFunctions::Murmur64Protein;
+
+    //     let frames = ReadingFrames::new(sequence, true, &hash_function);
+
+    //     assert_eq!(frames.frames().len(), 1); // Only one frame for protein
+    //     assert_eq!(frames.frames()[0].fw, sequence.to_vec());
+    //     assert_eq!(frames.frames()[0].rc, None); // No reverse complement for protein
+    // }
+
+    // #[test]
+    // fn test_reading_frames_translate_frames() {
+    //     let sequence = b"AGTCGTCGAGCT";
+    //     let hash_function = HashFunctions::Murmur64Protein;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+    //     eprintln!("frames: {}", frames);
+
+    //     assert_eq!(frames.frames().len(), 3); // Three translated frames
+    //     assert_eq!(frames.frames()[0].fw, b"SRRA".to_vec());
+    //     assert_eq!(frames.frames()[0].rc, Some(b"SSTT".to_vec()));
+    //     assert_eq!(frames.frames()[1].fw, b"VVE".to_vec());
+    //     assert_eq!(frames.frames()[1].rc, Some(b"ARR".to_vec()));
+    //     assert_eq!(frames.frames()[2].fw, b"SSS".to_vec());
+    //     assert_eq!(frames.frames()[2].rc, Some(b"LDD".to_vec()));
+    // }
+
+    // #[test]
+    // fn test_reading_frames_skipmer_frames_m1n3() {
+    //     let sequence = b"AGTCGTCGAGCT";
+    //     let hash_function = HashFunctions::Murmur64Skipm1n3;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+
+    //     assert_eq!(frames.frames().len(), 3); // Three skipmer frames
+
+    //     // Expected skipmer sequences for m=1, n=3 (keep-1, skip-2)
+    //     let expected_fw_frame_0 = b"ACCG".to_vec(); // Frame 0: Keep 1 base, skip 2 bases, starting from index 0
+    //     let expected_fw_frame_1 = b"GGGC".to_vec(); // Frame 1: Keep 1 base, skip 2 bases, starting from index 1
+    //     let expected_fw_frame_2 = b"TTAT".to_vec(); // Frame 2: Keep 1 base, skip 2 bases, starting from index 2
+
+    //     let expected_rc_frame_0 = revcomp(&expected_fw_frame_0);
+    //     let expected_rc_frame_1 = revcomp(&expected_fw_frame_1);
+    //     let expected_rc_frame_2 = revcomp(&expected_fw_frame_2);
+
+    //     // Check forward and reverse complement sequences for each frame
+    //     assert_eq!(frames.frames()[0].fw, expected_fw_frame_0);
+    //     assert_eq!(frames.frames()[0].rc, Some(expected_rc_frame_0));
+
+    //     assert_eq!(frames.frames()[1].fw, expected_fw_frame_1);
+    //     assert_eq!(frames.frames()[1].rc, Some(expected_rc_frame_1));
+
+    //     assert_eq!(frames.frames()[2].fw, expected_fw_frame_2);
+    //     assert_eq!(frames.frames()[2].rc, Some(expected_rc_frame_2));
+    // }
+
+    // #[test]
+    // fn test_reading_frames_skipmer_frames_m2n3() {
+    //     let sequence = b"AGTCGTCGAGCT";
+    //     let hash_function = HashFunctions::Murmur64Skipm2n3;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+
+    //     assert_eq!(frames.frames().len(), 3); // Three skipmer frames
+
+    //     // Expected skipmer sequences for m=1, n=3 (keep-1, skip-2)
+    //     let expected_fw_frame_0 = b"AGCGCGGC".to_vec();
+    //     let expected_fw_frame_1 = b"GTGTGACT".to_vec();
+    //     let expected_fw_frame_2 = b"TCTCAGT".to_vec();
+
+    //     let expected_rc_frame_0 = revcomp(&expected_fw_frame_0);
+    //     let expected_rc_frame_1 = revcomp(&expected_fw_frame_1);
+    //     let expected_rc_frame_2 = revcomp(&expected_fw_frame_2);
+
+    //     // Check forward and reverse complement sequences for each frame
+    //     assert_eq!(frames.frames()[0].fw, expected_fw_frame_0);
+    //     assert_eq!(frames.frames()[0].rc, Some(expected_rc_frame_0));
+
+    //     assert_eq!(frames.frames()[1].fw, expected_fw_frame_1);
+    //     assert_eq!(frames.frames()[1].rc, Some(expected_rc_frame_1));
+
+    //     assert_eq!(frames.frames()[2].fw, expected_fw_frame_2);
+    //     assert_eq!(frames.frames()[2].rc, Some(expected_rc_frame_2));
+    // }
+
+    // #[test]
+    // fn test_reading_frame_kmer_iter() {
+    //     let sequence = b"AGTCGT";
+    //     let rc = revcomp(sequence);
+    //     let hash_function = HashFunctions::Murmur64Dna;
+    //     let frame = ReadingFrame {
+    //         fw: sequence.to_vec(),
+    //         rc: Some(rc.clone()),
+    //         hash_function,
+    //         is_translated: false,
+    //     };
+    //     eprintln!("frame: {}", frame);
+    //     assert_eq!(frame.fw, sequence.to_vec());
+    //     assert_eq!(frame.rc, Some(b"ACGACT".to_vec()));
+
+    //     let kmer_iter = frame.kmer_iter(3, 42, false);
+
+    //     // Expected k-mers from the forward and reverse complement sequence
+    //     let expected_kmers = vec![
+    //         (b"AGT".to_vec(), b"ACT".to_vec()),
+    //         (b"GTC".to_vec(), b"GAC".to_vec()),
+    //         (b"TCG".to_vec(), b"CGA".to_vec()),
+    //         (b"CGT".to_vec(), b"ACG".to_vec()),
+    //     ];
+
+    //     // Compute hashes for expected k-mers
+    //     let expected_hashes: Vec<u64> = expected_kmers
+    //         .iter()
+    //         .map(|(fw_kmer, rc_kmer)| crate::_hash_murmur(std::cmp::min(fw_kmer, rc_kmer), 42))
+    //         .collect();
+
+    //     // Collect hashes produced by the kmer_iter
+    //     let produced_hashes: Vec<u64> = kmer_iter.map(|result| result.unwrap()).collect();
+
+    //     // Check that produced hashes match expected hashes in order
+    //     assert_eq!(
+    //         produced_hashes, expected_hashes,
+    //         "Hashes do not match in order"
+    //     );
+    // }
+
+    // #[test]
+    // fn test_kmer_iter_is_protein() {
+    //     let sequence = b"MVLSPADKTNVKAAW";
+    //     let hash_function = HashFunctions::Murmur64Protein;
+
+    //     let frames = ReadingFrames::new(sequence, true, &hash_function);
+
+    //     // Only one forward frame for protein
+    //     assert_eq!(frames.frames().len(), 1);
+    //     let frame = &frames.frames()[0];
+
+    //     let kmer_iter = frame.kmer_iter(3, 42, false);
+
+    //     // Expected k-mers for protein sequence
+    //     let expected_kmers = vec![
+    //         b"MVL".to_vec(),
+    //         b"VLS".to_vec(),
+    //         b"LSP".to_vec(),
+    //         b"SPA".to_vec(),
+    //         b"PAD".to_vec(),
+    //         b"ADK".to_vec(),
+    //         b"DKT".to_vec(),
+    //         b"KTN".to_vec(),
+    //         b"TNV".to_vec(),
+    //         b"NVK".to_vec(),
+    //         b"VKA".to_vec(),
+    //         b"KAA".to_vec(),
+    //         b"AAW".to_vec(),
+    //     ];
+
+    //     // Compute hashes for expected k-mers
+    //     let expected_hashes: Vec<u64> = expected_kmers
+    //         .iter()
+    //         .map(|fw_kmer| crate::_hash_murmur(fw_kmer, 42))
+    //         .collect();
+
+    //     // Collect hashes produced by the kmer_iter
+    //     let produced_hashes: Vec<u64> = kmer_iter.map(|result| result.unwrap()).collect();
+
+    //     // Check that produced hashes match expected hashes in order
+    //     assert_eq!(
+    //         produced_hashes, expected_hashes,
+    //         "Hashes do not match in order"
+    //     );
+    // }
+
+    // #[test]
+    // fn test_kmer_iter_translate_frames() {
+    //     let sequence = b"AGTCGTCGAGCT";
+    //     let hash_function = HashFunctions::Murmur64Protein;
+    //     let ksize =3;
+    //     let seed = 42;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+
+    //     // Three translated frames
+    //     assert_eq!(frames.frames().len(), 3);
+    //     eprintln!("frames: {}", frames);
+
+    //     // Expected k-mers for translated frames
+    //     let frame1_kmers =  vec![
+    //         vec![b"SRR".to_vec(), b"SST".to_vec()],
+    //         vec![b"RRA".to_vec(), b"STT".to_vec()],
+    //     ];
+    //     let frame2_kmers = vec![vec![b"VVE".to_vec(), b"ARR".to_vec()]];
+    //     let frame3_kmers = vec![vec![b"SSS".to_vec(), b"LDD".to_vec()]];
+    //     let expected_kmers = vec![frame1_kmers, frame2_kmers, frame3_kmers];
+    //     // let expected_kmers = vec![
+    //     //     vec![b"SRR".to_vec(), b"SST".to_vec()],
+    //     //     vec![b"RRA".to_vec(), b"STT".to_vec()],
+    //     //     vec![b"VVE".to_vec(), b"ARR".to_vec()],
+    //     //     vec![b"SSS".to_vec(), b"LDD".to_vec()],
+    //     // ];
+
+    //     for (frame, expected_frame_kmers) in frames.frames().iter().zip(expected_kmers.iter()) {
+    //         let kmer_iter = frame.kmer_iter(ksize, seed, false);
+
+    //         // Compute hashes for expected k-mers
+    //         // let expected_hashes: Vec<u64> = expected_frame_kmers
+    //         //     .iter()
+    //         //     .map(|fw_kmer| crate::_hash_murmur(fw_kmer, 42))
+    //         //     .collect();
+    //         let expected_hashes: Vec<u64> = expected_frame_kmers
+    //         .iter()
+    //         .flat_map(|kmers| {
+    //             kmers.iter().map(|fw_kmer| {
+    //                 let rc_kmer = revcomp(fw_kmer); // Compute reverse complement
+    //                 crate::_hash_murmur(std::cmp::min(fw_kmer, &rc_kmer), seed)
+    //             })
+    //         })
+    //         .collect();
+
+    //         // Collect hashes produced by the kmer_iter
+    //         let produced_hashes: Vec<u64> = kmer_iter.map(|result| result.unwrap()).collect();
+
+    //         // Check that produced hashes match expected hashes in order
+    //         assert_eq!(
+    //             produced_hashes, expected_hashes,
+    //             "Hashes do not match in order for frame"
+    //         );
+    //     }
+    // }
+
+    // #[test]
+    // fn test_kmer_iter_skipmer_m1n3() {
+    //     let sequence = b"AGTCGTCGAGCT";
+    //     let hash_function = HashFunctions::Murmur64Skipm1n3;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+
+    //     // Three skipmer frames
+    //     assert_eq!(frames.frames().len(), 3);
+
+    //     // Expected k-mers for skipmer (m=1, n=3)
+    //     let expected_kmers = vec![
+    //         vec![b"ACC".to_vec()],
+    //         vec![b"GTG".to_vec()],
+    //         vec![b"TCG".to_vec()],
+    //     ];
+
+    //     for (frame, expected_frame_kmers) in frames.frames().iter().zip(expected_kmers.iter()) {
+    //         let kmer_iter = frame.kmer_iter(3, 42, false);
+
+    //         // Compute hashes for expected k-mers
+    //         let expected_hashes: Vec<u64> = expected_frame_kmers
+    //             .iter()
+    //             .map(|fw_kmer| crate::_hash_murmur(fw_kmer, 42))
+    //             .collect();
+
+    //         // Collect hashes produced by the kmer_iter
+    //         let produced_hashes: Vec<u64> = kmer_iter.map(|result| result.unwrap()).collect();
+
+    //         // Check that produced hashes match expected hashes in order
+    //         assert_eq!(
+    //             produced_hashes, expected_hashes,
+    //             "Hashes do not match in order for frame"
+    //         );
+    //     }
+    // }
+
+    // #[test]
+    // fn test_kmer_iter_skipmer_m2n3() {
+    //     let sequence = b"AGTCGTCGAGCT";
+    //     let hash_function = HashFunctions::Murmur64Skipm2n3;
+
+    //     let frames = ReadingFrames::new(sequence, false, &hash_function);
+
+    //     // Three skipmer frames
+    //     assert_eq!(frames.frames().len(), 3);
+
+    //     // Expected k-mers for skipmer (m=2, n=3)
+    //     let expected_kmers = vec![
+    //         vec![b"AGC".to_vec()],
+    //         vec![b"GTG".to_vec()],
+    //         vec![b"TCA".to_vec()],
+    //     ];
+
+    //     for (frame, expected_frame_kmers) in frames.frames().iter().zip(expected_kmers.iter()) {
+    //         let kmer_iter = frame.kmer_iter(3, 42, false);
+
+    //         // Compute hashes for expected k-mers
+    //         let expected_hashes: Vec<u64> = expected_frame_kmers
+    //             .iter()
+    //             .map(|fw_kmer| crate::_hash_murmur(fw_kmer, 42))
+    //             .collect();
+
+    //         // Collect hashes produced by the kmer_iter
+    //         let produced_hashes: Vec<u64> = kmer_iter.map(|result| result.unwrap()).collect();
+
+    //         // Check that produced hashes match expected hashes in order
+    //         assert_eq!(
+    //             produced_hashes, expected_hashes,
+    //             "Hashes do not match in order for frame"
+    //         );
+    //     }
+    // }
 }
