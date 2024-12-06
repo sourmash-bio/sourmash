@@ -114,39 +114,6 @@ pub fn revcomp(seq: &[u8]) -> Vec<u8> {
         .collect()
 }
 
-/// Generate a single translated frame from a DNA sequence
-///
-/// * `sequence`: The DNA sequence as a slice of bytes.
-/// * `frame_number`: The frame to translate (0, 1, or 2).
-/// * `dayhoff`: Whether to use the Dayhoff amino acid alphabet.
-/// * `hp`: Whether to use the hydrophobic-polar amino acid alphabet.
-///
-/// Returns a translated frame as a `Vec<u8>`.
-pub fn translated_frame(sequence: &[u8], frame_number: usize, dayhoff: bool, hp: bool) -> Vec<u8> {
-    if frame_number > 2 {
-        panic!("Frame number must be 0, 1, or 2");
-    }
-
-    sequence
-        .iter()
-        .cloned()
-        .skip(frame_number) // Skip the initial bases for the frame
-        .take(sequence.len() - frame_number) // Adjust length based on skipped bases
-        .collect::<Vec<u8>>() // Collect the DNA subsequence
-        .chunks(3) // Group into codons (triplets)
-        .filter_map(|codon| to_aa(codon, dayhoff, hp).ok()) // Translate each codon
-        .flatten() // Flatten the nested results into a single sequence
-        .collect()
-}
-
-fn skipmer_frame(seq: &[u8], start: usize, n: usize, m: usize) -> Vec<u8> {
-    seq.iter()
-        .skip(start)
-        .enumerate()
-        .filter_map(|(i, &base)| if i % n < m { Some(base) } else { None })
-        .collect()
-}
-
 static CODONTABLE: Lazy<HashMap<&'static str, u8>> = Lazy::new(|| {
     [
         // F
