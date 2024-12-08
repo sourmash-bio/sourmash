@@ -32,7 +32,12 @@ You can verify that they've been successfully downloaded (and view database prop
 
 ## Sketches for human and animal genomes
 
-These include k=21, k=31, and k=51, at a scaled of 1000. Each file is about 110 MB.
+These sketches are of the latest releases of a number of animal
+genomes. Among other uses, they can be used to detect host
+contamination in microbial metagenomes.
+
+Each file includes sketches at k=21, k=31, and k=51, at a scaled of
+1000, and is about 110 MB.
 
 * Human (hg38) - [hg38.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/hg38.sig.zip)
 * Cow (bosTau9) - [bosTau9.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/bosTau9.sig.zip)
