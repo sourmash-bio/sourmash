@@ -167,8 +167,8 @@ impl SigsTrait for Sketch {
 pub enum ReadingFrame {
     DNA {
         fw: Vec<u8>,
-        rc: Vec<u8>, // Reverse complement is required
-        len: usize,
+        rc: Vec<u8>,
+        len: usize, // len gives max_index for kmer iterator
     },
     Protein {
         fw: Vec<u8>, // Only forward frame
@@ -218,8 +218,8 @@ impl ReadingFrame {
     }
 
     pub fn new_skipmer(seq: &[u8], start: usize, m: usize, n: usize) -> Self {
-        if start > n {
-            panic!("Skipmer frame number must be <= n ({})", n);
+        if start >= n {
+            panic!("Skipmer frame number must be < n ({})", n);
         }
         // Generate forward skipmer frame
         let fw: Vec<u8> = seq
@@ -239,21 +239,21 @@ impl ReadingFrame {
             panic!("Frame number must be 0, 1, or 2");
         }
 
-        // Translate the forward frame
+        // translate sequence
         let fw: Vec<u8> = sequence
             .iter()
             .cloned()
-            .skip(frame_number) // Skip the initial bases for the frame
-            .take(sequence.len() - frame_number) // Adjust length based on skipped bases
-            .collect::<Vec<u8>>() // Collect the DNA subsequence
-            .chunks(3) // Group into codons (triplets)
-            .filter_map(|codon| to_aa(codon, dayhoff, hp).ok()) // Translate each codon
-            .flatten() // Flatten the nested results into a single sequence
+            .skip(frame_number) // skip the initial bases for the frame
+            .take(sequence.len() - frame_number) // adjust length based on skipped bases
+            .collect::<Vec<u8>>() // collect the DNA subsequence
+            .chunks(3) // group into codons (triplets)
+            .filter_map(|codon| to_aa(codon, dayhoff, hp).ok()) // translate each codon
+            .flatten() // flatten the nested results into a single sequence
             .collect();
 
         let len = fw.len();
 
-        // Return a Protein reading frame (no reverse complement for translated frames)
+        // return protein reading frame
         ReadingFrame::Protein { fw, len }
     }
 
@@ -421,26 +421,28 @@ impl SeqToHashes {
         }
     }
 
-    /// Generate DNA frames (forward + reverse complement)
+    /// generate frames from DNA: 1 DNA frame (fw+rc)
     fn dna_frames(seq: &[u8]) -> Vec<ReadingFrame> {
-        vec![ReadingFrame::new_dna(&seq.to_ascii_uppercase())]
+        vec![ReadingFrame::new_dna(&seq)]
     }
 
+    /// generate frames from protein: 1 protein frame
     fn protein_frames(seq: &[u8], hash_function: &HashFunctions) -> Vec<ReadingFrame> {
         vec![ReadingFrame::new_protein(
-            &seq.to_ascii_uppercase(),
+            &seq,
             hash_function.dayhoff(),
             hash_function.hp(),
         )]
     }
 
+    /// generate translated frames: 6 protein frames
     fn translated_frames(seq: &[u8], hash_function: &HashFunctions) -> Vec<ReadingFrame> {
-        let revcomp_sequence = revcomp(&seq.to_ascii_uppercase());
+        let revcomp_sequence = revcomp(&seq);
         (0..3)
             .flat_map(|frame_number| {
                 vec![
                     ReadingFrame::new_translated(
-                        &seq.to_ascii_uppercase(),
+                        &seq,
                         frame_number,
                         hash_function.dayhoff(),
                         hash_function.hp(),
@@ -456,6 +458,7 @@ impl SeqToHashes {
             .collect()
     }
 
+    /// generate skipmer frames: 3 DNA frames (each with fw+rc)
     fn skipmer_frames(seq: &[u8], hash_function: &HashFunctions) -> Vec<ReadingFrame> {
         let (m, n) = if hash_function.skipm1n3() {
             (1, 3)
@@ -465,7 +468,7 @@ impl SeqToHashes {
         (0..3)
             .flat_map(|frame_number| {
                 vec![ReadingFrame::new_skipmer(
-                    &seq.to_ascii_uppercase(),
+                    &seq,
                     frame_number,
                     m,
                     n,
