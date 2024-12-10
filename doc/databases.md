@@ -49,6 +49,18 @@ Each file includes sketches at k=21, k=31, and k=51, at a scaled of
 * Goat (oviAri4) - [oviAri4.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/oviAri4.sig.zip)
 * Pig (susCr11) - [susScr11.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/susScr11.sig.zip)
 
+## Sketches for plant genomes
+
+These sketches are for the plant genomes available in GenBank as of 2024-07.
+
+| K-mer size | Zipfile collection |
+| -------- | -------- |
+| k21 | [download (7G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k21.zip) |
+| k31 | [download (8.8G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k31.zip) |
+| k51 | [download (11G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k51.zip) |
+
+Lineage spreadsheet for sourmash `tax` commands: [download](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.lineages.csv.gz)
+
 ## GTDB R08-RS214 - DNA databases
 
 [GTDB R08-RS214](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r08-rs214/456) consists of 402,709 genomes organized into 85,205 species clusters.
