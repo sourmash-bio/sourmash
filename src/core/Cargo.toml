@@ -57,7 +57,7 @@ roaring = "0.10.8"
 roots = "0.0.8"
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
-statrs = "0.17.1"
+statrs = "0.18.0"
 streaming-stats = "0.2.3"
 thiserror = "2.0"
 twox-hash = "1.6.0"
