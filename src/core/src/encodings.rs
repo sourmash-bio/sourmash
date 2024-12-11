@@ -519,8 +519,6 @@ impl<'a> Iterator for Indices<'a> {
 
 #[cfg(test)]
 mod test {
-    use proptest::collection::vec;
-
     use super::*;
 
     #[test]
