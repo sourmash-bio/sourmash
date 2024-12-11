@@ -289,101 +289,6 @@ impl ReadingFrame {
     }
 }
 
-pub struct KmerIterator<'a> {
-    frame: &'a ReadingFrame, // Reference to the ReadingFrame
-    ksize: usize,
-    index: usize,
-    seed: u64,
-    force: bool,
-}
-
-impl<'a> KmerIterator<'a> {
-    pub fn new(frame: &'a ReadingFrame, ksize: usize, seed: u64, force: bool) -> Self {
-        Self {
-            frame,
-            ksize,
-            index: 0,
-            seed,
-            force,
-        }
-    }
-
-    fn out_of_bounds(&self, length: usize) -> bool {
-        self.index + self.ksize > length
-    }
-
-    fn validate_dna_kmer(&self, kmer: &[u8]) -> Result<(), Error> {
-        for &nt in kmer {
-            if !VALID[nt as usize] {
-                return Err(Error::InvalidDNA {
-                    message: String::from_utf8_lossy(kmer).to_string(),
-                });
-            }
-        }
-        Ok(())
-    }
-
-    fn get_dna_hash(&mut self, fw: &[u8], rc: &[u8]) -> Option<Result<u64, Error>> {
-        let kmer = &fw[self.index..self.index + self.ksize];
-
-        if !self.force {
-            if let Err(e) = self.validate_dna_kmer(kmer) {
-                self.index += 1;
-                return Some(Err(e));
-            }
-        }
-
-        let krc = &rc[rc.len() - self.ksize - self.index..rc.len() - self.index];
-        let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
-        // NTP TESTING
-        eprintln!(
-            "Forward DNA k-mer: {}, Reverse Complement k-mer: {}, hash: {}",
-            String::from_utf8_lossy(kmer),
-            String::from_utf8_lossy(krc),
-            hash,
-        );
-
-        self.index += 1;
-        Some(Ok(hash))
-    }
-
-    fn get_protein_hash(&mut self, fw: &[u8]) -> Option<Result<u64, Error>> {
-        let kmer = &fw[self.index..self.index + self.ksize];
-
-        let hash = crate::_hash_murmur(kmer, self.seed);
-        // NTP TESTING
-        eprintln!(
-            "Protein k-mer: {}, hash: {}",
-            String::from_utf8_lossy(kmer),
-            hash
-        );
-
-        self.index += 1;
-        Some(Ok(hash))
-    }
-}
-
-impl<'a> Iterator for KmerIterator<'a> {
-    type Item = Result<u64, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.frame {
-            ReadingFrame::DNA { fw, rc, len } => {
-                if self.out_of_bounds(*len) {
-                    return None;
-                }
-                self.get_dna_hash(fw, rc)
-            }
-            ReadingFrame::Protein { fw, len } => {
-                if self.out_of_bounds(*len) {
-                    return None;
-                }
-                self.get_protein_hash(fw)
-            }
-        }
-    }
-}
-
 pub struct SeqToHashes {
     k_size: usize,
     force: bool,
@@ -1561,6 +1466,13 @@ mod test {
     fn test_reading_frame_new_dna() {
         let sequence = b"AGTCGT";
         let hash_function = HashFunctions::Murmur64Dna;
+        let k_size = 3;
+        let seed = 42;
+        let force = false;
+        let is_protein = false;
+
+        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let frames = sth.frames.clone(); // Clone frames to inspect them
 
         let frames = ReadingFrame::new_dna(sequence);
 
@@ -1572,10 +1484,16 @@ mod test {
     fn test_reading_frames_new_is_protein() {
         // NTP todo - test panic/err if rc()
         let sequence = b"MVLSPADKTNVKAAW";
+        let hash_function = HashFunctions::Murmur64Protein;
+        let k_size = 9;
+        let seed = 42;
+        let force = false;
+        let is_protein = true;
 
-        let frames = ReadingFrame::new_protein(sequence, false, false);
+        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let frames = sth.frames.clone(); // Clone frames to inspect them
 
-        assert_eq!(frames.fw(), sequence.as_slice());
+        assert_eq!(frames[0].fw(), sequence.as_slice());
     }
 
     #[test]
