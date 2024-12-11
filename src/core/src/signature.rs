@@ -271,25 +271,14 @@ impl ReadingFrame {
         }
     }
 
-    pub fn kmer_count(&self, k_size: usize) -> usize {
+    pub fn kmer_iter<'a>(&'a self, ksize: usize, seed: u64, force: bool) -> KmerIterator<'a> {
         match self {
-            ReadingFrame::DNA { len, .. } | ReadingFrame::Protein { len, .. } => {
-                if *len >= k_size {
-                    len - k_size + 1
-                } else {
-                    0 // No k-mers possible if len is smaller than k_size
-                }
-            }
+            ReadingFrame::DNA { .. } => KmerIterator::new(self, ksize, seed, force),
+            ReadingFrame::Protein { .. } => KmerIterator::new(self, ksize, seed, force),
         }
     }
-
-    pub fn kmer_iter(&self, ksize: usize, seed: u64, force: bool) -> KmerIterator {
-        KmerIterator::new(self, ksize, seed, force)
-    }
-
 }
 
-#[derive(Debug, Clone)]
 pub struct KmerIterator<'a> {
     frame: &'a ReadingFrame, // Reference to the ReadingFrame
     ksize: usize,
@@ -323,6 +312,45 @@ impl<'a> KmerIterator<'a> {
         }
         Ok(())
     }
+
+    fn get_dna_hash(&mut self, fw: &[u8], rc: &[u8]) -> Option<Result<u64, Error>> {
+        let kmer = &fw[self.index..self.index + self.ksize];
+
+        if !self.force {
+            if let Err(e) = self.validate_dna_kmer(kmer) {
+                self.index += 1;
+                return Some(Err(e));
+            }
+        }
+
+        let krc = &rc[rc.len() - self.ksize - self.index..rc.len() - self.index];
+        let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
+        // NTP TESTING
+        eprintln!(
+            "Forward DNA k-mer: {}, Reverse Complement k-mer: {}, hash: {}",
+            String::from_utf8_lossy(kmer),
+            String::from_utf8_lossy(krc),
+            hash,
+        );
+
+        self.index += 1;
+        Some(Ok(hash))
+    }
+
+    fn get_protein_hash(&mut self, fw: &[u8]) -> Option<Result<u64, Error>> {
+        let kmer = &fw[self.index..self.index + self.ksize];
+
+        let hash = crate::_hash_murmur(kmer, self.seed);
+        // NTP TESTING
+        eprintln!(
+            "Protein k-mer: {}, hash: {}",
+            String::from_utf8_lossy(kmer),
+            hash
+        );
+
+        self.index += 1;
+        Some(Ok(hash))
+    }
 }
 
 impl<'a> Iterator for KmerIterator<'a> {
@@ -330,60 +358,31 @@ impl<'a> Iterator for KmerIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.frame {
-            ReadingFrame::DNA { fw, rc, len, .. } => {
+            ReadingFrame::DNA { fw, rc, len } => {
                 if self.out_of_bounds(*len) {
                     return None;
                 }
-
-                let kmer = &fw[self.index..self.index + self.ksize];
-                if !self.force {
-                    if let Err(e) = self.validate_dna_kmer(kmer) {
-                        self.index += 1;
-                        return Some(Err(e));
-                    }
-                }
-
-                let krc = &rc[rc.len() - self.ksize - self.index..rc.len() - self.index];
-                let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
-                // NTP TESTING
-                eprintln!(
-                    "Forward DNA k-mer: {}, Reverse Complement k-mer: {}, hash: {}",
-                    String::from_utf8_lossy(kmer),
-                    String::from_utf8_lossy(krc),
-                    hash,
-                    );
-                self.index += 1;
-                Some(Ok(hash))
+                self.get_dna_hash(fw, rc)
             }
-            ReadingFrame::Protein { fw, len, .. } => {
+            ReadingFrame::Protein { fw, len } => {
                 if self.out_of_bounds(*len) {
                     return None;
                 }
-                let kmer = &fw[self.index..self.index + self.ksize];
-                let hash = crate::_hash_murmur(kmer, self.seed);
-                // NTP TESTING
-                eprintln!(
-                    "Protein k-mer: {}, hash: {}",
-                    String::from_utf8_lossy(kmer),
-                    hash
-                );
-                self.index += 1;
-                Some(Ok(hash))
+                self.get_protein_hash(fw)
             }
         }
     }
 }
 
-pub struct SeqToHashes<'a> {
+pub struct SeqToHashes {
     k_size: usize,
     force: bool,
     seed: u64,
     frames: Vec<ReadingFrame>,
     frame_index: usize, // Index of the current frame
-    current_kmer_iter: Option<KmerIterator<'a>>,
 }
 
-impl<'a> SeqToHashes<'a> {
+impl SeqToHashes {
     pub fn new(
         seq: &[u8],
         k_size: usize,
@@ -419,7 +418,6 @@ impl<'a> SeqToHashes<'a> {
             seed,
             frames,
             frame_index: 0,
-            current_kmer_iter: None,
         }
     }
 
@@ -473,84 +471,30 @@ impl<'a> SeqToHashes<'a> {
     }
 }
 
-impl<'a> Iterator for SeqToHashes<'a> {
+impl Iterator for SeqToHashes {
     type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // Iterate over the frames using frame_index
         while self.frame_index < self.frames.len() {
-            // Initialize the kmer_iter for the current frame if it is None
-            if self.current_kmer_iter.is_none() {
-                let frame = &self.frames[self.frame_index];
-                self.current_kmer_iter = Some(frame.kmer_iter(self.k_size, self.seed, self.force));
+            let frame = &self.frames[self.frame_index];
+
+            // Create a KmerIterator for the current frame
+            let mut kmer_iter = frame.kmer_iter(self.k_size, self.seed, self.force);
+
+            // Process k-mers in the current frame
+            if let Some(hash_result) = kmer_iter.next() {
+                return Some(hash_result); // Return the next hash
             }
 
-            // Attempt to get the next k-mer from the current iterator
-            if let Some(ref mut kmer_iter) = self.current_kmer_iter {
-                if let Some(hash_result) = kmer_iter.next() {
-                    return Some(hash_result);
-                }
-            }
-
-            // If the current iterator is exhausted, move to the next frame
-            self.current_kmer_iter = None;
+            // Move to the next frame if the current one is exhausted
             self.frame_index += 1;
         }
 
-        // All frames and iterators are exhausted
+        // All frames exhausted
         None
     }
 }
-
-// impl<'a> Iterator for SeqToHashes<'a> {
-//     type Item = Result<u64, Error>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         while self.frame_index < self.frames.len() {
-//             // Initialize kmer_iter for the current frame if it is None
-//             if self.current_kmer_iter.is_none() {
-//                 let frame = &self.frames[self.frame_index];
-//                 self.current_kmer_iter = Some(frame.kmer_iter(self.k_size, self.seed, self.force));
-//             }
-
-//             // Attempt to get the next hash from the current iterator
-//             if let Some(ref mut kmer_iter) = self.current_kmer_iter {
-//                 if let Some(hash_result) = kmer_iter.next() {
-//                     return Some(hash_result);
-//                 }
-//             }
-
-//             // If the current iterator is exhausted, move to the next frame
-//             self.current_kmer_iter = None;
-//             self.frame_index += 1;
-//         }
-
-//         // All frames and iterators are exhausted
-//         None
-//     }
-// }
-// impl Iterator for SeqToHashes {
-//     type Item = Result<u64, Error>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         // Iterate over the frames using frame_index
-//         while self.frame_index < self.frames.len() {
-//             let frame = &self.frames[self.frame_index];
-//             // Create a KmerIterator for the current frame
-//             let mut kmer_iter = frame.kmer_iter(self.k_size, self.seed, self.force);
-
-//             // Process k-mers in the current frame
-//             if let Some(hash_result) = kmer_iter.next() {
-//                 return Some(hash_result); // Return the next hash
-//             }
-
-//             // Move to the next frame if the current one is exhausted
-//             self.frame_index += 1;
-//         }
-
-//         // All frames exhausted
-//         None
-//     }
-// }
 
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
 #[cfg_attr(
@@ -1503,7 +1447,6 @@ mod test {
         }
     }
 
-
     #[test]
     fn test_seqtohashes_skipm2n3() {
         let sequence = b"AGTCGTCA";
@@ -1734,7 +1677,7 @@ mod test {
     fn test_kmer_iter_translate_frames() {
         let sequence = b"AGTCGTCGAGCT";
         let hash_function = HashFunctions::Murmur64Protein;
-        let k_size =3;
+        let k_size = 3;
         let seed = 42;
         let force = false;
         let is_protein = false;
@@ -1753,7 +1696,7 @@ mod test {
         assert_eq!(frames.len(), 6);
 
         // Expected k-mers for translated frames
-        let f1_kmers =  vec![b"SRR".as_slice(), b"RRA".as_slice()];
+        let f1_kmers = vec![b"SRR".as_slice(), b"RRA".as_slice()];
         let f2_kmers = vec![b"SST".as_slice(), b"STT".as_slice()];
         let f3_kmers = vec![b"VVE".as_slice()];
         let f4_kmers = vec![b"ARR".as_slice()];
@@ -1799,15 +1742,24 @@ mod test {
         assert_eq!(frames.len(), 3);
         assert_eq!(frames[0].get_fw(), Some(b"ACCG".as_slice()));
         assert_eq!(frames[0].get_rc(), Some(b"CGGT".as_slice()));
-        let f1_kmers =  vec![(b"ACC".as_slice(), b"GGT".as_slice()), (b"CCG".as_slice(), b"CGG".as_slice())];
+        let f1_kmers = vec![
+            (b"ACC".as_slice(), b"GGT".as_slice()),
+            (b"CCG".as_slice(), b"CGG".as_slice()),
+        ];
 
         assert_eq!(frames[1].get_fw(), Some(b"GGGC".as_slice()));
         assert_eq!(frames[1].get_rc(), Some(b"GCCC".as_slice()));
-        let f2_kmers =  vec![(b"GGG".as_slice(), b"CCC".as_slice()), (b"GGC".as_slice(), b"GCC".as_slice())];
+        let f2_kmers = vec![
+            (b"GGG".as_slice(), b"CCC".as_slice()),
+            (b"GGC".as_slice(), b"GCC".as_slice()),
+        ];
 
         assert_eq!(frames[2].get_fw(), Some(b"TTAT".as_slice()));
         assert_eq!(frames[2].get_rc(), Some(b"ATAA".as_slice()));
-        let f3_kmers =  vec![(b"TTA".as_slice(), b"TAA".as_slice()), (b"TAT".as_slice(), b"ATA".as_slice())];
+        let f3_kmers = vec![
+            (b"TTA".as_slice(), b"TAA".as_slice()),
+            (b"TAT".as_slice(), b"ATA".as_slice()),
+        ];
 
         // Expected k-mers for skipmer (m=1, n=3)
         let expected_kmers = vec![f1_kmers, f2_kmers, f3_kmers];
@@ -1841,7 +1793,6 @@ mod test {
         // );
     }
 
-
     #[test]
     fn test_kmer_iter_skipmer_m2n3() {
         let sequence = b"AGTCGTCGAGCT";
@@ -1858,22 +1809,25 @@ mod test {
         assert_eq!(frames.len(), 3);
         assert_eq!(frames[0].get_fw(), Some(b"AGCGCGGC".as_slice()));
         assert_eq!(frames[0].get_rc(), Some(b"GCCGCGCT".as_slice()));
-        let f1_kmers =  vec![(b"AGCGCGG".as_slice(), b"CCGCGCT".as_slice()),
-                                                  (b"GCGCGGC".as_slice(), b"GCCGCGC".as_slice())];
+        let f1_kmers = vec![
+            (b"AGCGCGG".as_slice(), b"CCGCGCT".as_slice()),
+            (b"GCGCGGC".as_slice(), b"GCCGCGC".as_slice()),
+        ];
 
         assert_eq!(frames[1].get_fw(), Some(b"GTGTGACT".as_slice()));
         assert_eq!(frames[1].get_rc(), Some(b"AGTCACAC".as_slice()));
-        let f2_kmers =  vec![(b"GTGTGAC".as_slice(), b"GTCACAC".as_slice()),
-                                                  (b"TGTGACT".as_slice(), b"AGTCACA".as_slice())];
+        let f2_kmers = vec![
+            (b"GTGTGAC".as_slice(), b"GTCACAC".as_slice()),
+            (b"TGTGACT".as_slice(), b"AGTCACA".as_slice()),
+        ];
 
         assert_eq!(frames[2].get_fw(), Some(b"TCTCAGT".as_slice()));
         assert_eq!(frames[2].get_rc(), Some(b"ACTGAGA".as_slice()));
-        let f3_kmers =  vec![(b"TCTCAGT".as_slice(), b"ACTGAGA".as_slice())];
-
+        let f3_kmers = vec![(b"TCTCAGT".as_slice(), b"ACTGAGA".as_slice())];
 
         // Expected k-mers for skipmer (m=2, n=3)
         let expected_kmers = vec![f1_kmers, f2_kmers, f3_kmers];
-       
+
         for (frame, expected_frame_kmers) in frames.iter().zip(expected_kmers.iter()) {
             // Compute hashes for expected k-mers
             let expected_hashes: Vec<u64> = expected_frame_kmers
@@ -1886,7 +1840,10 @@ mod test {
             let produced_hashes: Vec<u64> = kmer_iter.map(|result| result.unwrap()).collect();
 
             // Check that produced hashes match expected hashes in order
-            eprintln!("expected: {:?}, produced: {:?}", expected_hashes, produced_hashes);
+            eprintln!(
+                "expected: {:?}, produced: {:?}",
+                expected_hashes, produced_hashes
+            );
             assert_eq!(
                 produced_hashes, expected_hashes,
                 "Hashes do not match in order for frame"
@@ -1894,7 +1851,7 @@ mod test {
         }
     }
 
-#[test]
+    #[test]
     fn test_seqtohashes_dna() {
         let sequence = b"AGTCGTCA";
         let k_size = 7;
