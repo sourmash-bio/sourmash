@@ -43,7 +43,7 @@ log = "0.4.22"
 md5 = "0.7.0"
 memmap2 = "0.9.5"
 murmurhash3 = "0.0.5"
-needletail = { version = "0.6.0", default-features = false }
+needletail = { version = "0.6.1", default-features = false }
 niffler = { version = "2.4.0", default-features = false, features = [ "gz" ] }
 nohash-hasher = "0.2.0"
 num-iter = "0.1.45"
@@ -53,11 +53,11 @@ piz = "0.5.0"
 primal-check = "0.3.4"
 rayon = { version = "1.10.0", optional = true }
 rkyv = { version = "0.7.44", optional = true }
-roaring = "0.10.6"
+roaring = "0.10.8"
 roots = "0.0.8"
-serde = { version = "1.0.214", features = ["derive"] }
-serde_json = "1.0.132"
-statrs = "0.17.1"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+statrs = "0.18.0"
 streaming-stats = "0.2.3"
 thiserror = "2.0"
 twox-hash = "1.6.0"
@@ -96,8 +96,8 @@ skip_feature_sets = [
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies]
-js-sys = "0.3.68"
-web-sys = { version = "0.3.72", features = ["console", "File", "FileReaderSync"] }
+js-sys = "0.3.74"
+web-sys = { version = "0.3.74", features = ["console", "File", "FileReaderSync"] }
 wasm-bindgen = "0.2.89"
 getrandom = { version = "0.2", features = ["js"] }
 
