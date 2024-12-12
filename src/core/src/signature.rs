@@ -204,7 +204,6 @@ impl ReadingFrame {
         ReadingFrame::DNA { fw, rc, len }
     }
 
-    // TODO -- handle bad DNA sequence here??
     pub fn new_protein(sequence: &[u8], dayhoff: bool, hp: bool) -> Self {
         let fw: Vec<u8> = if dayhoff {
             sequence.iter().map(|&aa| aa_to_dayhoff(aa)).collect()
@@ -423,11 +422,21 @@ impl SeqToHashes {
         let rc = frame.rc();
 
         // Validate the k-mer. Skip if invalid and force is true
-        match self.validate_dna_kmer(kmer)? {
-            false => return Ok(0), // Skip this k-mer
-            true => {}
+        if !self.validate_dna_kmer(kmer)? {
+            return Ok(0); // Skip invalid k-mer
         }
 
+        //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+        //                   +-+---------+---------------+-------+
+        //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+        //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+        //  +->         +->  |0|    2    |       3       |   6   |
+        //   +->       +->   |1|    3    |       2       |   5   |
+        //    +->     +->    |2|    4    |       1       |   4   |
+        //     +->   +->     |3|    5    |       0       |   3   |
+        //                   +-+---------+---------------+-------+
+        // (leaving this table here because I had to draw to
+        //  get the indices correctly)
         let reverse_index = frame.length() - self.k_size - self.kmer_index;
         let krc = &rc[reverse_index..reverse_index + self.k_size];
 
