@@ -355,11 +355,6 @@ def test_protein_override_bad_rust_foo():
     with pytest.raises(ValueError) as exc:
         sig.add_protein(record.sequence)
 
-    # assert 'Invalid hash function: "DNA"' in str(exc)
-
-    # this case now ends up in the "DNA" section of SeqToHashes,
-    # so we run into the invalid k-mer error
-    # instead of invalid Hash Function.
     assert "invalid DNA character in input k-mer: MRVLKFGGTS" in str(exc)
 
 

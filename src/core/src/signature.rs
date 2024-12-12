@@ -327,13 +327,13 @@ impl SeqToHashes {
 
         // Generate frames based on sequence type and hash function
         let frames = if hash_function.dna() {
-            Self::dna_frames(&seq)
+            Self::dna_frames(seq)
         } else if is_protein {
-            Self::protein_frames(&seq, &hash_function)
+            Self::protein_frames(seq, &hash_function)
         } else if hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
-            Self::translated_frames(&seq, &hash_function)
+            Self::translated_frames(seq, &hash_function)
         } else if hash_function.skipm1n3() || hash_function.skipm2n3() {
-            Self::skipmer_frames(&seq, &hash_function, ksize)
+            Self::skipmer_frames(seq, &hash_function, ksize)
         } else {
             unimplemented!();
         };
