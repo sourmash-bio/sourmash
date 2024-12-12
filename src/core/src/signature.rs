@@ -204,6 +204,7 @@ impl ReadingFrame {
         ReadingFrame::DNA { fw, rc, len }
     }
 
+    // TODO -- handle bad DNA sequence here??
     pub fn new_protein(sequence: &[u8], dayhoff: bool, hp: bool) -> Self {
         let fw: Vec<u8> = if dayhoff {
             sequence.iter().map(|&aa| aa_to_dayhoff(aa)).collect()
@@ -417,13 +418,13 @@ impl SeqToHashes {
     }
 
     /// Process a DNA k-mer, including canonicalization and validation
-    fn dna_hash(&self, frame: &ReadingFrame) -> Result<Option<u64>, Error> {
+    fn dna_hash(&self, frame: &ReadingFrame) -> Result<u64, Error> {
         let kmer = &frame.fw()[self.kmer_index..self.kmer_index + self.k_size];
         let rc = frame.rc();
 
         // Validate the k-mer. Skip if invalid and force is true
         match self.validate_dna_kmer(kmer)? {
-            false => return Ok(None), // Skip this k-mer
+            false => return Ok(0), // Skip this k-mer
             true => {}
         }
 
@@ -434,7 +435,7 @@ impl SeqToHashes {
         let canonical_kmer = std::cmp::min(kmer, krc);
         let hash = crate::_hash_murmur(canonical_kmer, self.seed);
 
-        Ok(Some(hash))
+        Ok(hash)
     }
 
     fn protein_hash(&self, frame: &ReadingFrame) -> u64 {
@@ -460,12 +461,7 @@ impl Iterator for SeqToHashes {
             // Delegate to DNA or protein processing
             let result = match frame {
                 ReadingFrame::DNA { .. } => match self.dna_hash(frame) {
-                    Ok(Some(hash)) => Ok(hash), // Valid hash
-                    Ok(None) => {
-                        // Skipped invalid k-mer
-                        self.kmer_index += 1;
-                        continue;
-                    }
+                    Ok(hash) => Ok(hash), // Valid hash
                     Err(err) => Err(err), // Error
                 },
                 ReadingFrame::Protein { .. } => Ok(self.protein_hash(frame)),
