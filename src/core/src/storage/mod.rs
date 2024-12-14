@@ -418,7 +418,7 @@ impl ZipStorage {
             subdir: None,
             path: Some(location.as_ref().into()),
         }
-        .try_build().expect("cannot open file as zip file");
+        .try_build()?;
 
         let subdir = find_subdirs(storage.borrow_archive())?;
         storage.with_mut(|fields| *fields.subdir = subdir);
