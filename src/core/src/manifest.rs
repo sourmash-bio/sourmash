@@ -192,7 +192,8 @@ impl PartialEq for Record {
             && self.filename == other.filename;
         if !b {
             eprintln!("xxx {:?}, {:?}", self.name, other.name);
-        }
+        };
+        b
     }
 }
 
