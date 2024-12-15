@@ -448,8 +448,8 @@ impl Signature {
     pub fn name(&self) -> String {
         if let Some(name) = &self.name {
             name.clone()
-        } else if let Some(filename) = &self.filename {
-            filename.clone()
+//        } else if let Some(filename) = &self.filename {
+//            filename.clone()
         } else {
             self.md5sum()
         }
