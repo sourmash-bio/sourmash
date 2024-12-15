@@ -451,7 +451,7 @@ impl Signature {
 //        } else if let Some(filename) = &self.filename {
 //            filename.clone()
         } else {
-            self.md5sum()
+            "".to_string()
         }
     }
 
