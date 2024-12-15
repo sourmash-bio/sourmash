@@ -251,12 +251,15 @@ impl Manifest {
         // extract tuples from other mf:
         let pairs: HashSet<_> = other.iter().collect();
 
-        let records = self
+        eprintln!("yyy {}, {}", self.records.len(), pairs.len());
+        let records: Vec<_> = self
             .records
             .iter()
             .filter(|row| pairs.contains(row))
             .cloned()
             .collect();
+
+        eprintln!("yyy2 {}", records.len());
 
         Self { records }
     }
