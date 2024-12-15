@@ -181,7 +181,7 @@ impl Record {
 impl PartialEq for Record {
     // match everything but internal_location
     fn eq(&self, other: &Self) -> bool {
-        let b = self.md5 == other.md5
+        self.md5 == other.md5
             && self.ksize == other.ksize
             && self.moltype == other.moltype
             && self.scaled == other.scaled
@@ -189,11 +189,7 @@ impl PartialEq for Record {
             && self.n_hashes == other.n_hashes
             && self.with_abundance == other.with_abundance
             && self.name == other.name
-            && self.filename == other.filename;
-        if !b {
-            eprintln!("xxx {:?}, {:?}", self.name, other.name);
-        };
-        b
+            && self.filename == other.filename
     }
 }
 
@@ -251,16 +247,12 @@ impl Manifest {
         // extract tuples from other mf:
         let pairs: HashSet<_> = other.iter().collect();
 
-        eprintln!("yyy {}, {}", self.records.len(), pairs.len());
-        eprintln!("yyy3 {:?}, {:?}", self.records, pairs);
-        let records: Vec<_> = self
+        let records = self
             .records
             .iter()
             .filter(|row| pairs.contains(row))
             .cloned()
             .collect();
-
-        eprintln!("yyy2 {}", records.len());
 
         Self { records }
     }
