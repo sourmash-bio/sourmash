@@ -181,7 +181,7 @@ impl Record {
 impl PartialEq for Record {
     // match everything but internal_location
     fn eq(&self, other: &Self) -> bool {
-        self.md5 == other.md5
+        let b = self.md5 == other.md5
             && self.ksize == other.ksize
             && self.moltype == other.moltype
             && self.scaled == other.scaled
@@ -189,7 +189,10 @@ impl PartialEq for Record {
             && self.n_hashes == other.n_hashes
             && self.with_abundance == other.with_abundance
             && self.name == other.name
-            && self.filename == other.filename
+            && self.filename == other.filename;
+        if !b {
+            eprintln!("xxx {:?}, {:?}", self.name, other.name);
+        }
     }
 }
 
