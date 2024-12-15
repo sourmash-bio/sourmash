@@ -252,6 +252,7 @@ impl Manifest {
         let pairs: HashSet<_> = other.iter().collect();
 
         eprintln!("yyy {}, {}", self.records.len(), pairs.len());
+        eprintln!("yyy3 {:?}, {:?}", self.records, pairs);
         let records: Vec<_> = self
             .records
             .iter()
