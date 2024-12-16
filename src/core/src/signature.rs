@@ -995,7 +995,6 @@ impl TryInto<KmerMinHash> for Signature {
 #[cfg(test)]
 mod test {
 
-    use core::num;
     use std::fs::File;
     use std::io::{BufReader, Read};
     use std::path::PathBuf;
@@ -1442,6 +1441,83 @@ mod test {
     }
 
     #[test]
+    fn test_fw_dna() {
+        let dna_frame = ReadingFrame::DNA {
+            fw: b"ATCG".to_vec(),
+            rc: b"CGAT".to_vec(),
+            len: 4,
+        };
+        assert_eq!(dna_frame.fw(), b"ATCG");
+    }
+
+    #[test]
+    fn test_rc_dna() {
+        let dna_frame = ReadingFrame::DNA {
+            fw: b"ATCG".to_vec(),
+            rc: b"CGAT".to_vec(),
+            len: 4,
+        };
+        assert_eq!(dna_frame.rc(), b"CGAT");
+    }
+
+    #[test]
+    fn test_length_dna() {
+        let dna_frame = ReadingFrame::DNA {
+            fw: b"ATCG".to_vec(),
+            rc: b"CGAT".to_vec(),
+            len: 4,
+        };
+        assert_eq!(dna_frame.length(), 4);
+    }
+
+    #[test]
+    fn test_frame_type_dna() {
+        let dna_frame = ReadingFrame::DNA {
+            fw: b"ATCG".to_vec(),
+            rc: b"CGAT".to_vec(),
+            len: 4,
+        };
+        assert_eq!(dna_frame.frame_type(), "DNA");
+    }
+
+    #[test]
+    fn test_fw_protein() {
+        let protein_frame = ReadingFrame::Protein {
+            fw: b"MVHL".to_vec(),
+            len: 4,
+        };
+        assert_eq!(protein_frame.fw(), b"MVHL");
+    }
+
+    #[test]
+    #[should_panic(expected = "Reverse complement is only available for DNA frames")]
+    fn test_rc_protein_panics() {
+        let protein_frame = ReadingFrame::Protein {
+            fw: b"MVHL".to_vec(),
+            len: 4,
+        };
+        protein_frame.rc();
+    }
+
+    #[test]
+    fn test_length_protein() {
+        let protein_frame = ReadingFrame::Protein {
+            fw: b"MVHL".to_vec(),
+            len: 4,
+        };
+        assert_eq!(protein_frame.length(), 4);
+    }
+
+    #[test]
+    fn test_frame_type_protein() {
+        let protein_frame = ReadingFrame::Protein {
+            fw: b"MVHL".to_vec(),
+            len: 4,
+        };
+        assert_eq!(protein_frame.frame_type(), "Protein");
+    }
+
+    #[test]
     fn test_seqtohashes_frames_dna() {
         let sequence = b"AGTCGT";
         let hash_function = HashFunctions::Murmur64Dna;
@@ -1554,6 +1630,15 @@ mod test {
         assert_eq!(frames[3].fw(), b"ARR".as_slice());
         assert_eq!(frames[4].fw(), b"SSS".as_slice());
         assert_eq!(frames[5].fw(), b"LDD".as_slice());
+    }
+
+    #[test]
+    #[should_panic(expected = "Frame number must be 0, 1, or 2")]
+    fn test_readingframe_translate() {
+        let sequence = b"AGTCGT";
+        let frame_start = 3; // four frames but translate can only
+
+        ReadingFrame::new_translated(sequence, frame_start, false, false);
     }
 
     #[test]
