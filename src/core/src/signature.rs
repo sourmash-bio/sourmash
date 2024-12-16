@@ -995,6 +995,7 @@ impl TryInto<KmerMinHash> for Signature {
 #[cfg(test)]
 mod test {
 
+    use core::num;
     use std::fs::File;
     use std::io::{BufReader, Read};
     use std::path::PathBuf;
@@ -1003,8 +1004,7 @@ mod test {
 
     use crate::cmd::ComputeParameters;
     use crate::encodings::HashFunctions;
-    use crate::signature::SeqToHashes;
-    use crate::signature::SigsTrait;
+    use crate::signature::{ReadingFrame, SeqToHashes, SigsTrait};
 
     use super::Signature;
 
@@ -1433,6 +1433,15 @@ mod test {
     }
 
     #[test]
+    fn test_readingframe_dna() {
+        let sequence = b"AGTCGT";
+        let frame = ReadingFrame::new_dna(sequence);
+
+        assert_eq!(frame.fw(), sequence.as_slice());
+        assert_eq!(frame.rc(), b"ACGACT".as_slice());
+    }
+
+    #[test]
     fn test_seqtohashes_frames_dna() {
         let sequence = b"AGTCGT";
         let hash_function = HashFunctions::Murmur64Dna;
@@ -1463,6 +1472,16 @@ mod test {
 
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0].fw(), sequence.as_slice());
+    }
+
+    #[test]
+    fn test_readingframe_protein() {
+        let sequence = b"MVLSPADKTNVKAAW";
+        let hash_function = HashFunctions::Murmur64Protein;
+        let frame =
+            ReadingFrame::new_protein(sequence, hash_function.dayhoff(), hash_function.hp());
+
+        assert_eq!(frame.fw(), sequence.as_slice());
     }
 
     #[test]
@@ -1535,6 +1554,17 @@ mod test {
         assert_eq!(frames[3].fw(), b"ARR".as_slice());
         assert_eq!(frames[4].fw(), b"SSS".as_slice());
         assert_eq!(frames[5].fw(), b"LDD".as_slice());
+    }
+
+    #[test]
+    #[should_panic(expected = "Skipmer frame number must be < n")]
+    fn test_readingframe_skipmer() {
+        let sequence = b"AGTCGT";
+        let m = 2;
+        let n = 3;
+        let num_frames = 4; // four frames but n is only 3
+
+        ReadingFrame::new_skipmer(sequence, num_frames, m, n);
     }
 
     #[test]

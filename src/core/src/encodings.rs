@@ -520,6 +520,7 @@ impl<'a> Iterator for Indices<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::convert::TryFrom;
 
     #[test]
     fn colors_update() {
@@ -586,5 +587,95 @@ mod test {
         //colors.retain(|c, _| [color2, color3].contains(c));
 
         assert_eq!(colors.len(), 2);
+    }
+
+    #[test]
+    fn test_dna_method() {
+        assert!(HashFunctions::Murmur64Dna.dna());
+        assert!(!HashFunctions::Murmur64Protein.dna());
+        assert!(!HashFunctions::Murmur64Dayhoff.dna());
+    }
+
+    #[test]
+    fn test_protein_method() {
+        assert!(HashFunctions::Murmur64Protein.protein());
+        assert!(!HashFunctions::Murmur64Dna.protein());
+        assert!(!HashFunctions::Murmur64Dayhoff.protein());
+    }
+
+    #[test]
+    fn test_dayhoff_method() {
+        assert!(HashFunctions::Murmur64Dayhoff.dayhoff());
+        assert!(!HashFunctions::Murmur64Dna.dayhoff());
+        assert!(!HashFunctions::Murmur64Protein.dayhoff());
+    }
+
+    #[test]
+    fn test_hp_method() {
+        assert!(HashFunctions::Murmur64Hp.hp());
+        assert!(!HashFunctions::Murmur64Dna.hp());
+        assert!(!HashFunctions::Murmur64Protein.hp());
+    }
+
+    #[test]
+    fn test_skipm1n3_method() {
+        assert!(HashFunctions::Murmur64Skipm1n3.skipm1n3());
+        assert!(!HashFunctions::Murmur64Dna.skipm1n3());
+        assert!(!HashFunctions::Murmur64Protein.skipm1n3());
+    }
+
+    #[test]
+    fn test_skipm2n3_method() {
+        assert!(HashFunctions::Murmur64Skipm2n3.skipm2n3());
+        assert!(!HashFunctions::Murmur64Dna.skipm2n3());
+        assert!(!HashFunctions::Murmur64Protein.skipm2n3());
+    }
+
+    #[test]
+    fn test_display_hashfunctions() {
+        assert_eq!(HashFunctions::Murmur64Dna.to_string(), "DNA");
+        assert_eq!(HashFunctions::Murmur64Protein.to_string(), "protein");
+        assert_eq!(HashFunctions::Murmur64Dayhoff.to_string(), "dayhoff");
+        assert_eq!(HashFunctions::Murmur64Hp.to_string(), "hp");
+        assert_eq!(HashFunctions::Murmur64Skipm1n3.to_string(), "skipm1n3");
+        assert_eq!(HashFunctions::Murmur64Skipm2n3.to_string(), "skipm2n3");
+        assert_eq!(
+            HashFunctions::Custom("custom_string".into()).to_string(),
+            "custom_string"
+        );
+    }
+
+    #[test]
+    fn test_try_from_str_valid() {
+        assert_eq!(
+            HashFunctions::try_from("dna").unwrap(),
+            HashFunctions::Murmur64Dna
+        );
+        assert_eq!(
+            HashFunctions::try_from("protein").unwrap(),
+            HashFunctions::Murmur64Protein
+        );
+        assert_eq!(
+            HashFunctions::try_from("dayhoff").unwrap(),
+            HashFunctions::Murmur64Dayhoff
+        );
+        assert_eq!(
+            HashFunctions::try_from("hp").unwrap(),
+            HashFunctions::Murmur64Hp
+        );
+        assert_eq!(
+            HashFunctions::try_from("skipm1n3").unwrap(),
+            HashFunctions::Murmur64Skipm1n3
+        );
+        assert_eq!(
+            HashFunctions::try_from("skipm2n3").unwrap(),
+            HashFunctions::Murmur64Skipm2n3
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented: unknown")]
+    fn test_try_from_str_invalid() {
+        HashFunctions::try_from("unknown").unwrap();
     }
 }
