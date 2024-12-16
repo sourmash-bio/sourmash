@@ -1518,6 +1518,19 @@ mod test {
     }
 
     #[test]
+    fn test_readingframe_display_protein() {
+        // Create a Protein ReadingFrame
+        let protein_frame = ReadingFrame::Protein {
+            fw: b"MVHLK".to_vec(),
+            len: 5,
+        };
+
+        let output = format!("{}", protein_frame);
+        // Assert the output matches the expected format
+        assert_eq!(output, "Type: Protein (5aa), Forward: MVHLK");
+    }
+
+    #[test]
     fn test_seqtohashes_frames_dna() {
         let sequence = b"AGTCGT";
         let hash_function = HashFunctions::Murmur64Dna;
