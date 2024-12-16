@@ -403,22 +403,22 @@ impl ZipStorage {
         let zip_file = File::open(location.as_ref())?;
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
-        let mut storage = ZipStorageBuilder {
+        let mut storage = ZipStorageTryBuilder {
             mapping: Some(mapping),
             archive_builder: |mapping: &Option<memmap2::Mmap>| {
-                piz::ZipArchive::new(mapping.as_ref().unwrap()).unwrap()
+                piz::ZipArchive::new(mapping.as_ref().unwrap())
             },
             metadata_builder: |archive: &piz::ZipArchive| {
-                archive
+                Ok(archive
                     .entries()
                     .iter()
                     .map(|entry| (entry.path.as_os_str(), entry))
-                    .collect()
+                    .collect())
             },
             subdir: None,
             path: Some(location.as_ref().into()),
         }
-        .build();
+        .try_build()?;
 
         let subdir = find_subdirs(storage.borrow_archive())?;
         storage.with_mut(|fields| *fields.subdir = subdir);

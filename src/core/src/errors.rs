@@ -90,6 +90,9 @@ pub enum SourmashError {
     #[cfg(feature = "branchwater")]
     #[error(transparent)]
     RocksDBError(#[from] rocksdb::Error),
+
+    #[error(transparent)]
+    ZipError(#[from] piz::result::ZipError),
 }
 
 #[derive(Debug, Error)]
@@ -140,6 +143,7 @@ pub enum SourmashErrorCode {
     NifflerError = 100_005,
     CsvError = 100_006,
     RocksDBError = 100_007,
+    ZipError = 100_008,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
@@ -179,6 +183,8 @@ impl SourmashErrorCode {
             #[cfg(not(target_arch = "wasm32"))]
             #[cfg(feature = "branchwater")]
             SourmashError::RocksDBError { .. } => SourmashErrorCode::RocksDBError,
+
+            SourmashError::ZipError { .. } => SourmashErrorCode::ZipError,
         }
     }
 }
