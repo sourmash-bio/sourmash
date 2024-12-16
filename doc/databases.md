@@ -37,7 +37,7 @@ genomes. Among other uses, they can be used to detect host
 contamination in microbial metagenomes.
 
 Each file includes sketches at k=21, k=31, and k=51, at a scaled of
-1000, and is about 110 MB.
+1000, and is under 50 MB.
 
 * Human (hg38) - [hg38.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/hg38.sig.zip)
 * Cow (bosTau9) - [bosTau9.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/bosTau9.sig.zip)
@@ -48,6 +48,18 @@ Each file includes sketches at k=21, k=31, and k=51, at a scaled of
 * Mouse (mm39) - [mm39.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/mm39.sig.zip)
 * Goat (oviAri4) - [oviAri4.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/oviAri4.sig.zip)
 * Pig (susCr11) - [susScr11.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/susScr11.sig.zip)
+
+## Sketches for plant genomes
+
+These sketches are for the plant genomes available in GenBank as of 2024-07.
+
+| K-mer size | Zipfile collection |
+| -------- | -------- |
+| k21 | [download (7G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k21.zip) |
+| k31 | [download (8.8G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k31.zip) |
+| k51 | [download (11G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k51.zip) |
+
+Lineage spreadsheet for sourmash `tax` commands: [download](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.lineages.csv.gz)
 
 ## GTDB R08-RS214 - DNA databases
 
