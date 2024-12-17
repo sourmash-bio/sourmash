@@ -446,11 +446,7 @@ fn default_version() -> f64 {
 
 impl Signature {
     pub fn name(&self) -> Option<String> {
-        if let Some(name) = &self.name {
-            Some(name.clone())
-        } else {
-            None
-        }
+        self.name.as_ref().map(|name| name.clone())
     }
 
     // return name, if not None; or "" if None.
