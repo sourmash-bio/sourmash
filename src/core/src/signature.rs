@@ -980,6 +980,8 @@ mod test {
         assert_eq!(sig.signatures[0].size(), 3);
         assert_eq!(sig.signatures[1].size(), 2);
         assert_eq!(sig.signatures[2].size(), 1);
+
+        assert_eq!(sig.name(), "");
     }
 
     #[test]
