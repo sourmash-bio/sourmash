@@ -351,7 +351,15 @@ impl RevIndexOps for RevIndex {
                         .collection
                         .record_for_dataset(dataset_id)
                         .expect("dataset not found");
-                    Some((row.name().into(), size))
+
+                    let mut name = row.name();
+                    if name == "" {
+                        name = row.filename();
+                    }
+                    if name == "" {
+                        name = row.md5();
+                    }
+                    Some((name.into(), size))
                 } else {
                     None
                 }
