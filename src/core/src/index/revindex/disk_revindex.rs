@@ -356,7 +356,7 @@ impl RevIndexOps for RevIndex {
                         .into_iter()
                         .skip_while(|v| v.is_empty())
                         .next()
-                        .unwrap();  // guaranteed to succeed because `md5` always exists
+                        .unwrap(); // guaranteed to succeed because `md5` always exists
 
                     Some((name.into(), size))
                 } else {
