@@ -445,11 +445,11 @@ fn default_version() -> f64 {
 }
 
 impl Signature {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> Option<String> {
         if let Some(name) = &self.name {
-            name.clone()
+            Some(name.clone())
         } else {
-            "".into()
+            None
         }
     }
 
@@ -981,7 +981,7 @@ mod test {
         assert_eq!(sig.signatures[1].size(), 2);
         assert_eq!(sig.signatures[2].size(), 1);
 
-        assert_eq!(sig.name(), "");
+        assert_eq!(sig.name().unwrap_or("".into()), "");
     }
 
     #[test]

@@ -98,7 +98,7 @@ fn innerstorage_save_sig() -> Result<(), Box<dyn std::error::Error>> {
 
     let loaded_sig = instorage.load_sig("test")?;
 
-    assert_eq!(sig.name(), loaded_sig.name());
+    assert_eq!(sig.name().unwrap_or("".into()), loaded_sig.name());
     assert_eq!(sig.md5sum(), loaded_sig.md5sum());
 
     Ok(())
