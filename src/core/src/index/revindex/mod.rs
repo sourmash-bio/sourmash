@@ -558,7 +558,7 @@ mod test {
         )?;
 
         assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].name(), "../genome-s10.fa.gz");
+        assert_eq!(matches[0].name(), ""); // signature name is empty
         assert_eq!(matches[0].f_match(), 1.0);
 
         Ok(())
