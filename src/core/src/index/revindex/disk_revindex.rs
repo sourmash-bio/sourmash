@@ -352,13 +352,12 @@ impl RevIndexOps for RevIndex {
                         .record_for_dataset(dataset_id)
                         .expect("dataset not found");
 
-                    let mut name = row.name();
-                    if name == "" {
-                        name = row.filename();
-                    }
-                    if name == "" {
-                        name = row.md5();
-                    }
+                    let name = [row.name(), row.filename(), row.md5()]
+                        .into_iter()
+                        .skip_while(|v| v.is_empty())
+                        .next()
+                        .unwrap();  // guaranteed to succeed because `md5` always exists
+
                     Some((name.into(), size))
                 } else {
                     None
