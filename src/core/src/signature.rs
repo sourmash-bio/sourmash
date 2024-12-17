@@ -453,6 +453,11 @@ impl Signature {
         }
     }
 
+    // return name, if not None; or "" if None.
+    pub fn name_str(&self) -> String {
+        self.name().unwrap_or("".into())
+    }
+
     pub fn set_name(&mut self, name: &str) {
         self.name = Some(name.into())
     }
@@ -981,7 +986,7 @@ mod test {
         assert_eq!(sig.signatures[1].size(), 2);
         assert_eq!(sig.signatures[2].size(), 1);
 
-        assert_eq!(sig.name().unwrap_or("".into()), "");
+        assert_eq!(sig.name_str(), "");
     }
 
     #[test]
