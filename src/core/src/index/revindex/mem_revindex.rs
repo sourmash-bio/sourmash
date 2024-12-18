@@ -219,7 +219,7 @@ impl RevIndex {
                 // Prepare counter for finding the next match by decrementing
                 // all hashes found in the current match in other datasets
                 for hash in match_mh.iter_mins() {
-                    if let Some(color) = self.hash_to_color.get(hash) {
+                    if let Some(color) = self.hash_to_color.get(&hash) {
                         counter.subtract(self.colors.indices(color).cloned());
                     }
                 }
@@ -292,7 +292,7 @@ impl RevIndex {
     pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
         query
             .iter_mins()
-            .filter_map(|hash| self.hash_to_color.get(hash))
+            .filter_map(|hash| self.hash_to_color.get(&hash))
             .flat_map(|color| self.colors.indices(color))
             .cloned()
             .collect()

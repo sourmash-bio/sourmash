@@ -160,7 +160,7 @@ impl Nodegraph {
     }
 
     pub fn matches(&self, mh: &KmerMinHash) -> usize {
-        mh.iter_mins().filter(|x| self.get(**x) == 1).count()
+        mh.iter_mins().filter(|x| self.get(*x) == 1).count()
     }
 
     pub fn ntables(&self) -> usize {
