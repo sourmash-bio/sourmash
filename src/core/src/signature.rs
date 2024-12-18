@@ -449,7 +449,7 @@ impl Signature {
         self.name.clone()
     }
 
-    // return name, if not None; or "" if None.
+    /// return name, if not None; or "" if None.
     pub fn name_str(&self) -> String {
         self.name().unwrap_or("".into())
     }
