@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
+use std::io;
 use std::iter::Peekable;
 use std::str;
 use std::sync::Mutex;
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::HashFunctions;
+use crate::prelude::ToWriter;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
@@ -180,6 +182,16 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             abunds,
             hash_function,
         })
+    }
+}
+
+impl ToWriter for KmerMinHash {
+    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
+        serde_json::to_writer(writer, &self)?;
+        Ok(())
     }
 }
 
@@ -856,6 +868,16 @@ impl KmerMinHash {
 
         Ok((abundances, total_abundance))
     }
+
+    pub fn from_reader<R>(rdr: R) -> Result<KmerMinHash, Error>
+    where
+        R: std::io::Read,
+    {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
+        let mh: KmerMinHash = serde_json::from_reader(rdr)?;
+        Ok(mh)
+    }
 }
 
 impl SigsTrait for KmerMinHash {
@@ -1110,6 +1132,16 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             hash_function,
             current_max,
         })
+    }
+}
+
+impl ToWriter for KmerMinHashBTree {
+    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
+        serde_json::to_writer(writer, &self)?;
+        Ok(())
     }
 }
 
@@ -1593,6 +1625,16 @@ impl KmerMinHashBTree {
         } else {
             self.size() as u64
         }
+    }
+
+    pub fn from_reader<R>(rdr: R) -> Result<KmerMinHashBTree, Error>
+    where
+        R: std::io::Read,
+    {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
+        let mh: KmerMinHashBTree = serde_json::from_reader(rdr)?;
+        Ok(mh)
     }
 }
 

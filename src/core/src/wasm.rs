@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::cmd::ComputeParameters as _ComputeParameters;
 use crate::encodings::HashFunctions;
+use crate::prelude::ToWriter;
 use crate::signature::Signature as _Signature;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash as _KmerMinHash;
@@ -66,8 +67,9 @@ impl KmerMinHash {
 
     #[wasm_bindgen]
     pub fn to_json(&mut self) -> Result<String, JsErrors> {
-        let json = serde_json::to_string(&self.0)?;
-        Ok(json)
+        let mut st: Vec<u8> = vec![];
+        self.0.to_writer(&mut st)?;
+        Ok(unsafe { String::from_utf8_unchecked(st) })
     }
 }
 
@@ -160,8 +162,9 @@ impl Signature {
 
     #[wasm_bindgen]
     pub fn to_json(&mut self) -> Result<String, JsErrors> {
-        let json = serde_json::to_string(&self.0)?;
-        Ok(json)
+        let mut st: Vec<u8> = vec![];
+        self.0.to_writer(&mut st)?;
+        Ok(unsafe { String::from_utf8_unchecked(st) })
     }
 
     pub fn size(&self) -> usize {

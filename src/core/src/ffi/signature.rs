@@ -13,6 +13,7 @@ use crate::sketch::Sketch;
 use crate::ffi::cmd::compute::SourmashComputeParameters;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::prelude::ToWriter;
 
 pub struct SourmashSignature;
 
@@ -193,8 +194,9 @@ unsafe fn signature_eq(ptr: *const SourmashSignature, other: *const SourmashSign
 ffi_fn! {
 unsafe fn signature_save_json(ptr: *const SourmashSignature) -> Result<SourmashStr> {
     let sig = SourmashSignature::as_rust(ptr);
-    let st = serde_json::to_string(sig)?;
-    Ok(SourmashStr::from_string(st))
+    let mut st: Vec<u8> = vec![];
+    sig.to_writer(&mut st)?;
+    Ok(SourmashStr::from_string(String::from_utf8_unchecked(st)))
 }
 }
 
@@ -248,7 +250,7 @@ unsafe fn signatures_save_buffer(ptr: *const *const SourmashSignature, size: usi
       } else {
           Box::new(&mut buffer)
       };
-      serde_json::to_writer(&mut writer, &rsigs)?;
+      rsigs.to_writer(&mut writer)?;
     }
 
     let b = buffer.into_boxed_slice();

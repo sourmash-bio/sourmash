@@ -792,6 +792,16 @@ impl ToWriter for Signature {
     }
 }
 
+impl ToWriter for Vec<&Signature> {
+    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
+        serde_json::to_writer(writer, &self)?;
+        Ok(())
+    }
+}
+
 impl Select for Signature {
     fn select(mut self, selection: &Selection) -> Result<Self, Error> {
         self.signatures.retain(|s| {
@@ -949,7 +959,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 4);
 
@@ -1072,7 +1082,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1088,7 +1098,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1112,7 +1122,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1137,7 +1147,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         assert_eq!(sigs.len(), 1);
 
@@ -1161,7 +1171,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1187,7 +1197,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1207,7 +1217,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1227,7 +1237,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1248,7 +1258,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();
@@ -1266,7 +1276,7 @@ mod test {
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
 
         // create Selection object
         let mut selection = Selection::default();

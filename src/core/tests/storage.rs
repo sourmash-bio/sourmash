@@ -69,7 +69,7 @@ fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
     .par_iter()
     .map(|path| {
         let data = zs.load(path).unwrap();
-        let sigs: Vec<Signature> = serde_json::from_reader(&data[..]).expect("Loading error");
+        let sigs = Signature::from_reader(&data[..]).expect("Loading error");
         sigs.iter()
             .map(|v| v.sketches().iter().map(|mh| mh.size()).sum::<usize>())
             .sum::<usize>()
