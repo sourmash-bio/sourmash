@@ -711,6 +711,14 @@ impl KmerMinHash {
         self.hash_function == HashFunctions::Murmur64Hp
     }
 
+    pub fn skipm1n3(&self) -> bool {
+        self.hash_function == HashFunctions::Murmur64Skipm1n3
+    }
+
+    pub fn skipm2n3(&self) -> bool {
+        self.hash_function == HashFunctions::Murmur64Skipm2n3
+    }
+
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
     }

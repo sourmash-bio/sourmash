@@ -321,6 +321,18 @@ pub unsafe extern "C" fn kmerminhash_hp(ptr: *const SourmashKmerMinHash) -> bool
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn kmerminhash_skipm1n3(ptr: *const SourmashKmerMinHash) -> bool {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    mh.skipm1n3()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_skipm2n3(ptr: *const SourmashKmerMinHash) -> bool {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    mh.skipm2n3()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn kmerminhash_seed(ptr: *const SourmashKmerMinHash) -> u64 {
     let mh = SourmashKmerMinHash::as_rust(ptr);
     mh.seed()

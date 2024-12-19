@@ -84,7 +84,7 @@ def check_num_bounds(arg):
 
 def get_moltype(sig, require=False):
     mh = sig.minhash
-    if mh.moltype in ("DNA", "dayhoff", "hp", "protein"):
+    if mh.moltype in ("DNA", "dayhoff", "hp", "protein", "skipm1n3", "skipm2n3"):
         moltype = mh.moltype
     else:
         raise ValueError(f"unknown molecule type for sig {sig}")
@@ -109,9 +109,15 @@ def calculate_moltype(args, default=None):
         moltype = "protein"
         n += 1
 
+    if args.skipm1n3:
+        moltype = "skipm1n3"
+
+    if args.skipm2n3:
+        moltype = "skipm2n3"
+
     if n > 1:
         error(
-            "cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff"
+            "cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3"
         )
         sys.exit(-1)
 
@@ -185,11 +191,13 @@ def load_include_exclude_db_patterns(args):
 
         def search_pattern(vals):
             return any(pattern.search(val) for val in vals)
+
     elif args.exclude_db_pattern:
         pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
 
         def search_pattern(vals):
             return all(not pattern.search(val) for val in vals)
+
     else:
         search_pattern = None
 
