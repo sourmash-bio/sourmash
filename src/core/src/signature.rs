@@ -576,7 +576,7 @@ impl Signature {
     {
         let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
-        let sigs: Vec<Signature> = serde_json::from_reader(rdr)?;
+        let sigs: Vec<Signature> = simd_json::from_reader(rdr)?;
         Ok(sigs)
     }
 
@@ -787,7 +787,7 @@ impl ToWriter for Signature {
     where
         W: io::Write,
     {
-        serde_json::to_writer(writer, &vec![&self])?;
+        simd_json::to_writer(writer, &vec![&self])?;
         Ok(())
     }
 }
@@ -797,7 +797,7 @@ impl ToWriter for Vec<&Signature> {
     where
         W: io::Write,
     {
-        serde_json::to_writer(writer, &self)?;
+        simd_json::to_writer(writer, &self)?;
         Ok(())
     }
 }

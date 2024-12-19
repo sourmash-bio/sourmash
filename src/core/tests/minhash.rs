@@ -14,7 +14,6 @@ use sourmash::sketch::minhash::{
 };
 use sourmash::sketch::Sketch;
 use sourmash::ScaledType;
-use sourmash::prelude::ToWriter;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
