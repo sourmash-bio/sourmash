@@ -129,7 +129,7 @@ impl Record {
                 Self {
                     internal_location: path.into(),
                     moltype: moltype.to_string(),
-                    name: sig.name(),
+                    name: sig.name_str(),
                     ksize,
                     md5,
                     md5short,
