@@ -55,6 +55,15 @@ pub enum SourmashError {
     #[error("Codon is invalid length: {message}")]
     InvalidCodonLength { message: String },
 
+    #[error("Skipmer ksize must be >= n ({n}), but got ksize: {ksize}")]
+    InvalidSkipmerSize { ksize: usize, n: usize },
+
+    #[error("Skipmer frame number must be < n ({n}), but got start: {start}")]
+    InvalidSkipmerFrame { start: usize, n: usize },
+
+    #[error("Frame number must be 0, 1, or 2, but got {frame_number}")]
+    InvalidTranslateFrame { frame_number: usize },
+
     #[error("Set error rate to a value smaller than 0.367696 and larger than 0.00203125")]
     HLLPrecisionBounds,
 
@@ -128,6 +137,9 @@ pub enum SourmashErrorCode {
     InvalidProt = 11_02,
     InvalidCodonLength = 11_03,
     InvalidHashFunction = 11_04,
+    InvalidSkipmerFrame = 11_05,
+    InvalidSkipmerSize = 11_06,
+    InvalidTranslateFrame = 11_07,
     // index-related errors
     ReadData = 12_01,
     Storage = 12_02,
@@ -170,6 +182,9 @@ impl SourmashErrorCode {
             SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
             SourmashError::InvalidCodonLength { .. } => SourmashErrorCode::InvalidCodonLength,
             SourmashError::InvalidHashFunction { .. } => SourmashErrorCode::InvalidHashFunction,
+            SourmashError::InvalidSkipmerFrame { .. } => SourmashErrorCode::InvalidSkipmerFrame,
+            SourmashError::InvalidSkipmerSize { .. } => SourmashErrorCode::InvalidSkipmerSize,
+            SourmashError::InvalidTranslateFrame { .. } => SourmashErrorCode::InvalidTranslateFrame,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
             SourmashError::HLLPrecisionBounds { .. } => SourmashErrorCode::HLLPrecisionBounds,
