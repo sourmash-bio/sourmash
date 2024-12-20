@@ -291,7 +291,9 @@ class MinHash(RustObject):
         # get a ksize that makes sense to the Rust layer. See #2262.
         return (
             self.num,
-            self.ksize if self.is_dna or self.skipm1n3 or self.skipm2n3 else self.ksize * 3,
+            self.ksize
+            if self.is_dna or self.skipm1n3 or self.skipm2n3
+            else self.ksize * 3,
             self.is_protein,
             self.dayhoff,
             self.hp,
