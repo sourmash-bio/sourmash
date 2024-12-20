@@ -73,15 +73,26 @@ Result<*const u64> {
 
     let mut output: Vec<u64> = Vec::with_capacity(insize);
 
+    // Call SeqToHashes::new and handle errors
+    let ready_hashes = SeqToHashes::new(
+        buf,
+        mh.ksize(),
+        force,
+        is_protein,
+        mh.hash_function(),
+        mh.seed(),
+    )?;
+
+
     if force && bad_kmers_as_zeroes{
-        for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+        for hash_value in ready_hashes{
             match hash_value{
                 Ok(x) => output.push(x),
                 Err(err) => return Err(err),
             }
         }
     }else{
-        for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+        for hash_value in ready_hashes {
             match hash_value{
                 Ok(0) => continue,
                 Ok(x) => output.push(x),
