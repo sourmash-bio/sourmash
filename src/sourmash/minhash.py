@@ -289,6 +289,10 @@ class MinHash(RustObject):
         # note: we multiple ksize by 3 here so that
         # pickle protocols that bypass __setstate__ <coff numpy coff>
         # get a ksize that makes sense to the Rust layer. See #2262.
+        # CTB/NTP note: if you add things below, you might want to put
+        # them at the end, because we use internal indexes in a few places.
+        # see especially `_set_num_scaled()` in sig/__main__.my.
+        # My apologies.
         return (
             self.num,
             self.ksize

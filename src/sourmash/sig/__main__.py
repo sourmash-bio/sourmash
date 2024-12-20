@@ -102,7 +102,7 @@ def _set_num_scaled(mh, num, scaled):
     # Number of hashes is 0th parameter
     mh_params[0] = num
     # Scale is 8th parameter
-    mh_params[8] = _get_max_hash_for_scaled(scaled)
+    mh_params[10] = _get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
