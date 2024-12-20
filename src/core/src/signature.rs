@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
+use crate::errors::SourmashError;
 use crate::prelude::*;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
@@ -44,7 +45,7 @@ pub trait SigsTrait {
             false,
             self.hash_function(),
             self.seed(),
-        );
+        )?;
 
         for hash_value in ready_hashes {
             match hash_value {
@@ -66,7 +67,7 @@ pub trait SigsTrait {
             true,
             self.hash_function(),
             self.seed(),
-        );
+        )?;
 
         for hash_value in ready_hashes {
             match hash_value {
@@ -219,10 +220,15 @@ impl ReadingFrame {
         ReadingFrame::Protein { fw, len }
     }
 
-    pub fn new_skipmer(sequence: &[u8], start: usize, m: usize, n: usize) -> Self {
+    pub fn new_skipmer(
+        sequence: &[u8],
+        start: usize,
+        m: usize,
+        n: usize,
+    ) -> Result<Self, SourmashError> {
         let seq = sequence.to_ascii_uppercase();
         if start >= n {
-            panic!("Skipmer frame number must be < n ({})", n);
+            return Err(SourmashError::InvalidSkipmerFrame { start, n });
         }
         // do we need to round up? (+1)
         let mut fw = Vec::with_capacity(((seq.len() * m) + 1) / n);
@@ -234,13 +240,18 @@ impl ReadingFrame {
 
         let len = fw.len();
         let rc = revcomp(&fw);
-        ReadingFrame::DNA { fw, rc, len }
+        Ok(ReadingFrame::DNA { fw, rc, len })
     }
 
     // this is the only one that doesn't uppercase in here b/c more efficient to uppercase externally :/
-    pub fn new_translated(sequence: &[u8], frame_number: usize, dayhoff: bool, hp: bool) -> Self {
+    pub fn new_translated(
+        sequence: &[u8],
+        frame_number: usize,
+        dayhoff: bool,
+        hp: bool,
+    ) -> Result<Self, SourmashError> {
         if frame_number > 2 {
-            panic!("Frame number must be 0, 1, or 2");
+            return Err(SourmashError::InvalidTranslateFrame { frame_number });
         }
 
         // Translate sequence into amino acids
@@ -261,7 +272,7 @@ impl ReadingFrame {
         let len = fw.len();
 
         // return protein reading frame
-        ReadingFrame::Protein { fw, len }
+        Ok(ReadingFrame::Protein { fw, len })
     }
 
     /// Get the forward sequence.
@@ -317,7 +328,7 @@ impl SeqToHashes {
         is_protein: bool,
         hash_function: HashFunctions,
         seed: u64,
-    ) -> Self {
+    ) -> Result<Self, SourmashError> {
         let mut ksize: usize = k_size;
 
         // Adjust kmer size for protein-based hash functions
@@ -331,14 +342,16 @@ impl SeqToHashes {
         } else if is_protein {
             Self::protein_frames(seq, &hash_function)
         } else if hash_function.protein() || hash_function.dayhoff() || hash_function.hp() {
-            Self::translated_frames(seq, &hash_function)
+            Self::translated_frames(seq, &hash_function)?
         } else if hash_function.skipm1n3() || hash_function.skipm2n3() {
-            Self::skipmer_frames(seq, &hash_function, ksize)
+            Self::skipmer_frames(seq, &hash_function, ksize)?
         } else {
-            unimplemented!();
+            return Err(SourmashError::InvalidHashFunction {
+                function: format!("{:?}", hash_function),
+            });
         };
 
-        SeqToHashes {
+        Ok(SeqToHashes {
             k_size: ksize,
             force,
             seed,
@@ -346,7 +359,7 @@ impl SeqToHashes {
             frame_index: 0,
             kmer_index: 0,
             last_position_check: 0,
-        }
+        })
     }
 
     /// generate frames from DNA: 1 DNA frame (fw+rc)
@@ -364,11 +377,14 @@ impl SeqToHashes {
     }
 
     /// generate translated frames: 6 protein frames
-    fn translated_frames(seq: &[u8], hash_function: &HashFunctions) -> Vec<ReadingFrame> {
+    fn translated_frames(
+        seq: &[u8],
+        hash_function: &HashFunctions,
+    ) -> Result<Vec<ReadingFrame>, SourmashError> {
         // since we need to revcomp BEFORE making ReadingFrames, uppercase the sequence here
         let sequence = seq.to_ascii_uppercase();
         let revcomp_sequence = revcomp(&sequence);
-        (0..3)
+        let frames = (0..3)
             .flat_map(|frame_number| {
                 vec![
                     ReadingFrame::new_translated(
@@ -385,7 +401,9 @@ impl SeqToHashes {
                     ),
                 ]
             })
-            .collect()
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(frames)
     }
 
     /// generate skipmer frames: 3 DNA frames (each with fw+rc)
@@ -393,18 +411,20 @@ impl SeqToHashes {
         seq: &[u8],
         hash_function: &HashFunctions,
         ksize: usize,
-    ) -> Vec<ReadingFrame> {
+    ) -> Result<Vec<ReadingFrame>, SourmashError> {
         let (m, n) = if hash_function.skipm1n3() {
             (1, 3)
         } else {
             (2, 3)
         };
         if ksize < n {
-            unimplemented!()
+            return Err(SourmashError::InvalidSkipmerSize { ksize: ksize, n: n });
         }
-        (0..3)
+        let frames = (0..3)
             .flat_map(|frame_number| vec![ReadingFrame::new_skipmer(seq, frame_number, m, n)])
-            .collect()
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(frames)
     }
 
     fn out_of_bounds(&self, frame: &ReadingFrame) -> bool {
@@ -1165,21 +1185,32 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
     fn signature_skipm2n3_add_sequence_too_small() {
+        let ksize = 2;
         let params = ComputeParameters::builder()
-            .ksizes(vec![2])
+            .ksizes(vec![ksize])
             .num_hashes(10u32)
             .dna(false)
             .skipm2n3(true)
             .build();
 
         let mut sig = Signature::from_params(&params);
-        sig.add_sequence(b"ATGCATGA", false).unwrap();
+        let result = sig.add_sequence(b"ATGCATGA", false);
+
+        match result {
+            Err(error) => {
+                // Convert the error to a string and check the message
+                let error_message = format!("{}", error);
+                assert_eq!(
+                    error_message,
+                    "Skipmer ksize must be >= n (3), but got ksize: 2"
+                );
+            }
+            _ => panic!("Expected SourmashError::InvalidSkipmerSize"),
+        }
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
     fn signature_skipm1n3_add_sequence_too_small() {
         let params = ComputeParameters::builder()
             .ksizes(vec![2])
@@ -1189,7 +1220,19 @@ mod test {
             .build();
 
         let mut sig = Signature::from_params(&params);
-        sig.add_sequence(b"ATGCATGA", false).unwrap();
+        let result = sig.add_sequence(b"ATGCATGA", false);
+
+        match result {
+            Err(error) => {
+                // Convert the error to a string and check the message
+                let error_message = format!("{}", error);
+                assert_eq!(
+                    error_message,
+                    "Skipmer ksize must be >= n (3), but got ksize: 2"
+                );
+            }
+            _ => panic!("Expected SourmashError::InvalidSkipmerSize"),
+        }
     }
 
     #[test]
@@ -1539,7 +1582,8 @@ mod test {
         let force = false;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         assert_eq!(frames.len(), 1);
@@ -1556,7 +1600,8 @@ mod test {
         let force = false;
         let is_protein = true;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         assert_eq!(frames.len(), 1);
@@ -1584,7 +1629,8 @@ mod test {
         let force = false;
         let is_protein = true;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         // protein frame doesn't have rc; this should panic
@@ -1601,7 +1647,8 @@ mod test {
         let force = false;
         let is_protein = true;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         assert_eq!(frames.len(), 1);
@@ -1618,7 +1665,8 @@ mod test {
         let force = false;
         let is_protein = true;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         assert_eq!(frames.len(), 1);
@@ -1634,7 +1682,8 @@ mod test {
         let force = false;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         assert_eq!(frames[0].fw(), b"SRRA".as_slice());
@@ -1646,23 +1695,42 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Frame number must be 0, 1, or 2")]
     fn test_readingframe_translate() {
         let sequence = b"AGTCGT";
         let frame_start = 3; // four frames but translate can only
 
-        ReadingFrame::new_translated(sequence, frame_start, false, false);
+        let result = ReadingFrame::new_translated(sequence, frame_start, false, false);
+
+        match result {
+            Err(error) => {
+                // Convert the error to a string and check the message
+                let error_message = format!("{}", error);
+                assert_eq!(error_message, "Frame number must be 0, 1, or 2, but got 3");
+            }
+            _ => panic!("Expected SourmashError::InvalidTranslateFrame"),
+        }
     }
 
     #[test]
-    #[should_panic(expected = "Skipmer frame number must be < n")]
     fn test_readingframe_skipmer() {
         let sequence = b"AGTCGT";
         let m = 2;
         let n = 3;
         let num_frames = 4; // four frames but n is only 3
 
-        ReadingFrame::new_skipmer(sequence, num_frames, m, n);
+        let result = ReadingFrame::new_skipmer(sequence, num_frames, m, n);
+
+        match result {
+            Err(error) => {
+                // Convert the error to a string and check the message
+                let error_message = format!("{}", error);
+                assert_eq!(
+                    error_message,
+                    "Skipmer frame number must be < n (3), but got start: 4"
+                );
+            }
+            _ => panic!("Expected SourmashError::InvalidSkipmerFrame"),
+        }
     }
 
     #[test]
@@ -1674,7 +1742,8 @@ mod test {
         let force = false;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
         eprintln!("Frames: {:?}", frames);
@@ -1701,7 +1770,8 @@ mod test {
         let force = false;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames;
         eprintln!("Frames: {:?}", frames);
 
@@ -1727,7 +1797,8 @@ mod test {
         let force = false;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
 
         // Expected k-mers from the forward and reverse complement sequence
         let expected_kmers = vec![
@@ -1769,7 +1840,8 @@ mod test {
             is_protein,
             HashFunctions::Murmur64Dna,
             seed,
-        );
+        )
+        .unwrap();
 
         // Define expected hashes for the kmer configuration.
         let expected_kmers = ["AGTCGTC", "GTCGTCA"];
@@ -1801,7 +1873,8 @@ mod test {
         let force = false;
         let is_protein = true;
 
-        let sth = SeqToHashes::new(sequence, k_size * 3, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size * 3, force, is_protein, hash_function, seed).unwrap();
 
         // Expected k-mers for protein sequence
         let expected_kmers = vec![
@@ -1843,7 +1916,8 @@ mod test {
         let force = false;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
 
         let expected_kmers = vec![
             b"SRR".as_slice(),
@@ -1882,7 +1956,8 @@ mod test {
         let seed = 42;
         let force = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         // Expected k-mers for skipmer (m=1, n=3) across all frames
         let expected_kmers = vec![
             (b"ACC".as_slice(), b"GGT".as_slice()),
@@ -1919,7 +1994,8 @@ mod test {
         let seed = 42;
         let force = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
 
         // Expected k-mers for skipmer (m=2, n=3)
         let expected_kmers = vec![
@@ -1956,7 +2032,8 @@ mod test {
         let force = true;
         let is_protein = false;
 
-        let sth = SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed);
+        let sth =
+            SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
         for fr in frames {
             eprintln!("{}", fr);

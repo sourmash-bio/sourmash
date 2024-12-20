@@ -753,7 +753,9 @@ fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
 
     let mut hashes: Vec<u64> = Vec::new();
 
-    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed()){
+    let ready_hashes = SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed())?;
+
+    for hash_value in ready_hashes{
         match hash_value{
             Ok(0) => continue,
             Ok(x) => hashes.push(x),
@@ -776,7 +778,9 @@ fn seq_to_hashes_2(seq in "QRMTHINK") {
 
     let mut hashes: Vec<u64> = Vec::new();
 
-    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed()){
+    let ready_hashes = SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed())?;
+
+    for hash_value in ready_hashes {
         match hash_value{
             Ok(0) => continue,
             Ok(x) => hashes.push(x),
