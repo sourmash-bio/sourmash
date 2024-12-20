@@ -13,6 +13,8 @@ enum HashFunctions {
   HASH_FUNCTIONS_MURMUR64_PROTEIN = 2,
   HASH_FUNCTIONS_MURMUR64_DAYHOFF = 3,
   HASH_FUNCTIONS_MURMUR64_HP = 4,
+  HASH_FUNCTIONS_MURMUR64_SKIPM1N3 = 5,
+  HASH_FUNCTIONS_MURMUR64_SKIPM2N3 = 6,
 };
 typedef uint32_t HashFunctions;
 
@@ -270,6 +272,10 @@ double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
                               const SourmashKmerMinHash *other,
                               bool ignore_abundance,
                               bool downsample);
+
+bool kmerminhash_skipm1n3(const SourmashKmerMinHash *ptr);
+
+bool kmerminhash_skipm2n3(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
