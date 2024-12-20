@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.18.0] - 2024-12-20
 
+MSRV: 1.66
+
 Changes/additions:
 
 * add skipmer capacity to sourmash python layer via ffi (#3446)
