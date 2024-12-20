@@ -466,7 +466,7 @@ impl ZipStorage {
 
 impl SigStore {
     pub fn new_with_storage(sig: Signature, storage: InnerStorage) -> Self {
-        let name = sig.name();
+        let name = sig.name_str();
         let filename = sig.filename();
 
         SigStore::builder()
@@ -555,7 +555,7 @@ impl Deref for SigStore {
 
 impl From<Signature> for SigStore {
     fn from(other: Signature) -> SigStore {
-        let name = other.name();
+        let name = other.name_str();
         let filename = other.filename();
 
         SigStore::builder()
