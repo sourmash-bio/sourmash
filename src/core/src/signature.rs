@@ -418,7 +418,7 @@ impl SeqToHashes {
             (2, 3)
         };
         if ksize < n {
-            return Err(SourmashError::InvalidSkipmerSize { ksize: ksize, n: n });
+            return Err(SourmashError::InvalidSkipmerSize { ksize, n});
         }
         let frames = (0..3)
             .flat_map(|frame_number| vec![ReadingFrame::new_skipmer(seq, frame_number, m, n)])
