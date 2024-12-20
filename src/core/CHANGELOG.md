@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.0] - 2024-12-20
+
+Changes/additions:
+
+* add skipmer capacity to sourmash python layer via ffi (#3446)
+* add skipmers; switch to reading frame approach for translation, skipmers (#3395)
+* Refactor: Use to_writer/from_reader across the codebase (#3443)
+* adjust `Signature::name()` to return `Option<String>` instead of `filename()` and `md5sum()` (#3434)
+* propagate zipfile errors (#3431)
+
+Updates:
+
+* Bump proptest from 1.5.0 to 1.6.0 (#3437)
+* Bump roaring from 0.10.8 to 0.10.9 (#3438)
+* Bump serde from 1.0.215 to 1.0.216 (#3436)
+* Bump statrs from 0.17.1 to 0.18.0 (#3426)
+* Bump roaring from 0.10.7 to 0.10.8 (#3423)
+* Bump needletail from 0.6.0 to 0.6.1 (#3427)
+* Bump web-sys from 0.3.72 to 0.3.74 (#3411)
+* Bump js-sys from 0.3.72 to 0.3.74 (#3412)
+* Bump roaring from 0.10.6 to 0.10.7 (#3413)
+* Bump serde_json from 1.0.132 to 1.0.133 (#3402)
+* Bump serde from 1.0.214 to 1.0.215 (#3403)
+
 ## [0.17.2] - 2024-11-15
 
 MSRV: 1.66
