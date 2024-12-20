@@ -12,9 +12,9 @@ fn zipstorage_load_file() -> Result<(), Box<dyn std::error::Error>> {
 
     let zs = ZipStorage::from_file(filename.to_str().unwrap())?;
 
-    let data = zs.load("v6.sbt.json")?;
+    let mut data = zs.load("v6.sbt.json")?;
 
-    let description: serde_json::Value = serde_json::from_slice(&data[..])?;
+    let description: simd_json::borrowed::Value = simd_json::from_slice(&mut data[..])?;
     assert_eq!(description["version"], 6);
 
     Ok(())

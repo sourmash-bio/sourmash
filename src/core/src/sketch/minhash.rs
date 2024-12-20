@@ -192,7 +192,7 @@ impl ToWriter for KmerMinHash {
     where
         W: io::Write,
     {
-        serde_json::to_writer(writer, &self)?;
+        simd_json::to_writer(writer, &self)?;
         Ok(())
     }
 }
@@ -885,7 +885,7 @@ impl KmerMinHash {
     {
         let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
-        let mh: KmerMinHash = serde_json::from_reader(rdr)?;
+        let mh: KmerMinHash = simd_json::from_reader(rdr)?;
         Ok(mh)
     }
 }
@@ -1150,7 +1150,7 @@ impl ToWriter for KmerMinHashBTree {
     where
         W: io::Write,
     {
-        serde_json::to_writer(writer, &self)?;
+        simd_json::to_writer(writer, &self)?;
         Ok(())
     }
 }
@@ -1643,7 +1643,7 @@ impl KmerMinHashBTree {
     {
         let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
-        let mh: KmerMinHashBTree = serde_json::from_reader(rdr)?;
+        let mh: KmerMinHashBTree = simd_json::from_reader(rdr)?;
         Ok(mh)
     }
 }
