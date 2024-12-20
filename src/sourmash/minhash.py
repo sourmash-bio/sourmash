@@ -291,7 +291,7 @@ class MinHash(RustObject):
         # get a ksize that makes sense to the Rust layer. See #2262.
         return (
             self.num,
-            self.ksize if self.is_dna else self.ksize * 3,
+            self.ksize if self.is_dna or self.skipm1n3 or self.skipm2n3 else self.ksize * 3,
             self.is_protein,
             self.dayhoff,
             self.hp,
@@ -481,7 +481,7 @@ class MinHash(RustObject):
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
-        if self.is_dna:
+        if self.is_dna or self.skipm1n3 or self.skipm2n3:
             if len(kmer) != self.ksize:
                 raise ValueError(f"kmer to add is not {self.ksize} in length")
         else:
@@ -608,7 +608,7 @@ class MinHash(RustObject):
     @property
     def ksize(self):
         k = self._methodcall(lib.kmerminhash_ksize)
-        if not self.is_dna:
+        if not self.is_dna and not self.skipm1n3 and not self.skipm2n3:
             assert k % 3 == 0
             k = int(k / 3)
         return k
@@ -1081,6 +1081,10 @@ class MinHash(RustObject):
             return "dayhoff"
         elif self.hp:
             return "hp"
+        elif self.skipm1n3:
+            return "skipm1n3"
+        elif self.skipm2n3:
+            return "skipm2n3"
         else:
             return "DNA"
 
