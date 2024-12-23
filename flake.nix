@@ -33,14 +33,11 @@
 
         python = pkgs.python311Packages;
 
-        stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideSDK pkgs.stdenv "11.0" else pkgs.stdenv;
+        stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideSDK pkgs.stdenv { darwinMinVersion = "10.14"; } else pkgs.stdenv;
 
         commonArgs = {
           src = ./.;
           stdenv = stdenv;
-          preConfigure = lib.optionalString stdenv.isDarwin ''
-            export MACOSX_DEPLOYMENT_TARGET=10.14
-          '';
 
           buildInputs = lib.optionals stdenv.isDarwin [ pkgs.libiconv pkgs.darwin.apple_sdk.frameworks.Security ];
 
@@ -57,21 +54,16 @@
             name = "libsourmash";
             copyLibs = true;
             cargoLock.lockFile = ./Cargo.lock;
-            nativeBuildInputs = with rustPlatform; [ bindgenHook ];
           });
 
-          sourmash = python.buildPythonPackage ( commonArgs // rec {
-            pname = "sourmash";
-            version = "4.8.12";
-            format = "pyproject";
+          sourmash = python.sourmash.overrideAttrs (oldAttrs: commonArgs // rec {
+            version = "4.8.12-dev";
+
+            src = ./.;
 
             cargoDeps = rustPlatform.importCargoLock {
               lockFile = ./Cargo.lock;
             };
-
-            propagatedBuildInputs = with python; [ cffi deprecation cachetools bitstring numpy scipy matplotlib screed ];
-
-            DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
           });
 
           docker =
@@ -127,10 +119,6 @@
             cargo-semver-checks
             nixpkgs-fmt
           ];
-
-          shellHook = ''
-              export MACOSX_DEPLOYMENT_TARGET=10.14
-            '';
 
           # Needed for matplotlib
           LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
