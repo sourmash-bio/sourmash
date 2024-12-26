@@ -222,7 +222,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: check if README matches MSRV defined here
-        run: grep '1.66.0' src/core/README.md
+        run: grep '1.71.1' src/core/README.md
 
       - name: Check if it builds properly
         run: |
