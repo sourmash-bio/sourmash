@@ -127,7 +127,7 @@
             #cargo-llvm-cov
             cargo-component
             cargo-codspeed
-            cargo-semver-checks
+            #cargo-semver-checks
             nixpkgs-fmt
           ];
 
