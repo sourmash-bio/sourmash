@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash};
 use std::str;
 
 use nohash_hasher::BuildNoHashHasher;
@@ -469,9 +469,7 @@ impl Colors {
 
     fn compute_color(idxs: &IdxTracker) -> Color {
         let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
-        let mut hasher = s.build_hasher();
-        idxs.0.hash(&mut hasher);
-        hasher.finish()
+        s.hash_one(&idxs.0)
     }
 
     pub fn len(&self) -> usize {

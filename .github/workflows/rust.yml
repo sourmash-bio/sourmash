@@ -217,7 +217,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.66.0"
+          toolchain: "1.71.1"
 
       - uses: Swatinem/rust-cache@v2
 

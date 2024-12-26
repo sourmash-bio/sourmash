@@ -1,5 +1,5 @@
 use std::cmp::max;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
+use std::hash::{BuildHasher, BuildHasherDefault};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
@@ -30,9 +30,7 @@ const DB_VERSION: u8 = 1;
 
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
-    let mut hasher = s.build_hasher();
-    idxs.hash(&mut hasher);
-    hasher.finish()
+    s.hash_one(idxs)
 }
 
 #[derive(Clone)]
@@ -354,8 +352,7 @@ impl RevIndexOps for RevIndex {
 
                     let name = [row.name(), row.filename(), row.md5()]
                         .into_iter()
-                        .skip_while(|v| v.is_empty())
-                        .next()
+                        .find(|v| !v.is_empty())
                         .unwrap(); // guaranteed to succeed because `md5` always exists
 
                     Some((name.into(), size))
