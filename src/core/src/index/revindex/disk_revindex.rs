@@ -8,7 +8,6 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
 use rocksdb::{MergeOperands, WriteBatchWithTransaction};
-use voracious_radix_sort::RadixSort;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
@@ -104,71 +103,10 @@ impl RevIndex {
 
         index.save_collection().expect("Error saving collection");
 
-        info!("Starting collect hashes");
-        let mut hashes: dashmap::DashSet<HashIntoType> = Default::default();
-
-        hashes.par_extend(index.collection.par_iter().flat_map(|(dataset_id, _)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 100 == 0 && i > 0 {
-                info!("Processed {} reference sigs", i);
-            }
-
-            let search_sig = index
-                .collection
-                .sig_for_dataset(dataset_id)
-                .expect("Couldn't find a compatible Signature");
-            let mh = search_sig.minhash().expect("Error extracting a minhash");
-
-            mh.mins().into_par_iter()
-        }));
-        info!("Collected all hashes");
-
-        {
-            let mut hashes: Vec<HashIntoType> = hashes.into_iter().collect();
-            hashes.voracious_sort();
-
-            let processed_hashes = AtomicUsize::new(0);
-
-            let hashes_len = hashes.len();
-            let chunk_size = usize::max(1, hashes_len / 100);
-
-            info!("Starting index scaffolding");
-            hashes.into_par_iter().chunks(chunk_size).for_each(|chunk| {
-                let mut batch = WriteBatchWithTransaction::<true>::default();
-                let cf_hashes = index.db.cf_handle(HASHES).unwrap();
-
-                let mut hash_bytes = [0u8; 8];
-                let color = Datasets::Empty.as_bytes().unwrap();
-                for hash in chunk {
-                    (&mut hash_bytes[..])
-                        .write_u64::<LittleEndian>(hash)
-                        .expect("error writing bytes");
-                    batch.put_cf(&cf_hashes, &hash_bytes[..], color.as_slice());
-                }
-                let mut write_options = rocksdb::WriteOptions::default();
-                write_options.set_sync(false);
-                write_options.disable_wal(true);
-                index
-                    .db
-                    .write_opt(batch, &write_options)
-                    .expect("Error committing batch"); // Atomically commits the batch
-                                                       //
-                let i = processed_hashes.fetch_add(chunk_size, Ordering::SeqCst);
-                let percent = i as f64 / hashes_len as f64;
-                info!(
-                    "Processed {}/{} ({:.2}%) hashes",
-                    i,
-                    hashes_len,
-                    percent * 100.0
-                );
-            });
-            info!("Finished indexing scaffold");
-        }
-
         let processed_sigs = AtomicUsize::new(0);
 
         info!("Starting indexing");
-        index.collection.par_iter().chunks(100).for_each(|chunk| {
+        index.collection.par_iter().chunks(20).for_each(|chunk| {
             let filtered_chunk = chunk.into_iter().filter_map(|(dataset_id, _)| {
                 // check if this dataset_id was processed already
                 // call map_hashes_colors only if not already processed
@@ -178,11 +116,13 @@ impl RevIndex {
                         info!("Processed {} reference sigs", i);
                     }
 
+                    /*
                     if i % 5000 == 0 && i > 0 {
                         info!("Triggering manual compaction");
                         index.compact();
                         info!("Finished manual compaction");
                     }
+                    */
 
                     Some((
                         index.map_hashes_colors(dataset_id as Idx),
@@ -193,7 +133,7 @@ impl RevIndex {
                 }
             });
 
-            //let mut batch = WriteBatchWithTransaction::<false>::default();
+            let mut batch = WriteBatchWithTransaction::<false>::default();
             let cf_hashes = index.db.cf_handle(HASHES).unwrap();
             let mut dataset_ids = vec![];
 
@@ -205,15 +145,17 @@ impl RevIndex {
                     (&mut hash_bytes[..])
                         .write_u64::<LittleEndian>(hash)
                         .expect("error writing bytes");
+                    /*
                     index
                         .db
                         .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
                         .expect("error merging");
-                    //batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
+                    */
+                    batch.merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice());
                 }
                 dataset_ids.push(dataset_id);
             }
-            //index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+            index.db.write(batch).expect("error merging batch"); // Atomically commits the batch
 
             // if cached in a new field in the RevIndex,
             // then update the cache too
@@ -579,7 +521,7 @@ impl RevIndexOps for RevIndex {
         // process the remainder
         let processed_sigs = AtomicUsize::new(0);
 
-        self.collection.par_iter().chunks(100).for_each(|chunk| {
+        self.collection.par_iter().chunks(20).for_each(|chunk| {
             let filtered_chunk = chunk.into_iter().filter_map(|(dataset_id, _)| {
                 // check if this dataset_id was processed already
                 // call map_hashes_colors only if not already processed
@@ -595,7 +537,7 @@ impl RevIndexOps for RevIndex {
                 }
             });
 
-            let mut batch = WriteBatchWithTransaction::<true>::default();
+            let mut batch = WriteBatchWithTransaction::<false>::default();
             let cf_hashes = self.db.cf_handle(HASHES).unwrap();
             let mut dataset_ids = vec![];
 
@@ -611,7 +553,7 @@ impl RevIndexOps for RevIndex {
                 }
                 dataset_ids.push(dataset_id);
             }
-            //self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
+            self.db.write(batch).expect("error merging batch"); // Atomically commits the batch
 
             // if cached in a new field in the RevIndex,
             // then update the cache too
@@ -628,10 +570,6 @@ impl RevIndexOps for RevIndex {
         );
 
         Ok(module::RevIndex::Plain(self))
-    }
-
-    fn collection(&self) -> &CollectionSet {
-        &self.collection
     }
 
     fn check(&self, quick: bool) -> DbStats {
@@ -654,6 +592,10 @@ impl RevIndexOps for RevIndex {
         }
 
         Ok(())
+    }
+
+    fn collection(&self) -> &CollectionSet {
+        &self.collection
     }
 
     fn internalize_storage(&mut self) -> Result<()> {
