@@ -80,6 +80,7 @@ impl Storage for RocksDBStorage {
 pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescriptor> {
     let mut cfopts = db_options();
 
+    /*
     // following https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
     cfopts.set_enable_blob_files(true);
     // If empty or one dataset, avoid saving to blob store
@@ -89,6 +90,7 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
     cfopts.set_blob_file_size(0x4000000); // 64 MiB
     cfopts.set_enable_blob_gc(true);
     cfopts.set_blob_compression_type(rocksdb::DBCompressionType::Zstd);
+    */
 
     cfopts.set_max_write_buffer_number(16);
     cfopts.set_merge_operator_associative(

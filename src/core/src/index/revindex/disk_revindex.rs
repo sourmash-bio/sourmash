@@ -86,8 +86,6 @@ impl RevIndex {
 
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
-        let processed_sigs = AtomicUsize::new(0);
-
         let collection = Arc::new(collection);
         let processed = Arc::new(RwLock::new(Self::load_processed(
             db.clone(),
