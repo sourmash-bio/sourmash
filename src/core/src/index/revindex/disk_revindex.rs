@@ -114,13 +114,11 @@ impl RevIndex {
                         info!("Processed {} reference sigs", i);
                     }
 
-                    /*
                     if i % 5000 == 0 && i > 0 {
                         info!("Triggering manual compaction");
                         index.compact();
                         info!("Finished manual compaction");
                     }
-                    */
 
                     Some((
                         index.map_hashes_colors(dataset_id as Idx),

@@ -176,7 +176,7 @@ pub(crate) fn db_options() -> rocksdb::Options {
     // opts.optimize_universal_style_compaction();
 
     opts.set_bottommost_compression_type(rocksdb::DBCompressionType::Zstd);
-    opts.set_bottommost_zstd_max_train_bytes(0, true);
+    opts.set_bottommost_zstd_max_train_bytes(1024 << 10, true); // 1MiB
 
     opts
 }
