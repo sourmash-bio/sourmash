@@ -37,7 +37,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 
 #[derive(Clone)]
 pub struct RevIndex {
-    db: Arc<DB>,
+    pub db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
 }
