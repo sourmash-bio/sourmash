@@ -618,6 +618,18 @@ impl Signature {
         }
     }
 
+    pub fn n_hashes(&self) -> usize {
+        if self.signatures.len() == 1 {
+            match &self.signatures[0] {
+                Sketch::MinHash(mh) => mh.size(),
+                Sketch::LargeMinHash(mh) => mh.size(),
+                Sketch::HyperLogLog(mh) => mh.size(),
+            }
+        } else {
+            unimplemented!()
+        }
+    }
+
     pub fn select_sketch(&self, sketch: &Sketch) -> Option<&Sketch> {
         if let Sketch::MinHash(template) = sketch {
             for sk in &self.signatures {
@@ -2071,5 +2083,32 @@ mod test {
             sth_hashes, expected_hashes,
             "Hashes do not match in order for SeqToHashes"
         );
+    }
+
+    #[test]
+    fn test_n_hashes_minhash() {
+        // Load the signature file
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/genome-s10+s11.sig");
+
+        let file = File::open(filename).expect("Could not open file");
+        let reader = BufReader::new(file);
+        let sigs = Signature::from_reader(reader).expect("Error loading signature");
+
+        // Use the first signature for testing
+        assert_eq!(sigs.len(), 4, "Expected 4 signatures in the test data");
+        let sig = sigs.get(0).expect("No signature found");
+
+        // Ensure it has exactly one sketch
+        assert_eq!(
+            sig.signatures.len(),
+            1,
+            "Expected exactly one sketch in the signature"
+        );
+
+        // Test n_hashes
+        let n_hashes = sig.n_hashes();
+
+        assert!(n_hashes == 500, "Expected n_hashes to be 500");
     }
 }
