@@ -83,7 +83,7 @@ pub trait SigsTrait {
 }
 
 impl SigsTrait for Sketch {
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match *self {
             Sketch::MinHash(ref mh) => mh.size(),
             Sketch::LargeMinHash(ref mh) => mh.size(),
