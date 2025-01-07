@@ -92,7 +92,12 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
     cfopts.set_blob_compression_type(rocksdb::DBCompressionType::Zstd);
     */
 
-    cfopts.set_max_write_buffer_number(16);
+    cfopts.set_max_write_buffer_number(32);
+    cfopts.set_level_zero_file_num_compaction_trigger(8);
+    cfopts.set_max_bytes_for_level_multiplier(8.0);
+    // write_buffer_size (64 MiB) * write_buffer_number (32) == 2 GiB
+    cfopts.set_max_bytes_for_level_base(1024 << 21); // 2 GiB
+    cfopts.set_max_background_jobs(rayon::current_num_threads() as i32);
     cfopts.set_merge_operator_associative(
         "datasets operator",
         crate::index::revindex::disk_revindex::merge_datasets,
@@ -128,7 +133,8 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
     let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
 
     let mut cfopts = db_options();
-    cfopts.set_max_write_buffer_number(16);
+    cfopts.set_max_write_buffer_number(32);
+    cfopts.set_max_background_jobs(rayon::current_num_threads() as i32);
     cfopts.set_merge_operator_associative(
         "datasets operator",
         crate::index::revindex::disk_revindex::merge_datasets,
@@ -139,14 +145,16 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
     let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
 
     let mut cfopts = db_options();
-    cfopts.set_max_write_buffer_number(16);
+    cfopts.set_max_write_buffer_number(32);
+    cfopts.set_max_background_jobs(rayon::current_num_threads() as i32);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
 
     let cf_storage = ColumnFamilyDescriptor::new(STORAGE, cfopts);
 
     let mut cfopts = db_options();
-    cfopts.set_max_write_buffer_number(16);
+    cfopts.set_max_write_buffer_number(32);
+    cfopts.set_max_background_jobs(rayon::current_num_threads() as i32);
     // Updated default
     cfopts.set_level_compaction_dynamic_level_bytes(true);
 

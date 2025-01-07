@@ -290,7 +290,7 @@ impl Datasets {
     fn from_slice(slice: &[u8]) -> Option<Self> {
         use byteorder::ReadBytesExt;
 
-        if slice.len() == 8 {
+        if slice.len() == 8 || slice.len() == 4 {
             // Unique
             Some(Self::Unique(
                 (&slice[..]).read_u32::<LittleEndian>().unwrap(),
@@ -308,7 +308,7 @@ impl Datasets {
         match self {
             Self::Empty => Some(vec![42_u8]),
             Self::Unique(v) => {
-                let mut buf = vec![0u8; 8];
+                let mut buf = vec![0u8; 4];
                 (&mut buf[..])
                     .write_u32::<LittleEndian>(*v)
                     .expect("error writing bytes");

@@ -87,11 +87,17 @@ impl RevIndex {
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs).unwrap());
 
         let collection = Arc::new(collection);
+        info!("sigs in the new index once finished: {}", collection.len());
         let processed = Arc::new(RwLock::new(Self::load_processed(
             db.clone(),
             collection.clone(),
             true,
         )?));
+
+        let left_to_process = collection.len() - processed.read().unwrap().len();
+        if left_to_process != collection.len() {
+            info!("sigs left to process: {}", left_to_process);
+        }
 
         let index = Self {
             db,
@@ -155,8 +161,20 @@ impl RevIndex {
 
             // if cached in a new field in the RevIndex,
             // then update the cache too
-
             processed.write().unwrap().extend(dataset_ids);
+
+            // finished processing of this batch,
+            // do a merge_cf in the PROCESSED key in metadata
+            // to account for processed datasets in this batch.
+            let cf_metadata = index.db.cf_handle(METADATA).unwrap();
+            index
+                .db
+                .merge_cf(
+                    &cf_metadata,
+                    PROCESSED,
+                    processed.read().unwrap().as_bytes().unwrap().as_slice(),
+                )
+                .expect("error merging");
         });
 
         info!("Compact SSTs");
@@ -555,6 +573,19 @@ impl RevIndexOps for RevIndex {
             // then update the cache too
 
             processed.write().unwrap().extend(dataset_ids);
+
+            // finished processing of this batch,
+            // do a merge_cf in the PROCESSED key in metadata
+            // to account for processed datasets in this batch.
+            let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+            self 
+                .db
+                .merge_cf(
+                    &cf_metadata,
+                    PROCESSED,
+                    processed.read().unwrap().as_bytes().unwrap().as_slice(),
+                )
+                .expect("error merging");
         });
 
         info!("Compact SSTs");
