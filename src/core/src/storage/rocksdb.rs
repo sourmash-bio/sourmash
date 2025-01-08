@@ -114,7 +114,7 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
     tfopts.set_optimize_filters_for_memory(true);
     //tfopts.set_data_block_index_type(rocksdb::DataBlockIndexType::BinaryAndHash);
     // Keys for HASHES are HashIntoType, a u64
-    //tfopts.set_hybrid_ribbon_filter(64.0, 2);
+    tfopts.set_hybrid_ribbon_filter(64.0, 2);
 
     // these are from db_options, not sure if overwritten if not here
     //tfopts.set_block_size(0x4000000); // 64 MiB
@@ -125,7 +125,7 @@ pub(crate) fn cf_descriptors(cache: rocksdb::Cache) -> Vec<ColumnFamilyDescripto
 
     cfopts.set_block_based_table_factory(&tfopts);
     // Keys for HASHES are HashIntoType, a u64, and so 8 bytes
-    //cfopts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(8));
+    cfopts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(8));
 
     // 10GB for memory budget
     //cfopts.optimize_level_style_compaction(10 * 1024 * 1024 * 1024);

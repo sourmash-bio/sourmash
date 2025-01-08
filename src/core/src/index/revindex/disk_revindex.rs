@@ -96,6 +96,7 @@ impl RevIndex {
 
         let left_to_process = collection.len() - processed.read().unwrap().len();
         if left_to_process != collection.len() {
+            info!("sigs already processed: {}", collection.len() - left_to_process);
             info!("sigs left to process: {}", left_to_process);
         }
 
