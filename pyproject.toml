@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<1.8.0",
+    "maturin>=1,<1.9.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -9,7 +9,7 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.8.12"
+version = "4.8.13-dev"
 
 authors = [
   { name="Luiz Irber" },
