@@ -24,7 +24,7 @@ jobs:
 
     - run: nix run .# -- --version
 
-    - run: nix develop --command bash -c "tox -e py310"
+    - run: nix develop --command bash -c "tox -e py311"
 
   pixi:
     runs-on: ${{ matrix.os }}
@@ -39,7 +39,7 @@ jobs:
     - name: set up pixi
       uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        pixi-version: v0.26.1
+        pixi-version: v0.39.5
         cache: true
         frozen: true
 

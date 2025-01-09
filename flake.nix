@@ -21,8 +21,9 @@
         };
         rustVersion = pkgs.rust-bin.stable.latest.default.override {
           #extensions = [ "rust-src" ];
+          extensions = [ "llvm-tools-preview" ];
           #targets = [ "x86_64-unknown-linux-musl" ];
-          targets = [ "wasm32-wasi" "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
+          targets = [ "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
         };
         rustPlatform = pkgs.makeRustPlatform {
           cargo = rustVersion;
@@ -106,7 +107,7 @@
             (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
             (python310.withPackages (ps: with ps; [ virtualenv ]))
 
-            rust-cbindgen
+            #rust-cbindgen
             maturin
 
             wasmtime
@@ -122,7 +123,9 @@
             cargo-outdated
             cargo-udeps
             cargo-deny
-            cargo-wasi
+            cargo-nextest
+            #cargo-llvm-cov
+            cargo-component
             cargo-codspeed
             cargo-semver-checks
             nixpkgs-fmt
