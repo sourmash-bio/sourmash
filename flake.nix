@@ -107,7 +107,7 @@
             (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
             (python310.withPackages (ps: with ps; [ virtualenv ]))
 
-            rust-cbindgen
+            #rust-cbindgen
             maturin
 
             wasmtime
@@ -124,7 +124,7 @@
             cargo-udeps
             cargo-deny
             cargo-nextest
-            cargo-llvm-cov
+            #cargo-llvm-cov
             cargo-component
             cargo-codspeed
             cargo-semver-checks

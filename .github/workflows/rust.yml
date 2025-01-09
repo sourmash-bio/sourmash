@@ -240,7 +240,7 @@ jobs:
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: cbindgen@0.20.0
+          tool: cbindgen@0.26.0
 
       - run: make include/sourmash.h
 
