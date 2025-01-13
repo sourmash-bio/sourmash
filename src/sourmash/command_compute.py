@@ -78,10 +78,10 @@ def compute(args):
         notify("Computing both nucleotide and protein signatures.")
         num_sigs = 2 * len(ksizes)
     elif args.dna and args.dayhoff:
-        notify("Computing both nucleotide and Dayhoff-encoded protein " "signatures.")
+        notify("Computing both nucleotide and Dayhoff-encoded protein signatures.")
         num_sigs = 2 * len(ksizes)
     elif args.dna and args.hp:
-        notify("Computing both nucleotide and hp-encoded protein " "signatures.")
+        notify("Computing both nucleotide and hp-encoded protein signatures.")
         num_sigs = 2 * len(ksizes)
     elif args.dna:
         notify("Computing only nucleotide (and not protein) signatures.")
@@ -91,11 +91,11 @@ def compute(args):
         num_sigs = len(ksizes)
     elif args.dayhoff:
         notify(
-            "Computing only Dayhoff-encoded protein (and not nucleotide) " "signatures."
+            "Computing only Dayhoff-encoded protein (and not nucleotide) signatures."
         )
         num_sigs = len(ksizes)
     elif args.hp:
-        notify("Computing only hp-encoded protein (and not nucleotide) " "signatures.")
+        notify("Computing only hp-encoded protein (and not nucleotide) signatures.")
         num_sigs = len(ksizes)
 
     if args.protein or args.dayhoff or args.hp:
@@ -269,7 +269,7 @@ def _compute_individual(args, signatures_factory):
                 save_sigs_to_location(sigs, save_sigs)
 
                 notify(
-                    f"calculated {len(sigs)} signatures for {n+1} sequences in {filename}"
+                    f"calculated {len(sigs)} signatures for {n + 1} sequences in {filename}"
                 )
 
         # if not args.output, close output for every input filename.
@@ -443,7 +443,7 @@ class ComputeParameters(RustObject):
             kstr = [f"k={k}" for k in self.ksizes]
         else:
             # for protein, divide ksize by three.
-            kstr = [f"k={k//3}" for k in self.ksizes]
+            kstr = [f"k={k // 3}" for k in self.ksizes]
         assert kstr
         pi.extend(kstr)
 

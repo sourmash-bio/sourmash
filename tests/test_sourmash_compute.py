@@ -453,8 +453,7 @@ def test_do_sourmash_compute_multik_with_hp():
             in_directory=location,
         )
         assert (
-            "Computing only hp-encoded protein (and not nucleotide) "
-            "signatures." in err
+            "Computing only hp-encoded protein (and not nucleotide) signatures." in err
         )
         outfile = os.path.join(location, "short.fa.sig")
         assert os.path.exists(outfile)

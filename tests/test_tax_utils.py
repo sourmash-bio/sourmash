@@ -2221,7 +2221,7 @@ def test_RankLineageInfo_init_lineage_str_2():
     taxinf = RankLineageInfo(lineage_str=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
-    assert taxinf.zip_lineage() == ["a", "b", "", "c" "", "", "", "", ""]
+    assert taxinf.zip_lineage() == ["a", "b", "", "c", "", "", "", ""]
 
 
 def test_RankLineageInfo_init_lineage_str_2_truncate():
