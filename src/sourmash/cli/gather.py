@@ -100,8 +100,7 @@ def subparser(subparsers):
     subparser.add_argument(
         "--save-matches",
         metavar="FILE",
-        help="save gather matched signatures from the database to the "
-        "specified file",
+        help="save gather matched signatures from the database to the specified file",
     )
     subparser.add_argument(
         "--save-prefetch",

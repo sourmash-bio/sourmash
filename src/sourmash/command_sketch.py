@@ -207,7 +207,7 @@ def _execute_sketch(args, signatures_factory):
         error("error: sourmash only supports CC0-licensed signatures. sorry!")
         sys.exit(-1)
 
-    notify(f'computing signatures for files: {", ".join(args.filenames)}')
+    notify(f"computing signatures for files: {', '.join(args.filenames)}")
 
     if args.merge and not args.output:
         error("ERROR: must specify -o with --merge")
@@ -353,7 +353,7 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
                 save_sigs.add(sig)
 
             notify(
-                f"calculated {len(sigs)} signatures for {n+1} sequences in {filename}"
+                f"calculated {len(sigs)} signatures for {n + 1} sequences in {filename}"
             )
 
     save_sigs.close()
@@ -768,7 +768,7 @@ def _compute_individual(args, signatures_factory):
                 save_sigs_to_location(sigs, save_sigs)
 
                 notify(
-                    f"calculated {len(sigs)} signatures for {n+1} sequences in {filename}"
+                    f"calculated {len(sigs)} signatures for {n + 1} sequences in {filename}"
                 )
 
         # if not args.output, close output for every input filename.
@@ -942,7 +942,7 @@ class ComputeParameters(RustObject):
             kstr = [f"k={k}" for k in self.ksizes]
         else:
             # for protein, divide ksize by three.
-            kstr = [f"k={k//3}" for k in self.ksizes]
+            kstr = [f"k={k // 3}" for k in self.ksizes]
         assert kstr
         pi.extend(kstr)
 

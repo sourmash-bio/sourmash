@@ -22,8 +22,8 @@ __all__ = [
     "ascending_taxlist",
     "collect_gather_csvs",
     "load_gather_results",
-    "check_and_load_gather_csvs" "report_missing_and_skipped_identities",
-    "aggregate_by_lineage_at_rank" "format_for_krona",
+    "check_and_load_gather_csvsreport_missing_and_skipped_identities",
+    "aggregate_by_lineage_at_rankformat_for_krona",
     "write_output",
     "write_bioboxes",
     "parse_lingroups",
@@ -793,7 +793,7 @@ def read_lingroups(lingroup_csv):
     if n is None:
         raise ValueError(f"No lingroups loaded from {lingroup_csv}.")
     n_lg = len(lingroupD.keys())
-    notify(f"Read {n+1} lingroup rows and found {n_lg} distinct lingroup prefixes.")
+    notify(f"Read {n + 1} lingroup rows and found {n_lg} distinct lingroup prefixes.")
     return lingroupD
 
 
@@ -978,7 +978,7 @@ def report_missing_and_skipped_identities(gather_results):
             f"of {total_taxresults} gather results, lineage assignments for {total_n_missed} results were missed."
         )
         notify(
-            f'The following are missing from the taxonomy information: {", ".join(ident_missed)}'
+            f"The following are missing from the taxonomy information: {', '.join(ident_missed)}"
         )
 
 
@@ -2106,9 +2106,9 @@ class SummarizedGatherResult:
 
     def as_human_friendly_dict(self, query_info):
         sD = self.as_summary_dict(query_info=query_info, limit_float=True)
-        sD["f_weighted_at_rank"] = f"{self.f_weighted_at_rank*100:>4.1f}%"
+        sD["f_weighted_at_rank"] = f"{self.f_weighted_at_rank * 100:>4.1f}%"
         if self.query_ani_at_rank is not None:
-            sD["query_ani_at_rank"] = f"{self.query_ani_at_rank*100:>3.1f}%"
+            sD["query_ani_at_rank"] = f"{self.query_ani_at_rank * 100:>3.1f}%"
         else:
             sD["query_ani_at_rank"] = "-    "
         return sD

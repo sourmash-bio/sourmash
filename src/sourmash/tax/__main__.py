@@ -93,7 +93,7 @@ def metagenome(args):
 
     if not tax_assign:
         error(
-            f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.'
+            f"ERROR: No taxonomic assignments loaded from {','.join(args.taxonomy_csv)}. Exiting."
         )
         sys.exit(-1)
 
@@ -284,7 +284,7 @@ def genome(args):
 
     if not tax_assign:
         error(
-            f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.'
+            f"ERROR: No taxonomic assignments loaded from {','.join(args.taxonomy_csv)}. Exiting."
         )
         sys.exit(-1)
 
@@ -345,7 +345,7 @@ def genome(args):
     else:
         classif_perc = (float(n_classified) / float(n_total)) * 100
         notify(
-            f"classified {n_classified}/{n_total} queries ({classif_perc :.2f}%). Writing results"
+            f"classified {n_classified}/{n_total} queries ({classif_perc:.2f}%). Writing results"
         )
 
     # write outputs
@@ -442,7 +442,7 @@ def annotate(args):
 
     if not tax_assign:
         error(
-            f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.'
+            f"ERROR: No taxonomic assignments loaded from {','.join(args.taxonomy_csv)}. Exiting."
         )
         sys.exit(-1)
 
@@ -518,7 +518,7 @@ def annotate(args):
                         )
                     else:
                         notify(
-                            f"Annotated {rows_annotated} of {n+1} total rows from '{in_csv}'."
+                            f"Annotated {rows_annotated} of {n + 1} total rows from '{in_csv}'."
                         )
 
         except ValueError as exc:
