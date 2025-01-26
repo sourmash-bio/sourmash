@@ -305,7 +305,7 @@ libclang = ">=16.0.6,<16.1"
 rust = "~=1.71.1"
 
 [tool.pixi.feature.msrv.tasks]
-check-msrv = "cargo build"
+check-msrv = "cargo build --all-features"
 
 [tool.pixi.feature.dev.dependencies]
 cargo-llvm-cov = "~=0.6.15"
