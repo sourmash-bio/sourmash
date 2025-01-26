@@ -19,7 +19,7 @@ dist: FORCE
 
 test: .PHONY
 	tox -e py310
-	cargo test
+	cargo nextest run
 
 doc: .PHONY
 	tox -e docs
@@ -47,7 +47,7 @@ benchmark:
 
 check:
 	cargo build
-	cargo test
+	cargo nextest run
 	cargo bench
 
 last-tag:
