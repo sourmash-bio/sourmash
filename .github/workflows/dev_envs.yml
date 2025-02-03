@@ -19,8 +19,6 @@ jobs:
 
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@v16
-    - name: Run the Magic Nix Cache
-      uses: DeterminateSystems/magic-nix-cache-action@v9
 
     - run: nix run .# -- --version
 
@@ -39,7 +37,7 @@ jobs:
     - name: set up pixi
       uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        pixi-version: v0.39.5
+        pixi-version: v0.40.3
         cache: true
         frozen: true
 
