@@ -1298,7 +1298,7 @@ def kmers(args):
     found_hashes = set(found_mh.hashes)
     cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
 
-    notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
+    notify(f"found {len(found_mh)} distinct matching hashes ({cont * 100:.1f}%)")
 
     if not kmer_w and not save_seqs:
         notify("NOTE: see --save-kmers or --save-sequences for output options.")

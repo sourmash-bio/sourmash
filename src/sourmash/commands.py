@@ -1077,7 +1077,7 @@ def gather(args):
             )
 
         print_results(
-            f"the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted)."
+            f"the recovered matches hit {sum_f_uniq_found * 100:.1f}% of the query k-mers (unweighted)."
         )
 
     print_results("")
@@ -1345,7 +1345,7 @@ def multigather(args):
                 )
 
             print_results(
-                f"the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted)."
+                f"the recovered matches hit {sum_f_uniq_found * 100:.1f}% of the query k-mers (unweighted)."
             )
             print_results("")
 

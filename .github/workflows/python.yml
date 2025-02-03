@@ -40,6 +40,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-v4-
 
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

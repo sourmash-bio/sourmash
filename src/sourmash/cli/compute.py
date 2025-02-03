@@ -105,7 +105,7 @@ def subparser(subparsers):
         type=str,
         default="",
         metavar="FILE",
-        help="merge all input files into one signature file with the " "specified name",
+        help="merge all input files into one signature file with the specified name",
     )
     file_args.add_argument(
         "--name-from-first",

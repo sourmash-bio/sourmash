@@ -13,6 +13,7 @@ Quickly search, compare, and analyze genomic and metagenomic data sets.
 [![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
 <a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
 [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/sourmash-minimal.svg)](https://anaconda.org/conda-forge/sourmash-minimal)
+[![Debian Testing](https://badges.debian.net/badges/debian/testing/sourmash/version.svg)](https://packages.debian.org/testing/sourmash) [![Debian Unstable](https://badges.debian.net/badges/debian/unstable/sourmash/version.svg)](https://packages.debian.org/unstable/sourmash)
 
 ![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
