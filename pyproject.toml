@@ -328,9 +328,17 @@ cachetools = ">=4,<6"
 bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
+[tool.pixi.feature.dev.tasks]
+install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations"
+semver-check = { cmd = "cargo semver-checks check-release --features branchwater", depends-on = ["install-tools"] }
+
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
 msrv = { features = ["build", "msrv"], solve-group = "msrv" }
 
 [tool.pixi.system-requirements]
 macos = "11.0"
+
+[tool.pixi.activation.env]
+CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
+PATH = "$PATH:$CARGO_HOME/bin"
