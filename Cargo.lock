@@ -1622,6 +1622,7 @@ dependencies = [
  "histogram",
  "itertools 0.14.0",
  "js-sys",
+ "liblzma",
  "log",
  "md5",
  "memmap2",
