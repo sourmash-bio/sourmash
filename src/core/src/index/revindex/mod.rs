@@ -277,7 +277,7 @@ impl Extend<Idx> for Datasets {
 }
 
 impl Datasets {
-    fn new(vals: &[Idx]) -> Self {
+    pub fn new(vals: &[Idx]) -> Self {
         if vals.is_empty() {
             Self::Empty
         } else if vals.len() == 1 {
@@ -287,7 +287,7 @@ impl Datasets {
         }
     }
 
-    fn from_slice(slice: &[u8]) -> Option<Self> {
+    pub fn from_slice(slice: &[u8]) -> Option<Self> {
         use byteorder::ReadBytesExt;
 
         if slice.len() == 8 {
@@ -344,7 +344,7 @@ impl Datasets {
         }
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         match self {
             Self::Empty => 0,
             Self::Unique(_) => 1,
