@@ -37,9 +37,6 @@ pub mod signature;
 pub mod sketch;
 pub mod storage;
 
-#[cfg(feature = "from-finch")]
-pub mod from;
-
 use cfg_if::cfg_if;
 use murmurhash3::murmurhash3_x64_128;
 
