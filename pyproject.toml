@@ -329,12 +329,19 @@ bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
 [tool.pixi.feature.dev.tasks]
-install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations"
+install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
 semver-check = { cmd = "cargo semver-checks check-release --features branchwater", depends-on = ["install-tools"] }
+
+[tool.pixi.feature.wasm.dependencies]
+rust-std-wasm32-unknown-unknown = "*"
+
+[tool.pixi.feature.wasm.tasks]
+build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg", depends-on = ["install-tools"] }
 
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
 msrv = { features = ["build", "msrv"], solve-group = "msrv" }
+wasm = { features = ["dev", "build", "wasm"], solve-group = "default" }
 
 [tool.pixi.system-requirements]
 macos = "11.0"
