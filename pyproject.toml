@@ -302,7 +302,7 @@ cxx-compiler = ">=1.7.0,<1.8"
 libclang = ">=16.0.6,<16.1"
 
 [tool.pixi.feature.msrv.dependencies]
-rust = "~=1.71.1"
+rust = "~=1.74.0"
 
 [tool.pixi.feature.msrv.tasks]
 check-msrv = "cargo build --all-features"
