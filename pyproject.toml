@@ -336,7 +336,7 @@ semver-check = { cmd = "cargo semver-checks check-release --default-features --f
 rust-std-wasm32-unknown-unknown = "*"
 
 [tool.pixi.feature.wasm.tasks]
-build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg", depends-on = ["install-tools"] }
+build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
 
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
