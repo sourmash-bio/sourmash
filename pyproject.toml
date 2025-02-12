@@ -334,9 +334,11 @@ semver-check = { cmd = "cargo semver-checks check-release --default-features --f
 
 [tool.pixi.feature.wasm.dependencies]
 rust-std-wasm32-unknown-unknown = "*"
+nodejs = "~=20.0"
 
 [tool.pixi.feature.wasm.tasks]
 build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
+test-wasm = { cmd = "wasm-pack test --node src/core -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
 
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }

@@ -54,10 +54,10 @@ last-tag:
 	git fetch -p -q; git tag -l | sort -V | tail -1
 
 wasm:
-	wasm-pack build src/core -d ../../pkg
+	wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'
 
 wasm-test:
-	wasm-pack test --node src/core
+	wasm-pack test --node src/core -- --features 'niffler/wasm'
 
 wasi:
 	cargo wasi build

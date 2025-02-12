@@ -155,10 +155,10 @@ jobs:
 
       - name: run wasm tests
         continue-on-error: true  ## TODO: remove this when tests works again...
-        run: wasm-pack test --node src/core
+        run: wasm-pack test --node src/core -- --features 'niffler/wasm'
 
       - name: run wasm-pack build
-        run: wasm-pack build src/core -d ../../pkg
+        run: wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'
 
       - name: Prepare package for NPM publishing
         working-directory: pkg
