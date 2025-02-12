@@ -42,7 +42,7 @@ md5 = "0.7.0"
 memmap2 = "0.9.5"
 murmurhash3 = "0.0.5"
 needletail = { version = "0.6.1", default-features = false }
-niffler = { version = "2.7.0", default-features = false, features = [ "gz", "zstd", "lzma" ] }
+niffler = { version = "3.0.0", default-features = false, features = [ "wasm" ] }
 # declare liblzma here to allow static compilation and fix macos linking issues in Python wheel
 liblzma = { version = "0.3.6", features = ["static"] }
 nohash-hasher = "0.2.0"
