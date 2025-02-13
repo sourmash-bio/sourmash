@@ -4,11 +4,9 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 use cfg_if::cfg_if;
 use once_cell::sync::OnceCell;
-use rc_zip_sync::{ArchiveHandle, ReadZip};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use typed_builder::TypedBuilder;
@@ -125,25 +123,18 @@ pub struct FSStorage {
     subdir: String,
 }
 
-/// Store files in a zip file.
-#[ouroboros::self_referencing]
-pub struct ZipStorage {
-    file: std::fs::File,
-
-    #[borrows(file)]
-    #[covariant]
-    archive: ArchiveHandle<'this, std::fs::File>,
-
-    subdir: Option<String>,
-    path: Option<PathBuf>,
-}
-
 /// Store data in memory (no permanent storage)
 #[derive(TypedBuilder, Debug, Clone, Default)]
 pub struct MemStorage {
     //store: HashMap<String, Vec<u8>>,
     sigs: Arc<RwLock<HashMap<String, SigStore>>>,
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod zip;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use self::zip::ZipStorage;
 
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub mod rocksdb;
@@ -178,7 +169,14 @@ impl InnerStorage {
             }
             x if x.starts_with("zip") => {
                 let path = x.split("://").last().expect("not a valid path");
-                InnerStorage::new(ZipStorage::from_file(path)?)
+
+                cfg_if! {
+                    if #[cfg(not(target_arch = "wasm32"))] {
+                        InnerStorage::new(ZipStorage::from_file(path)?)
+                    } else {
+                        return Err(StorageError::MissingFeature("wasm".into(), path.into()).into())
+                    }
+                }
             }
             _ => todo!("storage not supported, throw error"),
         })
@@ -317,121 +315,6 @@ impl Storage for FSStorage {
 
     fn spec(&self) -> String {
         format!("fs://{}", self.subdir)
-    }
-}
-
-impl Storage for ZipStorage {
-    fn save(&self, _path: &str, _content: &[u8]) -> Result<String> {
-        unimplemented!();
-    }
-
-    fn load(&self, path: &str) -> Result<Vec<u8>> {
-        let archive = self.borrow_archive();
-        if let Some(entry) = archive.by_name(path) {
-            return Ok(entry.bytes()?);
-        }
-
-        if let Some(subdir) = &self.borrow_subdir() {
-            if let Some(entry) = archive.by_name(subdir.to_owned() + path) {
-                return Ok(entry.bytes()?);
-            }
-        }
-
-        Err(StorageError::PathNotFoundError(path.into()).into())
-    }
-
-    fn args(&self) -> StorageArgs {
-        unimplemented!();
-    }
-
-    fn load_sig(&self, path: &str) -> Result<SigStore> {
-        let raw = self.load(path)?;
-        let mut vs = Signature::from_reader(&mut &raw[..])?;
-        if vs.len() > 1 {
-            unimplemented!("only one Signature currently allowed");
-        }
-        let sig = vs.swap_remove(0);
-
-        Ok(sig.into())
-    }
-
-    fn spec(&self) -> String {
-        format!("zip://{}", self.borrow_path().clone().unwrap_or("".into()))
-    }
-}
-
-impl ZipStorage {
-    pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
-        let file = File::open(location.as_ref())?;
-
-        let mut storage = ZipStorageBuilder {
-            file,
-            archive_builder: |file: &std::fs::File| file.read_zip().expect("Error loading zipfile"),
-            subdir: None,
-            path: Some(location.as_ref().into()),
-        }
-        .build();
-
-        let subdir = {
-            let subdirs: Vec<_> = storage
-                .borrow_archive()
-                .entries()
-                .filter(|entry| matches!(entry.kind(), rc_zip::parse::EntryKind::Directory))
-                .collect();
-            if subdirs.len() == 1 {
-                Some(
-                    subdirs[0]
-                        .sanitized_name()
-                        .expect("TODO throw right error")
-                        .into(),
-                )
-            } else {
-                None
-            }
-        };
-
-        storage.with_mut(|fields| *fields.subdir = subdir);
-        Ok(storage)
-    }
-
-    pub fn path(&self) -> Option<PathBuf> {
-        self.borrow_path().clone()
-    }
-
-    pub fn subdir(&self) -> Option<String> {
-        self.borrow_subdir().clone()
-    }
-
-    pub fn set_subdir(&mut self, path: String) {
-        self.with_mut(|fields| *fields.subdir = Some(path))
-    }
-
-    pub fn list_sbts(&self) -> Result<Vec<String>> {
-        Ok(self
-            .borrow_archive()
-            .entries()
-            .filter_map(|entry| {
-                let path = entry.sanitized_name().expect("TODO throw right error");
-                if path.ends_with(".sbt.json") {
-                    Some(path.into())
-                } else {
-                    None
-                }
-            })
-            .collect())
-    }
-
-    pub fn filenames(&self) -> Result<Vec<String>> {
-        Ok(self
-            .borrow_archive()
-            .entries()
-            .map(|entry| {
-                entry
-                    .sanitized_name()
-                    .expect("TODO throw right error")
-                    .into()
-            })
-            .collect())
     }
 }
 
