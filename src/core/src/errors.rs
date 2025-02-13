@@ -103,9 +103,6 @@ pub enum SourmashError {
     #[cfg(feature = "branchwater")]
     #[error(transparent)]
     RocksDBError(#[from] rocksdb::Error),
-
-    #[error(transparent)]
-    ZipError(#[from] piz::result::ZipError),
 }
 
 #[derive(Debug, Error)]
@@ -203,8 +200,6 @@ impl SourmashErrorCode {
             #[cfg(not(target_arch = "wasm32"))]
             #[cfg(feature = "branchwater")]
             SourmashError::RocksDBError { .. } => SourmashErrorCode::RocksDBError,
-
-            SourmashError::ZipError { .. } => SourmashErrorCode::ZipError,
         }
     }
 }

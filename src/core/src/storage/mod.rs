@@ -151,11 +151,6 @@ pub mod rocksdb;
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub use self::rocksdb::RocksDBStorage;
 
-pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
-
-||||||| parent of 6ec1787b (replace piz with rc-zip):src/core/src/storage.rs
-pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
-
 // =========================================
 
 impl InnerStorage {
@@ -375,7 +370,7 @@ impl ZipStorage {
             subdir: None,
             path: Some(location.as_ref().into()),
         }
-        .try_build()?;
+        .build();
 
         let subdir = {
             let subdirs: Vec<_> = storage
