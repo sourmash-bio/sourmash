@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.19.0] - 2025-02-12
+
+MSRV: 1.74
+
+Changes/additions:
+
+* update MSRV to 1.74, niffler to 3.0.0 (#3530)
+* update to rocksdb 0.23 (#3456)
+* remove finch conversion, support zstd and lzma in wasm (#3521)
+
+Updates:
+
+* Bump serde_json from 1.0.133 to 1.0.138 (#3453) (#3490) (#3500) (#3518)
+* Bump tempfile from 3.14.0 to 3.16.0 (#3472) (#3519)
+* Bump liblzma from 0.3.5 to 0.3.6 (#3526)
+* Bump rand from 0.8.5 to 0.9.0 (#3512)
+* Bump log from 0.4.22 to 0.4.25 (#3501)
+* Bump histogram from 0.11.1 to 0.11.2 (#3498)
+* Bump getset from 0.1.3 to 0.1.4 (#3499)
+* Bump roaring from 0.10.9 to 0.10.10 (#3489)
+* Bump ouroboros from 0.18.4 to 0.18.5 (#3491)
+* Bump itertools from 0.13.0 to 0.14.0 (#3471)
+* Bump serde from 1.0.216 to 1.0.217 (#3464)
+
+
 ## [0.18.0] - 2024-12-20
 
 MSRV: 1.66
@@ -495,7 +520,17 @@ Fixed:
 - Fix mem leak in get_mins (#807)
 - Fixes for WASI and WASM compilation (#771) (#723)
 
-[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...HEAD
+[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.19.0...HEAD
+[0.19.0]: https://github.com/sourmash-bio/sourmash/compare/r0.18.0...r0.19.0
+[0.18.0]: https://github.com/sourmash-bio/sourmash/compare/r0.17.2...r0.18.0
+[0.17.2]: https://github.com/sourmash-bio/sourmash/compare/r0.17.1...r0.17.2
+[0.17.1]: https://github.com/sourmash-bio/sourmash/compare/r0.17.0...r0.17.1
+[0.17.0]: https://github.com/sourmash-bio/sourmash/compare/r0.16.0...r0.17.0
+[0.16.0]: https://github.com/sourmash-bio/sourmash/compare/r0.15.1...r0.16.0
+[0.15.1]: https://github.com/sourmash-bio/sourmash/compare/r0.15.0...r0.15.1
+[0.15.0]: https://github.com/sourmash-bio/sourmash/compare/r0.14.1...r0.15.0
+[0.14.1]: https://github.com/sourmash-bio/sourmash/compare/r0.14.0...r0.14.1
+[0.14.0]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...r0.14.0
 [0.13.1]: https://github.com/sourmash-bio/sourmash/compare/r0.13.0...r0.13.1
 [0.13.0]: https://github.com/sourmash-bio/sourmash/compare/r0.12.1...r0.13.0
 [0.12.1]: https://github.com/sourmash-bio/sourmash/compare/r0.12.0...r0.12.1
