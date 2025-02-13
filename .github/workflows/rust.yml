@@ -155,10 +155,10 @@ jobs:
 
       - name: run wasm tests
         continue-on-error: true  ## TODO: remove this when tests works again...
-        run: wasm-pack test --node src/core
+        run: wasm-pack test --node src/core -- --features 'niffler/wasm'
 
       - name: run wasm-pack build
-        run: wasm-pack build src/core -d ../../pkg
+        run: wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'
 
       - name: Prepare package for NPM publishing
         working-directory: pkg
@@ -217,12 +217,12 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.71.1"
+          toolchain: "1.74.0"
 
       - uses: Swatinem/rust-cache@v2
 
       - name: check if README matches MSRV defined here
-        run: grep '1.71.1' src/core/README.md
+        run: grep '1.74.0' src/core/README.md
 
       - name: Check if it builds properly
         run: |

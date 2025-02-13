@@ -302,7 +302,7 @@ cxx-compiler = ">=1.7.0,<1.8"
 libclang = ">=16.0.6,<16.1"
 
 [tool.pixi.feature.msrv.dependencies]
-rust = "~=1.71.1"
+rust = "~=1.74.0"
 
 [tool.pixi.feature.msrv.tasks]
 check-msrv = "cargo build --all-features"
@@ -329,12 +329,21 @@ bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
 [tool.pixi.feature.dev.tasks]
-install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations"
-semver-check = { cmd = "cargo semver-checks check-release --features branchwater", depends-on = ["install-tools"] }
+install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
+semver-check = { cmd = "cargo semver-checks check-release --default-features --features branchwater" }
+
+[tool.pixi.feature.wasm.dependencies]
+rust-std-wasm32-unknown-unknown = "*"
+nodejs = "~=20.0"
+
+[tool.pixi.feature.wasm.tasks]
+build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
+test-wasm = { cmd = "wasm-pack test --node src/core -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
 
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
 msrv = { features = ["build", "msrv"], solve-group = "msrv" }
+wasm = { features = ["dev", "build", "wasm"], solve-group = "default" }
 
 [tool.pixi.system-requirements]
 macos = "11.0"
