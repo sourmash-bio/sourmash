@@ -279,7 +279,7 @@ impl RevIndexOps for RevIndex {
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
             (&mut v[..])
-                .write_u64::<LittleEndian>(*hash)
+                .write_u64::<LittleEndian>(hash)
                 .expect("error writing bytes");
             (&cf_hashes, v)
         });
@@ -304,7 +304,7 @@ impl RevIndexOps for RevIndex {
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
             (&mut v[..])
-                .write_u64::<LittleEndian>(*hash)
+                .write_u64::<LittleEndian>(hash)
                 .expect("error writing bytes");
             (&cf_hashes, v)
         });
@@ -330,7 +330,7 @@ impl RevIndexOps for RevIndex {
                         .entry(color)
                         .or_insert_with(|| new_vals.clone());
                     counter.update(new_vals);
-                    (*k, color)
+                    (k, color)
                 })
             })
             .collect();
@@ -446,7 +446,7 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
+            query.remove_many(match_mh.iter_mins())?; // is there a better way?
 
             // TODO: Use HashesToColors here instead. If not initialized,
             //       build it.
