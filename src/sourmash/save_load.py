@@ -217,7 +217,7 @@ def _load_sqlite_db(filename, **kwargs):
 
 @add_loader("load collection from rocksdb", 20)
 def _load_sqlite_db(filename, **kwargs):
-    if filename.endswith('.rocksdb'):
+    if filename.endswith(".rocksdb"):
         return DiskRevIndex(filename)
 
 
