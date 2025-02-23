@@ -1,6 +1,7 @@
 import sourmash_tst_utils as utils
 
-from sourmash.index.revindex import RevIndex
+from sourmash.index import revindex 
+from sourmash.index.revindex import RevIndex, DiskRevIndex
 from sourmash.signature import load_one_signature_from_json
 from sourmash.search import JaccardSearch, SearchType
 
@@ -132,3 +133,32 @@ def test_revindex_gather_ignore():
     assert is_found(ss63, results)
 
 
+def test_rocksdb_len():
+    rocksdb_path = utils.get_test_data('3sigs.branch_0913.rocksdb')
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+
+def test_rocksdb_signatures():
+    rocksdb_path = utils.get_test_data('3sigs.branch_0913.rocksdb')
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    xx = list(db.signatures())
+    assert len(xx) == 3
+    for ss in xx:
+        print(ss.name)
+    # victory!
+
+
+def test_rocksdb_best_containment():
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    rocksdb_path = utils.get_test_data('2sigs.branch_0913.rocksdb')
+    db = DiskRevIndex(rocksdb_path)
+    print(db.best_containment(ss47))
+
+    assert 0

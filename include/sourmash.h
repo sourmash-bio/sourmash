@@ -60,6 +60,8 @@ typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
+typedef struct SourmashDiskRevIndex SourmashDiskRevIndex;
+
 typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
@@ -137,6 +139,20 @@ void computeparams_set_seed(SourmashComputeParameters *ptr, uint64_t new_seed);
 void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
+
+SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db_ptr,
+                                                  const SourmashSignature *query_ptr);
+
+void disk_revindex_free(SourmashDiskRevIndex *ptr);
+
+uint64_t disk_revindex_len(const SourmashDiskRevIndex *ptr);
+
+SourmashDiskRevIndex *disk_revindex_new_from_rocksdb(const char *path_ptr);
+
+SourmashSignature *disk_revindex_peek(const SourmashDiskRevIndex *db_ptr,
+                                      const SourmashKmerMinHash *query_ptr);
+
+SourmashSignature **disk_revindex_signatures(const SourmashDiskRevIndex *ptr, uintptr_t *size);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 

@@ -41,6 +41,7 @@ from .logging import notify, debug_literal
 from .exceptions import IndexNotLoaded
 
 from .index.sqlite_index import load_sqlite_index, SqliteIndex
+from .index.revindex import DiskRevIndex
 from .sbtmh import load_sbt_index
 from .lca.lca_db import load_single_database
 from . import signature as sigmod
@@ -212,6 +213,12 @@ def _load_revindex(filename, **kwargs):
 @add_loader("load collection from sqlitedb", 20)
 def _load_sqlite_db(filename, **kwargs):
     return load_sqlite_index(filename)
+
+
+@add_loader("load collection from rocksdb", 20)
+def _load_sqlite_db(filename, **kwargs):
+    if filename.endswith('.rocksdb'):
+        return DiskRevIndex(filename)
 
 
 @add_loader("load collection from zipfile", 80)

@@ -9,6 +9,8 @@ from sourmash.minhash import MinHash
 from sourmash.signature import SourmashSignature
 from sourmash._lowlevel import ffi, lib
 from sourmash.utils import RustObject, rustcall, decode_str, encode_str
+import sourmash._lowlevel
+from sourmash.minhash import flatten_and_intersect_scaled
 
 
 class RevIndex(RustObject, Index):
@@ -255,3 +257,58 @@ class SearchResult(RustObject):
         if result == "":
             return None
         return result
+
+
+class DiskRevIndex(RustObject):
+    __dealloc_func__ = lib.disk_revindex_free
+
+    def __init__(self, path):
+        path = path.encode('utf-8')
+        self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path)
+        self.location = path
+
+    def __len__(self):
+        return self._methodcall(lib.disk_revindex_len)
+
+    def signatures(self):
+        size = ffi.new("uintptr_t *")
+        sigs_ptr = self._methodcall(lib.disk_revindex_signatures, size)
+        size = size[0]
+
+        for i in range(size):
+            sig = SourmashSignature._from_objptr(sigs_ptr[i])
+            yield sig
+
+    def signatures_with_location(self):
+        for ss in self.signatures():
+            yield ss, self.location
+
+    def best_containment(self, query_ss, **kwargs):
+        ss_ptr = self._methodcall(lib.disk_revindex_best_containment,
+                                  query_ss._get_objptr())
+        match_ss = SourmashSignature._from_objptr(ss_ptr)
+        containment = match_ss.contained_by(query_ss)
+        
+        return IndexSearchResult(containment, match_ss, self.location)
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        try:
+            ss_ptr = self._methodcall(lib.disk_revindex_peek,
+                                      query_mh._get_objptr())
+        except:
+            return []
+
+        match_ss = SourmashSignature._from_objptr(ss_ptr)
+        intersect_mh = flatten_and_intersect_scaled(match_ss.minhash, query_mh)
+        containment = intersect_mh.contained_by(query_mh)
+        
+        return (IndexSearchResult(containment, match_ss, self.location),
+                intersect_mh)
+
+    def consume(self, *args, **kwargs):
+        pass
+
+
+    def select(self, *args, **kwargs):
+        return self
+
