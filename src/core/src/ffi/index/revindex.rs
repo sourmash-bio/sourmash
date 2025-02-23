@@ -6,7 +6,7 @@ use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
-use crate::index::revindex::mem_revindex::RevIndex;
+use crate::index::revindex::mem_revindex;
 use crate::index::Index;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
@@ -17,7 +17,7 @@ use crate::ScaledType;
 pub struct SourmashRevIndex;
 
 impl ForeignObject for SourmashRevIndex {
-    type RustObject = RevIndex;
+    type RustObject = mem_revindex::RevIndex;
 }
 
 // TODO: remove this when it is possible to pass Selection thru the FFI
@@ -78,7 +78,7 @@ unsafe fn revindex_new_with_paths(
 
     let selection = from_template(&template);
 
-    let revindex = RevIndex::new(
+    let revindex = mem_revindex::RevIndex::new(
         search_sigs.as_ref(),
         &selection,
         threshold,
@@ -127,7 +127,7 @@ unsafe fn revindex_new_with_sigs(
     };
 
     let selection = from_template(&template);
-    let revindex = RevIndex::new_with_sigs(search_sigs, &selection, threshold, queries)?;
+    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, threshold, queries)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
