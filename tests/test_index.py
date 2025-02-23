@@ -1857,7 +1857,7 @@ def test_revindex_index_search():
     assert sr[0][1] == ss63
 
 
-def test_revindex_gather():
+def test_revindex_best_containment():
     # check that RevIndex.best_containment works.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
