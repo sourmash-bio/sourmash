@@ -301,7 +301,11 @@ class DiskRevIndex(RustObject):
         try:
             size = ffi.new("uintptr_t *")
             results_ptr = self._methodcall(
-                lib.disk_revindex_prefetch, query_ss._get_objptr(), threshold_bp, size
+                lib.disk_revindex_prefetch,
+                query_ss._get_objptr(),
+                threshold_bp,
+                size,
+                False
             )
             size = size[0]
             print(f"got {size} results!")
@@ -311,6 +315,36 @@ class DiskRevIndex(RustObject):
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
             yield match
+
+    def search(self, query_ss, *, threshold=0, do_containment=False,
+               do_max_containment=False, best_only=False):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        threshold_bp = int(round(float(threshold) * len(query_ss.minhash)))
+
+        do_jaccard = True
+        if do_containment:      # @CTB do_max_containment?
+            do_jaccard = False
+        try:
+            size = ffi.new("uintptr_t *")
+            results_ptr = self._methodcall(
+                lib.disk_revindex_prefetch,
+                query_ss._get_objptr(),
+                threshold_bp,
+                size,
+                do_jaccard,
+            )
+            size = size[0]
+            #print(f"got {size} results!")
+        except:
+            raise
+
+        matches = []
+        for i in range(size):
+            match = SearchResult._from_objptr(results_ptr[i])
+            matches.append(match)
+        return matches
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
         if not query_ss.minhash:

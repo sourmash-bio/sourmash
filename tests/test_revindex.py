@@ -175,7 +175,15 @@ def test_rocksdb_prefetch():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    for match in db.prefetch(ss47, threshold_bp=0):
-        print(match)
+    matches = list(db.prefetch(ss47, threshold_bp=0));
+    print(matches)
+    match = matches[0]
+    assert match.signature.name.startswith('NC_009665.1 Shewanella baltica OS185')
+    assert round(match.score, 5) == 1.0
 
-    assert 0
+    match = matches[1]
+    assert match.signature.name.startswith('NC_011663.1 Shewanella baltica OS223')
+    assert round(match.score, 5) == 0.48851
+
+    assert len(matches) == 2
+

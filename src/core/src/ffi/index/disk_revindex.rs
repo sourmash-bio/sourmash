@@ -229,6 +229,7 @@ unsafe fn disk_revindex_prefetch(
     query_ptr: *const SourmashSignature,
     threshold_bp: u16,
     return_size: *mut usize,
+    jaccard: bool,
 ) -> Result<*const *const SourmashSearchResult> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
@@ -237,7 +238,7 @@ unsafe fn disk_revindex_prefetch(
     let query_mh: KmerMinHash = sig.clone()
         .try_into().expect("cannot get kmerminhash");
     let scaled = query_mh.scaled();
-    let threshold = threshold_bp as u32 / scaled as u32;
+    let threshold_bp: usize = threshold_bp as usize / scaled as usize;
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(&query_mh);
@@ -247,14 +248,19 @@ unsafe fn disk_revindex_prefetch(
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, size)| {
-            if size >= 0 {      // CTB threshold
+            if size >= threshold_bp {      // CTB threshold
                 let filename = "some rocksdb database";
-                let f_match = size as f64 / query_mh.size() as f64;
-                let sig = revindex
+                let sig: Signature = revindex
                     .collection()
                     .sig_for_dataset(dataset_id)
                     .expect("dataset not found")
                     .into();
+                let f_match = if jaccard {
+                    query_mh.jaccard(sig.minhash().expect("oops")).expect("foo") // @CTB
+                } else {
+                    size as f64 / query_mh.size() as f64
+                };
+
                 Some((f_match, sig, filename.to_owned()))
             } else {
                 None
