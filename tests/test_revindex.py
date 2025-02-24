@@ -164,3 +164,16 @@ def test_rocksdb_best_containment():
     print(result)
     assert round(result.score, 5) == 0.48851, result
     assert result.signature.name == 'NC_011663.1 Shewanella baltica OS223, complete genome', result.signature.name
+
+
+def test_rocksdb_prefetch():
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    for match in db.prefetch(ss47, threshold_bp=0):
+        print(match)
+
+    assert 0

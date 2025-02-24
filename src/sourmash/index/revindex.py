@@ -242,6 +242,9 @@ class RevIndex(RustObject, Index):
 class SearchResult(RustObject):
     __dealloc_func__ = lib.searchresult_free
 
+    def __repr__(self):
+        return f"SearchResult({self.score}, {self.signature}, {self.location})"
+
     @property
     def score(self):
         return self._methodcall(lib.searchresult_score)
@@ -252,7 +255,7 @@ class SearchResult(RustObject):
         return SourmashSignature._from_objptr(sig_ptr)
 
     @property
-    def filename(self):
+    def location(self):
         result = decode_str(self._methodcall(lib.searchresult_filename))
         if result == "":
             return None
@@ -288,6 +291,30 @@ class DiskRevIndex(RustObject):
     def _signatures_with_internal(self):
         for n, ss in enumerate(self.signatures()):
             yield ss, n
+
+    def prefetch(self, query_ss, *, threshold_bp=0):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        threshold_bp = int(threshold_bp)
+
+        try:
+            size = ffi.new("uintptr_t *")
+            results_ptr = self._methodcall(
+                lib.disk_revindex_prefetch,
+                query_ss._get_objptr(),
+                threshold_bp,
+                size
+            )
+            size = size[0]
+            print(f'got {size} results!')
+        except:
+            raise
+
+        for i in range(size):
+            match = SearchResult._from_objptr(results_ptr[i])
+            yield match
+
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
         if not query_ss.minhash:

@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
-// use crate::ffi::index::SourmashSearchResult;
+use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::index::revindex::RevIndexOps;
 use crate::ffi::signature::SourmashSignature;
@@ -11,7 +11,7 @@ use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
 // use crate::collection::Collection;
 // use crate::index::Index;
 // use crate::prelude::*;
-use crate::signature::Signature;
+use crate::signature::{ Signature, SigsTrait };
 use crate::sketch::minhash::KmerMinHash;
 // use crate::sketch::Sketch;
 // use crate::ScaledType;
@@ -224,6 +224,57 @@ unsafe fn disk_revindex_best_containment(
 }
     
 ffi_fn! {
+unsafe fn disk_revindex_prefetch(
+    db_ptr: *const SourmashDiskRevIndex,
+    query_ptr: *const SourmashSignature,
+    threshold_bp: u16,
+    return_size: *mut usize,
+) -> Result<*const *const SourmashSearchResult> {
+    let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
+    let sig = SourmashSignature::as_rust(query_ptr);
+
+    // extract KmerMinHash for query
+    let query_mh: KmerMinHash = sig.clone()
+        .try_into().expect("cannot get kmerminhash");
+    let scaled = query_mh.scaled();
+    let threshold = threshold_bp as u32 / scaled as u32;
+
+    // do search & get first/best match
+    let counter = revindex.counter_for_query(&query_mh);
+    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
+
+    let results: Vec<(f64, Signature, String)> = counter
+        .most_common()
+        .into_iter()
+        .filter_map(|(dataset_id, size)| {
+            if size >= 0 {      // CTB threshold
+                let filename = "some rocksdb database";
+                let f_match = size as f64 / query_mh.size() as f64;
+                let sig = revindex
+                    .collection()
+                    .sig_for_dataset(dataset_id)
+                    .expect("dataset not found")
+                    .into();
+                Some((f_match, sig, filename.to_owned()))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // convert to ffi.
+    let ptr_results: Vec<*const SourmashSearchResult> = results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+        .collect();
+
+    let b = ptr_results.into_boxed_slice();
+    *return_size = b.len();
+    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
+}
+}
+
+ffi_fn! {
 unsafe fn disk_revindex_peek(
     db_ptr: *const SourmashDiskRevIndex,
     query_ptr: *const SourmashKmerMinHash,
@@ -242,4 +293,4 @@ unsafe fn disk_revindex_peek(
     Ok(SourmashSignature::from_rust(match_sig))
 }
 }
-    
+

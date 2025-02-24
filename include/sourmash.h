@@ -153,6 +153,11 @@ SourmashDiskRevIndex *disk_revindex_new_from_rocksdb(const char *path_ptr);
 SourmashSignature *disk_revindex_peek(const SourmashDiskRevIndex *db_ptr,
                                       const SourmashKmerMinHash *query_ptr);
 
+const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevIndex *db_ptr,
+                                                          const SourmashSignature *query_ptr,
+                                                          uint16_t threshold_bp,
+                                                          uintptr_t *return_size);
+
 SourmashSignature **disk_revindex_signatures(const SourmashDiskRevIndex *ptr, uintptr_t *size);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
