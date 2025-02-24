@@ -261,6 +261,8 @@ class SearchResult(RustObject):
 
 class DiskRevIndex(RustObject):
     __dealloc_func__ = lib.disk_revindex_free
+    is_database = True
+    manifest = None
 
     def __init__(self, path):
         path = path.encode("utf-8")
@@ -283,12 +285,27 @@ class DiskRevIndex(RustObject):
         for ss in self.signatures():
             yield ss, self.location
 
-    def best_containment(self, query_ss, **kwargs):
-        ss_ptr = self._methodcall(
-            lib.disk_revindex_best_containment, query_ss._get_objptr()
-        )
-        match_ss = SourmashSignature._from_objptr(ss_ptr)
-        containment = match_ss.contained_by(query_ss)
+    def _signatures_with_internal(self):
+        for n, ss in enumerate(self.signatures()):
+            yield ss, n
+
+    def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        threshold_bp = int(threshold_bp)
+
+        try:
+            ss_ptr = self._methodcall(
+                lib.disk_revindex_best_containment, query_ss._get_objptr(),
+                threshold_bp
+            )
+            match_ss = SourmashSignature._from_objptr(ss_ptr)
+            if not match_ss.minhash:
+                raise ValueError("no results")
+        except:
+            raise ValueError("no results")
+        containment = query_ss.contained_by(match_ss)
 
         return IndexSearchResult(containment, match_ss, self.location)
 

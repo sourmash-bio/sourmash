@@ -141,7 +141,8 @@ void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
 SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db_ptr,
-                                                  const SourmashSignature *query_ptr);
+                                                  const SourmashSignature *query_ptr,
+                                                  uint16_t threshold_bp);
 
 void disk_revindex_free(SourmashDiskRevIndex *ptr);
 

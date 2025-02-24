@@ -196,6 +196,7 @@ ffi_fn! {
 unsafe fn disk_revindex_best_containment(
     db_ptr: *const SourmashDiskRevIndex,
     query_ptr: *const SourmashSignature,
+    threshold_bp: u16
 ) -> Result<*mut SourmashSignature> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
@@ -203,16 +204,22 @@ unsafe fn disk_revindex_best_containment(
     // extract KmerMinHash for query
     let query_mh: KmerMinHash = sig.clone()
         .try_into().expect("cannot get kmerminhash");
+    let scaled = query_mh.scaled();
+    let threshold = threshold_bp as u32 / scaled as u32;
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(&query_mh);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
-    // load into SigStore & convert to Signature.
-    let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-    let match_sig: Signature = match_sig.into();
+    if size as u32 >= threshold {
+        // load into SigStore & convert to Signature.
+        let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
+        let match_sig: Signature = match_sig.into();
 
-    Ok(SourmashSignature::from_rust(match_sig))
+        Ok(SourmashSignature::from_rust(match_sig))
+    } else {
+        Ok(SourmashSignature::from_rust(Signature::default()))
+    }
 }
 }
     

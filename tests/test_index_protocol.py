@@ -18,7 +18,7 @@ from sourmash.index import (
 )
 from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
-from sourmash.index.revindex import RevIndex
+from sourmash.index.revindex import RevIndex, DiskRevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
@@ -158,6 +158,12 @@ def build_revindex(runtmp):
     return lidx
 
 
+def build_disk_revindex(runtmp):
+    dbpath = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    idx = DiskRevIndex(dbpath)
+    return idx
+
+
 def build_lca_index_save_load_sql(runtmp):
     db = build_lca_index(runtmp)
     outfile = runtmp.output("db.lca.json")
@@ -189,6 +195,7 @@ def build_lca_index_save_load_sql(runtmp):
         build_sqlite_index,
         build_lca_index_save_load_sql,
         #                        build_revindex,
+        build_disk_revindex,
     ]
 )
 def index_obj(request, runtmp):
