@@ -324,8 +324,7 @@ class DiskRevIndex(RustObject):
 
         try:
             ss_ptr = self._methodcall(
-                lib.disk_revindex_best_containment, query_ss._get_objptr(),
-                threshold_bp
+                lib.disk_revindex_best_containment, query_ss._get_objptr(), threshold_bp
             )
             match_ss = SourmashSignature._from_objptr(ss_ptr)
             if not match_ss.minhash:
