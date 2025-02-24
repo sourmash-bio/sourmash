@@ -305,7 +305,7 @@ class DiskRevIndex(RustObject):
                 query_ss._get_objptr(),
                 threshold_bp,
                 size,
-                False
+                False,
             )
             size = size[0]
             print(f"got {size} results!")
@@ -316,15 +316,22 @@ class DiskRevIndex(RustObject):
             match = SearchResult._from_objptr(results_ptr[i])
             yield match
 
-    def search(self, query_ss, *, threshold=0, do_containment=False,
-               do_max_containment=False, best_only=False):
+    def search(
+        self,
+        query_ss,
+        *,
+        threshold=0,
+        do_containment=False,
+        do_max_containment=False,
+        best_only=False,
+    ):
         if not query_ss.minhash:
             raise ValueError("empty query")
 
         threshold_bp = int(round(float(threshold) * len(query_ss.minhash)))
 
         do_jaccard = True
-        if do_containment:      # @CTB do_max_containment?
+        if do_containment:  # @CTB do_max_containment?
             do_jaccard = False
         try:
             size = ffi.new("uintptr_t *")
@@ -336,7 +343,7 @@ class DiskRevIndex(RustObject):
                 do_jaccard,
             )
             size = size[0]
-            #print(f"got {size} results!")
+            # print(f"got {size} results!")
         except:
             raise
 
