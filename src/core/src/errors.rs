@@ -166,9 +166,7 @@ impl SourmashErrorCode {
             SourmashError::Panic { .. } => SourmashErrorCode::Panic,
             SourmashError::CannotUpsampleScaled => SourmashErrorCode::CannotUpsampleScaled,
             SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
-            SourmashError::NeedsAbundanceTracking => {
-                SourmashErrorCode::NeedsAbundanceTracking
-            }
+            SourmashError::NeedsAbundanceTracking => SourmashErrorCode::NeedsAbundanceTracking,
             SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
             SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
             SourmashError::MismatchScaled => SourmashErrorCode::MismatchScaled,
