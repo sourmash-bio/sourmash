@@ -265,8 +265,8 @@ class DiskRevIndex(RustObject):
     manifest = None
 
     def __init__(self, path):
-        path = path.encode("utf-8")
-        self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path)
+        path_b = path.encode("utf-8")
+        self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
         self.location = path
 
     def __len__(self):

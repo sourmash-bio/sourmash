@@ -160,6 +160,7 @@ def test_rocksdb_best_containment():
 
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
-    print(db.best_containment(ss47))
-
-    assert 0
+    result = db.best_containment(ss47)
+    print(result)
+    assert round(result.score, 5) == 0.48851, result
+    assert result.signature.name == 'NC_011663.1 Shewanella baltica OS223, complete genome', result.signature.name
