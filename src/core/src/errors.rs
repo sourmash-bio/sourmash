@@ -164,9 +164,9 @@ impl SourmashErrorCode {
         match error {
             SourmashError::Internal { .. } => SourmashErrorCode::Internal,
             SourmashError::Panic { .. } => SourmashErrorCode::Panic,
-            SourmashError::CannotUpsampleScaled { .. } => SourmashErrorCode::CannotUpsampleScaled,
+            SourmashError::CannotUpsampleScaled => SourmashErrorCode::CannotUpsampleScaled,
             SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
-            SourmashError::NeedsAbundanceTracking { .. } => {
+            SourmashError::NeedsAbundanceTracking => {
                 SourmashErrorCode::NeedsAbundanceTracking
             }
             SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
@@ -187,7 +187,7 @@ impl SourmashErrorCode {
             SourmashError::InvalidTranslateFrame { .. } => SourmashErrorCode::InvalidTranslateFrame,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
-            SourmashError::HLLPrecisionBounds { .. } => SourmashErrorCode::HLLPrecisionBounds,
+            SourmashError::HLLPrecisionBounds => SourmashErrorCode::HLLPrecisionBounds,
             SourmashError::ANIEstimationError { .. } => SourmashErrorCode::ANIEstimationError,
             SourmashError::SerdeError { .. } => SourmashErrorCode::SerdeError,
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
