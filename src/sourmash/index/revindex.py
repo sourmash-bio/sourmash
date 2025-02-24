@@ -301,20 +301,16 @@ class DiskRevIndex(RustObject):
         try:
             size = ffi.new("uintptr_t *")
             results_ptr = self._methodcall(
-                lib.disk_revindex_prefetch,
-                query_ss._get_objptr(),
-                threshold_bp,
-                size
+                lib.disk_revindex_prefetch, query_ss._get_objptr(), threshold_bp, size
             )
             size = size[0]
-            print(f'got {size} results!')
+            print(f"got {size} results!")
         except:
             raise
 
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
             yield match
-
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
         if not query_ss.minhash:
