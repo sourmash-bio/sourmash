@@ -146,7 +146,11 @@ SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db
 
 void disk_revindex_free(SourmashDiskRevIndex *ptr);
 
+uint64_t disk_revindex_ksize(const SourmashDiskRevIndex *ptr);
+
 uint64_t disk_revindex_len(const SourmashDiskRevIndex *ptr);
+
+const char *disk_revindex_moltype(const SourmashDiskRevIndex *ptr);
 
 SourmashDiskRevIndex *disk_revindex_new_from_rocksdb(const char *path_ptr);
 
@@ -157,6 +161,8 @@ const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevI
                                                           const SourmashSignature *query_ptr,
                                                           uint64_t threshold_bp,
                                                           uintptr_t *return_size);
+
+uint32_t disk_revindex_scaled(const SourmashDiskRevIndex *ptr);
 
 const SourmashSearchResult *const *disk_revindex_search_jaccard(const SourmashDiskRevIndex *db_ptr,
                                                                 const SourmashSignature *query_ptr,

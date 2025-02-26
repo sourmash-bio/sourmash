@@ -8,6 +8,7 @@ use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::{ForeignObject};
 use crate::index::revindex::RevIndex as BasicRevIndex;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
+use std::ffi::CString;
 // use crate::collection::Collection;
 // use crate::index::Index;
 // use crate::prelude::*;
@@ -161,6 +162,27 @@ pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> 
     revindex.collection().len() as u64
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn disk_revindex_ksize(ptr: *const SourmashDiskRevIndex) -> u64 {
+    let revindex = SourmashDiskRevIndex::as_rust(ptr);
+    31                          // @CTB :)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn disk_revindex_scaled(ptr: *const SourmashDiskRevIndex) -> u32 {
+    let revindex = SourmashDiskRevIndex::as_rust(ptr);
+    let (_, scaled) = revindex.collection().min_max_scaled().expect("no records!?");
+    *scaled
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn disk_revindex_moltype(ptr: *const SourmashDiskRevIndex) -> *const c_char {
+    let s = "DNA";
+
+    let c_string = CString::new(s).expect("foo");
+    c_string.as_ptr()
+}
+
 ffi_fn! {
 unsafe fn disk_revindex_signatures(
     ptr: *const SourmashDiskRevIndex,
@@ -295,7 +317,6 @@ unsafe fn disk_revindex_search_jaccard(
     // extract KmerMinHash for query
     let query_mh: KmerMinHash = sig.clone()
         .try_into().expect("cannot get kmerminhash");
-    let scaled = query_mh.scaled();
 
     // do search
     let counter = revindex.counter_for_query(&query_mh);
@@ -306,7 +327,7 @@ unsafe fn disk_revindex_search_jaccard(
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
         .into_iter()
-        .filter_map(|(dataset_id, size)| {
+        .filter_map(|(dataset_id, _size)| {
             let filename = "some rocksdb database";
             let sig: Signature = revindex
                 .collection()

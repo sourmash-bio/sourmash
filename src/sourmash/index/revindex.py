@@ -275,6 +275,26 @@ class DiskRevIndex(RustObject):
     def __len__(self):
         return self._methodcall(lib.disk_revindex_len)
 
+    def select(self, ksize=None, moltype=None, scaled=None, num=None,
+               abund=None, containment=None, picklist=None):
+        assert abund is None
+        assert num is None
+        # ignore containment!
+
+        my_ksize = self._methodcall(lib.disk_revindex_ksize)
+        my_scaled = self._methodcall(lib.disk_revindex_scaled)
+        my_moltype = self._methodcall(lib.disk_revindex_moltype)
+
+        if ksize is not None:
+            if ksize != my_ksize:
+                raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
+        if scaled is not None and (scaled < my_scaled or type(scaled)) != int :
+            raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
+        if moltype is not None and moltype != my_moltype:
+            raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
+
+        return self
+
     def signatures(self):
         size = ffi.new("uintptr_t *")
         sigs_ptr = self._methodcall(lib.disk_revindex_signatures, size)
@@ -391,6 +411,3 @@ class DiskRevIndex(RustObject):
 
     def consume(self, *args, **kwargs):
         pass
-
-    def select(self, *args, **kwargs):
-        return self

@@ -1,3 +1,4 @@
+import pytest
 import sourmash_tst_utils as utils
 
 from sourmash.index import revindex
@@ -186,3 +187,17 @@ def test_rocksdb_prefetch():
     assert round(match.score, 5) == 0.48851
 
     assert len(matches) == 2
+
+
+def test_rocksdb_ksize_wrong():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    with pytest.raises(ValueError):
+        db.select(ksize=21)
+
+
+def test_rocksdb_ksize():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print('xxx', db, db.select(ksize=31))
+    assert db == db.select(ksize=31)
