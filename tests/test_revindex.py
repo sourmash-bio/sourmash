@@ -199,5 +199,5 @@ def test_rocksdb_ksize_wrong():
 def test_rocksdb_ksize():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
-    print('xxx', db, db.select(ksize=31))
+    print("xxx", db, db.select(ksize=31))
     assert db == db.select(ksize=31)
