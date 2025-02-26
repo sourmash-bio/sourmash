@@ -1491,7 +1491,7 @@ class LineageDB_Sqlite(abc.Mapping):
         # get available ranks...
         ranks = set()
         for column, rank in zip(self.columns, RankLineageInfo().taxlist):
-            query = f'SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ""'
+            query = f"SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ''"
             c.execute(query)
             (cnt,) = c.fetchone()
             if cnt:
