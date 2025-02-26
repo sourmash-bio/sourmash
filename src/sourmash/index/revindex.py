@@ -298,23 +298,20 @@ class DiskRevIndex(RustObject):
 
         threshold_bp = int(threshold_bp)
 
-        try:
-            size = ffi.new("uintptr_t *")
-            results_ptr = self._methodcall(
-                lib.disk_revindex_prefetch,
-                query_ss._get_objptr(),
-                threshold_bp,
-                size,
-                False,
-            )
-            size = size[0]
-            print(f"got {size} results!")
-        except:
-            raise
+        size = ffi.new("uintptr_t *")
+        results_ptr = self._methodcall(
+            lib.disk_revindex_prefetch,
+            query_ss._get_objptr(),
+            threshold_bp,
+            size,
+        )
+        size = size[0]
 
+        matches = []
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
-            yield match
+            matches.append(match)
+        return matches
 
     def search(
         self,
@@ -325,32 +322,39 @@ class DiskRevIndex(RustObject):
         do_max_containment=False,
         best_only=False,
     ):
+        # @CTB: best_only? sorting?
         if not query_ss.minhash:
             raise ValueError("empty query")
 
-        threshold_bp = int(round(float(threshold) * len(query_ss.minhash)))
-
         do_jaccard = True
-        if do_containment:  # @CTB do_max_containment?
-            do_jaccard = False
-        try:
-            size = ffi.new("uintptr_t *")
+        size = ffi.new("uintptr_t *")
+        if do_containment:
+            # calculate threshold_bp from threshold
+            query_mh = query_ss.minhash
+            threshold_bp = int(round(threshold * len(query_mh) * query_mh.scaled))
             results_ptr = self._methodcall(
                 lib.disk_revindex_prefetch,
                 query_ss._get_objptr(),
                 threshold_bp,
                 size,
-                do_jaccard,
             )
-            size = size[0]
-            # print(f"got {size} results!")
-        except:
-            raise
+        elif do_max_containment:
+            raise NotImplementedError("max_containment is not (yet) available on RocksDB")
+        else:                   # jaccard
+            results_ptr = self._methodcall(
+                lib.disk_revindex_search_jaccard,
+                query_ss._get_objptr(),
+                threshold,
+                size,
+            )
+
+        size = size[0]
 
         matches = []
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
             matches.append(match)
+
         return matches
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):

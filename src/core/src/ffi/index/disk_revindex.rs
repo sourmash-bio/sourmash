@@ -222,14 +222,15 @@ unsafe fn disk_revindex_best_containment(
     }
 }
 }
-    
+
+// implement prefetch/containment separately from search/jaccard
+
 ffi_fn! {
 unsafe fn disk_revindex_prefetch(
     db_ptr: *const SourmashDiskRevIndex,
     query_ptr: *const SourmashSignature,
-    threshold_bp: u16,
+    threshold_bp: u64,
     return_size: *mut usize,
-    jaccard: bool,
 ) -> Result<*const *const SourmashSearchResult> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
@@ -238,29 +239,85 @@ unsafe fn disk_revindex_prefetch(
     let query_mh: KmerMinHash = sig.clone()
         .try_into().expect("cannot get kmerminhash");
     let scaled = query_mh.scaled();
-    let threshold_bp: usize = threshold_bp as usize / scaled as usize;
+    let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
 
-    // do search & get first/best match
+    // do search & get matches
     let counter = revindex.counter_for_query(&query_mh);
-    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
+    // right now this iterates over all matches from 'counter.most_common()'.
+    // we could probably truncate the search here in some way, yes?
+    // but it would require changing this to a loop rather than using an
+    // iterator I think.
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, size)| {
-            if size >= threshold_bp {      // CTB threshold
+            if size as u64 >= threshold_bp {
                 let filename = "some rocksdb database";
                 let sig: Signature = revindex
                     .collection()
                     .sig_for_dataset(dataset_id)
                     .expect("dataset not found")
                     .into();
-                let f_match = if jaccard {
-                    query_mh.jaccard(sig.minhash().expect("oops")).expect("foo") // @CTB
-                } else {
-                    size as f64 / query_mh.size() as f64
-                };
+                let f_cont = size as f64 / query_mh.size() as f64;
 
+                Some((f_cont, sig, filename.to_owned()))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // convert to ffi.
+    let ptr_results: Vec<*const SourmashSearchResult> = results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+        .collect();
+
+    let b = ptr_results.into_boxed_slice();
+    *return_size = b.len();
+    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
+}
+}
+
+// implement search/jaccard separately from search/jaccard asdf
+
+ffi_fn! {
+unsafe fn disk_revindex_search_jaccard(
+    db_ptr: *const SourmashDiskRevIndex,
+    query_ptr: *const SourmashSignature,
+    threshold: f64,
+    return_size: *mut usize,
+) -> Result<*const *const SourmashSearchResult> {
+    let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
+    let sig = SourmashSignature::as_rust(query_ptr);
+
+    // extract KmerMinHash for query
+    let query_mh: KmerMinHash = sig.clone()
+        .try_into().expect("cannot get kmerminhash");
+    let scaled = query_mh.scaled();
+
+    // do search
+    let counter = revindex.counter_for_query(&query_mh);
+
+    // retrieve/convert matches. I don't think there's a simple way to
+    // truncate this without going through all the matches, so it's
+    // potentially (much) more expensive than prefetch.
+    let results: Vec<(f64, Signature, String)> = counter
+        .most_common()
+        .into_iter()
+        .filter_map(|(dataset_id, size)| {
+            let filename = "some rocksdb database";
+            let sig: Signature = revindex
+                .collection()
+                .sig_for_dataset(dataset_id)
+                .expect("dataset not found")
+                .into();
+
+            let match_mh = sig.minhash().expect("cannot retrieve match");
+            let f_match = query_mh.jaccard(match_mh).expect("cannot calculate Jaccard");
+
+            if f_match >= threshold {
                 Some((f_match, sig, filename.to_owned()))
             } else {
                 None
@@ -279,6 +336,8 @@ unsafe fn disk_revindex_prefetch(
     Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
+
+// implement peek: used in 'gather' to retrieve best containment possible
 
 ffi_fn! {
 unsafe fn disk_revindex_peek(

@@ -155,9 +155,13 @@ SourmashSignature *disk_revindex_peek(const SourmashDiskRevIndex *db_ptr,
 
 const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevIndex *db_ptr,
                                                           const SourmashSignature *query_ptr,
-                                                          uint16_t threshold_bp,
-                                                          uintptr_t *return_size,
-                                                          bool jaccard);
+                                                          uint64_t threshold_bp,
+                                                          uintptr_t *return_size);
+
+const SourmashSearchResult *const *disk_revindex_search_jaccard(const SourmashDiskRevIndex *db_ptr,
+                                                                const SourmashSignature *query_ptr,
+                                                                double threshold,
+                                                                uintptr_t *return_size);
 
 SourmashSignature **disk_revindex_signatures(const SourmashDiskRevIndex *ptr, uintptr_t *size);
 
