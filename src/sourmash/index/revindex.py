@@ -326,7 +326,6 @@ class DiskRevIndex(RustObject):
         if not query_ss.minhash:
             raise ValueError("empty query")
 
-        do_jaccard = True
         size = ffi.new("uintptr_t *")
         if do_containment:
             # calculate threshold_bp from threshold
@@ -339,8 +338,10 @@ class DiskRevIndex(RustObject):
                 size,
             )
         elif do_max_containment:
-            raise NotImplementedError("max_containment is not (yet) available on RocksDB")
-        else:                   # jaccard
+            raise NotImplementedError(
+                "max_containment is not (yet) available on RocksDB"
+            )
+        else:  # jaccard
             results_ptr = self._methodcall(
                 lib.disk_revindex_search_jaccard,
                 query_ss._get_objptr(),
