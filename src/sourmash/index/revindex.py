@@ -245,6 +245,9 @@ class SearchResult(RustObject):
     def __repr__(self):
         return f"SearchResult({self.score}, {self.signature}, {self.location})"
 
+    def __iter__(self):
+        return iter((self.score, self.signature, self.location))
+
     @property
     def score(self):
         return self._methodcall(lib.searchresult_score)
@@ -286,7 +289,7 @@ class DiskRevIndex(RustObject):
         picklist=None,
     ):
         assert abund is None
-        assert num is None
+        assert num is None or num == 0
         # ignore containment!
 
         my_ksize = self._methodcall(lib.disk_revindex_ksize)
@@ -298,7 +301,7 @@ class DiskRevIndex(RustObject):
                 raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
         if scaled is not None and (scaled < my_scaled or type(scaled)) != int:
             raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if moltype is not None and moltype != my_moltype:
+        if 0 and moltype is not None and moltype != my_moltype:
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         return self
@@ -349,6 +352,7 @@ class DiskRevIndex(RustObject):
         do_containment=False,
         do_max_containment=False,
         best_only=False,
+        **kwargs
     ):
         # @CTB: best_only? sorting?
         if not query_ss.minhash:
@@ -417,5 +421,39 @@ class DiskRevIndex(RustObject):
 
         return (IndexSearchResult(containment, match_ss, self.location), intersect_mh)
 
-    def consume(self, *args, **kwargs):
+    def consume(self, intersect_mh):
         pass
+
+    # spin off into separate obj?
+    def counter_gather(self, query, threshold_bp, **kwargs):
+        counter = DiskRevIndex_CounterGather(query, self)
+        for result in self.prefetch(query, threshold_bp=threshold_bp):
+            counter.add(result.signature)
+
+        return counter
+
+
+class DiskRevIndex_CounterGather:
+    def __init__(self, query, db):
+        self.query = query
+        self.orig_query_mh = query.minhash.copy().flatten()
+        self.found_mh = query.minhash.copy_and_clear().to_mutable()
+        self.db = db
+
+    def add(self, match):
+        intersect_mh = self.orig_query_mh.intersection(match.minhash)
+        self.found_mh += intersect_mh
+
+    def peek(self, *args, **kwargs):
+        return self.db.peek(*args, **kwargs)
+
+    def consume(self, intersect_mh):
+        self.found_mh += intersect_mh
+
+    @property
+    def union_found(self):
+        return self.found_mh
+
+    def signatures(self):
+        for sr in self.db.prefetch(self.query):
+            yield sr.signature
