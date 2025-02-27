@@ -674,8 +674,14 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented: unknown")]
     fn test_try_from_str_invalid() {
-        HashFunctions::try_from("unknown").unwrap();
+        let result = HashFunctions::try_from("unknown");
+
+        // Ensure it returns an error instead of panicking
+        assert!(result.is_err());
+
+        // Extract and check the error message
+        let error_message = format!("{}", result.unwrap_err());
+        assert!(error_message.contains("Invalid hash function"));
     }
 }
