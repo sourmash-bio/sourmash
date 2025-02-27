@@ -352,7 +352,7 @@ class DiskRevIndex(RustObject):
         do_containment=False,
         do_max_containment=False,
         best_only=False,
-        **kwargs
+        **kwargs,
     ):
         # @CTB: best_only? sorting?
         if not query_ss.minhash:
