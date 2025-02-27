@@ -91,7 +91,9 @@ impl TryFrom<&str> for HashFunctions {
             "protein" => Ok(HashFunctions::Murmur64Protein),
             "skipm1n3" => Ok(HashFunctions::Murmur64Skipm1n3),
             "skipm2n3" => Ok(HashFunctions::Murmur64Skipm2n3),
-            v => unimplemented!("{v}"),
+            v => Err(Error::InvalidHashFunction {
+                function: v.to_string(),
+            }),
         }
     }
 }
