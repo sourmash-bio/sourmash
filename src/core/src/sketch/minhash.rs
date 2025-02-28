@@ -149,11 +149,11 @@ impl<'de> Deserialize<'de> for KmerMinHash {
         let tmpsig = TempSig::deserialize(deserializer)?;
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
-        
+
         // Set the hash function based on the molecule string. This will panic if
         // the molecule string is not a valid.
-        let hash_function = HashFunctions::try_from(tmpsig.molecule.as_str())
-            .map_err(serde::de::Error::custom)?;
+        let hash_function =
+            HashFunctions::try_from(tmpsig.molecule.as_str()).map_err(serde::de::Error::custom)?;
 
         // This shouldn't be necessary, but at some point we
         // created signatures with unordered mins =(
@@ -1858,7 +1858,6 @@ fn intersection_size<'a>(
     (common as u64, union_size as u64)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1880,7 +1879,8 @@ mod tests {
         }
         "#;
 
-        let deserialized: KmerMinHash = serde_json::from_str(json_data).expect("Failed to deserialize");
+        let deserialized: KmerMinHash =
+            serde_json::from_str(json_data).expect("Failed to deserialize");
 
         assert_eq!(deserialized.num, 1000);
         assert_eq!(deserialized.ksize, 21);
