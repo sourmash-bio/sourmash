@@ -270,10 +270,29 @@ class DiskRevIndex(RustObject):
     is_database = True
     manifest = None
 
-    def __init__(self, path):
+    def __init__(self, path, *, ptr=None):
         path_b = path.encode("utf-8")
-        self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
+        if ptr is None:
+            self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
         self.location = path
+
+    @classmethod
+    def from_sigs(self, siglist, path):
+        path_b = path.encode("utf-8")
+
+        collected = []
+        for ss in siglist:
+            rv = ss._get_objptr()
+            collected.append(rv)
+
+        sigs_ptr = ffi.new("SourmashSignature*[]", collected)
+        sig_size = len(collected)
+
+        _objptr = rustcall(lib.disk_revindex_new_with_sigs,
+                                sigs_ptr, sig_size,
+                                path_b)
+
+        return DiskRevIndex(path)
 
     def __len__(self):
         return self._methodcall(lib.disk_revindex_len)

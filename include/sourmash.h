@@ -154,6 +154,10 @@ const char *disk_revindex_moltype(const SourmashDiskRevIndex *ptr);
 
 SourmashDiskRevIndex *disk_revindex_new_from_rocksdb(const char *path_ptr);
 
+void disk_revindex_new_with_sigs(const SourmashSignature *const *sigs_ptr,
+                                 uintptr_t insigs,
+                                 const char *path_ptr);
+
 SourmashSignature *disk_revindex_peek(const SourmashDiskRevIndex *db_ptr,
                                       const SourmashKmerMinHash *query_ptr);
 

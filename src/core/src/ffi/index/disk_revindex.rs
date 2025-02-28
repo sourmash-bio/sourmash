@@ -1,3 +1,4 @@
+use std::slice;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
@@ -9,7 +10,8 @@ use crate::ffi::utils::{ForeignObject};
 use crate::index::revindex::RevIndex as BasicRevIndex;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
 use std::ffi::CString;
-// use crate::collection::Collection;
+use std::path::Path;
+use crate::collection::{ Collection, CollectionSet };
 // use crate::index::Index;
 // use crate::prelude::*;
 use crate::signature::{ Signature, SigsTrait };
@@ -43,118 +45,43 @@ unsafe fn disk_revindex_new_from_rocksdb(
 }
 }
 
+ffi_fn! {
+unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
+    sigs_ptr: *const *const SourmashSignature,
+    insigs: usize,
+    path_ptr: *const c_char,
+) -> Result<()> {
+    let sigs: Vec<Signature> = {
+        assert!(!sigs_ptr.is_null());
+        slice::from_raw_parts(sigs_ptr, insigs)
+            .iter()
+            .map(|sig| SourmashSignature::as_rust(*sig))
+            .cloned()
+            .collect()
+    };
+
+    let coll = Collection::from_sigs(sigs).expect("cannot create Collection");
+    let cs: CollectionSet = coll.try_into().expect("cannot convert to CollectionSet");
+
+    let rocksdb_path = {
+        assert!(!path_ptr.is_null());
+        CStr::from_ptr(path_ptr)
+    }.to_str()?;
+
+    let rocksdb_path = Path::new(rocksdb_path);
+
+    let mut revindex = DDRevIndex::create(rocksdb_path, cs).expect("cannot create RocksDB");
+    revindex.internalize_storage();
+    Ok(())
+}
+}
+
+
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_free(ptr: *mut SourmashDiskRevIndex) {
     SourmashDiskRevIndex::drop(ptr);
 }
 
-/*
-ffi_fn! {
-unsafe fn revindex_search(
-    ptr: *const SourmashRevIndex,
-    sig_ptr: *const SourmashSignature,
-    threshold: f64,
-    do_containment: bool,
-    _ignore_abundance: bool,
-    size: *mut usize,
-) -> Result<*const *const SourmashSearchResult> {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    let sig = SourmashSignature::as_rust(sig_ptr);
-
-    if sig.signatures.is_empty() {
-        *size = 0;
-        return Ok(std::ptr::null::<*const SourmashSearchResult>());
-    }
-
-    let mh = if let Sketch::MinHash(mh) = &sig.signatures[0] {
-        mh
-    } else {
-        // TODO: what if it is not a mh?
-        unimplemented!()
-    };
-
-    let results: Vec<(f64, Signature, String)> = revindex
-        .find_signatures(mh, threshold, do_containment, true)?
-        .into_iter()
-        .collect();
-
-    // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*const SourmashSearchResult> = results
-        .into_iter()
-        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
-        .collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
-}
-}
-
-ffi_fn! {
-unsafe fn revindex_gather(
-    ptr: *const SourmashRevIndex,
-    sig_ptr: *const SourmashSignature,
-    threshold: f64,
-    _do_containment: bool,
-    _ignore_abundance: bool,
-    size: *mut usize,
-) -> Result<*const *const SourmashSearchResult> {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    let sig = SourmashSignature::as_rust(sig_ptr);
-
-    if sig.signatures.is_empty() {
-        *size = 0;
-        return Ok(std::ptr::null::<*const SourmashSearchResult>());
-    }
-
-    let mh = if let Sketch::MinHash(mh) = &sig.signatures[0] {
-        mh
-    } else {
-        // TODO: what if it is not a mh?
-        unimplemented!()
-    };
-
-    // TODO: proper threshold calculation
-    let threshold: usize = (threshold * (mh.size() as f64)) as _;
-
-    let counter = revindex.counter_for_query(mh);
-    dbg!(&counter);
-
-    let results: Vec<(f64, Signature, String)> = revindex
-        .gather(counter, threshold, mh)
-        .unwrap() // TODO: proper error handling
-        .into_iter()
-        .map(|r| {
-            let filename = r.filename().to_owned();
-            let sig = r.get_match();
-            (r.f_match(), sig, filename)
-        })
-        .collect();
-
-    // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*const SourmashSearchResult> = results
-        .into_iter()
-        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
-        .collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
-}
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> ScaledType {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    if let Sketch::MinHash(mh) = revindex.template() {
-        mh.scaled()
-    } else {
-        unimplemented!()
-    }
-}
-*/ 
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> u64 {
@@ -177,7 +104,7 @@ pub unsafe extern "C" fn disk_revindex_scaled(ptr: *const SourmashDiskRevIndex) 
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_moltype(ptr: *const SourmashDiskRevIndex) -> *const c_char {
-    let s = "DNA";
+    let s = "DNA";              // @CTB ;)
 
     let c_string = CString::new(s).expect("foo");
     c_string.as_ptr()
