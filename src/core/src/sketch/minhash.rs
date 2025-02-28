@@ -149,15 +149,11 @@ impl<'de> Deserialize<'de> for KmerMinHash {
         let tmpsig = TempSig::deserialize(deserializer)?;
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
-        let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
-            "protein" => HashFunctions::Murmur64Protein,
-            "dayhoff" => HashFunctions::Murmur64Dayhoff,
-            "hp" => HashFunctions::Murmur64Hp,
-            "dna" => HashFunctions::Murmur64Dna,
-            "skipm1n3" => HashFunctions::Murmur64Skipm1n3,
-            "skipm2n3" => HashFunctions::Murmur64Skipm2n3,
-            _ => unimplemented!(), // TODO: throw error here
-        };
+
+        // Set the hash function based on the molecule string. This will panic if
+        // the molecule string is not a valid.
+        let hash_function =
+            HashFunctions::try_from(tmpsig.molecule.as_str()).map_err(serde::de::Error::custom)?;
 
         // This shouldn't be necessary, but at some point we
         // created signatures with unordered mins =(
@@ -1860,4 +1856,62 @@ fn intersection_size<'a>(
         };
     }
     (common as u64, union_size as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    /// Test that a valid KmerMinHash json can be deserialized correctly
+    fn test_deserialize_valid() {
+        let json_data = r#"
+        {
+            "num": 1000,
+            "ksize": 21,
+            "seed": 42,
+            "max_hash": 0,
+            "md5sum": "test_md5",
+            "mins": [1, 2, 3, 4, 5],
+            "abundances": [10, 20, 30, 40, 50],
+            "molecule": "dna"
+        }
+        "#;
+
+        let deserialized: KmerMinHash =
+            serde_json::from_str(json_data).expect("Failed to deserialize");
+
+        assert_eq!(deserialized.num, 1000);
+        assert_eq!(deserialized.ksize, 21);
+        assert_eq!(deserialized.seed, 42);
+        assert_eq!(deserialized.hash_function, HashFunctions::Murmur64Dna);
+        assert_eq!(deserialized.mins, vec![1, 2, 3, 4, 5]);
+        assert!(deserialized.abunds.is_some());
+    }
+
+    #[test]
+    /// Test that a invalid molecule type panics!
+    fn test_deserialize_invalid_molecule() {
+        let json_data = r#"
+        {
+            "num": 1000,
+            "ksize": 21,
+            "seed": 42,
+            "max_hash": 0,
+            "md5sum": "test_md5",
+            "mins": [1, 2, 3, 4, 5],
+            "molecule": "unknown_type"
+        }
+        "#;
+
+        let result: Result<KmerMinHash, _> = serde_json::from_str(json_data);
+
+        // Assert that the result is an error
+        assert!(result.is_err());
+
+        // Extract and check the error message
+        let error_message = format!("{}", result.unwrap_err());
+        assert!(error_message.contains("Invalid hash function"));
+    }
 }
