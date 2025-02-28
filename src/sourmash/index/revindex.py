@@ -288,9 +288,7 @@ class DiskRevIndex(RustObject):
         sigs_ptr = ffi.new("SourmashSignature*[]", collected)
         sig_size = len(collected)
 
-        _objptr = rustcall(lib.disk_revindex_new_with_sigs,
-                                sigs_ptr, sig_size,
-                                path_b)
+        _objptr = rustcall(lib.disk_revindex_new_with_sigs, sigs_ptr, sig_size, path_b)
 
         return DiskRevIndex(path)
 

@@ -506,11 +506,11 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
-    if 0: # @CTB
+    if 0:  # @CTB
         if args.append:
-            tree = load_sbt_index(args.sbt_name)
+            load_sbt_index(args.sbt_name)
         else:
-            tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+            create_sbt_index(args.bf_size, n_children=args.n_children)
 
     if args.sparseness < 0 or args.sparseness > 1.0:
         error("sparseness must be in range [0.0, 1.0].")
@@ -600,13 +600,14 @@ def index(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    #notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
-    #tree.save(args.sbt_name, sparseness=args.sparseness)
-    #if tree.storage:
+    # notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
+    # tree.save(args.sbt_name, sparseness=args.sparseness)
+    # if tree.storage:
     #    tree.storage.close()
     from sourmash.index.revindex import DiskRevIndex
-    print('CREATING ROCKSDB W00T XXX', args.sbt_name)
-    db = DiskRevIndex.from_sigs(full_siglist, args.sbt_name)
+
+    print("CREATING ROCKSDB W00T XXX", args.sbt_name)
+    DiskRevIndex.from_sigs(full_siglist, args.sbt_name)
 
 
 def search(args):
