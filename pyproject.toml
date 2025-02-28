@@ -331,9 +331,18 @@ cachetools = ">=4,<6"
 bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
-[tool.pixi.feature.dev.tasks]
-install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
-semver-check = { cmd = "cargo semver-checks check-release --default-features --features branchwater" }
+[tool.pixi.feature.dev.tasks.install-tools]
+cmd = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
+outputs = [
+  "$CARGO_HOME/bin/cargo-semver-checks",
+  "$CARGO_HOME/bin/cargo-binstall",
+  "$CARGO_HOME/bin/cargo-feature-combinations",
+  "$CARGO_HOME/bin/wasm-pack",
+]
+
+[tool.pixi.feature.dev.tasks.semver-check]
+cmd = "cargo semver-checks check-release --default-features --features branchwater"
+depends-on = "install-tools"
 
 [tool.pixi.feature.wasm.dependencies]
 rust-std-wasm32-unknown-unknown = "*"
