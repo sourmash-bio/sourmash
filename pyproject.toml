@@ -332,8 +332,9 @@ bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
 [tool.pixi.feature.dev.tasks.install-tools]
-cmd = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
+cmd = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack && cargo binstall -y cbindgen --version 0.26.0"
 outputs = [
+  "$CARGO_HOME/bin/cbindgen",
   "$CARGO_HOME/bin/cargo-semver-checks",
   "$CARGO_HOME/bin/cargo-binstall",
   "$CARGO_HOME/bin/cargo-feature-combinations",
@@ -343,6 +344,26 @@ outputs = [
 [tool.pixi.feature.dev.tasks.semver-check]
 cmd = "cargo semver-checks check-release --default-features --features branchwater"
 depends-on = "install-tools"
+
+[tool.pixi.feature.dev.tasks.cbindgen-generate]
+cmd = "cbindgen -c cbindgen.toml . -o ../../include/sourmash.h"
+cwd = "src/core"
+env = { RUSTC_BOOTSTRAP = "1" }
+depends-on = "install-tools"
+inputs = [
+  "src/core/src/lib.rs",
+  "src/core/src/errors.rs",
+  "src/core/src/ffi/*.rs",
+  "src/core/cbindgen.toml",
+]
+outputs = ["include/sourmash.h"]
+
+[tool.pixi.feature.dev.tasks.check-features]
+cmd = "cargo fc nextest run"
+depends-on = "install-tools"
+
+[tool.pixi.feature.dev.tasks.coverage-rust]
+cmd = "cargo llvm-cov nextest --all-features --lcov --output-path lcov.info"
 
 [tool.pixi.feature.wasm.dependencies]
 rust-std-wasm32-unknown-unknown = "*"
