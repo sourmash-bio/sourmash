@@ -2687,7 +2687,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     assert "12 matches above threshold 0.080; showing first 3:" in out
 
 
-def test_search_metagenome(runtmp):
+def test_search_metagenome(runtmp): # @CTB transferred to test_index_cmd
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2876,7 +2876,7 @@ def test_search_metagenome_sbt_downsample_fail(runtmp):
     )
 
 
-def test_search_metagenome_sbt_downsample_nofail(runtmp):
+def test_search_metagenome_sbt_downsample_nofail(runtmp): # @CTB transferred to test_index_cmd
     # test downsample on SBT => failure but ok with --no-fail-on-empty-database
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
@@ -2914,7 +2914,7 @@ def test_search_metagenome_sbt_downsample_nofail(runtmp):
     assert "0 matches" in runtmp.last_result.out
 
 
-def test_search_metagenome_downsample_containment(runtmp):
+def test_search_metagenome_downsample_containment(runtmp): # @CTB transferred to test_index_cmd
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2951,10 +2951,10 @@ def test_search_metagenome_downsample_containment(runtmp):
     )
 
 
-@utils.in_tempdir
-def test_search_metagenome_downsample_index(c):
+def test_search_metagenome_downsample_index(runtmp): # @CTB transferred to test_index_cmd
     # does same search as search_metagenome_downsample_containment but
     # rescales during indexing
+    c = runtmp
 
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
@@ -3981,7 +3981,7 @@ def test_compare_with_pattern_exclude(runtmp):
     assert "NC_011294.1 Sal..." in out
 
 
-def test_gather(runtmp, linear_gather, prefetch_gather):
+def test_gather(runtmp, linear_gather, prefetch_gather): # @CTB transferred
     testdata1 = utils.get_test_data("short.fa")
     testdata2 = utils.get_test_data("short2.fa")
 
@@ -4614,7 +4614,7 @@ def test_gather_metagenome_3_thermo(runtmp):
     assert remaining_bp == 10130000
 
 
-def test_gather_metagenome(runtmp):
+def test_gather_metagenome(runtmp): # @CTB transferred to test_index_cmd
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -4650,7 +4650,7 @@ def test_gather_metagenome(runtmp):
 
 
 @utils.in_tempdir
-def test_gather_metagenome_num_results(c):
+def test_gather_metagenome_num_results(c): # @CTB transferred to test_index_cmd
     # set a threshold on the number of results to be reported by gather
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
@@ -4686,7 +4686,7 @@ def test_gather_metagenome_num_results(c):
     assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
 
 
-def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather):
+def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather): # @CTB transferred to test_index_cmd
     # set a threshold on the gather output
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
@@ -4727,7 +4727,7 @@ def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather):
     )
 
 
-def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather):
+def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather): # @CTB transferred to test_index_cmd
     # set a threshold on the gather output => too low
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
@@ -4764,7 +4764,7 @@ def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gath
 
 def test_gather_metagenome_threshold_bp_too_high(
     runtmp, linear_gather, prefetch_gather
-):
+): # @CTB transferred to test_index_cmd
     # set a threshold on the gather output => no results
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)

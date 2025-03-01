@@ -2,6 +2,7 @@ use std::slice;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
+use crate::encodings::HashFunctions;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::index::revindex::RevIndexOps;
@@ -90,9 +91,10 @@ pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn disk_revindex_ksize(ptr: *const SourmashDiskRevIndex) -> u64 {
+pub unsafe extern "C" fn disk_revindex_ksize(ptr: *const SourmashDiskRevIndex) -> u32 {
     let revindex = SourmashDiskRevIndex::as_rust(ptr);
-    31                          // @CTB :)
+
+    revindex.collection().manifest().first().expect("no records!?").ksize()
 }
 
 #[no_mangle]
@@ -104,9 +106,10 @@ pub unsafe extern "C" fn disk_revindex_scaled(ptr: *const SourmashDiskRevIndex) 
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_moltype(ptr: *const SourmashDiskRevIndex) -> *const c_char {
-    let s = "DNA";              // @CTB ;)
-
-    let c_string = CString::new(s).expect("foo");
+    let revindex = SourmashDiskRevIndex::as_rust(ptr);
+    let moltype = revindex.collection().manifest().first().expect("no records!?").moltype();
+    let moltype_str = moltype.to_string();
+    let c_string = CString::new(moltype_str).expect("foo");
     c_string.as_ptr()
 }
 
@@ -192,6 +195,7 @@ unsafe fn disk_revindex_prefetch(
 
     // do search & get matches
     let counter = revindex.counter_for_query(&query_mh);
+    eprintln!("counter size: {}", counter.len());
 
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
@@ -201,8 +205,10 @@ unsafe fn disk_revindex_prefetch(
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, size)| {
+            eprintln!("ZZZ2 {} {} {}", size, threshold_bp, dataset_id);
+
             if size as u64 >= threshold_bp {
-                let filename = "some rocksdb database";
+                let filename = "some rocksdb database"; // @CTB
                 let sig: Signature = revindex
                     .collection()
                     .sig_for_dataset(dataset_id)

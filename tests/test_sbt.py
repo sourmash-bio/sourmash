@@ -1,4 +1,4 @@
-"Test SBT code."
+"Test SBT code. @CTB add index stuff?"
 
 import json
 import shutil
@@ -608,7 +608,7 @@ def test_save_sparseness(runtmp, n_children):
             assert all(c.node is None for c in tree_loaded.children(pos))
 
 
-def test_sbt_as_index_select():
+def test_sbt_as_index_select(): # @CTB-index
     # test 'select' method from Index base class.
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
@@ -638,7 +638,7 @@ def test_sbt_as_index_select():
         tree.select(abund=True)
 
 
-def test_sbt_as_index_select_picklist():
+def test_sbt_as_index_select_picklist(): # @CTB-index
     # test 'select' method from Index base class with a picklist
 
     factory = GraphFactory(31, 1e5, 4)
@@ -664,7 +664,7 @@ def test_sbt_as_index_select_picklist():
     assert ss.md5sum().startswith("09a08691c")
 
 
-def test_sbt_as_index_select_picklist_exclude():
+def test_sbt_as_index_select_picklist_exclude(): # @CTB-index
     # test 'select' method from Index base class with a picklist, exclude
 
     factory = GraphFactory(31, 1e5, 4)
@@ -690,7 +690,7 @@ def test_sbt_as_index_select_picklist_exclude():
     assert ss.md5sum().startswith("38729c637")
 
 
-def test_sbt_as_index_find_picklist():
+def test_sbt_as_index_find_picklist(): # @CTB-index
     # test 'select' method from Index base class with a picklist
 
     factory = GraphFactory(31, 1e5, 4)
@@ -724,7 +724,7 @@ def test_sbt_as_index_find_picklist():
     assert ss.md5sum().startswith("09a08691c")
 
 
-def test_sbt_as_index_find_picklist_exclude():
+def test_sbt_as_index_find_picklist_exclude(): # @CTB-index
     # test 'select' method from Index base class with a picklist
 
     factory = GraphFactory(31, 1e5, 4)

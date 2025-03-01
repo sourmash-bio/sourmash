@@ -4,7 +4,7 @@ RevIndex - a rust-based reverse index by hashes.
 
 import weakref
 
-from sourmash.index import Index, IndexSearchResult
+from sourmash.index import Index, IndexSearchResult, _check_select_parameters
 from sourmash.minhash import MinHash
 from sourmash.signature import SourmashSignature
 from sourmash._lowlevel import ffi, lib
@@ -304,8 +304,14 @@ class DiskRevIndex(RustObject):
         abund=None,
         containment=None,
         picklist=None,
+        **kwargs,
     ):
-        assert abund is None
+        _check_select_parameters(ksize=ksize, moltype=moltype,
+                                 scaled=scaled, num=num, abund=abund,
+                                 containment=containment, picklist=picklist,
+                                 **kwargs)
+
+        assert not abund
         assert num is None or num == 0
         # ignore containment!
 
@@ -340,9 +346,12 @@ class DiskRevIndex(RustObject):
         for n, ss in enumerate(self.signatures()):
             yield ss, n
 
-    def prefetch(self, query_ss, *, threshold_bp=0):
+    def prefetch(self, query_ss, threshold_bp=0, **kwargs):
+        print('ZZZ1', threshold_bp)
         if not query_ss.minhash:
             raise ValueError("empty query")
+
+        print('XXX query', len(query_ss.minhash), query_ss.minhash.scaled)
 
         threshold_bp = int(threshold_bp)
 
@@ -441,9 +450,8 @@ class DiskRevIndex(RustObject):
     def consume(self, intersect_mh):
         pass
 
-    # spin off into separate obj?
     def counter_gather(self, query, threshold_bp, **kwargs):
-        counter = DiskRevIndex_CounterGather(query, self)
+        counter = DiskRevIndex_CounterGather(query, self, threshold_bp)
         for result in self.prefetch(query, threshold_bp=threshold_bp):
             counter.add(result.signature)
 
@@ -451,18 +459,21 @@ class DiskRevIndex(RustObject):
 
 
 class DiskRevIndex_CounterGather:
-    def __init__(self, query, db):
+    def __init__(self, query, db, threshold_bp):
         self.query = query
         self.orig_query_mh = query.minhash.copy().flatten()
         self.found_mh = query.minhash.copy_and_clear().to_mutable()
         self.db = db
+        self.threshold_bp = threshold_bp
 
     def add(self, match):
         intersect_mh = self.orig_query_mh.intersection(match.minhash)
         self.found_mh += intersect_mh
 
-    def peek(self, *args, **kwargs):
-        return self.db.peek(*args, **kwargs)
+    def peek(self, query_mh, *, threshold_bp=None):
+        if threshold_bp is None:
+            threshold_bp = self.threshold_bp
+        return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):
         self.found_mh += intersect_mh

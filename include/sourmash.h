@@ -146,7 +146,7 @@ SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db
 
 void disk_revindex_free(SourmashDiskRevIndex *ptr);
 
-uint64_t disk_revindex_ksize(const SourmashDiskRevIndex *ptr);
+uint32_t disk_revindex_ksize(const SourmashDiskRevIndex *ptr);
 
 uint64_t disk_revindex_len(const SourmashDiskRevIndex *ptr);
 
