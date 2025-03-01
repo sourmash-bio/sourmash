@@ -348,14 +348,28 @@ depends-on = "install-tools"
 rust-std-wasm32-unknown-unknown = "*"
 nodejs = "~=20.0"
 
+[tool.pixi.feature.wasm.tasks.build-wasm]
+cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'"
+depends-on = ["install-tools"]
+outputs = [
+  "pkg/package.json",
+  "pkg/README",
+  "pkg/sourmash_bg.js",
+  "pkg/sourmash_bg.wasm",
+  "pkg/sourmash_bg.wasm.d.ts",
+  "pkg/sourmash.d.ts",
+  "pkg/sourmash.js",
+]
+
 [tool.pixi.feature.wasm.tasks]
-build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
 test-wasm = { cmd = "wasm-pack test --node src/core -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
+pack-npm = { cmd = "npm pack" , depends-on = ["build-wasm"], cwd = "pkg", outputs = ["pkg/sourmash-*.tgz"] }
+publish-npm = { cmd = "npm publish" , depends-on = ["pack-npm"], cwd = "pkg" }
 
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
-msrv = { features = ["build", "msrv"], solve-group = "msrv" }
-wasm = { features = ["dev", "build", "wasm"], solve-group = "default" }
+msrv = { features = ["build", "msrv"], solve-group = "msrv", no-default-feature = true }
+wasm = { features = ["dev", "build", "wasm"], solve-group = "default", no-default-feature = true }
 
 [tool.pixi.system-requirements]
 macos = "11.0"
