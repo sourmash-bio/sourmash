@@ -191,15 +191,15 @@ def test_gather_metagenome(runtmp):
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all"]
+    cmd = ["index", "gcf_all.rocksdb"]
     cmd.extend(testdata_sigs)
     cmd.extend(["-k", "21"])
 
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.sbt.zip"))
+    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
 
-    runtmp.sourmash("gather", query_sig, "gcf_all", "-k", "21", "--threshold-bp=0")
+    runtmp.sourmash("gather", query_sig, "gcf_all.rocksdb", "-k", "21", "--threshold-bp=0")
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
