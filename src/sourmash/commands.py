@@ -508,7 +508,7 @@ def index(args):
     picklist = sourmash_args.load_picklist(args)
 
     index_type = "SBT"
-    if not args.sbt:            # rocksdb is only alternative
+    if not args.sbt:  # rocksdb is only alternative
         index_type = "RocksDB"
 
     if index_type == "SBT":
@@ -532,8 +532,8 @@ def index(args):
         tree = None
         full_siglist = []
         output_name = args.sbt_name
-        if not output_name.endswith('.rocksdb'):
-            assert 0, output_name # @CTB
+        if not output_name.endswith(".rocksdb"):
+            assert 0, output_name  # @CTB
 
     if args.scaled:
         args.scaled = int(args.scaled)
@@ -628,7 +628,8 @@ def index(args):
         if tree.storage:
             tree.storage.close()
     else:
-        from sourmash.index.revindex import DiskRevIndex # @CTB
+        from sourmash.index.revindex import DiskRevIndex  # @CTB
+
         print("CREATING ROCKSDB W00T XXX", output_name, len(full_siglist))
         DiskRevIndex.from_sigs(full_siglist, output_name)
 

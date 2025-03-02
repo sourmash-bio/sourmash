@@ -9,10 +9,10 @@ from sourmash import sourmash_args
 
 
 def _index_filename(prefix, index_type):
-    if index_type in ('--sbt',):
-        return prefix + '.sbt.zip'
-    elif index_type in ('', '--rocksdb'):
-        return prefix + '.rocksdb'
+    if index_type in ("--sbt",):
+        return prefix + ".sbt.zip"
+    elif index_type in ("", "--rocksdb"):
+        return prefix + ".rocksdb"
 
     raise Exception(f"unknown index type: {index_type}")
 
@@ -23,11 +23,10 @@ def test_index_signatures(runtmp, disk_index_type):
     sig63 = utils.get_test_data("63.fa.sig")
 
     index_name = _index_filename("zzz", disk_index_type)
-    runtmp.run_sourmash("index", "-k", "31", index_name, sig47, sig63,
-                        disk_index_type)
+    runtmp.run_sourmash("index", "-k", "31", index_name, sig47, sig63, disk_index_type)
 
     print(runtmp.last_result)
-    print('loading from:', runtmp.output(index_name))
+    print("loading from:", runtmp.output(index_name))
 
     db = sourmash.load_file_as_index(runtmp.output(index_name))
 
