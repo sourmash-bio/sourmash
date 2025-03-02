@@ -432,6 +432,88 @@ def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
     )
 
 
+def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    cmd = ["index", "gcf_all.rocksdb"]
+    cmd.extend(testdata_sigs)
+    cmd.extend(["-k", "21"])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+
+    runtmp.sourmash(
+        "gather",
+        query_sig,
+        "gcf_all.rocksdb",
+        "-k",
+        "21",
+        "--save-matches",
+        "save.sigs",
+        linear_gather,
+        prefetch_gather,
+        "--threshold-bp",
+        "0",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "found 12 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out
+    assert os.path.exists(runtmp.output("save.sigs"))
+
+
+def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    cmd = ["index", "gcf_all.rocksdb"]
+    cmd.extend(testdata_sigs)
+    cmd.extend(["-k", "21"])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+
+    runtmp.sourmash(
+        "gather",
+        query_sig,
+        "gcf_all.rocksdb",
+        "-k",
+        "21",
+        "--save-matches",
+        "save.sigs",
+        "--save-prefetch",
+        "save2.sigs",
+        linear_gather,
+        "--threshold-bp",
+        "0",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "found 12 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out
+
+    matches_save = runtmp.output("save.sigs")
+    prefetch_save = runtmp.output("save2.sigs")
+    assert os.path.exists(matches_save)
+    assert os.path.exists(prefetch_save)
+
+    matches = list(sourmash.load_file_as_signatures(matches_save))
+    prefetch = list(sourmash.load_file_as_signatures(prefetch_save))
+
+    assert set(matches) == set(prefetch)
+
+
 """
 def test_sbt_gather_threshold_1():
     # test gather() method, in some detail

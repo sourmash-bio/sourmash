@@ -6212,7 +6212,7 @@ def test_gather_with_pattern_exclude(runtmp, linear_gather, prefetch_gather):
     assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp" in out
 
 
-def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
+def test_gather_save_matches(runtmp, linear_gather, prefetch_gather): # @CTB moved to test_index_cmd
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -6248,7 +6248,7 @@ def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
     assert os.path.exists(runtmp.output("save.sigs"))
 
 
-def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
+def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather): # @CTB moved to test_index_cmd
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
