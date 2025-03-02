@@ -347,11 +347,8 @@ class DiskRevIndex(RustObject):
             yield ss, n
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
-        print('ZZZ1', threshold_bp)
         if not query_ss.minhash:
             raise ValueError("empty query")
-
-        print('XXX query', len(query_ss.minhash), query_ss.minhash.scaled)
 
         threshold_bp = int(threshold_bp)
 
@@ -436,12 +433,12 @@ class DiskRevIndex(RustObject):
         return IndexSearchResult(containment, match_ss, self.location)
 
     def peek(self, query_mh, *, threshold_bp=0):
-        try:
-            ss_ptr = self._methodcall(lib.disk_revindex_peek, query_mh._get_objptr())
-        except:
-            return []
+        ss_ptr = self._methodcall(lib.disk_revindex_peek, query_mh._get_objptr(), int(threshold_bp))
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)
+        if not match_ss:
+            return []
+
         intersect_mh = flatten_and_intersect_scaled(match_ss.minhash, query_mh)
         containment = intersect_mh.contained_by(query_mh)
 
@@ -473,6 +470,7 @@ class DiskRevIndex_CounterGather:
     def peek(self, query_mh, *, threshold_bp=None):
         if threshold_bp is None:
             threshold_bp = self.threshold_bp
+            assert 0            # @CTB
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):

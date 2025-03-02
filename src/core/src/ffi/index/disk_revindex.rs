@@ -72,7 +72,7 @@ unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
     let rocksdb_path = Path::new(rocksdb_path);
 
     let mut revindex = DDRevIndex::create(rocksdb_path, cs).expect("cannot create RocksDB");
-    revindex.internalize_storage();
+    revindex.internalize_storage().expect("failed to internalize storage.");
     Ok(())
 }
 }
@@ -195,7 +195,6 @@ unsafe fn disk_revindex_prefetch(
 
     // do search & get matches
     let counter = revindex.counter_for_query(&query_mh);
-    eprintln!("counter size: {}", counter.len());
 
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
@@ -205,8 +204,6 @@ unsafe fn disk_revindex_prefetch(
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, size)| {
-            eprintln!("ZZZ2 {} {} {}", size, threshold_bp, dataset_id);
-
             if size as u64 >= threshold_bp {
                 let filename = "some rocksdb database"; // @CTB
                 let sig: Signature = revindex
@@ -297,19 +294,26 @@ ffi_fn! {
 unsafe fn disk_revindex_peek(
     db_ptr: *const SourmashDiskRevIndex,
     query_ptr: *const SourmashKmerMinHash,
+    threshold_bp: u64,
 ) -> Result<*mut SourmashSignature> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let query_mh = SourmashKmerMinHash::as_rust(query_ptr);
+    let scaled = query_mh.scaled();
+    let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
     
     // do search & get first/best match
     let counter = revindex.counter_for_query(&query_mh);
-    let (dataset_id, _size) = counter.k_most_common_ordered(1)[0];
+    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
-    // load into SigStore & convert to Signature.
-    let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-    let match_sig: Signature = match_sig.into();
+    if size as u64 >= threshold_bp {
+        // load into SigStore & convert to Signature.
+        let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
+        let match_sig: Signature = match_sig.into();
 
-    Ok(SourmashSignature::from_rust(match_sig))
+        Ok(SourmashSignature::from_rust(match_sig))
+    } else {
+        Ok(SourmashSignature::from_rust(Signature::default()))
+    }
 }
 }
 

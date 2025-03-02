@@ -159,7 +159,8 @@ void disk_revindex_new_with_sigs(const SourmashSignature *const *sigs_ptr,
                                  const char *path_ptr);
 
 SourmashSignature *disk_revindex_peek(const SourmashDiskRevIndex *db_ptr,
-                                      const SourmashKmerMinHash *query_ptr);
+                                      const SourmashKmerMinHash *query_ptr,
+                                      uint64_t threshold_bp);
 
 const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevIndex *db_ptr,
                                                           const SourmashSignature *query_ptr,
