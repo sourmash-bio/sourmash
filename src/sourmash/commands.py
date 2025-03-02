@@ -500,20 +500,40 @@ def sbt_combine(args):
 
 def index(args):
     """
-    Build a Sequence Bloom Tree index of the given signatures.
+    Build an on-disk index of the given signatures. Currently supports
+    SBT and RocksDB inverted indices.
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
-    if 0:  # @CTB
-        if args.append:
-            load_sbt_index(args.sbt_name)
-        else:
-            create_sbt_index(args.bf_size, n_children=args.n_children)
+    index_type = "SBT"
+    if not args.sbt:            # rocksdb is only alternative
+        index_type = "RocksDB"
 
-    if args.sparseness < 0 or args.sparseness > 1.0:
-        error("sparseness must be in range [0.0, 1.0].")
+    if index_type == "SBT":
+        if args.sparseness < 0 or args.sparseness > 1.0:
+            error("sparseness must be in range [0.0, 1.0].")
+            sys.exit(-1)
+
+        if args.append:
+            tree = load_sbt_index(args.sbt_name)
+        else:
+            tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+        full_siglist = None
+        output_name = args.sbt_name
+    else:
+        if args.append:
+            error("cannot use --append with a RocksDB index type")
+            sys.exit(-1)
+        if args.sparseness > 0.0:
+            error("cannot use --sparseness with a RocksDB index type")
+            sys.exit(-1)
+        tree = None
+        full_siglist = []
+        output_name = args.sbt_name
+        if not output_name.endswith('.rocksdb'):
+            assert 0, output_name # @CTB
 
     if args.scaled:
         args.scaled = int(args.scaled)
@@ -528,7 +548,7 @@ def index(args):
         error("ERROR: no files to index!? Supply on command line or use --from-file")
         sys.exit(-1)
 
-    notify(f"loading {len(inp_files)} files into SBT")
+    notify(f"loading {len(inp_files)} files into {index_type} index")
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -563,8 +583,10 @@ def index(args):
 
             scaleds.add(ss.minhash.scaled)
 
-            # @CTB tree.insert(ss)
-            full_siglist.append(ss)
+            if tree is not None:
+                tree.insert(ss)
+            else:
+                full_siglist.append(ss)
             n += 1
 
         if not ss:
@@ -586,7 +608,7 @@ def index(args):
         elif scaleds == {0} and len(nums) == 1:
             pass  # also good
         else:
-            error("trying to build an SBT with incompatible signatures.")
+            error("trying to build an index with incompatible signatures.")
             error("nums = {}; scaleds = {}", repr(nums), repr(scaleds))
             sys.exit(-1)
 
@@ -594,20 +616,21 @@ def index(args):
 
     # did we load any!?
     if n == 0:
-        error("no signatures found to load into tree!? failing.")
+        error("no signatures found to load into index!? failing.")
         sys.exit(-1)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    # notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
-    # tree.save(args.sbt_name, sparseness=args.sparseness)
-    # if tree.storage:
-    #    tree.storage.close()
-    from sourmash.index.revindex import DiskRevIndex
-
-    print("CREATING ROCKSDB W00T XXX", args.sbt_name)
-    DiskRevIndex.from_sigs(full_siglist, args.sbt_name)
+    if index_type == "SBT":
+        notify(f'loaded {n} sigs; saving SBT under "{output_name}"')
+        tree.save(output_name, sparseness=args.sparseness)
+        if tree.storage:
+            tree.storage.close()
+    else:
+        from sourmash.index.revindex import DiskRevIndex # @CTB
+        print("CREATING ROCKSDB W00T XXX", output_name, len(full_siglist))
+        DiskRevIndex.from_sigs(full_siglist, output_name)
 
 
 def search(args):

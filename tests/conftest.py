@@ -63,6 +63,9 @@ def linear_gather(request):
 def prefetch_gather(request):
     return request.param
 
+@pytest.fixture(params=["--sbt", "--rocksdb"])
+def disk_index_type(request):
+    return request.param
 
 @pytest.fixture(params=[True, False])
 def use_manifest(request):

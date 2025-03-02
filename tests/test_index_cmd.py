@@ -8,14 +8,28 @@ import sourmash
 from sourmash import sourmash_args
 
 
-def test_index_signatures(runtmp):
+def _index_filename(prefix, index_type):
+    if index_type in ('--sbt',):
+        return prefix + '.sbt.zip'
+    elif index_type in ('', '--rocksdb'):
+        return prefix + '.rocksdb'
+
+    raise Exception(f"unknown index type: {index_type}")
+
+
+def test_index_signatures(runtmp, disk_index_type):
     # test 'signatures' method from Index base class
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    runtmp.run_sourmash("index", "-k", "31", "zzz.rocksdb", sig47, sig63)
+    index_name = _index_filename("zzz", disk_index_type)
+    runtmp.run_sourmash("index", "-k", "31", index_name, sig47, sig63,
+                        disk_index_type)
 
-    db = sourmash.load_file_as_index(runtmp.output("zzz.rocksdb"))
+    print(runtmp.last_result)
+    print('loading from:', runtmp.output(index_name))
+
+    db = sourmash.load_file_as_index(runtmp.output(index_name))
 
     xx = list(db.signatures())
     assert len(xx) == 2
@@ -28,21 +42,19 @@ def test_index_signatures(runtmp):
     assert ss63 in xx
 
 
-def test_search_metagenome(runtmp):
+def test_search_metagenome(runtmp, disk_index_type):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
-
+    index_name = _index_filename("zzz", disk_index_type)
+    cmd = ["index", index_name, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(runtmp.output(index_name))
 
-    runtmp.sourmash("search", query_sig, "gcf_all.rocksdb", "-k", "21")
+    runtmp.sourmash("search", query_sig, index_name, "-k", "21")
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
