@@ -472,7 +472,9 @@ class DiskRevIndex_CounterGather:
         self.threshold_bp = threshold_bp
 
     def add(self, match):
-        intersect_mh = self.orig_query_mh.intersection(match.minhash)
+        query_mh = self.orig_query_mh
+        match_mh = match.minhash.downsample(scaled=query_mh.scaled)
+        intersect_mh = query_mh.intersection(match_mh)
         self.found_mh += intersect_mh
 
     def peek(self, query_mh, *, threshold_bp=None):

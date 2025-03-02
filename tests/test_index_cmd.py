@@ -384,6 +384,54 @@ def test_gather_metagenome_threshold_bp_too_high(
     assert "No matches found for --threshold-bp at 5.0 Mbp." in err
 
 
+def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
+    # downsample w/scaled of 100,000
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    cmd = ["index", "gcf_all.rocksdb"]
+    cmd.extend(testdata_sigs)
+    cmd.extend(["-k", "21"])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+
+    runtmp.sourmash(
+        "gather",
+        query_sig,
+        "gcf_all.rocksdb",
+        "-k",
+        "21",
+        "--scaled",
+        "100000",
+        prefetch_gather,
+        linear_gather,
+        "--threshold-bp",
+        "50000",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "found 11 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out
+    assert all(
+        (
+            "5.2 Mbp       32.9%  100.0%" in runtmp.last_result.out,
+            "NC_003198.1" in runtmp.last_result.out,
+        )
+    )
+    assert all(
+        (
+            "4.1 Mbp        0.6%    2.4%" in runtmp.last_result.out,
+            "4.1 Mbp        4.4%   17.1%" in runtmp.last_result.out,
+        )
+    )
+
+
 """
 def test_sbt_gather_threshold_1():
     # test gather() method, in some detail

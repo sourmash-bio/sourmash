@@ -5918,7 +5918,7 @@ def test_gather_check_scaled_bounds_more_than_maximum(
     )
 
 
-def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
+def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather): # @CTB moved to test_index_cmd
     # downsample w/scaled of 100,000
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
