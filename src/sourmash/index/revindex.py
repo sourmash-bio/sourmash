@@ -306,10 +306,16 @@ class DiskRevIndex(RustObject):
         picklist=None,
         **kwargs,
     ):
-        _check_select_parameters(ksize=ksize, moltype=moltype,
-                                 scaled=scaled, num=num, abund=abund,
-                                 containment=containment, picklist=picklist,
-                                 **kwargs)
+        _check_select_parameters(
+            ksize=ksize,
+            moltype=moltype,
+            scaled=scaled,
+            num=num,
+            abund=abund,
+            containment=containment,
+            picklist=picklist,
+            **kwargs,
+        )
 
         assert not abund
         assert num is None or num == 0
@@ -433,7 +439,9 @@ class DiskRevIndex(RustObject):
         return IndexSearchResult(containment, match_ss, self.location)
 
     def peek(self, query_mh, *, threshold_bp=0):
-        ss_ptr = self._methodcall(lib.disk_revindex_peek, query_mh._get_objptr(), int(threshold_bp))
+        ss_ptr = self._methodcall(
+            lib.disk_revindex_peek, query_mh._get_objptr(), int(threshold_bp)
+        )
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)
         if not match_ss:
@@ -470,7 +478,7 @@ class DiskRevIndex_CounterGather:
     def peek(self, query_mh, *, threshold_bp=None):
         if threshold_bp is None:
             threshold_bp = self.threshold_bp
-            assert 0            # @CTB
+            assert 0  # @CTB
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):

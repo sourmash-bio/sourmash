@@ -84,7 +84,9 @@ def test_search_metagenome_index_downsample_fail(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == -1
-    assert "ERROR: cannot use 'gcf_all.rocksdb' for this query." in runtmp.last_result.err
+    assert (
+        "ERROR: cannot use 'gcf_all.rocksdb' for this query." in runtmp.last_result.err
+    )
     assert (
         "search scaled value 100000 is less than database scaled value of 10000"
         in runtmp.last_result.err
@@ -138,11 +140,22 @@ def test_search_metagenome_downsample_index(runtmp):
     query_sig = utils.get_test_data("gather/combined.sig")
 
     # downscale during indexing, rather than during search.
-    runtmp.run_sourmash("index", "gcf_all.rocksdb", *testdata_sigs, "-k", "21", "--scaled", "100000")
+    runtmp.run_sourmash(
+        "index", "gcf_all.rocksdb", *testdata_sigs, "-k", "21", "--scaled", "100000"
+    )
 
     assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
 
-    runtmp.run_sourmash("search", query_sig, "gcf_all.rocksdb", "-k", "21", "--containment", "--scaled", "100000")
+    runtmp.run_sourmash(
+        "search",
+        query_sig,
+        "gcf_all.rocksdb",
+        "-k",
+        "21",
+        "--containment",
+        "--scaled",
+        "100000",
+    )
     print(runtmp)
 
     assert (
@@ -199,7 +212,9 @@ def test_gather_metagenome(runtmp):
 
     assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
 
-    runtmp.sourmash("gather", query_sig, "gcf_all.rocksdb", "-k", "21", "--threshold-bp=0")
+    runtmp.sourmash(
+        "gather", query_sig, "gcf_all.rocksdb", "-k", "21", "--threshold-bp=0"
+    )
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
