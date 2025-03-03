@@ -1945,7 +1945,8 @@ def test_do_sourmash_index_multinum_fail(runtmp):
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert runtmp.last_result.status == -1
     assert (
-        "trying to build an index with incompatible signatures." in runtmp.last_result.err
+        "trying to build an index with incompatible signatures."
+        in runtmp.last_result.err
     )
 
 
@@ -1963,7 +1964,8 @@ def test_do_sourmash_index_multiscaled_fail(runtmp):
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert runtmp.last_result.status == -1
     assert (
-        "trying to build an index with incompatible signatures." in runtmp.last_result.err
+        "trying to build an index with incompatible signatures."
+        in runtmp.last_result.err
     )
 
 
