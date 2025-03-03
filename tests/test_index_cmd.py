@@ -626,36 +626,32 @@ def test_sbt_gather_threshold_5():
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
+"""
 
 
-@utils.in_tempdir
-def test_gather_single_return(c):
+def test_gather_single_return(runtmp, disk_index_type):
     # test gather() number of returns
     sig2file = utils.get_test_data("2.fa.sig")
     sig47file = utils.get_test_data("47.fa.sig")
     sig63file = utils.get_test_data("63.fa.sig")
 
-    sig2 = load_one_signature(sig2file, ksize=31)
-    sig47 = load_one_signature(sig47file, ksize=31)
-    sig63 = load_one_signature(sig63file, ksize=31)
+    dbname = runtmp.output(_index_filename("db", disk_index_type))
 
-    # construct SBT Database
-    factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory, d=2)
+    runtmp.sourmash('index', disk_index_type, dbname,
+                    sig2file, sig47file, sig63file,
+                    '-k', '31')
 
-    tree.insert(sig2)
-    tree.insert(sig47)
-    tree.insert(sig63)
+    db = sourmash.load_file_as_index(dbname)
 
-    # now, run gather. how many results do we get, and are they in the
-    # right order?
-    result = tree.best_containment(sig63)
+    # now, run best_containment. Right match?
+    sig63 = sourmash_args.load_query_signature(sig63file, 31, "DNA")
+    result = db.best_containment(sig63)
     print(result)
     assert result
     assert result.score == 1.0
 
 
-def test_sbt_jaccard_ordering(runtmp):
+def test_sbt_jaccard_ordering(runtmp, disk_index_type):
     # this tests a tricky situation where for three sketches A, B, C,
     # |A intersect B| is greater than |A intersect C|
     # _but_
@@ -682,16 +678,22 @@ def test_sbt_jaccard_ordering(runtmp):
     assert a.jaccard(b) < 0.15
     assert a.jaccard(c) > 0.15
 
-    # now - make signatures, try out :)
+    # now - make signatures, build index, try out.
     ss_a = sourmash.SourmashSignature(a, name="A")
     ss_b = sourmash.SourmashSignature(b, name="B")
     ss_c = sourmash.SourmashSignature(c, name="C")
 
-    factory = GraphFactory(31, 1e5, 4)
-    db = SBT(factory, d=2)
-    db.insert(ss_a)
-    db.insert(ss_b)
-    db.insert(ss_c)
+    sigsfile = runtmp.output("insigs.sig.zip")
+    with sourmash_args.SaveSignaturesToLocation(sigsfile) as save_sigs:
+        save_sigs.add(ss_a)
+        save_sigs.add(ss_b)
+        save_sigs.add(ss_c)
+
+    index_name = _index_filename("db", disk_index_type)
+    runtmp.sourmash('index', disk_index_type, index_name, sigsfile,
+                    '--scaled', '2')
+
+    db = sourmash.load_file_as_index(runtmp.output(index_name))
 
     sr = db.search(ss_a, threshold=0.15)
     print(sr)
@@ -700,8 +702,6 @@ def test_sbt_jaccard_ordering(runtmp):
     assert sr[0].score == 1.0
     assert sr[1].signature == ss_c
     assert sr[1].score == 0.2
-
-"""
 
 
 def test_index_protein(runtmp, disk_index_type):
