@@ -934,3 +934,79 @@ def test_index_dayhoff_command_search(runtmp, disk_index_type):
     runtmp.run_sourmash("gather", sigfile1, db_out, "--threshold", "0.0")
     assert "found 1 matches total" in runtmp.last_result.out
     assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out
+
+
+def test_index_skipm1n3_command_search(runtmp, disk_index_type):
+    # test command-line search/gather of on-disk databases with skipm1n3 sigs
+    sig2file = utils.get_test_data('skipmers/2.skip.sig.zip')
+    sig47file = utils.get_test_data('skipmers/47.skip.sig.zip')
+    sig63file = utils.get_test_data('skipmers/63.skip.sig.zip')
+
+    db_out = runtmp.output(_index_filename("skipm1n3", disk_index_type))
+
+    runtmp.sourmash("index", disk_index_type, db_out,
+                    sig2file, sig47file, sig63file, '--skipm1n3', '-k', '31')
+    assert os.path.exists(runtmp.output(db_out))
+
+    db = sourmash.load_file_as_index(db_out)
+    sig47 = sourmash_args.load_query_signature(sig47file, 31, 'skipm1n3')
+    sig63 = sourmash_args.load_query_signature(sig63file, 31, 'skipm1n3')
+
+    # check reconstruction --
+    mh_list = [x.minhash for x in db.signatures()]
+    assert len(mh_list) == 3
+    assert sig47.minhash in mh_list
+    assert sig63.minhash in mh_list
+
+    # and search, gather
+    results = db.search(
+        sig47,
+        threshold=0.0,
+        ignore_abundance=True,
+        do_containment=False,
+        best_only=False,
+    )
+    assert len(results) == 3
+
+    result = db.best_containment(sig63)
+    assert result.score == 1.0
+    assert result.location == db.location
+    assert result.location == db_out
+
+
+def test_index_skipm2n3_command_search(runtmp, disk_index_type):
+    # test command-line search/gather of on-disk databases with skipm2n3 sigs
+    sig2file = utils.get_test_data('skipmers/2.skip.sig.zip')
+    sig47file = utils.get_test_data('skipmers/47.skip.sig.zip')
+    sig63file = utils.get_test_data('skipmers/63.skip.sig.zip')
+
+    db_out = runtmp.output(_index_filename("skipm2n3", disk_index_type))
+
+    runtmp.sourmash("index", disk_index_type, db_out,
+                    sig2file, sig47file, sig63file, '--skipm2n3', '-k', '31')
+    assert os.path.exists(runtmp.output(db_out))
+
+    db = sourmash.load_file_as_index(db_out)
+    sig47 = sourmash_args.load_query_signature(sig47file, 31, 'skipm2n3')
+    sig63 = sourmash_args.load_query_signature(sig63file, 31, 'skipm2n3')
+
+    # check reconstruction --
+    mh_list = [x.minhash for x in db.signatures()]
+    assert len(mh_list) == 3
+    assert sig47.minhash in mh_list
+    assert sig63.minhash in mh_list
+
+    # and search, gather
+    results = db.search(
+        sig47,
+        threshold=0.0,
+        ignore_abundance=True,
+        do_containment=False,
+        best_only=False,
+    )
+    assert len(results) == 3
+
+    result = db.best_containment(sig63)
+    assert result.score == 1.0
+    assert result.location == db.location
+    assert result.location == db_out
