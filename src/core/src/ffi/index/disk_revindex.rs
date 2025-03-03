@@ -3,7 +3,6 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::collection::{Collection, CollectionSet};
-use crate::encodings::HashFunctions;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
@@ -167,7 +166,7 @@ unsafe fn disk_revindex_best_containment(
     let query_mh: KmerMinHash = sig.clone()
         .try_into().expect("cannot get kmerminhash");
     let scaled = query_mh.scaled();
-    let threshold = threshold_bp as u32 / scaled as u32;
+    let threshold = threshold_bp as u32 / scaled;
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(&query_mh);
@@ -312,7 +311,7 @@ unsafe fn disk_revindex_peek(
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
 
     // do search & get first/best match
-    let counter = revindex.counter_for_query(&query_mh);
+    let counter = revindex.counter_for_query(query_mh);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
     if size as u64 >= threshold_bp {
