@@ -1,21 +1,21 @@
-use std::slice;
 use std::ffi::CStr;
 use std::os::raw::c_char;
+use std::slice;
 
+use crate::collection::{Collection, CollectionSet};
 use crate::encodings::HashFunctions;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
-use crate::index::revindex::RevIndexOps;
 use crate::ffi::signature::SourmashSignature;
-use crate::ffi::utils::{ForeignObject};
-use crate::index::revindex::RevIndex as BasicRevIndex;
+use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
+use crate::index::revindex::RevIndex as BasicRevIndex;
+use crate::index::revindex::RevIndexOps;
 use std::ffi::CString;
 use std::path::Path;
-use crate::collection::{ Collection, CollectionSet };
 // use crate::index::Index;
 // use crate::prelude::*;
-use crate::signature::{ Signature, SigsTrait };
+use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 // use crate::sketch::Sketch;
 // use crate::ScaledType;
@@ -77,12 +77,10 @@ unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
 }
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_free(ptr: *mut SourmashDiskRevIndex) {
     SourmashDiskRevIndex::drop(ptr);
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> u64 {
@@ -94,20 +92,33 @@ pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> 
 pub unsafe extern "C" fn disk_revindex_ksize(ptr: *const SourmashDiskRevIndex) -> u32 {
     let revindex = SourmashDiskRevIndex::as_rust(ptr);
 
-    revindex.collection().manifest().first().expect("no records!?").ksize()
+    revindex
+        .collection()
+        .manifest()
+        .first()
+        .expect("no records!?")
+        .ksize()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_scaled(ptr: *const SourmashDiskRevIndex) -> u32 {
     let revindex = SourmashDiskRevIndex::as_rust(ptr);
-    let (_, scaled) = revindex.collection().min_max_scaled().expect("no records!?");
+    let (_, scaled) = revindex
+        .collection()
+        .min_max_scaled()
+        .expect("no records!?");
     *scaled
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_moltype(ptr: *const SourmashDiskRevIndex) -> *const c_char {
     let revindex = SourmashDiskRevIndex::as_rust(ptr);
-    let moltype = revindex.collection().manifest().first().expect("no records!?").moltype();
+    let moltype = revindex
+        .collection()
+        .manifest()
+        .first()
+        .expect("no records!?")
+        .moltype();
     let moltype_str = moltype.to_string();
     let c_string = CString::new(moltype_str).expect("foo");
     c_string.as_ptr()
@@ -142,7 +153,6 @@ unsafe fn disk_revindex_signatures(
     Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
 }
 }
-
 
 ffi_fn! {
 unsafe fn disk_revindex_best_containment(
@@ -300,7 +310,7 @@ unsafe fn disk_revindex_peek(
     let query_mh = SourmashKmerMinHash::as_rust(query_ptr);
     let scaled = query_mh.scaled();
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
-    
+
     // do search & get first/best match
     let counter = revindex.counter_for_query(&query_mh);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
@@ -316,4 +326,3 @@ unsafe fn disk_revindex_peek(
     }
 }
 }
-
