@@ -104,24 +104,23 @@ def test_search_metagenome_index_downsample_fail(runtmp):
     )
 
 
-def test_search_metagenome_downsample_containment(runtmp):
+def test_search_metagenome_downsample_containment(runtmp, disk_index_type):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
+    db_out = runtmp.output(_index_filename("gcf_all", disk_index_type))
+    cmd = ["index", db_out, *testdata_sigs, "-k", "21", disk_index_type]
 
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(db_out)
 
     runtmp.sourmash(
         "search",
         query_sig,
-        "gcf_all.rocksdb",
+        db_out,
         "-k",
         "21",
         "--scaled",

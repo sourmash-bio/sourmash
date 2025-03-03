@@ -39,7 +39,7 @@ def subparser(subparsers):
     subparser.add_argument(
         "--sbt",
         action="store_true",
-        default=False,
+        default=True,
         help="build a Sequence Bloom Tree (default)",
     )
     subparser.add_argument(
