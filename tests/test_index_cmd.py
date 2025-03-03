@@ -521,7 +521,7 @@ def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather, disk_index
     assert set(matches) == set(prefetch)
 
 
-"""
+""" # noqa:
 def test_sbt_gather_threshold_1():
     # test gather() method, in some detail
     factory = GraphFactory(31, 1e5, 4)
