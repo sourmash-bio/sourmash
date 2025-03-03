@@ -524,6 +524,7 @@ def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
 
     assert set(matches) == set(prefetch)
 
+
 """
 def test_sbt_gather_threshold_1():
     # test gather() method, in some detail
@@ -701,6 +702,8 @@ def test_sbt_jaccard_ordering(runtmp):
     assert sr[1].score == 0.2
 
 """
+
+
 def test_index_protein(runtmp, disk_index_type):
     # test command-line creation of databases with protein sigs
     sigfile1 = utils.get_test_data(
@@ -713,9 +716,16 @@ def test_index_protein(runtmp, disk_index_type):
     db_out = runtmp.output(_index_filename("protein", disk_index_type))
 
     runtmp.run_sourmash(
-        "index", db_out, sigfile1, sigfile2,
-        "--scaled", "100", "-k", "19", "--protein",
-        disk_index_type
+        "index",
+        db_out,
+        sigfile1,
+        sigfile2,
+        "--scaled",
+        "100",
+        "-k",
+        "19",
+        "--protein",
+        disk_index_type,
     )
     assert os.path.exists(db_out), db_out
 
@@ -758,7 +768,16 @@ def test_index_protein_search_no_threshold(runtmp, disk_index_type):
     db_out = runtmp.output(_index_filename("protein", disk_index_type))
 
     runtmp.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--protein", disk_index_type,
+        "index",
+        db_out,
+        sigfile1,
+        sigfile2,
+        "--scaled",
+        "100",
+        "-k",
+        "19",
+        "--protein",
+        disk_index_type,
     )
 
     db2 = sourmash.load_file_as_index(db_out)
@@ -798,7 +817,16 @@ def test_index_hp_command_index(runtmp, disk_index_type):
     db_out = runtmp.output(_index_filename("hp", disk_index_type))
 
     runtmp.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--hp", disk_index_type,
+        "index",
+        db_out,
+        sigfile1,
+        sigfile2,
+        "--scaled",
+        "100",
+        "-k",
+        "19",
+        "--hp",
+        disk_index_type,
     )
 
     db2 = sourmash.load_file_as_index(db_out)
@@ -855,7 +883,16 @@ def test_index_dayhoff_command_index(runtmp, disk_index_type):
     db_out = runtmp.output(_index_filename("dayhoff", disk_index_type))
 
     runtmp.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--dayhoff", disk_index_type
+        "index",
+        db_out,
+        sigfile1,
+        sigfile2,
+        "--scaled",
+        "100",
+        "-k",
+        "19",
+        "--dayhoff",
+        disk_index_type,
     )
 
     db2 = sourmash.load_file_as_index(db_out)
