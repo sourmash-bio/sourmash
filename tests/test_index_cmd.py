@@ -637,9 +637,9 @@ def test_gather_single_return(runtmp, disk_index_type):
 
     dbname = runtmp.output(_index_filename("db", disk_index_type))
 
-    runtmp.sourmash('index', disk_index_type, dbname,
-                    sig2file, sig47file, sig63file,
-                    '-k', '31')
+    runtmp.sourmash(
+        "index", disk_index_type, dbname, sig2file, sig47file, sig63file, "-k", "31"
+    )
 
     db = sourmash.load_file_as_index(dbname)
 
@@ -690,8 +690,7 @@ def test_sbt_jaccard_ordering(runtmp, disk_index_type):
         save_sigs.add(ss_c)
 
     index_name = _index_filename("db", disk_index_type)
-    runtmp.sourmash('index', disk_index_type, index_name, sigsfile,
-                    '--scaled', '2')
+    runtmp.sourmash("index", disk_index_type, index_name, sigsfile, "--scaled", "2")
 
     db = sourmash.load_file_as_index(runtmp.output(index_name))
 
