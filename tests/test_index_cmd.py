@@ -149,12 +149,11 @@ def test_search_metagenome_downsample_index(runtmp, disk_index_type):
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    db = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    db = runtmp.output(_index_filename("gcf_all", disk_index_type))
 
     # downscale during indexing, rather than during search.
     runtmp.run_sourmash(
-        "index", db, *testdata_sigs, "-k", "21", "--scaled", "100000",
-        disk_index_type
+        "index", db, *testdata_sigs, "-k", "21", "--scaled", "100000", disk_index_type
     )
 
     assert os.path.exists(db)
@@ -190,9 +189,10 @@ def test_gather(runtmp, linear_gather, prefetch_gather, disk_index_type):
 
     runtmp.sourmash("sketch", "dna", "-p", "scaled=10", "-o", "query.fa.sig", testdata2)
 
-    dbname = runtmp.output(_index_filename('zzz', disk_index_type))
-    runtmp.sourmash("index", "-k", "31", dbname, "short.fa.sig",
-                    "short2.fa.sig", disk_index_type)
+    dbname = runtmp.output(_index_filename("zzz", disk_index_type))
+    runtmp.sourmash(
+        "index", "-k", "31", dbname, "short.fa.sig", "short2.fa.sig", disk_index_type
+    )
 
     assert os.path.exists(dbname)
 
@@ -219,16 +219,14 @@ def test_gather_metagenome(runtmp, disk_index_type):
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
 
     runtmp.sourmash(*cmd)
 
     assert os.path.exists(dbname)
 
-    runtmp.sourmash(
-        "gather", query_sig, dbname, "-k", "21", "--threshold-bp=0"
-    )
+    runtmp.sourmash("gather", query_sig, dbname, "-k", "21", "--threshold-bp=0")
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -256,7 +254,7 @@ def test_gather_metagenome_num_results(runtmp, disk_index_type):
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
 
     runtmp.run_sourmash(*cmd)
@@ -284,16 +282,17 @@ def test_gather_metagenome_num_results(runtmp, disk_index_type):
     assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
 
 
-def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather, disk_index_type):
+def test_gather_metagenome_threshold_bp(
+    runtmp, linear_gather, prefetch_gather, disk_index_type
+):
     # set a threshold on the gather output
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
-    cmd = ["index", dbname, *testdata_sigs, "-k", "21",
-           disk_index_type]
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
     assert os.path.exists(dbname)
@@ -324,14 +323,16 @@ def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather, 
     )
 
 
-def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather, disk_index_type):
+def test_gather_metagenome_threshold_bp_low(
+    runtmp, linear_gather, prefetch_gather, disk_index_type
+):
     # set a threshold on the gather output => too low
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
@@ -366,7 +367,7 @@ def test_gather_metagenome_threshold_bp_too_high(
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
@@ -392,14 +393,16 @@ def test_gather_metagenome_threshold_bp_too_high(
     assert "No matches found for --threshold-bp at 5.0 Mbp." in err
 
 
-def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather, disk_index_type):
+def test_gather_metagenome_downsample(
+    runtmp, prefetch_gather, linear_gather, disk_index_type
+):
     # downsample w/scaled of 100,000
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
@@ -444,7 +447,7 @@ def test_gather_save_matches(runtmp, linear_gather, prefetch_gather, disk_index_
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
@@ -480,7 +483,7 @@ def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather, disk_index
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
     cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
@@ -931,19 +934,28 @@ def test_index_dayhoff_command_search(runtmp, disk_index_type):
 
 def test_index_skipm1n3_command_search(runtmp, disk_index_type):
     # test command-line search/gather of on-disk databases with skipm1n3 sigs
-    sig2file = utils.get_test_data('skipmers/2.skip.sig.zip')
-    sig47file = utils.get_test_data('skipmers/47.skip.sig.zip')
-    sig63file = utils.get_test_data('skipmers/63.skip.sig.zip')
+    sig2file = utils.get_test_data("skipmers/2.skip.sig.zip")
+    sig47file = utils.get_test_data("skipmers/47.skip.sig.zip")
+    sig63file = utils.get_test_data("skipmers/63.skip.sig.zip")
 
     db_out = runtmp.output(_index_filename("skipm1n3", disk_index_type))
 
-    runtmp.sourmash("index", disk_index_type, db_out,
-                    sig2file, sig47file, sig63file, '--skipm1n3', '-k', '31')
+    runtmp.sourmash(
+        "index",
+        disk_index_type,
+        db_out,
+        sig2file,
+        sig47file,
+        sig63file,
+        "--skipm1n3",
+        "-k",
+        "31",
+    )
     assert os.path.exists(runtmp.output(db_out))
 
     db = sourmash.load_file_as_index(db_out)
-    sig47 = sourmash_args.load_query_signature(sig47file, 31, 'skipm1n3')
-    sig63 = sourmash_args.load_query_signature(sig63file, 31, 'skipm1n3')
+    sig47 = sourmash_args.load_query_signature(sig47file, 31, "skipm1n3")
+    sig63 = sourmash_args.load_query_signature(sig63file, 31, "skipm1n3")
 
     # check reconstruction --
     mh_list = [x.minhash for x in db.signatures()]
@@ -969,19 +981,28 @@ def test_index_skipm1n3_command_search(runtmp, disk_index_type):
 
 def test_index_skipm2n3_command_search(runtmp, disk_index_type):
     # test command-line search/gather of on-disk databases with skipm2n3 sigs
-    sig2file = utils.get_test_data('skipmers/2.skip.sig.zip')
-    sig47file = utils.get_test_data('skipmers/47.skip.sig.zip')
-    sig63file = utils.get_test_data('skipmers/63.skip.sig.zip')
+    sig2file = utils.get_test_data("skipmers/2.skip.sig.zip")
+    sig47file = utils.get_test_data("skipmers/47.skip.sig.zip")
+    sig63file = utils.get_test_data("skipmers/63.skip.sig.zip")
 
     db_out = runtmp.output(_index_filename("skipm2n3", disk_index_type))
 
-    runtmp.sourmash("index", disk_index_type, db_out,
-                    sig2file, sig47file, sig63file, '--skipm2n3', '-k', '31')
+    runtmp.sourmash(
+        "index",
+        disk_index_type,
+        db_out,
+        sig2file,
+        sig47file,
+        sig63file,
+        "--skipm2n3",
+        "-k",
+        "31",
+    )
     assert os.path.exists(runtmp.output(db_out))
 
     db = sourmash.load_file_as_index(db_out)
-    sig47 = sourmash_args.load_query_signature(sig47file, 31, 'skipm2n3')
-    sig63 = sourmash_args.load_query_signature(sig63file, 31, 'skipm2n3')
+    sig47 = sourmash_args.load_query_signature(sig47file, 31, "skipm2n3")
+    sig63 = sourmash_args.load_query_signature(sig63file, 31, "skipm2n3")
 
     # check reconstruction --
     mh_list = [x.minhash for x in db.signatures()]
