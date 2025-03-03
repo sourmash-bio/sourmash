@@ -140,7 +140,7 @@ def test_search_metagenome_downsample_containment(runtmp, disk_index_type):
     )
 
 
-def test_search_metagenome_downsample_index(runtmp):
+def test_search_metagenome_downsample_index(runtmp, disk_index_type):
     # does same search as search_metagenome_downsample_containment but
     # rescales during indexing
 
@@ -149,17 +149,20 @@ def test_search_metagenome_downsample_index(runtmp):
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
+    db = runtmp.output(_index_filename('gcf_all', disk_index_type))
+
     # downscale during indexing, rather than during search.
     runtmp.run_sourmash(
-        "index", "gcf_all.rocksdb", *testdata_sigs, "-k", "21", "--scaled", "100000"
+        "index", db, *testdata_sigs, "-k", "21", "--scaled", "100000",
+        disk_index_type
     )
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(db)
 
     runtmp.run_sourmash(
         "search",
         query_sig,
-        "gcf_all.rocksdb",
+        db,
         "-k",
         "21",
         "--containment",
@@ -179,7 +182,7 @@ def test_search_metagenome_downsample_index(runtmp):
     assert "12 matches above threshold 0.080; showing first 3:" in str(runtmp)
 
 
-def test_gather(runtmp, linear_gather, prefetch_gather):
+def test_gather(runtmp, linear_gather, prefetch_gather, disk_index_type):
     testdata1 = utils.get_test_data("short.fa")
     testdata2 = utils.get_test_data("short2.fa")
 
@@ -187,14 +190,16 @@ def test_gather(runtmp, linear_gather, prefetch_gather):
 
     runtmp.sourmash("sketch", "dna", "-p", "scaled=10", "-o", "query.fa.sig", testdata2)
 
-    runtmp.sourmash("index", "-k", "31", "zzz.rocksdb", "short.fa.sig", "short2.fa.sig")
+    dbname = runtmp.output(_index_filename('zzz', disk_index_type))
+    runtmp.sourmash("index", "-k", "31", dbname, "short.fa.sig",
+                    "short2.fa.sig", disk_index_type)
 
-    assert os.path.exists(runtmp.output("zzz.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         "query.fa.sig",
-        "zzz.rocksdb",
+        dbname,
         "-o",
         "foo.csv",
         "--threshold-bp=1",
@@ -208,22 +213,21 @@ def test_gather(runtmp, linear_gather, prefetch_gather):
     assert "0.9 kbp      100.0%  100.0%" in runtmp.last_result.out
 
 
-def test_gather_metagenome(runtmp):
+def test_gather_metagenome(runtmp, disk_index_type):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
 
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
-        "gather", query_sig, "gcf_all.rocksdb", "-k", "21", "--threshold-bp=0"
+        "gather", query_sig, dbname, "-k", "21", "--threshold-bp=0"
     )
 
     print(runtmp.last_result.out)
@@ -245,22 +249,21 @@ def test_gather_metagenome(runtmp):
     )
 
 
-def test_gather_metagenome_num_results(runtmp):
+def test_gather_metagenome_num_results(runtmp, disk_index_type):
     # set a threshold on the number of results to be reported by gather
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
 
     runtmp.run_sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
-    cmd = f"gather {query_sig} gcf_all.rocksdb -k 21 --num-results 10"
+    cmd = f"gather {query_sig} {dbname} -k 21 --num-results 10"
     cmd = cmd.split(" ")
     runtmp.run_sourmash(*cmd)
 
@@ -281,25 +284,24 @@ def test_gather_metagenome_num_results(runtmp):
     assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
 
 
-def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather):
+def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather, disk_index_type):
     # set a threshold on the gather output
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
-
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21",
+           disk_index_type]
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         query_sig,
-        "gcf_all.rocksdb",
+        dbname,
         "-k",
         "21",
         "--threshold-bp",
@@ -322,25 +324,23 @@ def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather):
     )
 
 
-def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather):
+def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather, disk_index_type):
     # set a threshold on the gather output => too low
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
-
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         query_sig,
-        "gcf_all.rocksdb",
+        dbname,
         "-k",
         "21",
         "--threshold-bp",
@@ -358,7 +358,7 @@ def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gath
 
 
 def test_gather_metagenome_threshold_bp_too_high(
-    runtmp, linear_gather, prefetch_gather
+    runtmp, linear_gather, prefetch_gather, disk_index_type
 ):
     # set a threshold on the gather output => no results
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
@@ -366,18 +366,16 @@ def test_gather_metagenome_threshold_bp_too_high(
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
-
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         query_sig,
-        "gcf_all.rocksdb",
+        dbname,
         "-k",
         "21",
         "--threshold-bp",
@@ -394,25 +392,23 @@ def test_gather_metagenome_threshold_bp_too_high(
     assert "No matches found for --threshold-bp at 5.0 Mbp." in err
 
 
-def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
+def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather, disk_index_type):
     # downsample w/scaled of 100,000
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
-
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         query_sig,
-        "gcf_all.rocksdb",
+        dbname,
         "-k",
         "21",
         "--scaled",
@@ -442,24 +438,24 @@ def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
     )
 
 
-def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
+def test_gather_save_matches(runtmp, linear_gather, prefetch_gather, disk_index_type):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
+    runtmp.sourmash(*cmd)
 
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         query_sig,
-        "gcf_all.rocksdb",
+        dbname,
         "-k",
         "21",
         "--save-matches",
@@ -478,24 +474,22 @@ def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
     assert os.path.exists(runtmp.output("save.sigs"))
 
 
-def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
+def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather, disk_index_type):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
-    cmd.extend(testdata_sigs)
-    cmd.extend(["-k", "21"])
-
+    dbname = runtmp.output(_index_filename('gcf_all', disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(dbname)
 
     runtmp.sourmash(
         "gather",
         query_sig,
-        "gcf_all.rocksdb",
+        dbname,
         "-k",
         "21",
         "--save-matches",
