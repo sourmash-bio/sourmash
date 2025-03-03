@@ -1,7 +1,8 @@
-pub mod disk_revindex;
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(feature = "branchwater")]
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub mod revindex;
+
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+pub mod disk_revindex;
 
 use crate::signature::Signature;
 
