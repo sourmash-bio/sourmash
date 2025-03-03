@@ -67,12 +67,12 @@ def test_search_metagenome(runtmp, disk_index_type):
     )
 
 
-# explanation: you cannot downsample a scaled SBT to match a scaled
+# explanation: you cannot downsample a scaled index to match a scaled
 # signature, so make sure that when you try such a search, it fails!
-# (you *can* downsample a signature to match an SBT.)
+# (you *can* downsample a signature to match an index.)
 def test_search_metagenome_index_downsample_fail(runtmp):
     raise pytest.xfail("mismatch scaled")
-    # test downsample on SBT => failure, with --fail-on-empty-databases
+    # test downsample on index => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -524,7 +524,6 @@ def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
 
     assert set(matches) == set(prefetch)
 
-
 """
 def test_sbt_gather_threshold_1():
     # test gather() method, in some detail
@@ -701,11 +700,9 @@ def test_sbt_jaccard_ordering(runtmp):
     assert sr[1].signature == ss_c
     assert sr[1].score == 0.2
 
-
-def test_sbt_protein_command_index(runtmp):
-    c = runtmp
-
-    # test command-line creation of SBT database with protein sigs
+"""
+def test_index_protein(runtmp, disk_index_type):
+    # test command-line creation of databases with protein sigs
     sigfile1 = utils.get_test_data(
         "prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
@@ -713,16 +710,16 @@ def test_sbt_protein_command_index(runtmp):
         "prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    db_out = c.output("protein.sbt.zip")
+    db_out = runtmp.output(_index_filename("protein", disk_index_type))
 
-    c.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--protein"
+    runtmp.run_sourmash(
+        "index", db_out, sigfile1, sigfile2,
+        "--scaled", "100", "-k", "19", "--protein",
+        disk_index_type
     )
+    assert os.path.exists(db_out), db_out
 
-    # check to make sure .sbt.protein directory doesn't get created
-    assert not os.path.exists(c.output(".sbt.protein"))
-
-    db2 = load_sbt_index(db_out)
+    db2 = sourmash.load_file_as_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
@@ -745,13 +742,12 @@ def test_sbt_protein_command_index(runtmp):
 
     result = db2.best_containment(sig2)
     assert result.score == 1.0
-    assert result.location == db2._location
+    assert result.location == db2.location
     assert result.location == db_out
 
 
-@utils.in_tempdir
-def test_sbt_protein_search_no_threshold(c):
-    # test the '.search' method on SBTs w/no threshold
+def test_index_protein_search_no_threshold(runtmp, disk_index_type):
+    # test the '.search' method on indexes w/no threshold
     sigfile1 = utils.get_test_data(
         "prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
@@ -759,13 +755,13 @@ def test_sbt_protein_search_no_threshold(c):
         "prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    db_out = c.output("protein.sbt.zip")
+    db_out = runtmp.output(_index_filename("protein", disk_index_type))
 
-    c.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--protein"
+    runtmp.run_sourmash(
+        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--protein", disk_index_type,
     )
 
-    db2 = load_sbt_index(db_out)
+    db2 = sourmash.load_file_as_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
 
@@ -775,25 +771,23 @@ def test_sbt_protein_search_no_threshold(c):
     assert "'search' requires 'threshold'" in str(exc)
 
 
-@utils.in_thisdir
-def test_sbt_protein_command_search(c):
-    # test command-line search/gather of SBT database with protein sigs
+def test_index_protein_command_search(runtmp, disk_index_type):
+    # test command-line search/gather of on-disk databases with protein sigs
     sigfile1 = utils.get_test_data(
         "prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    db_out = utils.get_test_data("prot/protein.sbt.zip")
+    db_out = utils.get_test_data(_index_filename("prot/protein", disk_index_type))
 
-    c.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
-    assert "2 matches" in c.last_result.out
+    runtmp.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
+    assert "2 matches" in runtmp.last_result.out
 
-    c.run_sourmash("gather", sigfile1, db_out)
-    assert "found 1 matches total" in c.last_result.out
-    assert "the recovered matches hit 100.0% of the query" in c.last_result.out
+    runtmp.run_sourmash("gather", sigfile1, db_out)
+    assert "found 1 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out
 
 
-@utils.in_tempdir
-def test_sbt_hp_command_index(c):
-    # test command-line creation of SBT database with hp sigs
+def test_index_hp_command_index(runtmp, disk_index_type):
+    # test command-line creation of on-disk databases with hp sigs
     sigfile1 = utils.get_test_data(
         "prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
@@ -801,13 +795,13 @@ def test_sbt_hp_command_index(c):
         "prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    db_out = c.output("hp.sbt.zip")
+    db_out = runtmp.output(_index_filename("hp", disk_index_type))
 
-    c.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--hp"
+    runtmp.run_sourmash(
+        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--hp", disk_index_type,
     )
 
-    db2 = load_sbt_index(db_out)
+    db2 = sourmash.load_file_as_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
@@ -830,29 +824,27 @@ def test_sbt_hp_command_index(c):
 
     result = db2.best_containment(sig2)
     assert result.score == 1.0
-    assert result.location == db2._location
+    assert result.location == db2.location
     assert result.location == db_out
 
 
-@utils.in_thisdir
-def test_sbt_hp_command_search(c):
-    # test command-line search/gather of SBT database with hp sigs
+def test_index_hp_command_search(runtmp, disk_index_type):
+    # test command-line search/gather of on-disk databases with hp sigs
     sigfile1 = utils.get_test_data(
         "prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    db_out = utils.get_test_data("prot/hp.sbt.zip")
+    db_out = utils.get_test_data(_index_filename("prot/hp", disk_index_type))
 
-    c.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
-    assert "2 matches" in c.last_result.out
+    runtmp.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
+    assert "2 matches" in runtmp.last_result.out
 
-    c.run_sourmash("gather", sigfile1, db_out, "--threshold", "0.0")
-    assert "found 1 matches total" in c.last_result.out
-    assert "the recovered matches hit 100.0% of the query" in c.last_result.out
+    runtmp.run_sourmash("gather", sigfile1, db_out, "--threshold", "0.0")
+    assert "found 1 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out
 
 
-@utils.in_tempdir
-def test_sbt_dayhoff_command_index(c):
-    # test command-line creation of SBT database with dayhoff sigs
+def test_index_dayhoff_command_index(runtmp, disk_index_type):
+    # test command-line creation of on-disk databases with dayhoff sigs
     sigfile1 = utils.get_test_data(
         "prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
@@ -860,13 +852,13 @@ def test_sbt_dayhoff_command_index(c):
         "prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    db_out = c.output("dayhoff.sbt.zip")
+    db_out = runtmp.output(_index_filename("dayhoff", disk_index_type))
 
-    c.run_sourmash(
-        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--dayhoff"
+    runtmp.run_sourmash(
+        "index", db_out, sigfile1, sigfile2, "--scaled", "100", "-k", "19", "--dayhoff", disk_index_type
     )
 
-    db2 = load_sbt_index(db_out)
+    db2 = sourmash.load_file_as_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
@@ -889,24 +881,20 @@ def test_sbt_dayhoff_command_index(c):
 
     result = db2.best_containment(sig2)
     assert result.score == 1.0
-    assert result.location == db2._location
+    assert result.location == db2.location
     assert result.location == db_out
 
 
-@utils.in_thisdir
-def test_sbt_dayhoff_command_search(c):
-    # test command-line search/gather of SBT database with dayhoff sigs
+def test_index_dayhoff_command_search(runtmp, disk_index_type):
+    # test command-line search/gather of on-disk databases with dayhoff sigs
     sigfile1 = utils.get_test_data(
         "prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    db_out = utils.get_test_data("prot/dayhoff.sbt.zip")
+    db_out = utils.get_test_data(_index_filename("prot/dayhoff", disk_index_type))
 
-    c.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
-    assert "2 matches" in c.last_result.out
+    runtmp.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
+    assert "2 matches" in runtmp.last_result.out
 
-    c.run_sourmash("gather", sigfile1, db_out, "--threshold", "0.0")
-    assert "found 1 matches total" in c.last_result.out
-    assert "the recovered matches hit 100.0% of the query" in c.last_result.out
-
-
-"""
+    runtmp.run_sourmash("gather", sigfile1, db_out, "--threshold", "0.0")
+    assert "found 1 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 100.0% of the query" in runtmp.last_result.out

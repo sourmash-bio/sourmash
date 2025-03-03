@@ -377,7 +377,7 @@ class DiskRevIndex(RustObject):
         self,
         query_ss,
         *,
-        threshold=0,
+        threshold=None,
         do_containment=False,
         do_max_containment=False,
         best_only=False,
@@ -386,6 +386,9 @@ class DiskRevIndex(RustObject):
         # @CTB: best_only? sorting?
         if not query_ss.minhash:
             raise ValueError("empty query")
+
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
 
         size = ffi.new("uintptr_t *")
         if do_containment:
