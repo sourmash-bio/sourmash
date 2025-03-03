@@ -1355,7 +1355,7 @@ def test_multi_index_load_from_directory_3_check_traverse_fn(runtmp):
     assert len(files) == 7, files
 
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files  # if this fails, check for extra files!
+    assert len(files) == 47, files  # if this fails, check for extra files!
 
 
 def test_multi_index_load_from_directory_no_exist():
@@ -1417,7 +1417,7 @@ def test_multi_index_load_from_pathlist_2(runtmp):
     c = runtmp
     dirname = utils.get_test_data("prot")
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files  # check there aren't extra files in here!
+    assert len(files) == 47, files  # check there aren't extra files in here!
 
     file_list = c.output("filelist.txt")
 
