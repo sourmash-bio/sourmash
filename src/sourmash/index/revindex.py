@@ -376,6 +376,7 @@ class DiskRevIndex(RustObject):
             query_ss._get_objptr(),
             threshold_bp,
             size,
+            ffi.NULL,
         )
         size = size[0]
 
@@ -413,6 +414,7 @@ class DiskRevIndex(RustObject):
                 query_ss._get_objptr(),
                 threshold_bp,
                 size,
+                ffi.NULL,
             )
         elif do_max_containment:
             raise NotImplementedError(
@@ -448,7 +450,10 @@ class DiskRevIndex(RustObject):
 
         try:
             ss_ptr = self._methodcall(
-                lib.disk_revindex_best_containment, query_ss._get_objptr(), threshold_bp
+                lib.disk_revindex_best_containment,
+                query_ss._get_objptr(),
+                threshold_bp,
+                ffi.NULL,
             )
             match_ss = SourmashSignature._from_objptr(ss_ptr)
             if not match_ss.minhash:
@@ -461,7 +466,10 @@ class DiskRevIndex(RustObject):
 
     def peek(self, query_mh, *, threshold_bp=0):
         ss_ptr = self._methodcall(
-            lib.disk_revindex_peek, query_mh._get_objptr(), int(threshold_bp)
+            lib.disk_revindex_peek,
+            query_mh._get_objptr(),
+            int(threshold_bp),
+            ffi.NULL,
         )
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)

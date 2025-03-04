@@ -149,7 +149,8 @@ const SourmashDatasetPicklist *dataset_picklist_new_from_list(const uint32_t *da
 
 SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db_ptr,
                                                   const SourmashSignature *query_ptr,
-                                                  uint16_t threshold_bp);
+                                                  uint16_t threshold_bp,
+                                                  const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 void disk_revindex_free(SourmashDiskRevIndex *ptr);
 
@@ -167,12 +168,14 @@ void disk_revindex_new_with_sigs(const SourmashSignature *const *sigs_ptr,
 
 SourmashSignature *disk_revindex_peek(const SourmashDiskRevIndex *db_ptr,
                                       const SourmashKmerMinHash *query_ptr,
-                                      uint64_t threshold_bp);
+                                      uint64_t threshold_bp,
+                                      const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevIndex *db_ptr,
                                                           const SourmashSignature *query_ptr,
                                                           uint64_t threshold_bp,
-                                                          uintptr_t *return_size);
+                                                          uintptr_t *return_size,
+                                                          const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 uint32_t disk_revindex_scaled(const SourmashDiskRevIndex *ptr);
 

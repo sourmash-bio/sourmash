@@ -32,6 +32,17 @@ impl ForeignObject for SourmashDatasetPicklist {
     type RustObject = DatasetPicklist;
 }
 
+unsafe fn retrieve_picklist(
+    dataset_picklist_ptr: *const SourmashDatasetPicklist
+) -> Option<DatasetPicklist> {
+        if dataset_picklist_ptr.is_null() {
+            None
+        } else {
+            let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
+            Some(x.clone())
+        }
+}
+
 ffi_fn! {
 unsafe fn disk_revindex_new_from_rocksdb(
     path_ptr: *const c_char,
@@ -190,7 +201,8 @@ ffi_fn! {
 unsafe fn disk_revindex_best_containment(
     db_ptr: *const SourmashDiskRevIndex,
     query_ptr: *const SourmashSignature,
-    threshold_bp: u16
+    threshold_bp: u16,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*mut SourmashSignature> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
@@ -201,8 +213,11 @@ unsafe fn disk_revindex_best_containment(
     let scaled = query_mh.scaled();
     let threshold = threshold_bp as u32 / scaled;
 
+    // picklist?
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
     // do search & get first/best match
-    let counter = revindex.counter_for_query(&query_mh, None);
+    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
     if size as u32 >= threshold {
@@ -225,6 +240,7 @@ unsafe fn disk_revindex_prefetch(
     query_ptr: *const SourmashSignature,
     threshold_bp: u64,
     return_size: *mut usize,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*const *const SourmashSearchResult> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
@@ -235,8 +251,11 @@ unsafe fn disk_revindex_prefetch(
     let scaled = query_mh.scaled();
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
 
+    // picklist?
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
     // do search & get matches
-    let counter = revindex.counter_for_query(&query_mh, None);
+    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
 
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
@@ -292,13 +311,7 @@ unsafe fn disk_revindex_search_jaccard(
         .try_into().expect("cannot get kmerminhash");
 
     // picklist?
-    let dataset_picklist: Option<DatasetPicklist> =
-        if dataset_picklist_ptr.is_null() {
-            None
-        } else {
-            let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
-            Some(x.clone())
-        };
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
     // do search
     let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
@@ -347,14 +360,18 @@ unsafe fn disk_revindex_peek(
     db_ptr: *const SourmashDiskRevIndex,
     query_ptr: *const SourmashKmerMinHash,
     threshold_bp: u64,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*mut SourmashSignature> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let query_mh = SourmashKmerMinHash::as_rust(query_ptr);
     let scaled = query_mh.scaled();
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
 
+    // picklist?
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
     // do search & get first/best match
-    let counter = revindex.counter_for_query(query_mh, None);
+    let counter = revindex.counter_for_query(query_mh, dataset_picklist);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
     if size as u64 >= threshold_bp {
