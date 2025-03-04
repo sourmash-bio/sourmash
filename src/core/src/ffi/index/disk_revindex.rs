@@ -2,6 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
+use std::collections::HashSet;
 use crate::collection::{Collection, CollectionSet};
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
@@ -9,7 +10,7 @@ use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
 use crate::index::revindex::RevIndex as BasicRevIndex;
-use crate::index::revindex::RevIndexOps;
+use crate::index::revindex::{ RevIndexOps, DatasetPicklist };
 use std::ffi::CString;
 use std::path::Path;
 // use crate::index::Index;
@@ -23,6 +24,12 @@ pub struct SourmashDiskRevIndex;
 
 impl ForeignObject for SourmashDiskRevIndex {
     type RustObject = BasicRevIndex;
+}
+
+pub struct SourmashDatasetPicklist;
+
+impl ForeignObject for SourmashDatasetPicklist {
+    type RustObject = DatasetPicklist;
 }
 
 ffi_fn! {
@@ -80,6 +87,32 @@ unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
 pub unsafe extern "C" fn disk_revindex_free(ptr: *mut SourmashDiskRevIndex) {
     SourmashDiskRevIndex::drop(ptr);
 }
+
+ffi_fn! {
+unsafe fn dataset_picklist_new_from_list(
+    dataset_idxs_ptr: *const u32,
+    insize: usize,
+) -> Result<*const SourmashDatasetPicklist> {
+    assert!(!dataset_idxs_ptr.is_null());
+    let dids = HashSet::from_iter(
+        slice::from_raw_parts(dataset_idxs_ptr as *mut u32, insize)
+            .iter().copied()
+    );
+
+    let ds = DatasetPicklist {
+        dataset_ids: dids
+    };
+
+    Ok(SourmashDatasetPicklist::from_rust(ds))
+}
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist) {
+    SourmashDatasetPicklist::drop(ptr);
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> u64 {
@@ -249,6 +282,7 @@ unsafe fn disk_revindex_search_jaccard(
     query_ptr: *const SourmashSignature,
     threshold: f64,
     return_size: *mut usize,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*const *const SourmashSearchResult> {
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
@@ -257,8 +291,17 @@ unsafe fn disk_revindex_search_jaccard(
     let query_mh: KmerMinHash = sig.clone()
         .try_into().expect("cannot get kmerminhash");
 
+    // picklist?
+    let dataset_picklist: Option<DatasetPicklist> =
+        if dataset_picklist_ptr.is_null() {
+            None
+        } else {
+            let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
+            Some(x.clone())
+        };
+
     // do search
-    let counter = revindex.counter_for_query(&query_mh, None);
+    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
 
     // retrieve/convert matches. I don't think there's a simple way to
     // truncate this without going through all the matches, so it's

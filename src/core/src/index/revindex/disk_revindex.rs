@@ -284,7 +284,13 @@ impl RevIndexOps for RevIndex {
                 .expect("error writing bytes");
             (&cf_hashes, v)
         });
-
+/*
+        let dids = HashSet::from_iter(vec![0].iter().cloned());
+        let ds = DatasetPicklist {
+            dataset_ids: dids
+        };
+        let picklist = Some(&ds);
+*/
         info!("Multi get");
         self.db
             .multi_get_cf(hashes_iter)

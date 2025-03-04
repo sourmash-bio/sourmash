@@ -42,6 +42,7 @@ pub enum RevIndex {
     //Mem(mem_revindex::RevIndex),
 }
 
+#[derive(Clone)]
 pub struct DatasetPicklist {
     pub dataset_ids: HashSet<Idx>,
 }

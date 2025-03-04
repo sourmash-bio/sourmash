@@ -60,6 +60,8 @@ typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
+typedef struct SourmashDatasetPicklist SourmashDatasetPicklist;
+
 typedef struct SourmashDiskRevIndex SourmashDiskRevIndex;
 
 typedef struct SourmashHyperLogLog SourmashHyperLogLog;
@@ -140,6 +142,11 @@ void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
+void dataset_picklist_free(SourmashDatasetPicklist *ptr);
+
+const SourmashDatasetPicklist *dataset_picklist_new_from_list(const uint32_t *dataset_idxs_ptr,
+                                                              uintptr_t insize);
+
 SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db_ptr,
                                                   const SourmashSignature *query_ptr,
                                                   uint16_t threshold_bp);
@@ -172,7 +179,8 @@ uint32_t disk_revindex_scaled(const SourmashDiskRevIndex *ptr);
 const SourmashSearchResult *const *disk_revindex_search_jaccard(const SourmashDiskRevIndex *db_ptr,
                                                                 const SourmashSignature *query_ptr,
                                                                 double threshold,
-                                                                uintptr_t *return_size);
+                                                                uintptr_t *return_size,
+                                                                const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 SourmashSignature **disk_revindex_signatures(const SourmashDiskRevIndex *ptr, uintptr_t *size);
 

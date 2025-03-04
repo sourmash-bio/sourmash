@@ -220,3 +220,66 @@ def test_rocksdb_ksize():
     db = DiskRevIndex(rocksdb_path)
     print("xxx", db, db.select(ksize=31))
     assert db == db.select(ksize=31)
+
+
+def test_create_dataset_picklist_1():
+    dataset_picks = revindex.DiskRevIndex_DatasetPicklist([0, 1])
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+
+    # no picklist
+    xx = list(db.search(ss2, threshold=0, picklist=dataset_picks))
+    assert len(xx) == 1
+
+    # picklist including match:
+    xx = list(db.search(ss2, threshold=0, picklist=dataset_picks))
+    assert len(xx) == 1
+    assert xx[0].score == 1.0
+
+
+def test_create_dataset_picklist_2():
+    dataset_picks = revindex.DiskRevIndex_DatasetPicklist([0, 1])
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    # no picklist, 2 matches
+    xx = list(db.search(ss47, threshold=0))
+    assert len(xx) == 2
+
+    # picklist, 1 exact match
+    xx = list(db.search(ss47, threshold=0, picklist=dataset_picks))
+    assert len(xx) == 1
+    assert xx[0].score == 1.0
+
+
+def test_create_dataset_picklist_3():
+    dataset_picks = revindex.DiskRevIndex_DatasetPicklist([0, 1])
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    sig63 = utils.get_test_data("63.fa.sig")
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
+
+    # no picklist
+    xx = list(db.search(ss63, threshold=0))
+    assert len(xx) == 2
+
+    # picklist, 1 inexact match
+    xx = list(db.search(ss63, threshold=0, picklist=dataset_picks))
+    assert len(xx) == 1
+    assert round(xx[0].score, 3) == 0.321

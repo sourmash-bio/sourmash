@@ -265,6 +265,17 @@ class SearchResult(RustObject):
         return result
 
 
+class DiskRevIndex_DatasetPicklist(RustObject):
+    __dealloc_func__ = lib.dataset_picklist_free
+
+    def __init__(self, idxs):
+        idx_list = list(idxs)
+        idx_list_size = len(idx_list)
+
+        self._objptr = rustcall(lib.dataset_picklist_new_from_list,
+                                idx_list, idx_list_size)
+
+
 class DiskRevIndex(RustObject):
     __dealloc_func__ = lib.disk_revindex_free
     is_database = True
@@ -288,7 +299,7 @@ class DiskRevIndex(RustObject):
         sigs_ptr = ffi.new("SourmashSignature*[]", collected)
         sig_size = len(collected)
 
-        _objptr = rustcall(lib.disk_revindex_new_with_sigs, sigs_ptr, sig_size, path_b)
+        _ = rustcall(lib.disk_revindex_new_with_sigs, sigs_ptr, sig_size, path_b)
 
         return DiskRevIndex(path)
 
@@ -381,6 +392,7 @@ class DiskRevIndex(RustObject):
         do_containment=False,
         do_max_containment=False,
         best_only=False,
+        picklist=None,
         **kwargs,
     ):
         # @CTB: best_only? sorting?
@@ -406,11 +418,16 @@ class DiskRevIndex(RustObject):
                 "max_containment is not (yet) available on RocksDB"
             )
         else:  # jaccard
+            if picklist is None:
+                pl_ptr = ffi.NULL
+            else:
+                pl_ptr = picklist._objptr
             results_ptr = self._methodcall(
                 lib.disk_revindex_search_jaccard,
                 query_ss._get_objptr(),
                 threshold,
                 size,
+                pl_ptr,
             )
 
         size = size[0]
