@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::collections::HashSet;
 use std::hash::{BuildHasher, BuildHasherDefault};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -12,7 +13,7 @@ use rocksdb::MergeOperands;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps,
+    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DatasetPicklist,
     MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
@@ -273,7 +274,7 @@ impl RevIndex {
 }
 
 impl RevIndexOps for RevIndex {
-    fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+    fn counter_for_query(&self, query: &KmerMinHash, picklist: Option<DatasetPicklist>) -> SigCounter {
         info!("Collecting hashes");
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
@@ -291,7 +292,19 @@ impl RevIndexOps for RevIndex {
             .filter_map(|r| r.ok().unwrap_or(None))
             .flat_map(|raw_datasets| {
                 let new_vals = Datasets::from_slice(&raw_datasets).unwrap();
-                new_vals.into_iter()
+                if let Some(pl) = &picklist {
+                    let new_vals: HashSet<_> = new_vals
+                        .into_iter()
+                        .filter_map(|i| if pl.dataset_ids.contains(&i) {
+                            Some(i)
+                        } else {
+                            None
+                        } )
+                        .collect();
+                    Box::new(new_vals.into_iter())
+                } else {
+                    new_vals.into_iter()
+                }
             })
             .collect()
     }

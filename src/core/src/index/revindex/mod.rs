@@ -1,7 +1,7 @@
 pub mod disk_revindex;
 pub mod mem_revindex;
 
-use std::collections::HashMap;
+use std::collections::{ HashMap, HashSet };
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
@@ -42,13 +42,17 @@ pub enum RevIndex {
     //Mem(mem_revindex::RevIndex),
 }
 
+pub struct DatasetPicklist {
+    pub dataset_ids: HashSet<Idx>,
+}
+
 #[enum_dispatch]
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
         pub fn repair(index: &Path, colors: bool);
     */
 
-    fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter;
+    fn counter_for_query(&self, query: &KmerMinHash, picklist: Option<DatasetPicklist>) -> SigCounter;
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
 

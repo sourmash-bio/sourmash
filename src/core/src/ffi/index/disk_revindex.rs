@@ -169,7 +169,7 @@ unsafe fn disk_revindex_best_containment(
     let threshold = threshold_bp as u32 / scaled;
 
     // do search & get first/best match
-    let counter = revindex.counter_for_query(&query_mh);
+    let counter = revindex.counter_for_query(&query_mh, None);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
     if size as u32 >= threshold {
@@ -203,7 +203,7 @@ unsafe fn disk_revindex_prefetch(
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
 
     // do search & get matches
-    let counter = revindex.counter_for_query(&query_mh);
+    let counter = revindex.counter_for_query(&query_mh, None);
 
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
@@ -258,7 +258,7 @@ unsafe fn disk_revindex_search_jaccard(
         .try_into().expect("cannot get kmerminhash");
 
     // do search
-    let counter = revindex.counter_for_query(&query_mh);
+    let counter = revindex.counter_for_query(&query_mh, None);
 
     // retrieve/convert matches. I don't think there's a simple way to
     // truncate this without going through all the matches, so it's
@@ -311,7 +311,7 @@ unsafe fn disk_revindex_peek(
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
 
     // do search & get first/best match
-    let counter = revindex.counter_for_query(query_mh);
+    let counter = revindex.counter_for_query(query_mh, None);
     let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
     if size as u64 >= threshold_bp {
