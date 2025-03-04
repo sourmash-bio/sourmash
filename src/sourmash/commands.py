@@ -507,9 +507,7 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
-    index_type = "SBT"
-    if not args.sbt:  # rocksdb is only alternative
-        index_type = "RocksDB"
+    index_type = args.index_type
 
     if index_type == "SBT":
         if args.sparseness < 0 or args.sparseness > 1.0:
@@ -522,7 +520,19 @@ def index(args):
             tree = create_sbt_index(args.bf_size, n_children=args.n_children)
         full_siglist = None
         output_name = args.sbt_name
-    else:
+    elif index_type == "zip":
+        if args.append:
+            error("cannot use --append with a RocksDB index type")
+            sys.exit(-1)
+        if args.sparseness > 0.0:
+            error("cannot use --sparseness with a RocksDB index type")
+            sys.exit(-1)
+        tree = None
+        full_siglist = []       # @CTB use save_sigs instead
+        output_name = args.sbt_name
+        if not output_name.endswith(".sig.zip"):
+            assert 0, output_name  # @CTB
+    elif index_type == "rocksdb":
         if args.append:
             error("cannot use --append with a RocksDB index type")
             sys.exit(-1)
@@ -627,9 +637,13 @@ def index(args):
         tree.save(output_name, sparseness=args.sparseness)
         if tree.storage:
             tree.storage.close()
-    else:
-        from sourmash.index.revindex import DiskRevIndex  # @CTB
-
+    elif index_type == "zip":
+        print("CREATING sig zip W00T XXX", output_name, len(full_siglist))
+        with sourmash_args.SaveSignaturesToLocation(output_name) as save_sig:
+            for ss in full_siglist:
+                save_sig.add(ss)
+    elif index_type == "rocksdb":
+        from sourmash.index.revindex import DiskRevIndex # @CTB
         print("CREATING ROCKSDB W00T XXX", output_name, len(full_siglist))
         DiskRevIndex.from_sigs(full_siglist, output_name)
 

@@ -36,19 +36,11 @@ from sourmash.cli.utils import (
 def subparser(subparsers):
     subparser = subparsers.add_parser("index", description=__doc__, usage=usage)
     # @CTB Reconsider - --index-type, or -F?
-    subparser.add_argument(
-        "--sbt",
-        action="store_true",
-        default=True,
-        help="build a Sequence Bloom Tree (default)",
-    )
-    subparser.add_argument(
-        "--rocksdb",
-        action="store_false",
-        dest="sbt",
-        help="build a RocksDB inverted index",
-    )
+    subparser.add_argument('-F', '--index-type',
+                           help="type of index to build (default: SBT",
+                           choices=['SBT', 'rocksdb', 'zip'])
 
+    # @CTB sbt_name
     subparser.add_argument(
         "sbt_name", help="name to save index into; .sbt.zip or .sbt.json file"
     )
