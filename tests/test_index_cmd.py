@@ -71,7 +71,7 @@ def test_search_metagenome(runtmp, disk_index_type):
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an index.)
 def test_search_metagenome_index_downsample_fail(runtmp):
-    raise pytest.xfail("mismatch scaled") #@CTB
+    raise pytest.xfail("mismatch scaled")  # @CTB
     # test downsample on index => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
