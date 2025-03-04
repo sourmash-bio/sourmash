@@ -13,8 +13,8 @@ use rocksdb::MergeOperands;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DatasetPicklist,
-    MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors,
+    RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
@@ -274,7 +274,11 @@ impl RevIndex {
 }
 
 impl RevIndexOps for RevIndex {
-    fn counter_for_query(&self, query: &KmerMinHash, picklist: Option<DatasetPicklist>) -> SigCounter {
+    fn counter_for_query(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> SigCounter {
         info!("Collecting hashes");
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
@@ -284,13 +288,7 @@ impl RevIndexOps for RevIndex {
                 .expect("error writing bytes");
             (&cf_hashes, v)
         });
-/*
-        let dids = HashSet::from_iter(vec![0].iter().cloned());
-        let ds = DatasetPicklist {
-            dataset_ids: dids
-        };
-        let picklist = Some(&ds);
-*/
+
         info!("Multi get");
         self.db
             .multi_get_cf(hashes_iter)
@@ -301,11 +299,13 @@ impl RevIndexOps for RevIndex {
                 if let Some(pl) = &picklist {
                     let new_vals: HashSet<_> = new_vals
                         .into_iter()
-                        .filter_map(|i| if pl.dataset_ids.contains(&i) {
-                            Some(i)
-                        } else {
-                            None
-                        } )
+                        .filter_map(|i| {
+                            if pl.dataset_ids.contains(&i) {
+                                Some(i)
+                            } else {
+                                None
+                            }
+                        })
                         .collect();
                     Box::new(new_vals.into_iter())
                 } else {

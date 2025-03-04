@@ -2,7 +2,6 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use std::collections::HashSet;
 use crate::collection::{Collection, CollectionSet};
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
@@ -10,7 +9,8 @@ use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
 use crate::index::revindex::RevIndex as BasicRevIndex;
-use crate::index::revindex::{ RevIndexOps, DatasetPicklist };
+use crate::index::revindex::{DatasetPicklist, RevIndexOps};
+use std::collections::HashSet;
 use std::ffi::CString;
 use std::path::Path;
 // use crate::index::Index;
@@ -33,14 +33,14 @@ impl ForeignObject for SourmashDatasetPicklist {
 }
 
 unsafe fn retrieve_picklist(
-    dataset_picklist_ptr: *const SourmashDatasetPicklist
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Option<DatasetPicklist> {
-        if dataset_picklist_ptr.is_null() {
-            None
-        } else {
-            let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
-            Some(x.clone())
-        }
+    if dataset_picklist_ptr.is_null() {
+        None
+    } else {
+        let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
+        Some(x.clone())
+    }
 }
 
 ffi_fn! {
@@ -118,12 +118,10 @@ unsafe fn dataset_picklist_new_from_list(
 }
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist) {
     SourmashDatasetPicklist::drop(ptr);
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> u64 {

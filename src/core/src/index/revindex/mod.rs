@@ -1,7 +1,7 @@
 pub mod disk_revindex;
 pub mod mem_revindex;
 
-use std::collections::{ HashMap, HashSet };
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
@@ -53,7 +53,11 @@ pub trait RevIndexOps {
         pub fn repair(index: &Path, colors: bool);
     */
 
-    fn counter_for_query(&self, query: &KmerMinHash, picklist: Option<DatasetPicklist>) -> SigCounter;
+    fn counter_for_query(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> SigCounter;
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
 
