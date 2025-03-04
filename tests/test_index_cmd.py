@@ -521,6 +521,42 @@ def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather, disk_index
     assert set(matches) == set(prefetch)
 
 
+def test_gather_metagenome_picklist(runtmp, disk_index_type):
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    dbname = runtmp.output(_index_filename("gcf_all", disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "21", disk_index_type]
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(dbname)
+
+    pl = utils.get_test_data('gather/salmonella-picklist.csv')
+    runtmp.sourmash("gather", query_sig, dbname, "-k", "21",
+                    "--picklist", f"{pl}:name:ident")
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "found 7 matches total" in runtmp.last_result.out
+    assert "the recovered matches hit 58.3% of the query" in runtmp.last_result.out
+    assert all(
+        (
+            "4.9 Mbp       33.2%  100.0%" in runtmp.last_result.out,
+            "NC_003198.1 Salmonella enterica subsp" in runtmp.last_result.out,
+        )
+    )
+    assert all(
+        (
+            "4.7 Mbp        0.5%    1.5%" in runtmp.last_result.out,
+            "NC_011294.1 Salmonella enterica subs" in runtmp.last_result.out,
+        )
+    )
+    assert "for given picklist, found 8 matches to 8 distinct values" in runtmp.last_result.err
+
+
 """ # noqa:
 def test_sbt_gather_threshold_1():
     # test gather() method, in some detail
