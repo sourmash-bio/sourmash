@@ -155,6 +155,25 @@ def test_rocksdb_signatures():
     # victory!
 
 
+def test_rocksdb_signatures_with_internal():
+    # check that 'internal' matches enumeration order.
+    # CTB note: this is, for now, an important implementation detail,
+    # implemented by the Python layer but corresponding to the Rust
+    # behavior. Be careful about changing it :). The better thing
+    # to do would be to export the manifest directly from Rust...
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    xx = list(db._signatures_with_internal())
+    assert len(xx) == 3
+    for n, (ss, internal) in enumerate(xx):
+        assert n == int(internal)
+        print(ss.name)
+    # victory!
+
+
 def test_rocksdb_best_containment():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
