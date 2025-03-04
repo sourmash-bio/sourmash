@@ -533,9 +533,10 @@ def test_gather_metagenome_picklist(runtmp, disk_index_type):
 
     assert os.path.exists(dbname)
 
-    pl = utils.get_test_data('gather/salmonella-picklist.csv')
-    runtmp.sourmash("gather", query_sig, dbname, "-k", "21",
-                    "--picklist", f"{pl}:name:ident")
+    pl = utils.get_test_data("gather/salmonella-picklist.csv")
+    runtmp.sourmash(
+        "gather", query_sig, dbname, "-k", "21", "--picklist", f"{pl}:name:ident"
+    )
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -554,7 +555,10 @@ def test_gather_metagenome_picklist(runtmp, disk_index_type):
             "NC_011294.1 Salmonella enterica subs" in runtmp.last_result.out,
         )
     )
-    assert "for given picklist, found 8 matches to 8 distinct values" in runtmp.last_result.err
+    assert (
+        "for given picklist, found 8 matches to 8 distinct values"
+        in runtmp.last_result.err
+    )
 
 
 """ # noqa:

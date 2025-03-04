@@ -348,7 +348,7 @@ class DiskRevIndex(RustObject):
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
-            print('xxx building manifest @CTB')
+            print("xxx building manifest @CTB")
             m = CollectionManifest.create_manifest(
                 self._signatures_with_internal(), include_signature=False
             )
@@ -362,7 +362,7 @@ class DiskRevIndex(RustObject):
             raise Exception("cannot use picklists multiple times, sorry")
 
         # grab internal indices
-        idx_list = [ int(row["internal_location"]) for row in mf.rows ]
+        idx_list = [int(row["internal_location"]) for row in mf.rows]
         self.idx_picklist = DiskRevIndex_DatasetPicklist(idx_list)
 
     @property
@@ -449,7 +449,7 @@ class DiskRevIndex(RustObject):
                 query_ss._get_objptr(),
                 threshold,
                 size,
-                self._ffi_idx_picklist
+                self._ffi_idx_picklist,
             )
 
         size = size[0]
@@ -472,7 +472,7 @@ class DiskRevIndex(RustObject):
                 lib.disk_revindex_best_containment,
                 query_ss._get_objptr(),
                 threshold_bp,
-                self._ffi_idx_picklist
+                self._ffi_idx_picklist,
             )
             match_ss = SourmashSignature._from_objptr(ss_ptr)
             if not match_ss.minhash:
