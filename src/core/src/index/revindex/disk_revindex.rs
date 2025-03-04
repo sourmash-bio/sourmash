@@ -296,6 +296,8 @@ impl RevIndexOps for RevIndex {
             .filter_map(|r| r.ok().unwrap_or(None))
             .flat_map(|raw_datasets| {
                 let new_vals = Datasets::from_slice(&raw_datasets).unwrap();
+
+                // filter against picklist if need be.
                 if let Some(pl) = &picklist {
                     let new_vals: HashSet<_> = new_vals
                         .into_iter()
