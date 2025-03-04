@@ -272,8 +272,9 @@ class DiskRevIndex_DatasetPicklist(RustObject):
         idx_list = list(idxs)
         idx_list_size = len(idx_list)
 
-        self._objptr = rustcall(lib.dataset_picklist_new_from_list,
-                                idx_list, idx_list_size)
+        self._objptr = rustcall(
+            lib.dataset_picklist_new_from_list, idx_list, idx_list_size
+        )
 
 
 class DiskRevIndex(RustObject):
