@@ -301,13 +301,7 @@ impl RevIndexOps for RevIndex {
                 if let Some(pl) = &picklist {
                     let new_vals: HashSet<_> = new_vals
                         .into_iter()
-                        .filter_map(|i| {
-                            if pl.dataset_ids.contains(&i) {
-                                Some(i)
-                            } else {
-                                None
-                            }
-                        })
+                        .filter(|&i| pl.dataset_ids.contains(&i))
                         .collect();
                     Box::new(new_vals.into_iter())
                 } else {
