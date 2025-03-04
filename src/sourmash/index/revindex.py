@@ -11,6 +11,7 @@ from sourmash._lowlevel import ffi, lib
 from sourmash.utils import RustObject, rustcall, decode_str, encode_str
 import sourmash._lowlevel
 from sourmash.minhash import flatten_and_intersect_scaled
+from sourmash.manifest import CollectionManifest
 
 
 class RevIndex(RustObject, Index):
@@ -287,6 +288,7 @@ class DiskRevIndex(RustObject):
         if ptr is None:
             self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
         self.location = path
+        self.idx_picklist = None
 
     @classmethod
     def from_sigs(self, siglist, path):
@@ -345,7 +347,29 @@ class DiskRevIndex(RustObject):
         if 0 and moltype is not None and moltype != my_moltype:
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
+        if picklist is not None:
+            print('xxx building manifest @CTB')
+            m = CollectionManifest.create_manifest(
+                self._signatures_with_internal(), include_signature=False
+            )
+            m = m.select_to_manifest(picklist=picklist)
+            self._generate_idx_picklist_from_manifest(m)
+
         return self
+
+    def _generate_idx_picklist_from_manifest(self, mf):
+        if self.idx_picklist is not None:
+            raise Exception("cannot use picklists multiple times, sorry")
+
+        # grab internal indices
+        idx_list = [ int(row["internal_location"]) for row in mf.rows ]
+        self.idx_picklist = DiskRevIndex_DatasetPicklist(idx_list)
+
+    @property
+    def _ffi_idx_picklist(self):
+        if self.idx_picklist is None:
+            return ffi.NULL
+        return self.idx_picklist._objptr
 
     def signatures(self):
         size = ffi.new("uintptr_t *")
@@ -376,7 +400,7 @@ class DiskRevIndex(RustObject):
             query_ss._get_objptr(),
             threshold_bp,
             size,
-            ffi.NULL,
+            self._ffi_idx_picklist,
         )
         size = size[0]
 
@@ -394,7 +418,6 @@ class DiskRevIndex(RustObject):
         do_containment=False,
         do_max_containment=False,
         best_only=False,
-        picklist=None,
         **kwargs,
     ):
         # @CTB: best_only? sorting?
@@ -414,23 +437,19 @@ class DiskRevIndex(RustObject):
                 query_ss._get_objptr(),
                 threshold_bp,
                 size,
-                ffi.NULL,
+                self._ffi_idx_picklist,
             )
         elif do_max_containment:
             raise NotImplementedError(
                 "max_containment is not (yet) available on RocksDB"
             )
         else:  # jaccard
-            if picklist is None:
-                pl_ptr = ffi.NULL
-            else:
-                pl_ptr = picklist._objptr
             results_ptr = self._methodcall(
                 lib.disk_revindex_search_jaccard,
                 query_ss._get_objptr(),
                 threshold,
                 size,
-                pl_ptr,
+                self._ffi_idx_picklist
             )
 
         size = size[0]
@@ -453,7 +472,7 @@ class DiskRevIndex(RustObject):
                 lib.disk_revindex_best_containment,
                 query_ss._get_objptr(),
                 threshold_bp,
-                ffi.NULL,
+                self._ffi_idx_picklist
             )
             match_ss = SourmashSignature._from_objptr(ss_ptr)
             if not match_ss.minhash:
@@ -469,7 +488,7 @@ class DiskRevIndex(RustObject):
             lib.disk_revindex_peek,
             query_mh._get_objptr(),
             int(threshold_bp),
-            ffi.NULL,
+            self._ffi_idx_picklist,
         )
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)

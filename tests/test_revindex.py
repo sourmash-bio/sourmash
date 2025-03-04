@@ -234,11 +234,14 @@ def test_create_dataset_picklist_1():
     ss2 = load_one_signature_from_json(sig2, ksize=31)
 
     # no picklist
-    xx = list(db.search(ss2, threshold=0, picklist=dataset_picks))
+    xx = list(db.search(ss2, threshold=0))
     assert len(xx) == 1
 
+    # forcibly set picklist for now
+    db.idx_picklist = dataset_picks
+
     # picklist including match:
-    xx = list(db.search(ss2, threshold=0, picklist=dataset_picks))
+    xx = list(db.search(ss2, threshold=0))
     assert len(xx) == 1
     assert xx[0].score == 1.0
 
@@ -258,8 +261,11 @@ def test_create_dataset_picklist_2():
     xx = list(db.search(ss47, threshold=0))
     assert len(xx) == 2
 
+    # forcibly set picklist for now
+    db.idx_picklist = dataset_picks
+
     # picklist, 1 exact match
-    xx = list(db.search(ss47, threshold=0, picklist=dataset_picks))
+    xx = list(db.search(ss47, threshold=0))
     assert len(xx) == 1
     assert xx[0].score == 1.0
 
@@ -279,7 +285,10 @@ def test_create_dataset_picklist_3():
     xx = list(db.search(ss63, threshold=0))
     assert len(xx) == 2
 
+    # forcibly set picklist for now
+    db.idx_picklist = dataset_picks
+
     # picklist, 1 inexact match
-    xx = list(db.search(ss63, threshold=0, picklist=dataset_picks))
+    xx = list(db.search(ss63, threshold=0))
     assert len(xx) == 1
     assert round(xx[0].score, 3) == 0.321
