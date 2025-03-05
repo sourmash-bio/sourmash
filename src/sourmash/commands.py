@@ -528,7 +528,7 @@ def index(args):
             error("cannot use --sparseness with a RocksDB index type")
             sys.exit(-1)
         tree = None
-        full_siglist = []       # @CTB use save_sigs instead
+        full_siglist = []  # @CTB use save_sigs instead
         output_name = args.sbt_name
         if not output_name.endswith(".sig.zip"):
             assert 0, output_name  # @CTB
@@ -545,8 +545,8 @@ def index(args):
         if not output_name.endswith(".rocksdb"):
             assert 0, output_name  # @CTB
     else:
-         error(f"ERROR: unknown index type '{index_type}'; quitting.")
-         sys.exit(-1)
+        error(f"ERROR: unknown index type '{index_type}'; quitting.")
+        sys.exit(-1)
 
     if args.scaled:
         args.scaled = int(args.scaled)
@@ -646,7 +646,8 @@ def index(args):
             for ss in full_siglist:
                 save_sig.add(ss)
     elif index_type == "rocksdb":
-        from sourmash.index.revindex import DiskRevIndex # @CTB
+        from sourmash.index.revindex import DiskRevIndex  # @CTB
+
         print("CREATING ROCKSDB W00T XXX", output_name, len(full_siglist))
         DiskRevIndex.from_sigs(full_siglist, output_name)
 

@@ -1,6 +1,7 @@
 """
 Tests for 'sourmash index'.
 """
+
 import glob
 import os
 
@@ -28,8 +29,9 @@ def test_index_signatures(runtmp, disk_index_type):
     sig63 = utils.get_test_data("63.fa.sig")
 
     index_name = _index_filename("zzz", disk_index_type)
-    runtmp.run_sourmash("index", "-k", "31", index_name, sig47, sig63,
-                        "-F", disk_index_type)
+    runtmp.run_sourmash(
+        "index", "-k", "31", index_name, sig47, sig63, "-F", disk_index_type
+    )
 
     print(runtmp.last_result)
     print("loading from:", runtmp.output(index_name))
@@ -54,8 +56,7 @@ def test_search_metagenome(runtmp, disk_index_type):
     query_sig = utils.get_test_data("gather/combined.sig")
 
     index_name = _index_filename("zzz", disk_index_type)
-    cmd = ["index", index_name, *testdata_sigs, "-k", "21",
-           "-F", disk_index_type]
+    cmd = ["index", index_name, *testdata_sigs, "-k", "21", "-F", disk_index_type]
     runtmp.sourmash(*cmd)
 
     assert os.path.exists(runtmp.output(index_name))
@@ -118,8 +119,7 @@ def test_search_metagenome_downsample_containment(runtmp, disk_index_type):
     query_sig = utils.get_test_data("gather/combined.sig")
 
     db_out = runtmp.output(_index_filename("gcf_all", disk_index_type))
-    cmd = ["index", db_out, *testdata_sigs, "-k", "21",
-           "-F", disk_index_type]
+    cmd = ["index", db_out, *testdata_sigs, "-k", "21", "-F", disk_index_type]
 
     runtmp.sourmash(*cmd)
 
@@ -161,8 +161,15 @@ def test_search_metagenome_downsample_index(runtmp, disk_index_type):
 
     # downscale during indexing, rather than during search.
     runtmp.run_sourmash(
-        "index", db, *testdata_sigs, "-k", "21", "--scaled", "100000",
-        "-F", disk_index_type
+        "index",
+        db,
+        *testdata_sigs,
+        "-k",
+        "21",
+        "--scaled",
+        "100000",
+        "-F",
+        disk_index_type,
     )
 
     assert os.path.exists(db)
@@ -200,8 +207,14 @@ def test_gather(runtmp, linear_gather, prefetch_gather, disk_index_type):
 
     dbname = runtmp.output(_index_filename("zzz", disk_index_type))
     runtmp.sourmash(
-        "index", "-k", "31", dbname, "short.fa.sig", "short2.fa.sig",
-        "-F", disk_index_type
+        "index",
+        "-k",
+        "31",
+        dbname,
+        "short.fa.sig",
+        "short2.fa.sig",
+        "-F",
+        disk_index_type,
     )
 
     assert os.path.exists(dbname)
@@ -684,7 +697,15 @@ def test_gather_single_return(runtmp, disk_index_type):
     dbname = runtmp.output(_index_filename("db", disk_index_type))
 
     runtmp.sourmash(
-        "index", dbname, sig2file, sig47file, sig63file, "-k", "31", "-F", disk_index_type
+        "index",
+        dbname,
+        sig2file,
+        sig47file,
+        sig63file,
+        "-k",
+        "31",
+        "-F",
+        disk_index_type,
     )
 
     db = sourmash.load_file_as_index(dbname)
@@ -736,7 +757,9 @@ def test_sbt_jaccard_ordering(runtmp, disk_index_type):
         save_sigs.add(ss_c)
 
     index_name = _index_filename("db", disk_index_type)
-    runtmp.sourmash("index", "-F", disk_index_type, index_name, sigsfile, "--scaled", "2")
+    runtmp.sourmash(
+        "index", "-F", disk_index_type, index_name, sigsfile, "--scaled", "2"
+    )
 
     db = sourmash.load_file_as_index(runtmp.output(index_name))
 
@@ -843,7 +866,7 @@ def test_index_protein_command_search(runtmp, disk_index_type):
         "prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
 
-    if disk_index_type == 'zip':
+    if disk_index_type == "zip":
         db_out = utils.get_test_data("prot/protein.zip")
     else:
         db_out = utils.get_test_data(_index_filename("prot/protein", disk_index_type))
@@ -913,7 +936,7 @@ def test_index_hp_command_search(runtmp, disk_index_type):
     sigfile1 = utils.get_test_data(
         "prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    if disk_index_type == 'zip':
+    if disk_index_type == "zip":
         db_out = utils.get_test_data("prot/hp.zip")
     else:
         db_out = utils.get_test_data(_index_filename("prot/hp", disk_index_type))
@@ -983,7 +1006,7 @@ def test_index_dayhoff_command_search(runtmp, disk_index_type):
     sigfile1 = utils.get_test_data(
         "prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    if disk_index_type == 'zip':
+    if disk_index_type == "zip":
         db_out = utils.get_test_data("prot/dayhoff.zip")
     else:
         db_out = utils.get_test_data(_index_filename("prot/dayhoff", disk_index_type))

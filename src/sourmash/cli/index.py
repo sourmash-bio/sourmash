@@ -36,10 +36,13 @@ from sourmash.cli.utils import (
 def subparser(subparsers):
     subparser = subparsers.add_parser("index", description=__doc__, usage=usage)
     # @CTB Reconsider - --index-type, or -F?
-    subparser.add_argument('-F', '--index-type',
-                           help="type of index to build (default: SBT",
-                           choices=['SBT', 'rocksdb', 'zip'],
-                           default='SBT')
+    subparser.add_argument(
+        "-F",
+        "--index-type",
+        help="type of index to build (default: SBT",
+        choices=["SBT", "rocksdb", "zip"],
+        default="SBT",
+    )
 
     # @CTB sbt_name
     subparser.add_argument(
