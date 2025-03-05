@@ -225,7 +225,7 @@ unsafe fn disk_revindex_best_containment(
 
         Ok(SourmashSignature::from_rust(match_sig))
     } else {
-        Ok(SourmashSignature::from_rust(Signature::default()))
+        Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
     }
 }
 }
@@ -379,7 +379,7 @@ unsafe fn disk_revindex_peek(
 
         Ok(SourmashSignature::from_rust(match_sig))
     } else {
-        Ok(SourmashSignature::from_rust(Signature::default()))
+        Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
     }
 }
 }
