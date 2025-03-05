@@ -38,7 +38,8 @@ def subparser(subparsers):
     # @CTB Reconsider - --index-type, or -F?
     subparser.add_argument('-F', '--index-type',
                            help="type of index to build (default: SBT",
-                           choices=['SBT', 'rocksdb', 'zip'])
+                           choices=['SBT', 'rocksdb', 'zip'],
+                           default='SBT')
 
     # @CTB sbt_name
     subparser.add_argument(

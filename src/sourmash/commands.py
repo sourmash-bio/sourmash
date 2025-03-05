@@ -544,6 +544,9 @@ def index(args):
         output_name = args.sbt_name
         if not output_name.endswith(".rocksdb"):
             assert 0, output_name  # @CTB
+    else:
+         error(f"ERROR: unknown index type '{index_type}'; quitting.")
+         sys.exit(-1)
 
     if args.scaled:
         args.scaled = int(args.scaled)
