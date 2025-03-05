@@ -467,7 +467,7 @@ mod test {
         let collection = Collection::from_paths(&siglist)?.select(&selection)?;
         let index = RevIndex::create(output.path(), collection.try_into()?, false)?;
 
-        let counter = index.counter_for_query(&query);
+        let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
@@ -514,7 +514,7 @@ mod test {
         let index =
             RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
-        let counter = index.counter_for_query(&query);
+        let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
@@ -854,7 +854,7 @@ mod test {
         {
             let index = RevIndex::open(output.as_path(), false, None)?;
 
-            let counter = index.counter_for_query(&query);
+            let counter = index.counter_for_query(&query, None);
             let matches = index.matches_from_counter(counter, 0);
 
             assert!(matches[0].0.starts_with("NC_009665.1"));
@@ -874,7 +874,7 @@ mod test {
 
         let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
 
-        let counter = index.counter_for_query(&query);
+        let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
