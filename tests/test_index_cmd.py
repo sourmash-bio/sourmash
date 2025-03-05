@@ -1,3 +1,6 @@
+"""
+Tests for 'sourmash index'.
+"""
 import glob
 import os
 
@@ -839,7 +842,11 @@ def test_index_protein_command_search(runtmp, disk_index_type):
     sigfile1 = utils.get_test_data(
         "prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    db_out = utils.get_test_data(_index_filename("prot/protein", disk_index_type))
+
+    if disk_index_type == 'zip':
+        db_out = utils.get_test_data("prot/protein.zip")
+    else:
+        db_out = utils.get_test_data(_index_filename("prot/protein", disk_index_type))
 
     runtmp.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
     assert "2 matches" in runtmp.last_result.out
@@ -906,7 +913,10 @@ def test_index_hp_command_search(runtmp, disk_index_type):
     sigfile1 = utils.get_test_data(
         "prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    db_out = utils.get_test_data(_index_filename("prot/hp", disk_index_type))
+    if disk_index_type == 'zip':
+        db_out = utils.get_test_data("prot/hp.zip")
+    else:
+        db_out = utils.get_test_data(_index_filename("prot/hp", disk_index_type))
 
     runtmp.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
     assert "2 matches" in runtmp.last_result.out
@@ -973,7 +983,10 @@ def test_index_dayhoff_command_search(runtmp, disk_index_type):
     sigfile1 = utils.get_test_data(
         "prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    db_out = utils.get_test_data(_index_filename("prot/dayhoff", disk_index_type))
+    if disk_index_type == 'zip':
+        db_out = utils.get_test_data("prot/dayhoff.zip")
+    else:
+        db_out = utils.get_test_data(_index_filename("prot/dayhoff", disk_index_type))
 
     runtmp.run_sourmash("search", sigfile1, db_out, "--threshold", "0.0")
     assert "2 matches" in runtmp.last_result.out
