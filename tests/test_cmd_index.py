@@ -592,8 +592,7 @@ def test_index_best_containment_threshold_1(runtmp, disk_index_type):
     sig63 = utils.get_test_data("63.fa.sig")
 
     dbname = runtmp.output(_index_filename("test", disk_index_type))
-    cmd = ["index", dbname, sig2, sig47, sig63, "-k", "31",
-           "-F", disk_index_type]
+    cmd = ["index", dbname, sig2, sig47, sig63, "-k", "31", "-F", disk_index_type]
     runtmp.sourmash(*cmd)
 
     db = sourmash.load_file_as_index(dbname)
@@ -648,8 +647,7 @@ def test_index_best_containment_threshold_5(runtmp, disk_index_type):
     sig63 = utils.get_test_data("63.fa.sig")
 
     dbname = runtmp.output(_index_filename("test", disk_index_type))
-    cmd = ["index", dbname, sig2, sig47, sig63, "-k", "31",
-           "-F", disk_index_type]
+    cmd = ["index", dbname, sig2, sig47, sig63, "-k", "31", "-F", disk_index_type]
     runtmp.sourmash(*cmd)
 
     db = sourmash.load_file_as_index(dbname)
