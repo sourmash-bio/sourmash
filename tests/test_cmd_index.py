@@ -9,7 +9,7 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash import sourmash_args
+from sourmash import sourmash_args, SourmashSignature
 
 
 def _index_filename(prefix, index_type):
@@ -584,45 +584,44 @@ def test_gather_metagenome_picklist(runtmp, disk_index_type):
     )
 
 
-""" # noqa:
-def test_sbt_gather_threshold_1():
-    # test gather() method, in some detail
-    factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory, d=2)
+def test_index_best_containment_threshold_1(runtmp, disk_index_type):
+    # test best_containment() method, in some detail
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = sourmash_args.load_query_signature(sig2, 31, "DNA")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
 
-    sig2 = load_one_signature(utils.get_test_data("2.fa.sig"), ksize=31)
-    sig47 = load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    sig63 = load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    dbname = runtmp.output(_index_filename("test", disk_index_type))
+    cmd = ["index", dbname, sig2, sig47, sig63, "-k", "31",
+           "-F", disk_index_type]
+    runtmp.sourmash(*cmd)
 
-    tree.insert(sig47)
-    tree.insert(sig63)
-    tree.insert(sig2)
+    db = sourmash.load_file_as_index(dbname)
 
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
-    new_mh = sig2.minhash.copy_and_clear()
+    mins = list(sorted(ss2.minhash.hashes.keys()))
+    new_mh = ss2.minhash.copy_and_clear()
 
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        tree.best_containment(SourmashSignature(new_mh))
+        db.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    result = tree.best_containment(SourmashSignature(new_mh))
+    result = db.best_containment(SourmashSignature(new_mh))
     assert result
     containment, match_sig, name = result
     assert containment == 1.0
-    assert match_sig == sig2
-    assert name is None
+    assert match_sig == ss2
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        tree.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
+        db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -630,37 +629,36 @@ def test_sbt_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    result = tree.best_containment(SourmashSignature(new_mh))
+    result = db.best_containment(SourmashSignature(new_mh))
     assert result
     containment, match_sig, name = result
     assert containment == 1.0
-    assert match_sig == sig2
-    assert name is None
+    assert match_sig == ss2
 
     # check with a too-high threshold -> should be no results.
     print("len mh", len(new_mh))
     with pytest.raises(ValueError):
-        tree.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
+        db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
-def test_sbt_gather_threshold_5():
-    # test gather() method above threshold
-    factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory, d=2)
+def test_index_best_containment_threshold_5(runtmp, disk_index_type):
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = sourmash_args.load_query_signature(sig2, 31, "DNA")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
 
-    sig2 = load_one_signature(utils.get_test_data("2.fa.sig"), ksize=31)
-    sig47 = load_one_signature(utils.get_test_data("47.fa.sig"), ksize=31)
-    sig63 = load_one_signature(utils.get_test_data("63.fa.sig"), ksize=31)
+    dbname = runtmp.output(_index_filename("test", disk_index_type))
+    cmd = ["index", dbname, sig2, sig47, sig63, "-k", "31",
+           "-F", disk_index_type]
+    runtmp.sourmash(*cmd)
 
-    tree.insert(sig47)
-    tree.insert(sig63)
-    tree.insert(sig2)
+    db = sourmash.load_file_as_index(dbname)
 
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
-    new_mh = sig2.minhash.copy_and_clear()
+    mins = list(sorted(ss2.minhash.hashes.keys()))
+    new_mh = ss2.minhash.copy_and_clear()
 
     # add five hashes
     for i in range(5):
@@ -671,21 +669,18 @@ def test_sbt_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    result = tree.best_containment(SourmashSignature(new_mh))
+    result = db.best_containment(SourmashSignature(new_mh))
     assert result
     containment, match_sig, name = result
     assert containment == 1.0
-    assert match_sig == sig2
-    assert name is None
+    assert match_sig == ss2
 
     # now, check with a threshold_bp that should be meet-able.
-    tree.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
+    db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
     assert result
     containment, match_sig, name = result
     assert containment == 1.0
-    assert match_sig == sig2
-    assert name is None
-"""
+    assert match_sig == ss2
 
 
 def test_gather_single_return(runtmp, disk_index_type):
