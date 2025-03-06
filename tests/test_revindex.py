@@ -254,7 +254,7 @@ def test_create_dataset_picklist_1():
     assert len(xx) == 1
 
     # forcibly set picklist for now
-    db.idx_picklist = dataset_picks
+    db._idx_picklist = dataset_picks
 
     # picklist including match:
     xx = list(db.search(ss2, threshold=0))
@@ -278,7 +278,7 @@ def test_create_dataset_picklist_2():
     assert len(xx) == 2
 
     # forcibly set picklist for now
-    db.idx_picklist = dataset_picks
+    db._idx_picklist = dataset_picks
 
     # picklist, 1 exact match
     xx = list(db.search(ss47, threshold=0))
@@ -302,7 +302,7 @@ def test_create_dataset_picklist_3():
     assert len(xx) == 2
 
     # forcibly set picklist for now
-    db.idx_picklist = dataset_picks
+    db._idx_picklist = dataset_picks
 
     # picklist, 1 inexact match
     xx = list(db.search(ss63, threshold=0))

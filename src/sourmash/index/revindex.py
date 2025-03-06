@@ -283,20 +283,25 @@ class DiskRevIndex_DatasetPicklist(RustObject):
 
 
 class DiskRevIndex(RustObject, Index):
+    """
+    RocksDB-based low-memory on disk inverted index, implemented in Rust.
+    """
     __dealloc_func__ = lib.disk_revindex_free
     is_database = True
     manifest = None
 
-    def __init__(self, path, *, ptr=None):
+    def __init__(self, path):
         check_file = os.path.join(path, 'CURRENT')
         if not os.path.exists(check_file):
             raise ValueError("not a RocksDB")
 
+        # create via FFI
         path_b = path.encode("utf-8")
-        if ptr is None:
-            self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
+        self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
+
+        # store location
         self._path = path
-        self.idx_picklist = None
+        self._idx_picklist = None
 
     @property
     def location(self):
@@ -369,7 +374,7 @@ class DiskRevIndex(RustObject, Index):
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
-            print("xxx building manifest @CTB")
+            # @CTB building manifest this way is expensive!!
             m = CollectionManifest.create_manifest(
                 self._signatures_with_internal(), include_signature=False
             )
@@ -379,20 +384,20 @@ class DiskRevIndex(RustObject, Index):
         return self
 
     def _generate_idx_picklist_from_manifest(self, mf):
-        if self.idx_picklist is not None:
+        if self._idx_picklist is not None:
             raise Exception("cannot use picklists multiple times, sorry")
 
         # grab internal indices
         idx_list = [int(row["internal_location"]) for row in mf.rows]
-        self.idx_picklist = DiskRevIndex_DatasetPicklist(idx_list)
+        self._idx_picklist = DiskRevIndex_DatasetPicklist(idx_list)
 
     @property
     def _ffi_idx_picklist(self):
-        if self.idx_picklist is None:
+        if self._idx_picklist is None:
             return ffi.NULL
-        return self.idx_picklist._objptr
+        return self._idx_picklist._objptr
 
-    def signatures(self):
+    def signatures(self):       # @CTB add picklist
         size = ffi.new("uintptr_t *")
         sigs_ptr = self._methodcall(lib.disk_revindex_signatures, size)
         size = size[0]
@@ -406,6 +411,8 @@ class DiskRevIndex(RustObject, Index):
             yield ss, self.location
 
     def _signatures_with_internal(self):
+        # CTB fix: don't use signatures() once we start paying attention
+        # to picklists.
         for n, ss in enumerate(self.signatures()):
             yield ss, n
 
@@ -504,6 +511,10 @@ class DiskRevIndex(RustObject, Index):
 
         return IndexSearchResult(containment, match_ss, self.location)
 
+    #
+    # implement CounterGather API
+    #
+
     def peek(self, query_mh, *, threshold_bp=0):
         ss_ptr = self._methodcall(
             lib.disk_revindex_peek,
@@ -533,6 +544,10 @@ class DiskRevIndex(RustObject, Index):
 
 
 class DiskRevIndex_CounterGather:
+    """
+    Simple implementation of CounterGather API that tracks matches
+    while passing most calls back to the DiskRevIndex.
+    """
     def __init__(self, query, db, threshold_bp):
         self.query = query
         self.orig_query_mh = query.minhash.copy().flatten()
@@ -547,9 +562,7 @@ class DiskRevIndex_CounterGather:
         self.found_mh += intersect_mh
 
     def peek(self, query_mh, *, threshold_bp=None):
-        if threshold_bp is None:
-            threshold_bp = self.threshold_bp
-            assert 0  # @CTB
+        assert not threshold_bp is None
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):
@@ -560,5 +573,6 @@ class DiskRevIndex_CounterGather:
         return self.found_mh
 
     def signatures(self):
+        # don't track actual signatures - go back to DiskRevIndex
         for sr in self.db.prefetch(self.query):
             yield sr.signature
