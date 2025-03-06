@@ -286,12 +286,13 @@ class DiskRevIndex(RustObject, Index):
     """
     RocksDB-based low-memory on disk inverted index, implemented in Rust.
     """
+
     __dealloc_func__ = lib.disk_revindex_free
     is_database = True
     manifest = None
 
     def __init__(self, path):
-        check_file = os.path.join(path, 'CURRENT')
+        check_file = os.path.join(path, "CURRENT")
         if not os.path.exists(check_file):
             raise ValueError("not a RocksDB")
 
@@ -310,7 +311,7 @@ class DiskRevIndex(RustObject, Index):
     def insert(self, *args, **kwargs):
         raise NotImplementedError
 
-    def load(self, *args, **kwargs): # @CTB
+    def load(self, *args, **kwargs):  # @CTB
         raise NotImplementedError
 
     def save(self, *args, **kwargs):
@@ -397,7 +398,7 @@ class DiskRevIndex(RustObject, Index):
             return ffi.NULL
         return self._idx_picklist._objptr
 
-    def signatures(self):       # @CTB add picklist
+    def signatures(self):  # @CTB add picklist
         size = ffi.new("uintptr_t *")
         sigs_ptr = self._methodcall(lib.disk_revindex_signatures, size)
         size = size[0]
@@ -548,6 +549,7 @@ class DiskRevIndex_CounterGather:
     Simple implementation of CounterGather API that tracks matches
     while passing most calls back to the DiskRevIndex.
     """
+
     def __init__(self, query, db, threshold_bp):
         self.query = query
         self.orig_query_mh = query.minhash.copy().flatten()
@@ -562,7 +564,7 @@ class DiskRevIndex_CounterGather:
         self.found_mh += intersect_mh
 
     def peek(self, query_mh, *, threshold_bp=None):
-        assert not threshold_bp is None
+        assert threshold_bp is not None
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):
