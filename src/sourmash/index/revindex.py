@@ -1,7 +1,8 @@
 """
-RevIndex - a rust-based reverse index by hashes.
+RevIndex and DiskRevIndex - a Rust-based reverse indexes by hashes.
 """
 
+import os
 import weakref
 
 from sourmash.index import Index, IndexSearchResult, _check_select_parameters
@@ -287,6 +288,10 @@ class DiskRevIndex(RustObject):
     manifest = None
 
     def __init__(self, path, *, ptr=None):
+        check_file = os.path.join(path, 'CURRENT')
+        if not os.path.exists(check_file):
+            raise ValueError("not a RocksDB")
+
         path_b = path.encode("utf-8")
         if ptr is None:
             self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
