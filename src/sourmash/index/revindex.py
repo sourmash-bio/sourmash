@@ -282,7 +282,7 @@ class DiskRevIndex_DatasetPicklist(RustObject):
         )
 
 
-class DiskRevIndex(RustObject):
+class DiskRevIndex(RustObject, Index):
     __dealloc_func__ = lib.disk_revindex_free
     is_database = True
     manifest = None
@@ -295,8 +295,21 @@ class DiskRevIndex(RustObject):
         path_b = path.encode("utf-8")
         if ptr is None:
             self._objptr = rustcall(lib.disk_revindex_new_from_rocksdb, path_b)
-        self.location = path
+        self._path = path
         self.idx_picklist = None
+
+    @property
+    def location(self):
+        return self._path
+
+    def insert(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def load(self, *args, **kwargs): # @CTB
+        raise NotImplementedError
+
+    def save(self, *args, **kwargs):
+        raise NotImplementedError
 
     @classmethod
     def from_sigs(self, siglist, path):
