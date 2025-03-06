@@ -1,5 +1,9 @@
+"""
+Tests of the RevIndex and DiskRevIndex classes.
+"""
 import pytest
 import sourmash_tst_utils as utils
+import shutil
 
 from sourmash.index import revindex
 from sourmash.index.revindex import RevIndex, DiskRevIndex
@@ -133,6 +137,18 @@ def test_revindex_gather_ignore():
     assert not is_found(ss47, results)
     assert not is_found(ss2, results)
     assert is_found(ss63, results)
+
+
+def test_rocksdb_load(runtmp):
+    # check loading from non .rocksdb directories
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+
+    newpath = runtmp.output('foo.dir')
+    shutil.copytree(rocksdb_path, newpath)
+    
+    db = DiskRevIndex(newpath)
+    print(db)
+    assert len(db) == 3, len(db)
 
 
 def test_rocksdb_len():
