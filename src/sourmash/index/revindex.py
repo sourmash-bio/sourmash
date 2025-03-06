@@ -249,6 +249,9 @@ class SearchResult(RustObject):
     def __iter__(self):
         return iter((self.score, self.signature, self.location))
 
+    def __getitem__(self, i):
+        return list(self)[i]
+
     @property
     def score(self):
         return self._methodcall(lib.searchresult_score)

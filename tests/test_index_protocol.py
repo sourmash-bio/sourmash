@@ -215,7 +215,7 @@ def test_index_search_exact_match(index_obj):
     ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss2, threshold=1.0)
-    print([s.signature.name for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 1
     assert sr[0].signature.minhash == ss2.minhash
     assert sr[0].score == 1.0
@@ -226,9 +226,9 @@ def test_index_search_lower_threshold(index_obj):
     ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss47, threshold=0.1)
-    print([s.signature.name for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 2
-    sr.sort(key=lambda x: -x.score)
+    sr.sort(key=lambda x: -x[0])
     assert sr[0].signature.minhash == ss47.minhash
     assert sr[0].score == 1.0
     assert sr[1].signature.minhash == ss63.minhash
@@ -240,9 +240,9 @@ def test_index_search_lower_threshold_2(index_obj):
     ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss63, threshold=0.1)
-    print([s.signature.name for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 2
-    sr.sort(key=lambda x: -x.score)
+    sr.sort(key=lambda x: -x[0])
     assert sr[0].signature.minhash == ss63.minhash
     assert sr[0].score == 1.0
     assert sr[1].signature.minhash == ss47.minhash
@@ -255,9 +255,9 @@ def test_index_search_higher_threshold_2(index_obj):
 
     # search for sig63 with high threshold => 1 match
     sr = index_obj.search(ss63, threshold=0.8)
-    print([s.signature.name for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 1
-    sr.sort(key=lambda x: -x.score)
+    sr.sort(key=lambda x: -x[0])
     assert sr[0].signature.minhash == ss63.minhash
     assert sr[0].score == 1.0
 
@@ -267,9 +267,9 @@ def test_index_search_containment(index_obj):
     ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss63, do_containment=True, threshold=0.1)
-    print([s.signature.name for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 2
-    sr.sort(key=lambda x: -x.score)
+    sr.sort(key=lambda x: -x[0])
     assert sr[0].signature.minhash == ss63.minhash
     assert sr[0].score == 1.0
     assert sr[1].signature.minhash == ss47.minhash
