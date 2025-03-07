@@ -44,7 +44,8 @@ def subparser(subparsers):
     )
 
     subparser.add_argument(
-        "name", help="name to save index under; defaults to {name}.sbt.zip",
+        "name",
+        help="name to save index under; defaults to {name}.sbt.zip",
     )
     subparser.add_argument("signatures", nargs="*", help="signatures to load into SBT")
     subparser.add_argument(

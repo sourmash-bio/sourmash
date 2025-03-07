@@ -553,6 +553,7 @@ def index(args):
 
     elif index_type == "rocksdb":
         full_siglist = []
+
         def add_sketch(sigobj):
             full_siglist.append(sigobj)
 
