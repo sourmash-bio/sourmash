@@ -508,18 +508,32 @@ def index(args):
     picklist = sourmash_args.load_picklist(args)
 
     index_type = args.index_type
+    add_sketch = None
+    output_name = args.name
 
+    # check input options
+    if index_type != "SBT":
+        if args.append:
+            error("cannot use --append with a RocksDB index type")
+            sys.exit(-1)
+        if args.sparseness > 0.0:
+            error("cannot use --sparseness with a RocksDB index type")
+            sys.exit(-1)
+
+    # open writing
     if index_type == "SBT":
         if args.sparseness < 0 or args.sparseness > 1.0:
             error("sparseness must be in range [0.0, 1.0].")
             sys.exit(-1)
 
         if args.append:
-            tree = load_sbt_index(args.sbt_name)
+            tree = load_sbt_index(args.name)
         else:
             tree = create_sbt_index(args.bf_size, n_children=args.n_children)
-        full_siglist = None
-        output_name = args.sbt_name
+
+        def add_sketch(sigobj):
+            tree.insert(sigobj)
+
     elif index_type == "zip":
         if args.append:
             error("cannot use --append with a RocksDB index type")
@@ -527,21 +541,22 @@ def index(args):
         if args.sparseness > 0.0:
             error("cannot use --sparseness with a RocksDB index type")
             sys.exit(-1)
-        tree = None
-        full_siglist = []  # @CTB use save_sigs instead
-        output_name = args.sbt_name
+
         if not output_name.endswith(".sig.zip"):
             assert 0, output_name  # @CTB
+
+        save_sigs = sourmash_args.SaveSignaturesToLocation(output_name)
+        save_sigs.open()
+
+        def add_sketch(sigobj):
+            save_sigs.add(sigobj)
+
     elif index_type == "rocksdb":
-        if args.append:
-            error("cannot use --append with a RocksDB index type")
-            sys.exit(-1)
-        if args.sparseness > 0.0:
-            error("cannot use --sparseness with a RocksDB index type")
-            sys.exit(-1)
-        tree = None
         full_siglist = []
-        output_name = args.sbt_name
+        def add_sketch(sigobj):
+            full_siglist.append(sigobj)
+
+        output_name = args.name
         if not output_name.endswith(".rocksdb"):
             assert 0, output_name  # @CTB
     else:
@@ -596,10 +611,7 @@ def index(args):
 
             scaleds.add(ss.minhash.scaled)
 
-            if tree is not None:
-                tree.insert(ss)
-            else:
-                full_siglist.append(ss)
+            add_sketch(ss)
             n += 1
 
         if not ss:
@@ -642,9 +654,7 @@ def index(args):
             tree.storage.close()
     elif index_type == "zip":
         print("CREATING sig zip W00T XXX", output_name, len(full_siglist))
-        with sourmash_args.SaveSignaturesToLocation(output_name) as save_sig:
-            for ss in full_siglist:
-                save_sig.add(ss)
+        save_sigs.close()
     elif index_type == "rocksdb":
         from sourmash.index.revindex import DiskRevIndex  # @CTB
 
