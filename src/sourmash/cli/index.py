@@ -38,7 +38,7 @@ def subparser(subparsers):
     subparser.add_argument(
         "-F",
         "--index-type",
-        help="type of index to build (default: SBT",
+        help="type of index to build (default: SBT)",
         choices=["SBT", "rocksdb", "zip"],
         default="SBT",
     )
