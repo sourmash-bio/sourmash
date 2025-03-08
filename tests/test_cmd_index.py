@@ -416,6 +416,27 @@ def test_gather_metagenome_threshold_bp_too_high(
     assert "No matches found for --threshold-bp at 5.0 Mbp." in err
 
 
+def test_gather_metagenome_abund(runtmp, disk_index_type):
+    testdata_glob = utils.get_test_data("track_abund/*.fa.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data("SRR606249.sig.gz")
+
+    dbname = runtmp.output(_index_filename("against", disk_index_type))
+    cmd = ["index", dbname, *testdata_sigs, "-k", "31", "-F", disk_index_type]
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(dbname)
+
+    runtmp.sourmash("gather", query_sig, dbname, "-k", "31", "--threshold-bp=0")
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '4.4 Mbp        0.6%  100.0%      10.4    NC_011663.1 ' in runtmp.last_result.out
+
+
 def test_gather_metagenome_downsample(
     runtmp, prefetch_gather, linear_gather, disk_index_type
 ):

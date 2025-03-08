@@ -309,3 +309,13 @@ def test_create_dataset_picklist_3():
     xx = list(db.search(ss63, threshold=0))
     assert len(xx) == 1
     assert round(xx[0].score, 3) == 0.321
+
+
+def test_against_bad_abund_rocksdb(runtmp):
+    # check against a RocksDB that contains sketches w/abund,
+    # created by branchwater. An alternative would be to write
+    # a test that uses the internal Python API for gather.
+    db = utils.get_test_data("track_abund/47+63.abund.rocksdb")
+    metag = utils.get_test_data("SRR606249.sig.gz")
+
+    runtmp.sourmash("gather", metag, db)
