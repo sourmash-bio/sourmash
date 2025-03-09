@@ -434,7 +434,10 @@ def test_gather_metagenome_abund(runtmp, disk_index_type):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert '4.4 Mbp        0.6%  100.0%      10.4    NC_011663.1 ' in runtmp.last_result.out
+    assert (
+        "4.4 Mbp        0.6%  100.0%      10.4    NC_011663.1 "
+        in runtmp.last_result.out
+    )
 
 
 def test_gather_metagenome_downsample(
