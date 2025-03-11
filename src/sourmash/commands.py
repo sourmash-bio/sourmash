@@ -940,8 +940,24 @@ def gather(args):
         fail_on_empty_database=args.fail_on_empty_database,
     )
 
-    if args.linear:  # force linear traversal?
+    if args.linear and 0:  # force linear traversal?
         databases = [LazyLinearIndex(db) for db in databases]
+    else:
+        # @CTB foo revindex
+        from sourmash.index.revindex import RevIndex
+        from sourmash.index import ZipFileLinearIndex
+        xx = []
+        for db in databases:
+            print('xxx', db)
+            if isinstance(db, ZipFileLinearIndex):
+                ri = RevIndex(template=query.minhash)
+                for ss in db.signatures():
+                    ri.insert(ss)
+                    xx.append(ri)
+                xx.append(ri)
+            else:
+                xx.append(db)
+        databases = xx
 
     size_may_be_inaccurate = False
     if args.prefetch:  # note: on by default!
