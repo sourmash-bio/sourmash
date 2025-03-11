@@ -14,6 +14,9 @@ clean:
 
 install: build
 
+offline:
+	pip install -e . --no-index --find-links '.' --no-build-isolation
+
 dist: FORCE
 	$(PYTHON) -m build --sdist
 
