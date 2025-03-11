@@ -275,7 +275,7 @@ impl RevIndex {
                 let score = if containment {
                     size as f64 / mh.size() as f64
                 } else {
-                    size as f64 / (mh.size() + match_size - size) as f64
+                    mh.jaccard(match_mh).expect("cannot calculate Jaccard")
                 };
                 let filename = match_path.to_string();
                 let mut sig: Signature = match_sig.clone().into();

@@ -194,7 +194,7 @@ def build_lca_index_save_load_sql(runtmp):
         build_lca_index_save_load,
         build_sqlite_index,
         build_lca_index_save_load_sql,
-        #                        build_revindex,
+        build_revindex,
         build_disk_revindex,
     ]
 )

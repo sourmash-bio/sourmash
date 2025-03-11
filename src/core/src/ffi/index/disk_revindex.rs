@@ -291,7 +291,7 @@ unsafe fn disk_revindex_prefetch(
 }
 }
 
-// implement search/jaccard separately from search/jaccard asdf
+// implement search/jaccard separately from search/jaccard asdf @CTB
 
 ffi_fn! {
 unsafe fn disk_revindex_search_jaccard(
@@ -321,7 +321,7 @@ unsafe fn disk_revindex_search_jaccard(
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, _size)| {
-            let filename = "some rocksdb database";
+            let filename = "some rocksdb database"; // @CTB
             let sig: Signature = revindex
                 .collection()
                 .sig_for_dataset(dataset_id)
