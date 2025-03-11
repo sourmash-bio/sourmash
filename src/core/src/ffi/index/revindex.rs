@@ -2,6 +2,7 @@ use std::slice;
 
 use camino::Utf8PathBuf as PathBuf;
 
+use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
@@ -28,8 +29,24 @@ fn from_template(template: &Sketch) -> Selection {
         _ => unimplemented!(),
     };
 
+    let (ksize, moltype) = match template {
+        Sketch::MinHash(mh) => (mh.ksize() as u32, mh.hash_function()),
+        Sketch::LargeMinHash(mh) => (mh.ksize() as u32, mh.hash_function()),
+        _ => unimplemented!(),
+    };
+
+    let adj_ksize: u32 = match moltype {
+        HashFunctions::Murmur64Dna => ksize,
+        HashFunctions::Murmur64Protein => ksize / 3,
+        HashFunctions::Murmur64Dayhoff => ksize /  3,
+        HashFunctions::Murmur64Hp => ksize / 3,
+        HashFunctions::Murmur64Skipm1n3 => ksize,
+        HashFunctions::Murmur64Skipm2n3 => ksize,
+        _ => ksize,
+    };
+
     Selection::builder()
-        .ksize(template.ksize() as u32)
+        .ksize(adj_ksize)
         .num(num)
         .scaled(scaled)
         .build()
