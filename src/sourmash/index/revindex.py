@@ -15,7 +15,7 @@ from sourmash.minhash import flatten_and_intersect_scaled
 from sourmash.manifest import CollectionManifest
 
 
-class RevIndex(RustObject, Index):
+class RevIndex(RustObject): #, Index):
     __dealloc_func__ = lib.revindex_free
 
     def __init__(
@@ -239,6 +239,35 @@ class RevIndex(RustObject, Index):
     @property
     def scaled(self):
         return self._methodcall(lib.revindex_scaled)
+
+    def prefetch(self, query_ss, threshold_bp=0, **kwargs):
+        query_mh = query_ss.minhash
+        threshold = threshold_bp /query_mh.scaled
+        return self.search(query_ss, threshold=threshold, do_containment=True)
+
+    def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
+        pass
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        threshold = threshold_bp / query_mh.scaled
+        query_ss = sourmash.SourmashSignature(query_mh)
+        found = self.search(query_ss, threshold=threshold, do_containment=True)
+
+        if found:
+            match_mh = found[0].signature.minhash
+            intersect_mh = match_mh.intersection(query_mh)
+            return found[0], intersect_mh
+        return None, None
+
+    def consume(self, intersect_mh):
+        pass
+
+    def counter_gather(self, query, threshold_bp, **kwargs):
+        counter = RevIndex_CounterGather(query, self, threshold_bp)
+        for result in self.prefetch(query, threshold_bp=threshold_bp):
+            counter.add(result.signature)
+
+        return counter
 
 
 class SearchResult(RustObject):
@@ -537,17 +566,17 @@ class DiskRevIndex(RustObject, Index):
         pass
 
     def counter_gather(self, query, threshold_bp, **kwargs):
-        counter = DiskRevIndex_CounterGather(query, self, threshold_bp)
+        counter = RevIndex_CounterGather(query, self, threshold_bp)
         for result in self.prefetch(query, threshold_bp=threshold_bp):
             counter.add(result.signature)
 
         return counter
 
 
-class DiskRevIndex_CounterGather:
+class RevIndex_CounterGather:
     """
     Simple implementation of CounterGather API that tracks matches
-    while passing most calls back to the DiskRevIndex.
+    while passing most calls back to the parent RevIndex.
     """
 
     def __init__(self, query, db, threshold_bp):
