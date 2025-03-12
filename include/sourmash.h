@@ -388,20 +388,9 @@ const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
 
 uint64_t revindex_len(const SourmashRevIndex *ptr);
 
-SourmashRevIndex *revindex_new_with_paths(const SourmashStr *const *search_sigs_ptr,
-                                          uintptr_t insigs,
-                                          const SourmashKmerMinHash *template_ptr,
-                                          uintptr_t threshold,
-                                          const SourmashKmerMinHash *const *queries_ptr,
-                                          uintptr_t inqueries,
-                                          bool keep_sigs);
-
 SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
                                          uintptr_t insigs,
-                                         const SourmashKmerMinHash *template_ptr,
-                                         uintptr_t threshold,
-                                         const SourmashKmerMinHash *const *queries_ptr,
-                                         uintptr_t inqueries);
+                                         const SourmashKmerMinHash *template_ptr);
 
 ScaledType revindex_scaled(const SourmashRevIndex *ptr);
 

@@ -52,6 +52,7 @@ fn from_template(template: &Sketch) -> Selection {
         .build()
 }
 
+/*
 ffi_fn! {
 unsafe fn revindex_new_with_paths(
     search_sigs_ptr: *const *const SourmashStr,
@@ -105,15 +106,13 @@ unsafe fn revindex_new_with_paths(
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
+*/
 
 ffi_fn! {
 unsafe fn revindex_new_with_sigs(
     search_sigs_ptr: *const *const SourmashSignature,
     insigs: usize,
     template_ptr: *const SourmashKmerMinHash,
-    threshold: usize,
-    queries_ptr: *const *const SourmashKmerMinHash,
-    inqueries: usize,
 ) -> Result<*mut SourmashRevIndex> {
     let search_sigs: Vec<Signature> = {
         assert!(!search_sigs_ptr.is_null());
@@ -130,6 +129,8 @@ unsafe fn revindex_new_with_sigs(
         Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
     };
 
+    let queries = None;
+/*
     let queries_vec: Vec<KmerMinHash>;
     let queries: Option<&[KmerMinHash]> = if queries_ptr.is_null() {
         None
@@ -142,8 +143,9 @@ unsafe fn revindex_new_with_sigs(
             .collect();
         Some(queries_vec.as_ref())
     };
-
+*/
     let selection = from_template(&template);
+    let threshold = 0;
     let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, threshold, queries)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
