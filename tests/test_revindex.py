@@ -38,6 +38,14 @@ class JaccardSearchBestOnly_ButIgnore(JaccardSearch): # @CTB remove?
         return True
 
 
+def test_revindex_empty():
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    lidx = RevIndex(template=ss2.minhash)
+
+    x = list(lidx.signatures())
+
+
 def test_revindex_index_search():
     # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")

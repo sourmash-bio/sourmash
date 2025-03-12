@@ -25,6 +25,7 @@ class RevIndex(RustObject): #, Index):
         assert template is not None
         assert isinstance(template, MinHash)
         self.template = template
+        self._scaled = template.scaled
         self._signatures = []
         self._objptr = ffi.NULL
 
@@ -80,9 +81,11 @@ class RevIndex(RustObject): #, Index):
         self._init_inner()
         return self._methodcall(lib.revindex_len)
 
-    def insert(self, node):
+    def insert(self, sig):
+        if sig.minhash.scaled > self._scaled:
+            raise Exception(f"insert scaled {sig.minhash.scaled} is higher than template scaled {self._scaled}")
         self._check_init()
-        self._signatures.append(node)
+        self._signatures.append(sig)
 
     def save(self, path):
         pass
@@ -213,10 +216,10 @@ class RevIndex(RustObject): #, Index):
         found = self.search(query_ss, threshold=threshold, do_containment=True)
 
         if found:
-            match_mh = found[0].signature.minhash
-            intersect_mh = match_mh.intersection(query_mh)
+            match_mh = found[0].signature.minhash.flatten()
+            intersect_mh = match_mh.intersection(query_mh.flatten())
             return found[0], intersect_mh
-        return None, None
+        return None
 
     def consume(self, intersect_mh):
         pass
