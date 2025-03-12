@@ -946,6 +946,7 @@ def gather(args):
         # @CTB foo revindex
         from sourmash.index.revindex import RevIndex
         from sourmash.index import ZipFileLinearIndex
+
         xx = []
         for db in databases:
             if isinstance(db, ZipFileLinearIndex):

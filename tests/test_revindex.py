@@ -17,7 +17,7 @@ from sourmash.search import JaccardSearch, SearchType
 ##
 
 
-class JaccardSearchBestOnly_ButIgnore(JaccardSearch): # @CTB remove?
+class JaccardSearchBestOnly_ButIgnore(JaccardSearch):  # @CTB remove?
     "A class that ignores certain results, but still does all the pruning."
 
     def __init__(self, ignore_list):
@@ -44,7 +44,7 @@ def test_revindex_empty():
     lidx = RevIndex(template=ss2.minhash)
 
     with pytest.raises(ValueError):
-        x = list(lidx.signatures())
+        list(lidx.signatures())
 
 
 def test_revindex_index_search():
@@ -119,7 +119,7 @@ def test_revindex_best_containment():
 
 
 def test_revindex_gather_ignore():
-    raise pytest.skip('not implemented')
+    raise pytest.skip("not implemented")
     # check that RevIndex gather ignores things properly.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -157,7 +157,7 @@ def test_revindex_insert_after_init():
 
     ss2 = load_one_signature_from_json(sig2, ksize=31)
     ss47 = load_one_signature_from_json(sig47)
-    ss63 = load_one_signature_from_json(sig63)
+    load_one_signature_from_json(sig63)
 
     lidx = RevIndex(template=ss2.minhash)
     lidx.insert(ss2)
