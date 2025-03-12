@@ -43,7 +43,8 @@ def test_revindex_empty():
     ss2 = load_one_signature_from_json(sig2, ksize=31)
     lidx = RevIndex(template=ss2.minhash)
 
-    x = list(lidx.signatures())
+    with pytest.raises(ValueError):
+        x = list(lidx.signatures())
 
 
 def test_revindex_index_search():
