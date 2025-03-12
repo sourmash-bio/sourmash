@@ -311,13 +311,22 @@ class Index(ABC):
         with query.update() as prefetch_query:
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
-        # find all matches and construct a CounterGather object.
-        counter = CounterGather(prefetch_query)
-        for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-            counter.add(result.signature, location=result.location)
+        if 0: # @CTB
+            # find all matches and construct a CounterGather object.
+            counter = CounterGather(prefetch_query)
+            for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
+                counter.add(result.signature, location=result.location)
 
-        # tada!
-        return counter
+            # tada!
+            return counter
+        else:
+            from .revindex import RevIndex
+            revindex = RevIndex(template=prefetch_query.minhash)
+
+            for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
+                revindex.insert(result.signature)
+
+            return revindex.counter_gather(prefetch_query, threshold_bp)
 
     @abstractmethod
     def select(
