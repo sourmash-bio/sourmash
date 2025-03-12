@@ -17,6 +17,9 @@ from sourmash.manifest import CollectionManifest
 
 class RevIndex(RustObject): #, Index):
     __dealloc_func__ = lib.revindex_free
+    manifest = None
+    is_database = True
+    location = None
 
     def __init__(
         self,
@@ -132,6 +135,10 @@ class RevIndex(RustObject): #, Index):
         # else:
         #    raise NotImplementedError("Call into Rust and retrieve sigs")
 
+    def signatures_with_location(self):
+        for ss in self.signatures():
+            yield ss, self.location
+
     def __len__(self):
         if self._objptr:
             return self._methodcall(lib.revindex_len)
@@ -242,14 +249,29 @@ class RevIndex(RustObject): #, Index):
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
         query_mh = query_ss.minhash
-        threshold = threshold_bp /query_mh.scaled
-        return self.search(query_ss, threshold=threshold, do_containment=True)
+        if not query_mh:
+            raise ValueError
+        threshold = threshold_bp / query_mh.scaled / len(query_mh)
+        sr = self.search(query_ss, threshold=threshold, do_containment=True)
+        return sr
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
-        pass
+        query_mh = query_ss.minhash
+        if not query_mh:
+            raise ValueError("empty query")
+        threshold_hashes = threshold_bp / query_mh.scaled / len(query_mh)
+        results = self.search(query_ss, threshold=threshold,
+                              do_containment=True)
+
+        if results:
+            results.sort(key=lambda x: -x.score)
+            return results[0]
+        raise ValueError("no results")
 
     def peek(self, query_mh, *, threshold_bp=0):
-        threshold = threshold_bp / query_mh.scaled
+        if not len(query_mh):
+            raise ValueError
+        threshold = threshold_bp / query_mh.scaled / len(query_mh)
         query_ss = sourmash.SourmashSignature(query_mh)
         found = self.search(query_ss, threshold=threshold, do_containment=True)
 

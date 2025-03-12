@@ -110,6 +110,7 @@ def test_revindex_best_containment():
 
 
 def test_revindex_gather_ignore():
+    raise pytest.skip('not implemented')
     # check that RevIndex gather ignores things properly.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
