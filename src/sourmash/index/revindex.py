@@ -639,6 +639,11 @@ class RevIndex_CounterGather:
     """
 
     def __init__(self, query, db, threshold_bp):
+        """
+        Initialize a CounterGather obj.
+
+        Here, 'db' can be either a RevIndex or a DiskRevIndex.
+        """
         self.query = query
         self.orig_query_mh = query.minhash.copy().flatten()
         self.found_mh = query.minhash.copy_and_clear().to_mutable()
