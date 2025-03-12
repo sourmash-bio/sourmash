@@ -17,7 +17,7 @@ from sourmash.search import JaccardSearch, SearchType
 ##
 
 
-class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
+class JaccardSearchBestOnly_ButIgnore(JaccardSearch): # @CTB remove?
     "A class that ignores certain results, but still does all the pruning."
 
     def __init__(self, ignore_list):
@@ -139,6 +139,24 @@ def test_revindex_gather_ignore():
     assert not is_found(ss47, results)
     assert not is_found(ss2, results)
     assert is_found(ss63, results)
+
+
+def test_revindex_insert_after_init():
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx._init_inner()
+
+    # should not work!
+    with pytest.raises(Exception):
+        lidx.insert(ss47)
 
 
 def test_rocksdb_load(runtmp):

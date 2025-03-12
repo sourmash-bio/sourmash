@@ -31,7 +31,7 @@ class RevIndex(RustObject): #, Index):
         queries=None,
         keep_sigs=False,
     ):
-        self.template = template
+        self.template = template.to_mutable()
         self.threshold = threshold
         self.queries = queries
         self.keep_sigs = keep_sigs
@@ -43,6 +43,10 @@ class RevIndex(RustObject): #, Index):
             self._objptr = ffi.NULL
         else:
             self._init_inner()
+
+    def _check_init(self):
+        if self._objptr != ffi.NULL:
+            raise Exception("already initialized")
 
     def _init_inner(self):
         if self._objptr != ffi.NULL:
@@ -146,6 +150,7 @@ class RevIndex(RustObject): #, Index):
             return len(self._signatures)
 
     def insert(self, node):
+        self._check_init()
         if self._signatures is None:
             self._signatures = []
         self._signatures.append(node)
@@ -157,15 +162,47 @@ class RevIndex(RustObject): #, Index):
     def load(cls, location):
         pass
 
-    def select(self, ksize=None, moltype=None, **kwargs):
-        if self.template:
-            if ksize:
-                self.template.ksize = ksize
-            if moltype:
-                self.template.moltype = moltype
-        else:
-            # TODO: deal with None/default values
-            self.template = MinHash(ksize=ksize, moltype=moltype)
+    def select(
+        self,
+        ksize=None,
+        moltype=None,
+        scaled=None,
+        num=None,
+        abund=None,
+        containment=None,
+        picklist=None,
+        **kwargs):
+        _check_select_parameters(
+            ksize=ksize,
+            moltype=moltype,
+            scaled=scaled,
+            num=num,
+            abund=abund,
+            containment=containment,
+            picklist=picklist,
+            **kwargs,
+        )
+
+        assert not abund
+        assert num is None or num == 0
+        # ignore containment!
+
+        my_ksize = self.template.ksize
+        my_scaled = self.template.scaled
+        my_moltype = self.template.moltype
+
+        if ksize is not None:
+            if ksize != my_ksize:
+                raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
+        if scaled is not None and scaled < my_scaled:
+            raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
+        if moltype is not None and moltype != my_moltype:
+            raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
+
+        if picklist is not None:
+            raise Exception("cannot use picklists, sry")
+
+        return self
 
     def search(self, query, *args, **kwargs):
         """Return set of matches with similarity above 'threshold'.
@@ -259,7 +296,7 @@ class RevIndex(RustObject): #, Index):
         query_mh = query_ss.minhash
         if not query_mh:
             raise ValueError("empty query")
-        threshold_hashes = threshold_bp / query_mh.scaled / len(query_mh)
+        threshold = threshold_bp / query_mh.scaled / len(query_mh)
         results = self.search(query_ss, threshold=threshold,
                               do_containment=True)
 
@@ -422,7 +459,7 @@ class DiskRevIndex(RustObject, Index):
                 raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
         if scaled is not None and scaled < my_scaled:
             raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if 0 and moltype is not None and moltype != my_moltype:
+        if moltype is not None and moltype != my_moltype:
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
