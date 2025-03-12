@@ -15,7 +15,7 @@ from sourmash.minhash import flatten_and_intersect_scaled
 from sourmash.manifest import CollectionManifest
 
 
-class RevIndex(RustObject): #, Index):
+class RevIndex(RustObject):  # , Index):
     __dealloc_func__ = lib.revindex_free
     manifest = None
     is_database = True
@@ -171,7 +171,8 @@ class RevIndex(RustObject): #, Index):
         abund=None,
         containment=None,
         picklist=None,
-        **kwargs):
+        **kwargs,
+    ):
         _check_select_parameters(
             ksize=ksize,
             moltype=moltype,
@@ -246,7 +247,9 @@ class RevIndex(RustObject): #, Index):
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
             if match.score >= threshold:
-                results.append(IndexSearchResult(match.score, match.signature, match.location))
+                results.append(
+                    IndexSearchResult(match.score, match.signature, match.location)
+                )
 
         return results
 
@@ -297,8 +300,7 @@ class RevIndex(RustObject): #, Index):
         if not query_mh:
             raise ValueError("empty query")
         threshold = threshold_bp / query_mh.scaled / len(query_mh)
-        results = self.search(query_ss, threshold=threshold,
-                              do_containment=True)
+        results = self.search(query_ss, threshold=threshold, do_containment=True)
 
         if results:
             results.sort(key=lambda x: -x.score)
@@ -459,7 +461,7 @@ class DiskRevIndex(RustObject, Index):
                 raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
         if scaled is not None and scaled < my_scaled:
             raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if 0 and moltype is not None and moltype != my_moltype: #  @CTB
+        if 0 and moltype is not None and moltype != my_moltype:  #  @CTB
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
