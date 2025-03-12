@@ -459,7 +459,7 @@ class DiskRevIndex(RustObject, Index):
                 raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
         if scaled is not None and scaled < my_scaled:
             raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if moltype is not None and moltype != my_moltype:
+        if 0 and moltype is not None and moltype != my_moltype: #  @CTB
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
