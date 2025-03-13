@@ -256,7 +256,7 @@ impl RevIndex {
 
         let mut results = vec![];
         for (dataset_id, size) in counter.most_common() {
-            let match_size = if size >= threshold { size } else { break };
+            if size < threshold { break };
 
             let match_sig = self.linear.sig_for_dataset(dataset_id)?;
             let match_path = self

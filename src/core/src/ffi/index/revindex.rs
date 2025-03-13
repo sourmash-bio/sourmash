@@ -1,17 +1,14 @@
 use std::slice;
 
-use camino::Utf8PathBuf as PathBuf;
-
 use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
-use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::mem_revindex;
 use crate::index::Index;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::ScaledType;
 
@@ -129,24 +126,8 @@ unsafe fn revindex_new_with_sigs(
         Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
     };
 
-    let queries = None;
-/*
-    let queries_vec: Vec<KmerMinHash>;
-    let queries: Option<&[KmerMinHash]> = if queries_ptr.is_null() {
-        None
-    } else {
-        queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
-            .iter()
-            .map(|mh_ptr|
-            // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
-            .collect();
-        Some(queries_vec.as_ref())
-    };
-*/
     let selection = from_template(&template);
-    let threshold = 0;
-    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, threshold, queries)?;
+    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
