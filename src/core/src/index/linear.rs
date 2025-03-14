@@ -183,7 +183,6 @@ impl LinearIndex {
         let intersect_bp: u64 = match_mh.scaled() as u64 * intersect_orig;
 
         let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
-        let match_ = match_sig;
 
         // TODO: all of these
         let f_unique_weighted = 0.;
@@ -217,7 +216,6 @@ impl LinearIndex {
             filename,
             name,
             md5,
-            match_,
             f_match_orig,
             unique_intersect_bp,
             gather_result_rank,
