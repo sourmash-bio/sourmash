@@ -695,7 +695,7 @@ class CounterGather_LCA:
         location = self.locations[md5]
 
         new_sr = IndexSearchResult(cont, match, location)
-        return [new_sr, intersect_mh]
+        return new_sr, intersect_mh
 
     def consume(self, intersect_mh):
         self.query_started = 1
