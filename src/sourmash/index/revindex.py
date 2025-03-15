@@ -234,7 +234,7 @@ class RevIndex(RustObject):  # , Index):
             match_mh = found[0].signature.minhash.flatten()
             intersect_mh = match_mh.intersection(query_mh.flatten())
             return found[0], intersect_mh
-        return None
+        return []
 
     def consume(self, intersect_mh):
         pass
@@ -559,7 +559,7 @@ class RevIndex_CounterGather:
     while passing most calls back to the parent RevIndex.
     """
 
-    def __init__(self, query, db, threshold_bp):
+    def __init__(self, query, db, threshold_bp, *, allow_insert=False):
         """
         Initialize a CounterGather obj.
 
@@ -570,15 +570,23 @@ class RevIndex_CounterGather:
         self.found_mh = query.minhash.copy_and_clear().to_mutable()
         self.db = db
         self.threshold_bp = threshold_bp
+        self.allow_insert = allow_insert
 
-    def add(self, match):
+    def add(self, match_ss, location=None): # @CTB location
+        if self.allow_insert:
+            self.db.insert(match_ss)
         query_mh = self.orig_query_mh
-        match_mh = match.minhash.downsample(scaled=query_mh.scaled)
+        match_mh = match_ss.minhash.downsample(scaled=query_mh.scaled)
         intersect_mh = query_mh.intersection(match_mh.flatten())
         self.found_mh += intersect_mh
 
-    def peek(self, query_mh, *, threshold_bp=None):
-        assert threshold_bp is not None
+    def peek(self, query_mh, *, threshold_bp=0): # threshold_bp default?? @CTB
+        if not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh) != 1.0:
+            raise ValueError
+        #assert threshold_bp is not None
         print('BBB peek')
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 

@@ -701,11 +701,21 @@ class CounterGather_LCA:
         self.query_started = 1
 
 
+## XXX @CTB
+
+def build_RevIndex_CounterGather(query):
+    from sourmash.index.revindex import RevIndex_CounterGather
+    ri = RevIndex(template=query.minhash)
+    cg = RevIndex_CounterGather(query, ri, 0, allow_insert=True)
+    return cg
+
+
 @pytest.fixture(
     params=[
         CounterGather,
         CounterGather_LinearIndex,
         CounterGather_LCA,
+        build_RevIndex_CounterGather
     ]
 )
 def counter_gather_constructor(request):
