@@ -1184,7 +1184,9 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
+    print('create')
     counter = counter_gather_constructor(query_ss)
+    print('insert')
     counter.add(query_ss, location="somewhere over the rainbow")
 
     counter.consume(query_ss.minhash)

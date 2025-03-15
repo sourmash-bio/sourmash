@@ -24,14 +24,19 @@ class RevIndex(RustObject):  # , Index):
     def __init__(self, *, template=None):
         assert template is not None
         assert isinstance(template, MinHash)
+        if template.num != 0:
+            raise ValueError("must use scaled sketches")
         self.template = template.copy_and_clear().to_mutable()
         self._scaled = template.scaled
         self._signatures = []
         self._objptr = ffi.NULL
 
-    def _check_not_init(self):
+    def _check_not_init(self, *, do_raise=True):
         if self._objptr != ffi.NULL:
-            raise Exception("already initialized")
+            if do_raise:
+                raise Exception("already initialized")
+            return False
+        return True
 
     def _init_inner(self):
         if self._objptr != ffi.NULL:
@@ -572,12 +577,22 @@ class RevIndex_CounterGather:
         self.threshold_bp = threshold_bp
         self.allow_insert = allow_insert
 
-    def add(self, match_ss, location=None): # @CTB location
+    def add(self, match_ss, *, location=None, require_overlap=True): # @CTB location
         if self.allow_insert:
-            self.db.insert(match_ss)
+            x = self.db._check_not_init(do_raise=False)
+            print('checking', x)
+            if self.db._check_not_init(do_raise=False):
+                print('not init')
+                self.db.insert(match_ss)
+            else:
+                raise ValueError
+
         query_mh = self.orig_query_mh
         match_mh = match_ss.minhash.downsample(scaled=query_mh.scaled)
         intersect_mh = query_mh.intersection(match_mh.flatten())
+        if require_overlap and not intersect_mh:
+            raise ValueError("require overlap")
+
         self.found_mh += intersect_mh
 
     def peek(self, query_mh, *, threshold_bp=0): # threshold_bp default?? @CTB
@@ -591,6 +606,7 @@ class RevIndex_CounterGather:
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):
+        self.db._init_inner()
         self.found_mh += intersect_mh
 
     @property
