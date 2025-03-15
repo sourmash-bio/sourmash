@@ -5565,6 +5565,7 @@ def test_gather_check_scaled_bounds_more_than_maximum(
 
 
 def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
+    # check that query sig gets properly downsampled
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
     print(testdata_sigs)

@@ -24,12 +24,12 @@ class RevIndex(RustObject):  # , Index):
     def __init__(self, *, template=None):
         assert template is not None
         assert isinstance(template, MinHash)
-        self.template = template
+        self.template = template.copy_and_clear().to_mutable()
         self._scaled = template.scaled
         self._signatures = []
         self._objptr = ffi.NULL
 
-    def _check_init(self):
+    def _check_not_init(self):
         if self._objptr != ffi.NULL:
             raise Exception("already initialized")
 
@@ -40,6 +40,10 @@ class RevIndex(RustObject):  # , Index):
 
         if not self._signatures and self._objptr == ffi.NULL:
             raise ValueError("No signatures provided")
+
+        if self.template.scaled != self._scaled:
+            print(f'XXX downsampling: {self.template.scaled}, {self._scaled}')
+            self.template = self.template.downsample(scaled=self._scaled)
 
         template_ptr = self.template._get_objptr()
 
@@ -83,10 +87,9 @@ class RevIndex(RustObject):  # , Index):
 
     def insert(self, sig):
         if sig.minhash.scaled > self._scaled:
-            raise Exception(
-                f"insert scaled {sig.minhash.scaled} is higher than template scaled {self._scaled}"
-            )
-        self._check_init()
+            self._scaled = sig.minhash.scaled
+
+        self._check_not_init()
         self._signatures.append(sig)
 
     def save(self, path):
@@ -154,6 +157,8 @@ class RevIndex(RustObject):  # , Index):
         if not query.minhash:
             return []
 
+        print('XYY', query.minhash.scaled, self._scaled)
+
         # check arguments
         if "threshold" not in kwargs:
             raise TypeError("'search' requires 'threshold'")
@@ -196,8 +201,12 @@ class RevIndex(RustObject):  # , Index):
         query_mh = query_ss.minhash
         if not query_mh:
             raise ValueError
+        query_mh = query_mh.downsample(scaled=self._scaled)
+        ss = SourmashSignature(query_mh)
         threshold = threshold_bp / query_mh.scaled / len(query_mh)
-        sr = self.search(query_ss, threshold=threshold, do_containment=True)
+        print('XZZY prefetch', query_mh.scaled, self._scaled, threshold)
+        sr = self.search(ss, threshold=threshold, do_containment=True)
+        print(f'found: {len(sr)}')
         return sr
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
@@ -205,6 +214,7 @@ class RevIndex(RustObject):  # , Index):
         if not query_mh:
             raise ValueError("empty query")
         threshold = threshold_bp / query_mh.scaled / len(query_mh)
+        print('XZX', query_mh.scaled, self._scaled, threshold)
         results = self.search(query_ss, threshold=threshold, do_containment=True)
 
         if results:
@@ -216,6 +226,7 @@ class RevIndex(RustObject):  # , Index):
         if not len(query_mh):
             raise ValueError
         threshold = threshold_bp / query_mh.scaled / len(query_mh)
+        print('XZZ peek', query_mh.scaled, self._scaled, threshold)
         query_ss = sourmash.SourmashSignature(query_mh)
         found = self.search(query_ss, threshold=threshold, do_containment=True)
 
@@ -229,9 +240,12 @@ class RevIndex(RustObject):  # , Index):
         pass
 
     def counter_gather(self, query, threshold_bp, **kwargs):
+        # will raise ValueError if empty:
+        self._init_inner()
+
         counter = RevIndex_CounterGather(query, self, threshold_bp)
-        for result in self.prefetch(query, threshold_bp=threshold_bp):
-            counter.add(result.signature)
+        #for result in self.prefetch(query, threshold_bp=threshold_bp):
+        #    counter.add(result.signature)
 
         return counter
 
@@ -565,6 +579,7 @@ class RevIndex_CounterGather:
 
     def peek(self, query_mh, *, threshold_bp=None):
         assert threshold_bp is not None
+        print('BBB peek')
         return self.db.peek(query_mh, threshold_bp=threshold_bp)
 
     def consume(self, intersect_mh):
@@ -575,6 +590,7 @@ class RevIndex_CounterGather:
         return self.found_mh
 
     def signatures(self):
-        # don't track actual signatures - go back to DiskRevIndex
+        # don't track actual signatures - go back to RevIndex
         for sr in self.db.prefetch(self.query):
+            print('FOO')
             yield sr.signature
