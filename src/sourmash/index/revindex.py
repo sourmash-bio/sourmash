@@ -29,6 +29,7 @@ class RevIndex(RustObject):  # , Index):
         self.template = template.copy_and_clear().to_mutable()
         self._scaled = template.scaled
         self._signatures = []
+        self._orig_signatures = {}
         self._objptr = ffi.NULL
 
     def _check_not_init(self, *, do_raise=True):
@@ -65,6 +66,11 @@ class RevIndex(RustObject):  # , Index):
             sigs_size,
             template_ptr,
         )
+
+        for n, (orig_ss, stored_ss) in enumerate(zip(self._signatures,
+                                                     self.signatures())):
+            self._orig_signatures[stored_ss.md5sum()] = orig_ss
+
 
     def signatures(self):
         self._init_inner()
@@ -188,8 +194,10 @@ class RevIndex(RustObject):  # , Index):
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
             if match.score >= threshold:
+                match_md5 = match.signature.md5sum()
+                orig_ss = self._orig_signatures[match_md5]
                 results.append(
-                    IndexSearchResult(match.score, match.signature, match.location)
+                    IndexSearchResult(match.score, orig_ss, match.location)
                 )
 
         return results
