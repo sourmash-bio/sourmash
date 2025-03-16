@@ -583,7 +583,7 @@ class RevIndex_CounterGather:
         self.db = db
         self.threshold_bp = threshold_bp
         self.allow_insert = allow_insert
-        self.locations = dict()
+        self.locations = {}
 
     @property
     def scaled(self):
