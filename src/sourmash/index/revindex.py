@@ -585,7 +585,6 @@ class RevIndex_CounterGather:
 
     def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
         if self.allow_insert:
-            self.db._check_not_init(do_raise=False)
             if self.db._check_not_init(do_raise=False):
                 self.db.insert(match_ss)
             else:

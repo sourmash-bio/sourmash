@@ -4281,6 +4281,7 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
             # double check -- should match 'search --containment'.
             # (this is kind of useless for a 1.0 contained_by, I guess)
             filename = row["filename"]
+            print('trying load from:', row["filename"])
             match = load_one_signature(filename, ksize=21)
             assert match.contained_by(combined_sig) == 1.0
 
