@@ -13,6 +13,7 @@ use crate::index::linear::LinearIndex;
 use crate::index::revindex::HashToColor;
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
+use crate::ScaledType;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
@@ -236,6 +237,14 @@ impl RevIndex {
         self.linear.template().clone()
     }
 
+    pub fn scaled(&self) -> ScaledType {
+        if let Sketch::MinHash(mh) = self.linear.template() {
+            mh.clone().scaled() // @CTB avoid clone
+        } else {
+            unimplemented!()
+        }
+    }
+
     // TODO: mh should be a sketch, or even a sig...
     pub(crate) fn find_signatures(
         &self,
@@ -244,10 +253,13 @@ impl RevIndex {
         containment: bool,
         _ignore_scaled: bool,
     ) -> Result<Vec<(f64, Signature, String)>> {
+        let scaled = self.scaled();
+        // @CTB avoid clone?
+        let query_mh = mh.clone().downsample_scaled(scaled).expect("cannot downsample query");
         // TODO: proper threshold calculation
-        let threshold: usize = (threshold * (mh.size() as f64)) as _;
+        let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
 
-        let counter = self.counter_for_query(mh);
+        let counter = self.counter_for_query(&query_mh);
 
         debug!(
             "number of matching signatures for hashes: {}",
@@ -266,6 +278,7 @@ impl RevIndex {
                 .internal_location();
 
             let mut match_mh = None;
+            //@CTB use something other than mh here?
             if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {
                 match_mh = Some(mh);
             }
@@ -273,9 +286,9 @@ impl RevIndex {
 
             if size >= threshold {
                 let score = if containment {
-                    size as f64 / mh.size() as f64
+                    size as f64 / query_mh.size() as f64
                 } else {
-                    mh.jaccard(match_mh).expect("cannot calculate Jaccard")
+                    query_mh.jaccard(match_mh).expect("cannot calculate Jaccard")
                 };
                 let filename = match_path.to_string();
                 let mut sig: Signature = match_sig.clone().into();

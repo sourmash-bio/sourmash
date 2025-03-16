@@ -10,6 +10,7 @@ from sourmash.index import revindex
 from sourmash.index.revindex import RevIndex, DiskRevIndex
 from sourmash.signature import load_one_signature_from_json
 from sourmash.search import JaccardSearch, SearchType
+from sourmash import SourmashSignature
 
 ##
 ## test a slightly outre version of JaccardSearch - this is a test of the
@@ -58,6 +59,53 @@ def test_revindex_index_search():
     ss63 = load_one_signature_from_json(sig63)
 
     lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[1][1] == ss63
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[1][1] == ss47
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+
+
+def test_revindex_index_search_retrieve_orig():
+    # confirm that RevIndex returns the original, not the downsampled sketches
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    # store downsampled:
+    ds_mh = ss2.minhash.downsample(scaled=10_000)
+    lidx = RevIndex(template=ds_mh)
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
