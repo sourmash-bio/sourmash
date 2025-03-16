@@ -320,12 +320,13 @@ class Index(ABC):
             # tada!
             return counter
         else:
-            print('XXX NOTE: Using RevIndex CounterGather')
+            print("XXX NOTE: Using RevIndex CounterGather")
             from .revindex import RevIndex_CounterGather, RevIndex
 
             revindex = RevIndex(template=prefetch_query.minhash)
-            cg = RevIndex_CounterGather(prefetch_query, revindex, threshold_bp,
-                                        allow_insert=True)
+            cg = RevIndex_CounterGather(
+                prefetch_query, revindex, threshold_bp, allow_insert=True
+            )
 
             n_added = 0
             for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):

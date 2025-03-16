@@ -67,10 +67,10 @@ class RevIndex(RustObject):  # , Index):
             template_ptr,
         )
 
-        for n, (orig_ss, stored_ss) in enumerate(zip(self._signatures,
-                                                     self.signatures())):
+        for n, (orig_ss, stored_ss) in enumerate(
+            zip(self._signatures, self.signatures())
+        ):
             self._orig_signatures[stored_ss.md5sum()] = orig_ss
-
 
     def signatures(self):
         self._init_inner()
@@ -196,9 +196,7 @@ class RevIndex(RustObject):  # , Index):
             if match.score >= threshold:
                 match_md5 = match.signature.md5sum()
                 orig_ss = self._orig_signatures[match_md5]
-                results.append(
-                    IndexSearchResult(match.score, orig_ss, match.location)
-                )
+                results.append(IndexSearchResult(match.score, orig_ss, match.location))
 
         return results
 
