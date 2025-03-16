@@ -14,8 +14,14 @@ clean:
 
 install: build
 
+offline:
+	pip install -e . --no-index --find-links '.' --no-build-isolation
+
 dist: FORCE
 	$(PYTHON) -m build --sdist
+
+wheel:
+	$(PYTHON) -m maturin build -r
 
 test: .PHONY
 	tox -e py310
@@ -32,11 +38,12 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/nodegraph.rs \
                     src/core/src/ffi/index/mod.rs \
                     src/core/src/ffi/index/revindex.rs \
+                    src/core/src/ffi/index/disk_revindex.rs \
                     src/core/src/ffi/storage.rs \
                     src/core/src/errors.rs \
                     src/core/cbindgen.toml
 	cd src/core && \
-	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@
+	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@ -v
 
 coverage: all
 	tox -e coverage
