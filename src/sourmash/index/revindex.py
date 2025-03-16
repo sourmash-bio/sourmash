@@ -623,6 +623,12 @@ class RevIndex_CounterGather:
 
     def consume(self, intersect_mh):
         self.db._init_inner()
+
+        if self.found_mh.scaled < intersect_mh.scaled:
+            self.found_mh = self.found_mh.downsample(scaled=intersect_mh.scaled)
+        elif self.found_mh.scaled > intersect_mh.scaled:
+            intersect_mh = intersect_mh.downsample(scaled=self.found_mh.scaled)
+
         self.found_mh += intersect_mh
 
     @property
