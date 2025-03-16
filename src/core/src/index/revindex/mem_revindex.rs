@@ -253,9 +253,21 @@ impl RevIndex {
         containment: bool,
         _ignore_scaled: bool,
     ) -> Result<Vec<(f64, Signature, String)>> {
-        let scaled = self.scaled();
-        // @CTB avoid clone?
-        let query_mh = mh.clone().downsample_scaled(scaled).expect("cannot downsample query");
+        let index_scaled = self.scaled();
+        let query_scaled = mh.scaled();
+
+        // @CTB avoid clones?
+        let query_mh = {
+            if query_scaled < index_scaled {
+                mh
+                    .clone()
+                    .downsample_scaled(index_scaled)
+                    .expect("cannot downsample query")
+            } else {
+                mh.clone()
+            }
+        };
+
         // TODO: proper threshold calculation
         let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
 
