@@ -320,14 +320,23 @@ class Index(ABC):
             # tada!
             return counter
         else:
-            from .revindex import RevIndex
+            print("XXX NOTE: Using RevIndex CounterGather")
+            from .revindex import RevIndex_CounterGather, RevIndex
 
             revindex = RevIndex(template=prefetch_query.minhash)
+            cg = RevIndex_CounterGather(
+                prefetch_query, revindex, threshold_bp, allow_insert=True
+            )
 
+            n_added = 0
             for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-                revindex.insert(result.signature)
+                cg.add(result.signature, location=result.location)
+                n_added += 1
 
-            return revindex.counter_gather(prefetch_query, threshold_bp)
+            if n_added == 0:
+                raise ValueError("no signatures to count")
+
+            return cg
 
     @abstractmethod
     def select(

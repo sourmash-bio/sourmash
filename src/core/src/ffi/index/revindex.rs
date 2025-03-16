@@ -1,17 +1,14 @@
 use std::slice;
 
-use camino::Utf8PathBuf as PathBuf;
-
 use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
-use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::mem_revindex;
 use crate::index::Index;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::ScaledType;
 
@@ -38,7 +35,7 @@ fn from_template(template: &Sketch) -> Selection {
     let adj_ksize: u32 = match moltype {
         HashFunctions::Murmur64Dna => ksize,
         HashFunctions::Murmur64Protein => ksize / 3,
-        HashFunctions::Murmur64Dayhoff => ksize /  3,
+        HashFunctions::Murmur64Dayhoff => ksize / 3,
         HashFunctions::Murmur64Hp => ksize / 3,
         HashFunctions::Murmur64Skipm1n3 => ksize,
         HashFunctions::Murmur64Skipm2n3 => ksize,
@@ -52,6 +49,7 @@ fn from_template(template: &Sketch) -> Selection {
         .build()
 }
 
+/*
 ffi_fn! {
 unsafe fn revindex_new_with_paths(
     search_sigs_ptr: *const *const SourmashStr,
@@ -105,15 +103,13 @@ unsafe fn revindex_new_with_paths(
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
+*/
 
 ffi_fn! {
 unsafe fn revindex_new_with_sigs(
     search_sigs_ptr: *const *const SourmashSignature,
     insigs: usize,
     template_ptr: *const SourmashKmerMinHash,
-    threshold: usize,
-    queries_ptr: *const *const SourmashKmerMinHash,
-    inqueries: usize,
 ) -> Result<*mut SourmashRevIndex> {
     let search_sigs: Vec<Signature> = {
         assert!(!search_sigs_ptr.is_null());
@@ -130,21 +126,8 @@ unsafe fn revindex_new_with_sigs(
         Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
     };
 
-    let queries_vec: Vec<KmerMinHash>;
-    let queries: Option<&[KmerMinHash]> = if queries_ptr.is_null() {
-        None
-    } else {
-        queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
-            .iter()
-            .map(|mh_ptr|
-            // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
-            .collect();
-        Some(queries_vec.as_ref())
-    };
-
     let selection = from_template(&template);
-    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, threshold, queries)?;
+    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }

@@ -6,7 +6,7 @@ import os
 import weakref
 
 from sourmash.index import Index, IndexSearchResult, _check_select_parameters
-from sourmash.minhash import MinHash
+from sourmash.minhash import MinHash, flatten_and_intersect_scaled
 from sourmash.signature import SourmashSignature
 from sourmash._lowlevel import ffi, lib
 from sourmash.utils import RustObject, rustcall, decode_str, encode_str
@@ -21,103 +21,56 @@ class RevIndex(RustObject):  # , Index):
     is_database = True
     location = None
 
-    def __init__(
-        self,
-        *,
-        signatures=None,
-        signature_paths=None,
-        template=None,
-        threshold=0,
-        queries=None,
-        keep_sigs=False,
-    ):
-        self.template = template.to_mutable()
-        self.threshold = threshold
-        self.queries = queries
-        self.keep_sigs = keep_sigs
-        self.signature_paths = signature_paths
-        self._signatures = signatures
+    def __init__(self, *, template=None):
+        assert template is not None
+        assert isinstance(template, MinHash)
+        if template.num != 0:
+            raise ValueError("must use scaled sketches")
+        self.template = template.copy_and_clear().to_mutable()
+        self._scaled = template.scaled
+        self._signatures = []
+        self._orig_signatures = {}
+        self._objptr = ffi.NULL
 
-        if signature_paths is None or signatures is None:
-            # delay initialization
-            self._objptr = ffi.NULL
-        else:
-            self._init_inner()
-
-    def _check_init(self):
+    def _check_not_init(self, *, do_raise=True):
         if self._objptr != ffi.NULL:
-            raise Exception("already initialized")
+            if do_raise:
+                raise Exception("already initialized")
+            return False
+        return True
 
     def _init_inner(self):
         if self._objptr != ffi.NULL:
             # Already initialized
             return
 
-        if (
-            self.signature_paths is None
-            and not self._signatures
-            and self._objptr == ffi.NULL
-        ):
+        if not self._signatures and self._objptr == ffi.NULL:
             raise ValueError("No signatures provided")
-        elif (self.signature_paths or self._signatures) and self._objptr != ffi.NULL:
-            raise NotImplementedError("Need to update RevIndex")
 
-        attached_refs = weakref.WeakKeyDictionary()
+        if self.template.scaled != self._scaled:
+            self.template = self.template.downsample(scaled=self._scaled)
 
-        queries_ptr = ffi.NULL
-        queries_size = 0
-        if self.queries:
-            # get list of rust objects
-            collected = []
-            for obj in queries:
-                rv = obj._get_objptr()
-                attached_refs[rv] = obj
-                collected.append(rv)
-            queries_ptr = ffi.new("SourmashSignature*[]", collected)
-            queries_size = len(queries)
-
-        template_ptr = ffi.NULL
-        if self.template:
-            if isinstance(self.template, MinHash):
-                template_ptr = self.template._get_objptr()
-            else:
-                raise ValueError("Template must be a MinHash")
+        template_ptr = self.template._get_objptr()
 
         search_sigs_ptr = ffi.NULL
         sigs_size = 0
         collected = []
-        if self.signature_paths:
-            for path in self.signature_paths:
-                collected.append(encode_str(path))
-            search_sigs_ptr = ffi.new("SourmashStr*[]", collected)
-            sigs_size = len(signature_paths)
-
-            self._objptr = rustcall(
-                lib.revindex_new_with_paths,
-                search_sigs_ptr,
-                sigs_size,
-                template_ptr,
-                self.threshold,
-                queries_ptr,
-                queries_size,
-                self.keep_sigs,
-            )
-        elif self._signatures:
-            # force keep_sigs=True, and pass SourmashSignature directly to RevIndex.
-            for sig in self._signatures:
-                collected.append(sig._get_objptr())
+        for sig in self._signatures:
+            collected.append(sig._get_objptr())
             search_sigs_ptr = ffi.new("SourmashSignature*[]", collected)
             sigs_size = len(self._signatures)
 
-            self._objptr = rustcall(
-                lib.revindex_new_with_sigs,
-                search_sigs_ptr,
-                sigs_size,
-                template_ptr,
-                self.threshold,
-                queries_ptr,
-                queries_size,
-            )
+        self._objptr = rustcall(
+            lib.revindex_new_with_sigs,
+            search_sigs_ptr,
+            sigs_size,
+            template_ptr,
+        )
+
+        for n, (orig_ss, stored_ss) in enumerate(
+            zip(self._signatures, self.signatures())
+        ):
+            self._orig_signatures[stored_ss.md5sum()] = orig_ss
 
     def signatures(self):
         self._init_inner()
@@ -134,26 +87,20 @@ class RevIndex(RustObject):  # , Index):
         for sig in sigs:
             yield sig
 
-        # if self._signatures:
-        #    yield from self._signatures
-        # else:
-        #    raise NotImplementedError("Call into Rust and retrieve sigs")
-
     def signatures_with_location(self):
         for ss in self.signatures():
-            yield ss, self.location
+            yield ss, self.location  # @CTB
 
     def __len__(self):
-        if self._objptr:
-            return self._methodcall(lib.revindex_len)
-        else:
-            return len(self._signatures)
+        self._init_inner()
+        return self._methodcall(lib.revindex_len)
 
-    def insert(self, node):
-        self._check_init()
-        if self._signatures is None:
-            self._signatures = []
-        self._signatures.append(node)
+    def insert(self, sig):
+        if sig.minhash.scaled > self._scaled:
+            self._scaled = sig.minhash.scaled
+
+        self._check_not_init()
+        self._signatures.append(sig)
 
     def save(self, path):
         pass
@@ -247,52 +194,25 @@ class RevIndex(RustObject):  # , Index):
         for i in range(size):
             match = SearchResult._from_objptr(results_ptr[i])
             if match.score >= threshold:
-                results.append(
-                    IndexSearchResult(match.score, match.signature, match.location)
-                )
+                match_md5 = match.signature.md5sum()
+                orig_ss = self._orig_signatures[match_md5]
+                results.append(IndexSearchResult(match.score, orig_ss, match.location))
 
         return results
 
-    #    def gather(self, query, *args, **kwargs):
-    #        "Return the match with the best Jaccard containment in the database."
-    #        if not query.minhash:
-    #            return []
-    #
-    #        self._init_inner()
-    #
-    #        threshold_bp = kwargs.get("threshold_bp", 0.0)
-    #        threshold = threshold_bp / (len(query.minhash) * self.scaled)
-    #
-    #        results = []
-    #        size = ffi.new("uintptr_t *")
-    #        results_ptr = self._methodcall(
-    #            lib.revindex_gather, query._get_objptr(), threshold, True, True, size
-    #        )
-    #        size = size[0]
-    #        if size == 0:
-    #            return []
-    #
-    #        results = []
-    #        for i in range(size):
-    #            match = SearchResult._from_objptr(results_ptr[i])
-    #            if match.score >= threshold:
-    #                results.append(IndexSearchResult(match.score, match.signature, match.filename))
-    #
-    #        results.sort(reverse=True,
-    #                     key=lambda x: (x.score, x.signature.md5sum()))
-    #
-    #        return results[:1]
-
     @property
     def scaled(self):
+        self._init_inner()
         return self._methodcall(lib.revindex_scaled)
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
         query_mh = query_ss.minhash
         if not query_mh:
             raise ValueError
+        query_mh = query_mh.downsample(scaled=self._scaled)
+        ss = SourmashSignature(query_mh)
         threshold = threshold_bp / query_mh.scaled / len(query_mh)
-        sr = self.search(query_ss, threshold=threshold, do_containment=True)
+        sr = self.search(ss, threshold=threshold, do_containment=True)
         return sr
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
@@ -315,15 +235,18 @@ class RevIndex(RustObject):  # , Index):
         found = self.search(query_ss, threshold=threshold, do_containment=True)
 
         if found:
-            match_mh = found[0].signature.minhash
-            intersect_mh = match_mh.intersection(query_mh)
+            match_mh = found[0].signature.minhash.flatten()
+            intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
             return found[0], intersect_mh
-        return None, None
+        return []
 
     def consume(self, intersect_mh):
         pass
 
     def counter_gather(self, query, threshold_bp, **kwargs):
+        # will raise ValueError if empty:
+        self._init_inner()
+
         counter = RevIndex_CounterGather(query, self, threshold_bp)
         for result in self.prefetch(query, threshold_bp=threshold_bp):
             counter.add(result.signature)
@@ -394,6 +317,9 @@ class DiskRevIndex(RustObject, Index):
         self._path = path
         self._idx_picklist = None
 
+    def _init_inner(self):
+        pass
+
     @property
     def location(self):
         return self._path
@@ -425,6 +351,11 @@ class DiskRevIndex(RustObject, Index):
 
     def __len__(self):
         return self._methodcall(lib.disk_revindex_len)
+
+    @property
+    def scaled(self):
+        scaled = self._methodcall(lib.disk_revindex_scaled)
+        return scaled
 
     def select(
         self,
@@ -640,7 +571,7 @@ class RevIndex_CounterGather:
     while passing most calls back to the parent RevIndex.
     """
 
-    def __init__(self, query, db, threshold_bp):
+    def __init__(self, query, db, threshold_bp, *, allow_insert=False):
         """
         Initialize a CounterGather obj.
 
@@ -651,18 +582,59 @@ class RevIndex_CounterGather:
         self.found_mh = query.minhash.copy_and_clear().to_mutable()
         self.db = db
         self.threshold_bp = threshold_bp
+        self.allow_insert = allow_insert
+        self.locations = {}
 
-    def add(self, match):
+    @property
+    def scaled(self):
+        return self.db.scaled
+
+    def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
+        if self.allow_insert:
+            if self.db._check_not_init(do_raise=False):
+                self.db.insert(match_ss)
+            else:
+                raise ValueError
+
+        self.locations[match_ss.md5sum()] = location
+
         query_mh = self.orig_query_mh
-        match_mh = match.minhash.downsample(scaled=query_mh.scaled)
-        intersect_mh = query_mh.intersection(match_mh.flatten())
+        match_mh = match_ss.minhash
+        intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
+        if require_overlap and not intersect_mh:
+            raise ValueError("require overlap")
+
+        if self.found_mh.scaled < intersect_mh.scaled:
+            self.found_mh = self.found_mh.downsample(scaled=intersect_mh.scaled)
+
         self.found_mh += intersect_mh
 
-    def peek(self, query_mh, *, threshold_bp=None):
-        assert threshold_bp is not None
-        return self.db.peek(query_mh, threshold_bp=threshold_bp)
+    def peek(self, query_mh, *, threshold_bp=0):  # threshold_bp default?? @CTB
+        if not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh, True) != 1.0:
+            raise ValueError
+        # assert threshold_bp is not None
+
+        res = self.db.peek(query_mh, threshold_bp=threshold_bp)
+        if not res:
+            return []
+
+        sr, intersect_mh = res
+        sr_ss = sr.signature
+        sr_score = sr.score
+        new_sr = IndexSearchResult(sr_score, sr_ss, self.locations.get(sr_ss.md5sum()))
+        return new_sr, intersect_mh
 
     def consume(self, intersect_mh):
+        self.db._init_inner()
+
+        if self.found_mh.scaled < intersect_mh.scaled:
+            self.found_mh = self.found_mh.downsample(scaled=intersect_mh.scaled)
+        elif self.found_mh.scaled > intersect_mh.scaled:
+            intersect_mh = intersect_mh.downsample(scaled=self.found_mh.scaled)
+
         self.found_mh += intersect_mh
 
     @property
@@ -670,6 +642,6 @@ class RevIndex_CounterGather:
         return self.found_mh
 
     def signatures(self):
-        # don't track actual signatures - go back to DiskRevIndex
+        # don't track actual signatures - go back to RevIndex
         for sr in self.db.prefetch(self.query):
             yield sr.signature

@@ -17,6 +17,7 @@ use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Result;
+use crate::ScaledType;
 
 pub struct RevIndex {
     linear: LinearIndex,
@@ -236,6 +237,14 @@ impl RevIndex {
         self.linear.template().clone()
     }
 
+    pub fn scaled(&self) -> ScaledType {
+        if let Sketch::MinHash(mh) = self.linear.template() {
+            mh.clone().scaled() // @CTB avoid clone
+        } else {
+            unimplemented!()
+        }
+    }
+
     // TODO: mh should be a sketch, or even a sig...
     pub(crate) fn find_signatures(
         &self,
@@ -244,10 +253,24 @@ impl RevIndex {
         containment: bool,
         _ignore_scaled: bool,
     ) -> Result<Vec<(f64, Signature, String)>> {
-        // TODO: proper threshold calculation
-        let threshold: usize = (threshold * (mh.size() as f64)) as _;
+        let index_scaled = self.scaled();
+        let query_scaled = mh.scaled();
 
-        let counter = self.counter_for_query(mh);
+        // @CTB avoid clones?
+        let query_mh = {
+            if query_scaled < index_scaled {
+                mh.clone()
+                    .downsample_scaled(index_scaled)
+                    .expect("cannot downsample query")
+            } else {
+                mh.clone()
+            }
+        };
+
+        // TODO: proper threshold calculation
+        let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
+
+        let counter = self.counter_for_query(&query_mh);
 
         debug!(
             "number of matching signatures for hashes: {}",
@@ -256,7 +279,9 @@ impl RevIndex {
 
         let mut results = vec![];
         for (dataset_id, size) in counter.most_common() {
-            let match_size = if size >= threshold { size } else { break };
+            if size < threshold {
+                break;
+            };
 
             let match_sig = self.linear.sig_for_dataset(dataset_id)?;
             let match_path = self
@@ -266,6 +291,7 @@ impl RevIndex {
                 .internal_location();
 
             let mut match_mh = None;
+            //@CTB use something other than mh here?
             if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {
                 match_mh = Some(mh);
             }
@@ -273,9 +299,11 @@ impl RevIndex {
 
             if size >= threshold {
                 let score = if containment {
-                    size as f64 / mh.size() as f64
+                    size as f64 / query_mh.size() as f64
                 } else {
-                    mh.jaccard(match_mh).expect("cannot calculate Jaccard")
+                    query_mh
+                        .jaccard(match_mh)
+                        .expect("cannot calculate Jaccard")
                 };
                 let filename = match_path.to_string();
                 let mut sig: Signature = match_sig.clone().into();

@@ -4281,6 +4281,7 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
             # double check -- should match 'search --containment'.
             # (this is kind of useless for a 1.0 contained_by, I guess)
             filename = row["filename"]
+            print("trying load from:", row["filename"])
             match = load_one_signature(filename, ksize=21)
             assert match.contained_by(combined_sig) == 1.0
 
@@ -5565,6 +5566,7 @@ def test_gather_check_scaled_bounds_more_than_maximum(
 
 
 def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
+    # check that query sig gets properly downsampled
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
     print(testdata_sigs)

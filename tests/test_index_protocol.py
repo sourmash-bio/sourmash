@@ -695,10 +695,21 @@ class CounterGather_LCA:
         location = self.locations[md5]
 
         new_sr = IndexSearchResult(cont, match, location)
-        return [new_sr, intersect_mh]
+        return new_sr, intersect_mh
 
     def consume(self, intersect_mh):
         self.query_started = 1
+
+
+## XXX @CTB
+
+
+def build_RevIndex_CounterGather(query):
+    from sourmash.index.revindex import RevIndex_CounterGather
+
+    ri = RevIndex(template=query.minhash)
+    cg = RevIndex_CounterGather(query, ri, 0, allow_insert=True)
+    return cg
 
 
 @pytest.fixture(
@@ -706,6 +717,7 @@ class CounterGather_LCA:
         CounterGather,
         CounterGather_LinearIndex,
         CounterGather_LCA,
+        build_RevIndex_CounterGather,
     ]
 )
 def counter_gather_constructor(request):
@@ -745,6 +757,7 @@ def test_counter_get_signatures(counter_gather_constructor):
     assert match_ss_3 in siglist
 
 
+# utility function to exhaust a CounterGather set of matches
 def _consume_all(query_mh, counter, threshold_bp=0):
     results = []
     query_mh = query_mh.to_mutable()
@@ -1174,7 +1187,9 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
+    print("create")
     counter = counter_gather_constructor(query_ss)
+    print("insert")
     counter.add(query_ss, location="somewhere over the rainbow")
 
     counter.consume(query_ss.minhash)
