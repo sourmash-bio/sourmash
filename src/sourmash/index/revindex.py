@@ -242,8 +242,8 @@ class RevIndex(RustObject):  # , Index):
         self._init_inner()
 
         counter = RevIndex_CounterGather(query, self, threshold_bp)
-        #for result in self.prefetch(query, threshold_bp=threshold_bp):
-        #    counter.add(result.signature)
+        for result in self.prefetch(query, threshold_bp=threshold_bp):
+            counter.add(result.signature)
 
         return counter
 
