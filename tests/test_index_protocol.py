@@ -703,8 +703,10 @@ class CounterGather_LCA:
 
 ## XXX @CTB
 
+
 def build_RevIndex_CounterGather(query):
     from sourmash.index.revindex import RevIndex_CounterGather
+
     ri = RevIndex(template=query.minhash)
     cg = RevIndex_CounterGather(query, ri, 0, allow_insert=True)
     return cg
@@ -715,7 +717,7 @@ def build_RevIndex_CounterGather(query):
         CounterGather,
         CounterGather_LinearIndex,
         CounterGather_LCA,
-        build_RevIndex_CounterGather
+        build_RevIndex_CounterGather,
     ]
 )
 def counter_gather_constructor(request):
@@ -1184,9 +1186,9 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
-    print('create')
+    print("create")
     counter = counter_gather_constructor(query_ss)
-    print('insert')
+    print("insert")
     counter.add(query_ss, location="somewhere over the rainbow")
 
     counter.consume(query_ss.minhash)
