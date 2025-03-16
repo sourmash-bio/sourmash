@@ -607,7 +607,7 @@ class RevIndex_CounterGather:
         if not query_mh:
             return []
 
-        if query_mh.contained_by(self.orig_query_mh) != 1.0:
+        if query_mh.contained_by(self.orig_query_mh, True) != 1.0:
             raise ValueError
         # assert threshold_bp is not None
 
