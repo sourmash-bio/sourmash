@@ -618,7 +618,7 @@ class RevIndex_CounterGather:
         sr, intersect_mh = res
         sr_ss = sr.signature
         sr_score = sr.score
-        new_sr = IndexSearchResult(sr_score, sr_ss, self.locations[sr_ss.md5sum()])
+        new_sr = IndexSearchResult(sr_score, sr_ss, self.locations.get(sr_ss.md5sum()))
         return new_sr, intersect_mh
 
     def consume(self, intersect_mh):
