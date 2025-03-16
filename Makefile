@@ -20,6 +20,9 @@ offline:
 dist: FORCE
 	$(PYTHON) -m build --sdist
 
+wheel:
+	$(PYTHON) -m maturin build -r
+
 test: .PHONY
 	tox -e py310
 	cargo nextest run
