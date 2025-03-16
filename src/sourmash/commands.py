@@ -944,6 +944,7 @@ def gather(args):
         databases = [LazyLinearIndex(db) for db in databases]
     elif 1:
         # @CTB foo revindex
+        print('XXX NOTE: using RevIndex for ZipFileLinearIndex')
         from sourmash.index.revindex import RevIndex
         from sourmash.index import ZipFileLinearIndex
 

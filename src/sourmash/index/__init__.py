@@ -311,7 +311,7 @@ class Index(ABC):
         with query.update() as prefetch_query:
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
-        if 1:  # @CTB
+        if 0:  # @CTB
             # find all matches and construct a CounterGather object.
             counter = CounterGather(prefetch_query)
             for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
@@ -320,6 +320,7 @@ class Index(ABC):
             # tada!
             return counter
         else:
+            print('XXX NOTE: Using RevIndex CounterGather')
             from .revindex import RevIndex
 
             revindex = RevIndex(template=prefetch_query.minhash)
