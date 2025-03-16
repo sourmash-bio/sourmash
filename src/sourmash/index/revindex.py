@@ -574,9 +574,9 @@ class RevIndex_CounterGather:
         self.allow_insert = allow_insert
         self.locations = dict()
 
-    def add(self, match_ss, *, location=None, require_overlap=True): # @CTB location
+    def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
         if self.allow_insert:
-            x = self.db._check_not_init(do_raise=False)
+            self.db._check_not_init(do_raise=False)
             if self.db._check_not_init(do_raise=False):
                 self.db.insert(match_ss)
             else:
@@ -592,13 +592,13 @@ class RevIndex_CounterGather:
 
         self.found_mh += intersect_mh
 
-    def peek(self, query_mh, *, threshold_bp=0): # threshold_bp default?? @CTB
+    def peek(self, query_mh, *, threshold_bp=0):  # threshold_bp default?? @CTB
         if not query_mh:
             return []
 
         if query_mh.contained_by(self.orig_query_mh) != 1.0:
             raise ValueError
-        #assert threshold_bp is not None
+        # assert threshold_bp is not None
 
         res = self.db.peek(query_mh, threshold_bp=threshold_bp)
         if not res:
@@ -607,8 +607,7 @@ class RevIndex_CounterGather:
         sr, intersect_mh = res
         sr_ss = sr.signature
         sr_score = sr.score
-        new_sr = IndexSearchResult(sr_score, sr_ss,
-                                   self.locations[sr_ss.md5sum()])
+        new_sr = IndexSearchResult(sr_score, sr_ss, self.locations[sr_ss.md5sum()])
         return new_sr, intersect_mh
 
     def consume(self, intersect_mh):

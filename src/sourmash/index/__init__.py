@@ -323,7 +323,7 @@ class Index(ABC):
             from .revindex import RevIndex
 
             revindex = RevIndex(template=prefetch_query.minhash)
-            #return revindex.CounterGather(prefetch_query, threshold_bp, **kwargs)
+            # return revindex.CounterGather(prefetch_query, threshold_bp, **kwargs)
 
             for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
                 revindex.insert(result.signature)
