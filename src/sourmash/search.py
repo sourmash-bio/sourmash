@@ -761,9 +761,7 @@ def _find_best(counters, query, threshold_bp):
 
     # find the best score across multiple counters, without consuming
     for counter in counters:
-        print('TTT _find_best')
         result = counter.peek(query.minhash, threshold_bp=threshold_bp)
-        print('TTT result:', result)
         if result:
             (sr, intersect_mh) = result
 
@@ -879,10 +877,7 @@ class GatherDatabases:
     def __next__(self):
         query = self.query
         if not self.query.minhash:
-            print('SSS empty', self.query.minhash.scaled)
             raise StopIteration
-        else:
-            print('SSS ok')
 
         # may be changed:
         counters = self.counters
