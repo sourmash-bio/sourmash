@@ -942,7 +942,7 @@ def gather(args):
 
     if args.linear:  # force linear traversal?
         databases = [LazyLinearIndex(db) for db in databases]
-    elif 1:
+    elif 0:
         # @CTB foo revindex
         print("XXX NOTE: using RevIndex for ZipFileLinearIndex")
         from sourmash.index.revindex import RevIndex
