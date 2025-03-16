@@ -13,11 +13,11 @@ use crate::index::linear::LinearIndex;
 use crate::index::revindex::HashToColor;
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
-use crate::ScaledType;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::Result;
+use crate::ScaledType;
 
 pub struct RevIndex {
     linear: LinearIndex,
@@ -259,8 +259,7 @@ impl RevIndex {
         // @CTB avoid clones?
         let query_mh = {
             if query_scaled < index_scaled {
-                mh
-                    .clone()
+                mh.clone()
                     .downsample_scaled(index_scaled)
                     .expect("cannot downsample query")
             } else {
@@ -280,7 +279,9 @@ impl RevIndex {
 
         let mut results = vec![];
         for (dataset_id, size) in counter.most_common() {
-            if size < threshold { break };
+            if size < threshold {
+                break;
+            };
 
             let match_sig = self.linear.sig_for_dataset(dataset_id)?;
             let match_path = self
@@ -300,7 +301,9 @@ impl RevIndex {
                 let score = if containment {
                     size as f64 / query_mh.size() as f64
                 } else {
-                    query_mh.jaccard(match_mh).expect("cannot calculate Jaccard")
+                    query_mh
+                        .jaccard(match_mh)
+                        .expect("cannot calculate Jaccard")
                 };
                 let filename = match_path.to_string();
                 let mut sig: Signature = match_sig.clone().into();

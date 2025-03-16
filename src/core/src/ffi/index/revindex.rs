@@ -35,7 +35,7 @@ fn from_template(template: &Sketch) -> Selection {
     let adj_ksize: u32 = match moltype {
         HashFunctions::Murmur64Dna => ksize,
         HashFunctions::Murmur64Protein => ksize / 3,
-        HashFunctions::Murmur64Dayhoff => ksize /  3,
+        HashFunctions::Murmur64Dayhoff => ksize / 3,
         HashFunctions::Murmur64Hp => ksize / 3,
         HashFunctions::Murmur64Skipm1n3 => ksize,
         HashFunctions::Murmur64Skipm2n3 => ksize,
