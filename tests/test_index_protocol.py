@@ -757,6 +757,7 @@ def test_counter_get_signatures(counter_gather_constructor):
     assert match_ss_3 in siglist
 
 
+# utility function to exhaust a CounterGather set of matches
 def _consume_all(query_mh, counter, threshold_bp=0):
     results = []
     query_mh = query_mh.to_mutable()

@@ -6,7 +6,7 @@ import os
 import weakref
 
 from sourmash.index import Index, IndexSearchResult, _check_select_parameters
-from sourmash.minhash import MinHash
+from sourmash.minhash import MinHash, flatten_and_intersect_scaled
 from sourmash.signature import SourmashSignature
 from sourmash._lowlevel import ffi, lib
 from sourmash.utils import RustObject, rustcall, decode_str, encode_str
@@ -230,7 +230,7 @@ class RevIndex(RustObject):  # , Index):
 
         if found:
             match_mh = found[0].signature.minhash.flatten()
-            intersect_mh = match_mh.intersection(query_mh.flatten())
+            intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
             return found[0], intersect_mh
         return []
 
@@ -345,6 +345,11 @@ class DiskRevIndex(RustObject, Index):
 
     def __len__(self):
         return self._methodcall(lib.disk_revindex_len)
+
+    @property
+    def scaled(self):
+        scaled = self._methodcall(lib.disk_revindex_scaled)
+        return scaled
 
     def select(
         self,
@@ -574,6 +579,10 @@ class RevIndex_CounterGather:
         self.allow_insert = allow_insert
         self.locations = dict()
 
+    @property
+    def scaled(self):
+        return self.db.scaled
+
     def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
         if self.allow_insert:
             self.db._check_not_init(do_raise=False)
@@ -585,10 +594,13 @@ class RevIndex_CounterGather:
         self.locations[match_ss.md5sum()] = location
 
         query_mh = self.orig_query_mh
-        match_mh = match_ss.minhash.downsample(scaled=query_mh.scaled)
-        intersect_mh = query_mh.intersection(match_mh.flatten())
+        match_mh = match_ss.minhash
+        intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
         if require_overlap and not intersect_mh:
             raise ValueError("require overlap")
+
+        if self.found_mh.scaled < intersect_mh.scaled:
+            self.found_mh = self.found_mh.downsample(scaled=intersect_mh.scaled)
 
         self.found_mh += intersect_mh
 
