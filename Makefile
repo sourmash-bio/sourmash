@@ -38,7 +38,6 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/nodegraph.rs \
                     src/core/src/ffi/index/mod.rs \
                     src/core/src/ffi/index/revindex.rs \
-                    src/core/src/ffi/index/disk_revindex.rs \
                     src/core/src/ffi/storage.rs \
                     src/core/src/errors.rs \
                     src/core/cbindgen.toml
