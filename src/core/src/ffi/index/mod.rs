@@ -1,5 +1,5 @@
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
-pub mod revindex;
+pub mod mem_revindex;
 
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub mod disk_revindex;
