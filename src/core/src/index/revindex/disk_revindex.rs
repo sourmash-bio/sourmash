@@ -17,7 +17,7 @@ use crate::index::revindex::{
     RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
@@ -39,6 +39,14 @@ pub struct RevIndex {
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
+}
+
+/// Track a name/minhash for reporting purposes. @CTB may not be necessary
+pub struct SignatureInfo {
+    pub location: String,
+    pub name: String,
+    pub md5sum: String,
+    pub minhash: KmerMinHash,
 }
 
 pub(crate) fn merge_datasets(
@@ -371,6 +379,25 @@ impl RevIndexOps for RevIndex {
                         .unwrap(); // guaranteed to succeed because `md5` always exists
 
                     Some((name.into(), size))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+        info!("get matches from counter");
+        counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, size)| {
+                if size >= threshold {
+                    let row = self
+                        .collection
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
+                    Some(row)
                 } else {
                     None
                 }

@@ -4,12 +4,14 @@ use std::slice;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::ffi::index::SourmashSearchResult;
+use crate::ffi::index::mem_revindex::{ SourmashRevIndex, from_template };
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
 use crate::index::revindex::RevIndex as BasicRevIndex;
 use crate::index::revindex::{DatasetPicklist, RevIndexOps};
+use crate::index::revindex::mem_revindex;
 use std::collections::HashSet;
 use std::ffi::CString;
 use std::path::Path;
@@ -17,7 +19,7 @@ use std::path::Path;
 // use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
-// use crate::sketch::Sketch;
+use crate::sketch::Sketch;
 // use crate::ScaledType;
 
 pub struct SourmashDiskRevIndex;
@@ -381,5 +383,48 @@ unsafe fn disk_revindex_peek(
     } else {
         Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
     }
+}
+}
+
+
+// implement prefetch/containment separately from search/jaccard
+
+ffi_fn! {
+unsafe fn disk_revindex_prefetch_to_mem_revindex(
+    db_ptr: *const SourmashDiskRevIndex,
+    query_ptr: *const SourmashSignature,
+    threshold_bp: u64,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
+) -> Result<*mut SourmashRevIndex> {
+    let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
+    let sig = SourmashSignature::as_rust(query_ptr);
+
+    // extract KmerMinHash for query
+    let query_mh: KmerMinHash = sig.clone()
+        .try_into().expect("cannot get kmerminhash");
+    let scaled = query_mh.scaled();
+    let threshold_bp: usize = threshold_bp as usize / scaled as usize;
+
+    // picklist?
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
+    // do search & get matches
+    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
+
+    let records = revindex.records_from_counter(counter, threshold_bp);
+
+    //if records.is_empty() {
+    //    return Ok(std::ptr::null::<*mut SourmashRevIndex>());
+    //}
+
+    let search_sigs: Vec<Signature> = records
+        .iter()
+        .map(|r| revindex.collection().sig_from_record(r).expect("error retrieving record").into())
+        .collect();
+
+    let template_sketch = Sketch::MinHash(query_mh);
+    let selection = from_template(&template_sketch);
+    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
+    Ok(SourmashRevIndex::from_rust(revindex))
 }
 }

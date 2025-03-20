@@ -23,6 +23,7 @@ use crate::sketch::Sketch;
 use crate::storage::rocksdb::{db_options, COLORS, DB};
 use crate::HashIntoType;
 use crate::Result;
+use crate::manifest::Record;
 
 // DB metadata saved in the METADATA column family
 const MANIFEST: &str = "manifest";
@@ -60,6 +61,8 @@ pub trait RevIndexOps {
     ) -> SigCounter;
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
+
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record>;
 
     fn prepare_gather_counters(
         &self,

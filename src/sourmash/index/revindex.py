@@ -557,7 +557,32 @@ class DiskRevIndex(RustObject, Index):
     def consume(self, intersect_mh):
         pass
 
-    def counter_gather(self, query, threshold_bp, **kwargs):
+    def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        threshold_bp = int(threshold_bp)
+
+        revindex_ptr = self._methodcall(
+            lib.disk_revindex_prefetch_to_mem_revindex,
+            query_ss._get_objptr(),
+            threshold_bp,
+            self._ffi_idx_picklist,
+        )
+        if revindex_ptr == ffi.NULL:
+            raise ValueError("no matches")
+
+        ri = RevIndex(template=query_ss.minhash)
+        ri._objptr = revindex_ptr
+
+        x = RevIndex_CounterGather(query_ss, ri, threshold_bp)
+        for ss in ri.signatures():
+            ri._orig_signatures[ss.md5sum()] = ss
+            x.add(ss)
+
+        return x
+
+    def counter_gather_OLD(self, query, threshold_bp, **kwargs):
         counter = RevIndex_CounterGather(query, self, threshold_bp)
         for result in self.prefetch(query, threshold_bp=threshold_bp):
             counter.add(result.signature)

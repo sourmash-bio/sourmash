@@ -177,6 +177,11 @@ const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevI
                                                           uintptr_t *return_size,
                                                           const SourmashDatasetPicklist *dataset_picklist_ptr);
 
+SourmashRevIndex *disk_revindex_prefetch_to_mem_revindex(const SourmashDiskRevIndex *db_ptr,
+                                                         const SourmashSignature *query_ptr,
+                                                         uint64_t threshold_bp,
+                                                         const SourmashDatasetPicklist *dataset_picklist_ptr);
+
 uint32_t disk_revindex_scaled(const SourmashDiskRevIndex *ptr);
 
 const SourmashSearchResult *const *disk_revindex_search_jaccard(const SourmashDiskRevIndex *db_ptr,

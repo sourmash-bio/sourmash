@@ -216,6 +216,24 @@ def test_revindex_insert_after_init():
         lidx.insert(ss47)
 
 
+def test_rocksdb_prefetch_to_revindex():
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    ri = db.counter_gather(ss47, threshold_bp=0)
+    assert len(list(ri.signatures())) == 2
+
+
+def test_rocksdb_ksize_wrong():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    with pytest.raises(ValueError):
+        db.select(ksize=21)
+
+
 def test_rocksdb_load(runtmp):
     # check loading from non .rocksdb directories
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
