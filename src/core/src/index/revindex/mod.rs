@@ -32,10 +32,13 @@ const VERSION: &str = "version";
 const PROCESSED: &str = "processed";
 
 type QueryColors = HashMap<Color, Datasets>;
+
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
-#[derive(Serialize, Deserialize, Clone)]
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HashToColor(HashToColorT);
 
+#[derive(Debug)]
 pub struct CounterGather {
     // add orig_query? threshold?
     counter: SigCounter,
@@ -127,6 +130,7 @@ impl CounterGather {
         dataset_id: Idx,
         intersect_mh: &KmerMinHash,
     ) -> () {
+        // eprintln!("intersect_mh: {} {}", intersect_mh.mins().len(), intersect_mh.scaled());
         intersect_mh
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
@@ -137,6 +141,7 @@ impl CounterGather {
             .for_each(|dataset| {
                 // TODO: collect the flat_map into a Counter, and remove more
                 //       than one at a time...
+                // eprintln!("xxx {:?}", self.counter.entry(dataset));
                 self.counter.entry(dataset).and_modify(|e| *e -= 1);
             });
 

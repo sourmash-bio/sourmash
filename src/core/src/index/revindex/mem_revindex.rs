@@ -14,7 +14,7 @@ use crate::index::revindex::{ CounterGather, Datasets, HashToColor, QueryColors 
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{ KmerMinHash, KmerMinHashBTree };
 use crate::sketch::Sketch;
 use crate::Result;
 use crate::ScaledType;
@@ -203,26 +203,34 @@ impl RevIndex {
         &self,
         cg: &mut CounterGather,
         threshold: usize,
-        query: &KmerMinHash,
+        orig_query: &KmerMinHash,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
 
+        let mut query = KmerMinHashBTree::from(orig_query.clone());
         while match_size > threshold && !cg.is_empty() {
             let result = cg.peek(threshold);
             if result.is_none() {
                 break;
             }
-            
             let (dataset_id, match_size) = result.unwrap();
 
+            // eprintln!("dataset_id: {} {}", dataset_id, match_size);
+
+            let query_mh = KmerMinHash::from(query.clone());
             let result = self
                 .linear
-                .gather_round(dataset_id, match_size, query, matches.len())?;
+                .gather_round(dataset_id, match_size, &query_mh, matches.len())?;
             if let Some(Sketch::MinHash(match_mh)) =
                 result.match_.select_sketch(self.linear.template())
             {
-                cg.consume(dataset_id, match_mh);
+                let (matched_hashes, _intersection) = match_mh.intersection(&query_mh).expect("cannot get intersection!?");
+                let mut isect_mh = match_mh.clone();
+                isect_mh.clear();
+                isect_mh.add_many(&matched_hashes)?;
+
+                cg.consume(dataset_id, &isect_mh);
 /*
                 // Prepare counter for finding the next match by decrementing
                 // all hashes found in the current match in other datasets
@@ -234,6 +242,7 @@ impl RevIndex {
                 counter.remove(&dataset_id);
 */
                 matches.push(result);
+                query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
             } else {
                 unimplemented!()
             }
@@ -339,6 +348,7 @@ impl RevIndex {
         query: &KmerMinHash) -> CounterGather {
         let counter = self.counter_for_query(query);
         let hash_to_color = self.hash_to_color.clone();
+        // eprintln!("hash_to_color: {:?}", hash_to_color);
         let query_colors: QueryColors = query
             .iter_mins()
             .filter_map(|hash| hash_to_color.get(hash))
@@ -347,6 +357,8 @@ impl RevIndex {
             // @CTB could we add a 'from' to Datasets for this?
             .map(|(color, indices)| (color, Datasets::new(&indices)))
             .collect();
+
+        //eprintln!("query_colors: {:?}", query_colors);
         
         CounterGather { counter, query_colors, hash_to_color }
     }
@@ -514,10 +526,10 @@ mod test {
 
     #[test]
     fn revindex_test_gather_2() -> Result<()> {
-        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
         let search_sigs: Vec<Signature> = [
-            "../../tests/test-data/47.fa.sig",
             "../../tests/test-data/2.fa.sig",
+            "../../tests/test-data/47.fa.sig",
         ]
         .into_iter()
         .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
@@ -536,9 +548,43 @@ mod test {
         let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
 
         let mut gather_cg = index.prepare_gather_counters(&query_mh);
+        // eprintln!("gather_cg: {:?}", gather_cg);
         let results = index.gather(&mut gather_cg, 0, &query_mh).unwrap();
 
         assert_eq!(results.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_test_gather_3() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+        let search_sigs: Vec<Signature> = [
+            "../../tests/test-data/2.fa.sig",
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/63.fa.sig",
+        ]
+        .into_iter()
+        .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
+            .collect();
+
+        let query_sig = Signature::from_path(
+            "../../tests/test-data/SRR606249.sig.gz",
+        )
+            .expect("error processing query")
+            .swap_remove(0)
+            .select(&selection)
+            .expect("error getting compatible sig");
+
+        let query_mh = prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+
+        let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
+
+        let mut gather_cg = index.prepare_gather_counters(&query_mh);
+        // eprintln!("gather_cg: {:?}", gather_cg);
+        let results = index.gather(&mut gather_cg, 0, &query_mh).unwrap();
+
+        assert_eq!(results.len(), 3);
 
         Ok(())
     }
