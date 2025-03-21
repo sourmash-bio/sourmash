@@ -33,13 +33,13 @@ const PROCESSED: &str = "processed";
 
 type QueryColors = HashMap<Color, Datasets>;
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct HashToColor(HashToColorT);
 
 pub struct CounterGather {
     // add orig_query? threshold?
     counter: SigCounter,
-    query_colors: QueryColors,
+    query_colors: QueryColors,  // @CTB could be refs
     hash_to_color: HashToColor,
 }
 

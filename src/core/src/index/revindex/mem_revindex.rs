@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use crate::collection::Collection;
 use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::revindex::HashToColor;
+use crate::index::revindex::{ CounterGather, HashToColor, QueryColors };
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
@@ -201,22 +201,37 @@ impl RevIndex {
 
     pub fn gather(
         &self,
-        mut counter: SigCounter,
+        counter: SigCounter,
         threshold: usize,
         query: &KmerMinHash,
     ) -> Result<Vec<GatherResult>> {
-        let mut match_size = usize::MAX;
+        let match_size = usize::MAX;
         let mut matches = vec![];
 
-        while match_size > threshold && !counter.is_empty() {
-            let (dataset_id, size) = counter.most_common()[0];
-            match_size = if size >= threshold { size } else { break };
+        let mut query_colors: QueryColors = Default::default();
+
+        let mut cg = CounterGather {
+            counter,
+            query_colors,
+            hash_to_color: self.hash_to_color.clone(),
+        };
+
+        while match_size > threshold && !cg.is_empty() {
+            let result = cg.peek(threshold);
+            if result.is_none() {
+                break;
+            }
+            
+            let (dataset_id, match_size) = result.unwrap();
+
             let result = self
                 .linear
                 .gather_round(dataset_id, match_size, query, matches.len())?;
             if let Some(Sketch::MinHash(match_mh)) =
                 result.match_.select_sketch(self.linear.template())
             {
+                cg.consume(dataset_id, match_mh);
+/*
                 // Prepare counter for finding the next match by decrementing
                 // all hashes found in the current match in other datasets
                 for hash in match_mh.iter_mins() {
@@ -225,6 +240,7 @@ impl RevIndex {
                     }
                 }
                 counter.remove(&dataset_id);
+*/
                 matches.push(result);
             } else {
                 unimplemented!()
