@@ -408,7 +408,7 @@ impl RevIndexOps for RevIndex {
 
     fn gather(
         &self,
-        mut counter: SigCounter,
+        counter: SigCounter,
         query_colors: QueryColors,
         hash_to_color: HashToColor,
         threshold: usize,
@@ -416,7 +416,7 @@ impl RevIndexOps for RevIndex {
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let mut cg = CounterGather { counter, query_colors, hash_to_color };
-        let mut match_size = usize::MAX;
+        let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
@@ -489,25 +489,10 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
+            // @CTB use isect_mh here instead of match_mh?
             query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
 
-            // TODO: Use HashesToColors here instead. If not initialized,
-            //       build it.
-            isect
-                .0
-                .iter()
-                .filter_map(|hash| cg.hash_to_color.get(hash))
-                .flat_map(|color| {
-                    // TODO: remove this clone
-                    cg.query_colors.get(color).unwrap().clone().into_iter()
-                })
-                .for_each(|dataset| {
-                    // TODO: collect the flat_map into a Counter, and remove more
-                    //       than one at a time...
-                    cg.counter.entry(dataset).and_modify(|e| *e -= 1);
-                });
-
-            cg.counter.remove(&dataset_id);
+            cg.consume(dataset_id, &isect_mh);
         }
         Ok(matches)
     }

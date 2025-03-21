@@ -126,9 +126,23 @@ impl CounterGather {
 
     fn consume(
         &mut self,
-        match_mh: &KmerMinHash,
+        dataset_id: Idx,
+        intersect_mh: &KmerMinHash,
     ) -> () {
-        ()
+        intersect_mh
+            .iter_mins()
+            .filter_map(|hash| self.hash_to_color.get(hash))
+            .flat_map(|color| {
+                // TODO: remove this clone
+                self.query_colors.get(color).unwrap().clone().into_iter()
+            })
+            .for_each(|dataset| {
+                // TODO: collect the flat_map into a Counter, and remove more
+                //       than one at a time...
+                self.counter.entry(dataset).and_modify(|e| *e -= 1);
+            });
+
+        self.counter.remove(&dataset_id);
     }
 }
 
