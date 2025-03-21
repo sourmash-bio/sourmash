@@ -38,9 +38,9 @@ pub struct HashToColor(HashToColorT);
 
 pub struct CounterGather {
     // add orig_query? threshold?
-    pub counter: SigCounter,
-    pub query_colors: QueryColors,
-    pub hash_to_color: HashToColor,
+    counter: SigCounter,
+    query_colors: QueryColors,
+    hash_to_color: HashToColor,
 }
 
 #[enum_dispatch(RevIndexOps)]
