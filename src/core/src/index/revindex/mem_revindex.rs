@@ -338,11 +338,14 @@ impl RevIndex {
         &self,
         query: &KmerMinHash) -> CounterGather {
         let counter = self.counter_for_query(query);
-        let query_colors: QueryColors = Default::default();
+        let hash_to_color = self.hash_to_color.clone();
+        let query_colors: QueryColors = query
+            .iter_mins()
+            .filter_map(|hash| hash_to_color.get(hash))
+            .flat_map(|color| self.colors.indices(color))
+            .collect();
         
-        CounterGather { counter,
-                        query_colors,
-                        hash_to_color: self.hash_to_color.clone() }
+        CounterGather { counter, query_colors, hash_to_color }
     }
 }
 
