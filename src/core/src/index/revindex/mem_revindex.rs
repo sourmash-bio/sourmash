@@ -201,20 +201,12 @@ impl RevIndex {
 
     pub fn gather(
         &self,
-        counter: SigCounter,
+        cg: &mut CounterGather,
         threshold: usize,
         query: &KmerMinHash,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
-
-        let mut query_colors: QueryColors = Default::default();
-
-        let mut cg = CounterGather {
-            counter,
-            query_colors,
-            hash_to_color: self.hash_to_color.clone(),
-        };
 
         while match_size > threshold && !cg.is_empty() {
             let result = cg.peek(threshold);
@@ -340,6 +332,17 @@ impl RevIndex {
             .flat_map(|color| self.colors.indices(color))
             .cloned()
             .collect()
+    }
+
+    pub fn prepare_gather_counters(
+        &self,
+        query: &KmerMinHash) -> CounterGather {
+        let counter = self.counter_for_query(query);
+        let query_colors: QueryColors = Default::default();
+        
+        CounterGather { counter,
+                        query_colors,
+                        hash_to_color: self.hash_to_color.clone() }
     }
 }
 
@@ -492,10 +495,10 @@ mod test {
         let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
         assert_eq!(results_rev, results_linear);
 
-        let counter_rev = index.counter_for_query(&query_mh);
+        let mut counter_rev = index.prepare_gather_counters(&query_mh);
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
-        let results_rev = index.gather(counter_rev, 0, &query_mh).unwrap();
+        let results_rev = index.gather(&mut counter_rev, 0, &query_mh).unwrap();
         let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
         assert_eq!(results_rev.len(), 1);
         assert_eq!(results_rev, results_linear);

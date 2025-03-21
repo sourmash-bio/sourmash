@@ -206,11 +206,10 @@ unsafe fn revindex_gather(
     // TODO: proper threshold calculation
     let threshold: usize = (threshold * (mh.size() as f64)) as _;
 
-    let counter = revindex.counter_for_query(mh);
-    dbg!(&counter);
+    let mut cg = revindex.prepare_gather_counters(mh);
 
     let results: Vec<(f64, Signature, String)> = revindex
-        .gather(counter, threshold, mh)
+        .gather(&mut cg, threshold, mh)
         .unwrap() // TODO: proper error handling
         .into_iter()
         .map(|r| {
