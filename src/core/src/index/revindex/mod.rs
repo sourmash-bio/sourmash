@@ -36,6 +36,13 @@ type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>
 #[derive(Serialize, Deserialize)]
 pub struct HashToColor(HashToColorT);
 
+pub struct CounterGather {
+    // add orig_query? threshold?
+    counter: SigCounter,
+    query_colors: QueryColors,
+    hash_to_color: HashToColor,
+}
+
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
     //Color(color_revindex::ColorRevIndex),
@@ -94,6 +101,25 @@ pub trait RevIndexOps {
     fn collection(&self) -> &CollectionSet;
 
     fn internalize_storage(&mut self) -> Result<()>;
+}
+
+impl CounterGather {
+    fn peek(
+        &self,
+        counter: SigCounter,
+        threshold: usize,
+        query_colors: QueryColors,
+        hash_to_color: HashToColor,
+    ) -> Option<(Idx, usize)> {
+        None
+    }
+
+    fn consume(
+        &mut self,
+        match_mh: &KmerMinHash,
+    ) -> () {
+        ()
+    }
 }
 
 impl HashToColor {

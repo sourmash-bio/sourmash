@@ -15,6 +15,7 @@ use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
     self as module, stats_for_cf, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors,
     RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
+    CounterGather,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::{Manifest, Record};
