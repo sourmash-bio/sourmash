@@ -341,13 +341,13 @@ impl RevIndex {
         let hash_to_color = self.hash_to_color.clone();
         let query_colors: QueryColors = query
             .iter_mins()
-            .filter_map(|hash| Some((hash, hash_to_color.get(hash).expect("foo"))))
-            .filter_map(|(hash, color)| {
+            .map(|hash| (hash, hash_to_color.get(hash).expect("foo")))
+            .map(|(_hash, color)| {
                 let i = self.colors.indices(color);
-                Some((*hash, i))
+                (*color, i)
             })
-            .map(|(hash, indices)| (hash, indices.cloned().collect::<Vec<u32>>()))
-            .map(|(hash, indices)| (hash, Datasets::new(&indices)))
+            .map(|(color, indices)| (color, indices.cloned().collect::<Vec<u32>>()))
+            .map(|(color, indices)| (color, Datasets::new(&indices)))
             .collect();
         
         CounterGather { counter, query_colors, hash_to_color }
