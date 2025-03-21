@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use crate::collection::Collection;
 use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::revindex::{ CounterGather, HashToColor, QueryColors };
+use crate::index::revindex::{ CounterGather, Datasets, HashToColor, QueryColors };
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
@@ -341,8 +341,13 @@ impl RevIndex {
         let hash_to_color = self.hash_to_color.clone();
         let query_colors: QueryColors = query
             .iter_mins()
-            .filter_map(|hash| hash_to_color.get(hash))
-            .flat_map(|color| self.colors.indices(color))
+            .filter_map(|hash| Some((hash, hash_to_color.get(hash).expect("foo"))))
+            .filter_map(|(hash, color)| {
+                let i = self.colors.indices(color);
+                Some((*hash, i))
+            })
+            .map(|(hash, indices)| (hash, indices.cloned().collect::<Vec<u32>>()))
+            .map(|(hash, indices)| (hash, Datasets::new(&indices)))
             .collect();
         
         CounterGather { counter, query_colors, hash_to_color }
