@@ -341,12 +341,10 @@ impl RevIndex {
         let hash_to_color = self.hash_to_color.clone();
         let query_colors: QueryColors = query
             .iter_mins()
-            .map(|hash| (hash, hash_to_color.get(hash).expect("foo")))
-            .map(|(_hash, color)| {
-                let i = self.colors.indices(color);
-                (*color, i)
-            })
+            .map(|hash| hash_to_color.get(hash).expect("no color for hash!?"))
+            .map(|color| (*color, self.colors.indices(color)))
             .map(|(color, indices)| (color, indices.cloned().collect::<Vec<u32>>()))
+            // @CTB could we add a 'from' to Datasets for this?
             .map(|(color, indices)| (color, Datasets::new(&indices)))
             .collect();
         
