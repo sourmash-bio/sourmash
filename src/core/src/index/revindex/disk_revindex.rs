@@ -13,7 +13,7 @@ use rocksdb::MergeOperands;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors,
+    self as module, stats_for_cf, DatasetPicklist, Datasets, DbStats, QueryColors,
     RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
     CounterGather,
 };
@@ -323,7 +323,7 @@ impl RevIndexOps for RevIndex {
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor) {
+    ) -> CounterGather {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -341,8 +341,8 @@ impl RevIndexOps for RevIndex {
         let mut query_colors: QueryColors = Default::default();
         let mut counter: SigCounter = Default::default();
 
-        info!("Building hash_to_colors and query_colors");
-        let hash_to_colors = query
+        info!("Building hash_to_color and query_colors");
+        let hash_to_color = query
             .iter_mins()
             .zip(self.db.multi_get_cf(hashes_iter))
             .filter_map(|(k, r)| {
@@ -359,7 +359,7 @@ impl RevIndexOps for RevIndex {
             })
             .collect();
 
-        (counter, query_colors, hash_to_colors)
+        CounterGather { counter, query_colors, hash_to_color }
     }
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
@@ -408,14 +408,11 @@ impl RevIndexOps for RevIndex {
 
     fn gather(
         &self,
-        counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        cg: &mut CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
-        let mut cg = CounterGather { counter, query_colors, hash_to_color };
         let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());

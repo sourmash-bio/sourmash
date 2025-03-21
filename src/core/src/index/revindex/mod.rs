@@ -74,7 +74,7 @@ pub trait RevIndexOps {
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor);
+    ) -> CounterGather;
 
     fn update(self, collection: CollectionSet) -> Result<RevIndex>
     where
@@ -90,9 +90,7 @@ pub trait RevIndexOps {
 
     fn gather(
         &self,
-        counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        cg: &mut CounterGather,
         threshold: usize,
         query: &KmerMinHash,
         selection: Option<Selection>,
@@ -608,12 +606,10 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query);
 
         let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
+            &mut cg,
             0,
             &query,
             Some(selection),
@@ -675,12 +671,10 @@ mod test {
         }
         let query = query.unwrap();
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query);
 
         let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
+            &mut cg,
             5, // 50kb threshold
             &query,
             Some(selection),
@@ -825,12 +819,10 @@ mod test {
         }
         let query = query.unwrap();
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query);
 
         let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
+            &mut cg,
             0,
             &query,
             Some(selection),
@@ -963,13 +955,11 @@ mod test {
 
         let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query);
 
         let matches_external = index
             .gather(
-                counter,
-                query_colors,
-                hash_to_color,
+                &mut cg,
                 0,
                 &query,
                 Some(selection.clone()),
@@ -982,12 +972,10 @@ mod test {
                 .internalize_storage()
                 .expect("Error internalizing storage");
 
-            let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+            let mut cg = index.prepare_gather_counters(&query);
 
             let matches_internal = index.gather(
-                counter,
-                query_colors,
-                hash_to_color,
+                &mut cg,
                 0,
                 &query,
                 Some(selection.clone()),
@@ -999,12 +987,10 @@ mod test {
 
         let index = RevIndex::open(new_path, false, None)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query);
 
         let matches_moved = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
+            &mut cg,
             0,
             &query,
             Some(selection.clone()),
