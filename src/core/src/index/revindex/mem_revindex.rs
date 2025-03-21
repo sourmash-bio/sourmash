@@ -404,7 +404,7 @@ mod test {
     use crate::Result;
 
     #[test]
-    fn revindex_new() -> Result<()> {
+    fn mem_revindex_new() -> Result<()> {
         let selection = Selection::builder().ksize(31).scaled(10000).build();
         let search_sigs = [
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig".into(),
@@ -417,7 +417,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_many() -> Result<()> {
+    fn mem_revindex_many() -> Result<()> {
         let selection = Selection::builder().ksize(31).scaled(10000).build();
         let search_sigs = [
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig".into(),
@@ -446,7 +446,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_from_sigs() -> Result<()> {
+    fn mem_revindex_from_sigs() -> Result<()> {
         let selection = Selection::builder().ksize(31).scaled(10000).build();
         let search_sigs: Vec<Signature> = [
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
@@ -476,7 +476,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_from_zipstorage() -> Result<()> {
+    fn mem_revindex_from_zipstorage() -> Result<()> {
         let selection = Selection::builder()
             .ksize(19)
             .scaled(100)
@@ -525,7 +525,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_test_gather_2() -> Result<()> {
+    fn mem_revindex_test_gather_2() -> Result<()> {
         let selection = Selection::builder().ksize(31).scaled(100000).build();
         let search_sigs: Vec<Signature> = [
             "../../tests/test-data/2.fa.sig",
@@ -557,7 +557,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_test_gather_3() -> Result<()> {
+    fn mem_revindex_test_gather_3() -> Result<()> {
         let selection = Selection::builder().ksize(31).scaled(100000).build();
         let search_sigs: Vec<Signature> = [
             "../../tests/test-data/2.fa.sig",
@@ -580,11 +580,168 @@ mod test {
 
         let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
 
+        // run the CounterGather-style gather:
         let mut gather_cg = index.prepare_gather_counters(&query_mh);
         // eprintln!("gather_cg: {:?}", gather_cg);
         let results = index.gather(&mut gather_cg, 0, &query_mh).unwrap();
-
         assert_eq!(results.len(), 3);
+
+        // compare to linear gather.
+        let counter_lin = index.linear.counter_for_query(&query_mh);
+        let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
+
+        assert_eq!(results, results_linear);
+
+        Ok(())
+    }
+
+    #[test]
+    fn mem_revindex_load_and_gather_2() -> Result<()> {
+        let selection = Selection::builder().ksize(21).scaled(10000).build();
+
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/gather/");
+
+        let against = vec![
+            "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+            "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+            "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+            "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+            "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+            "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+            "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+            "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+            "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+            "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+            "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+            "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+        ];
+        let against: Vec<_> = against
+            .into_iter()
+            .map(|sig| {
+                let mut path = basedir.clone();
+                path.push(sig);
+                Signature::from_path(path).unwrap().swap_remove(0)
+            })
+            .collect();
+
+        // build 'against' sketches into a revindex
+        let index = RevIndex::new_with_sigs(against, &selection, 0, None)?;
+
+        let mut query = None;
+        let mut query_filename = basedir.clone();
+        query_filename.push("combined.sig");
+        let query_sig = Signature::from_path(query_filename)?
+            .swap_remove(0)
+            .select(&selection)?;
+
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        let mut cg = index.prepare_gather_counters(&query);
+
+        let matches = index.gather(
+            &mut cg,
+            5, // 50kb threshold
+            &query,
+//            Some(selection),
+        )?;
+
+        // should be 11, based on test_gather_metagenome_num_results
+        assert_eq!(matches.len(), 11);
+
+        fn round5(a: f64) -> f64 {
+            (a * 1e5).round() / 1e5
+        }
+
+        let match_ = &matches[0];
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_003198.1");
+        assert_eq!(match_.f_match(), 1.0);
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.33219645));
+
+        let match_ = &matches[1];
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_000853.1");
+        assert_eq!(match_.f_match(), 1.0);
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.13096862));
+
+        let match_ = &matches[2];
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011978.1");
+        assert_eq!(match_.f_match(), 0.898936170212766);
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.115279));
+
+        let match_ = &matches[3];
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_002163.1");
+        assert_eq!(match_.f_match(), 1.0);
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.10709413));
+
+        let match_ = &matches[4];
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_003197.2");
+        assert_eq!(round5(match_.f_match()), round5(0.31340206));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.103683));
+
+        let match_ = &matches[5];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_009486.1");
+        assert_eq!(round5(match_.f_match()), round5(0.4842105));
+        assert_eq!(round5(match_.f_unique_to_query()), round5(0.0627557));
+
+        let match_ = &matches[6];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_006905.1");
+        assert_eq!(round5(match_.f_match()), round5(0.161016949152542));
+        assert_eq!(
+            round5(match_.f_unique_to_query()),
+            round5(0.0518417462482947)
+        );
+
+        let match_ = &matches[7];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011080.1");
+        assert_eq!(round5(match_.f_match()), round5(0.125799573560768));
+        assert_eq!(
+            round5(match_.f_unique_to_query()),
+            round5(0.04024556616643930)
+        );
+
+        let match_ = &matches[8];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011274.1");
+        assert_eq!(round5(match_.f_match()), round5(0.0919037199124727));
+        assert_eq!(
+            round5(match_.f_unique_to_query()),
+            round5(0.0286493860845839)
+        );
+
+        let match_ = &matches[9];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_006511.1");
+        assert_eq!(round5(match_.f_match()), round5(0.0725995316159251));
+        assert_eq!(
+            round5(match_.f_unique_to_query()),
+            round5(0.021145975443383400)
+        );
+
+        let match_ = &matches[10];
+        dbg!(match_);
+        let names: Vec<&str> = match_.name().split(' ').take(1).collect();
+        assert_eq!(names[0], "NC_011294.1");
+        assert_eq!(round5(match_.f_match()), round5(0.0148619957537155));
+        assert_eq!(
+            round5(match_.f_unique_to_query()),
+            round5(0.0047748976807639800)
+        );
 
         Ok(())
     }
