@@ -415,6 +415,7 @@ impl RevIndexOps for RevIndex {
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
+        let mut cg = CounterGather { counter, query_colors, hash_to_color };
         let mut match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
@@ -429,16 +430,15 @@ impl RevIndexOps for RevIndex {
         let calc_ani_ci = false;
         let ani_confidence_interval_fraction = None;
 
-        while match_size > threshold && !counter.is_empty() {
-            trace!("counter len: {}", counter.len());
+        while match_size > threshold && !cg.is_empty() {
+            trace!("counter len: {}", cg.len());
             trace!("match size: {}", match_size);
 
-            let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
-            match_size = if size >= threshold { size } else { break };
-            // handle special case where threshold was set to 0
-            if match_size == 0 {
+            let result = cg.peek(threshold);
+            if result.is_none() {
                 break;
             }
+            let (dataset_id, match_size) = result.unwrap();
 
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
             let match_mh = match_sig.minhash().unwrap().clone();
@@ -496,18 +496,18 @@ impl RevIndexOps for RevIndex {
             isect
                 .0
                 .iter()
-                .filter_map(|hash| hash_to_color.get(hash))
+                .filter_map(|hash| cg.hash_to_color.get(hash))
                 .flat_map(|color| {
                     // TODO: remove this clone
-                    query_colors.get(color).unwrap().clone().into_iter()
+                    cg.query_colors.get(color).unwrap().clone().into_iter()
                 })
                 .for_each(|dataset| {
                     // TODO: collect the flat_map into a Counter, and remove more
                     //       than one at a time...
-                    counter.entry(dataset).and_modify(|e| *e -= 1);
+                    cg.counter.entry(dataset).and_modify(|e| *e -= 1);
                 });
 
-            counter.remove(&dataset_id);
+            cg.counter.remove(&dataset_id);
         }
         Ok(matches)
     }

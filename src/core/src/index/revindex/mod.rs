@@ -38,9 +38,9 @@ pub struct HashToColor(HashToColorT);
 
 pub struct CounterGather {
     // add orig_query? threshold?
-    counter: SigCounter,
-    query_colors: QueryColors,
-    hash_to_color: HashToColor,
+    pub counter: SigCounter,
+    pub query_colors: QueryColors,
+    pub hash_to_color: HashToColor,
 }
 
 #[enum_dispatch(RevIndexOps)]
@@ -104,14 +104,24 @@ pub trait RevIndexOps {
 }
 
 impl CounterGather {
+    fn is_empty(&self) -> bool {
+        self.counter.is_empty()
+    }
+
+    fn len(&self) -> usize {
+        self.counter.len()
+    }
+
     fn peek(
         &self,
-        counter: SigCounter,
         threshold: usize,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
     ) -> Option<(Idx, usize)> {
-        None
+        let (dataset_id, size) = self.counter.k_most_common_ordered(1)[0];
+        if size > 0 && size >= threshold {
+            Some((dataset_id, size))
+        } else {
+            None
+        }
     }
 
     fn consume(
