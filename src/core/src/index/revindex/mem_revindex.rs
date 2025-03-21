@@ -341,7 +341,7 @@ impl RevIndex {
         let hash_to_color = self.hash_to_color.clone();
         let query_colors: QueryColors = query
             .iter_mins()
-            .map(|hash| hash_to_color.get(hash).expect("no color for hash!?"))
+            .filter_map(|hash| hash_to_color.get(hash))
             .map(|color| (*color, self.colors.indices(color)))
             .map(|(color, indices)| (color, indices.cloned().collect::<Vec<u32>>()))
             // @CTB could we add a 'from' to Datasets for this?
@@ -508,6 +508,37 @@ mod test {
         let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
         assert_eq!(results_rev.len(), 1);
         assert_eq!(results_rev, results_linear);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_test_gather_2() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let search_sigs: Vec<Signature> = [
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/2.fa.sig",
+        ]
+        .into_iter()
+        .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
+            .collect();
+
+        let query_sig = Signature::from_path(
+            "../../tests/test-data/63.fa.sig",
+        )
+            .expect("error processing query")
+            .swap_remove(0)
+            .select(&selection)
+            .expect("error getting compatible sig");
+
+        let query_mh = prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+
+        let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
+
+        let mut gather_cg = index.prepare_gather_counters(&query_mh);
+        let results = index.gather(&mut gather_cg, 0, &query_mh).unwrap();
+
+        assert_eq!(results.len(), 1);
 
         Ok(())
     }
