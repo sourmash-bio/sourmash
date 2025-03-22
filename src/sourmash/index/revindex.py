@@ -701,7 +701,9 @@ class RevIndex_CounterGather_Colors(RustObject):
         self.found_mh = query_ss.minhash.copy_and_clear().to_mutable()
         self._scaled = self.found_mh.scaled
 
-        for ss in self.signatures():
+        for n, ss in enumerate(self.signatures()):
+            if n % 100 == 0:
+               print('... adding:', n) 
             self.found_mh += ss.minhash.downsample(scaled=self.scaled)
 
     @property
@@ -745,11 +747,13 @@ class RevIndex_CounterGather_Colors(RustObject):
         return self.found_mh
 
     def signatures(self):
+        print('colors: getting signatures!')
         size = ffi.new("uintptr_t *")
         sigs_ptr = self._methodcall(
             lib.disk_revindex_countergather_signatures, self.db._objptr, size
         )
         size = size[0]
+        print(f'colors: got {size} signatures...')
 
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
