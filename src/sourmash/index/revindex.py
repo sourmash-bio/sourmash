@@ -554,7 +554,7 @@ class DiskRevIndex(RustObject, Index):
         pass
 
     def counter_gather_OLD_2(self, query_ss, threshold_bp=0, **kwargs):
-        print('v2 RevIndex Counter Gather - direct to RevIndex')
+        print("v2 RevIndex Counter Gather - direct to RevIndex")
         if not query_ss.minhash:
             raise ValueError("empty query")
 
@@ -580,7 +580,7 @@ class DiskRevIndex(RustObject, Index):
         return x
 
     def counter_gather_colors(self, query_ss, threshold_bp=0, **kwargs):
-        print('v3 RevIndex Counter Gather - colors!')
+        print("v3 RevIndex Counter Gather - colors!")
         if not query_ss.minhash:
             raise ValueError("empty query")
 
@@ -592,7 +592,7 @@ class DiskRevIndex(RustObject, Index):
         if cg_ptr == ffi.NULL:
             raise ValueError("no matches")
 
-        print('colors: create! poof!')
+        print("colors: create! poof!")
 
         x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
         # for ss in ri.signatures():
@@ -604,7 +604,7 @@ class DiskRevIndex(RustObject, Index):
     counter_gather = counter_gather_colors
 
     def counter_gather_OLD(self, query, threshold_bp, **kwargs):
-        print('v1 RevIndex Counter Gather')
+        print("v1 RevIndex Counter Gather")
         counter = RevIndex_CounterGather(query, self, threshold_bp)
         for result in self.prefetch(query, threshold_bp=threshold_bp):
             counter.add(result.signature)
@@ -714,7 +714,7 @@ class RevIndex_CounterGather_Colors(RustObject):
         raise NotImplementedError
 
     def peek(self, query_mh, *, threshold_bp=0):
-        print('colors: peekaboo!')
+        print("colors: peekaboo!")
         threshold_hashes = int(threshold_bp / query_mh.scaled)
         try:
             match_ss_ptr = self._methodcall(
@@ -737,7 +737,7 @@ class RevIndex_CounterGather_Colors(RustObject):
         )
 
     def consume(self, intersect_mh):
-        print('colors: consume! yummy!')
+        print("colors: consume! yummy!")
         _ = self._methodcall(
             lib.disk_revindex_countergather_consume, intersect_mh._objptr
         )
