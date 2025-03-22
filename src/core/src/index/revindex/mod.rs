@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
+use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
@@ -23,7 +24,6 @@ use crate::sketch::Sketch;
 use crate::storage::rocksdb::{db_options, COLORS, DB};
 use crate::HashIntoType;
 use crate::Result;
-use crate::manifest::Record;
 
 // DB metadata saved in the METADATA column family
 const MANIFEST: &str = "manifest";
@@ -42,7 +42,7 @@ pub struct HashToColor(HashToColorT);
 pub struct CounterGather {
     // add orig_query? threshold?
     counter: SigCounter,
-    query_colors: QueryColors,  // @CTB could be refs
+    query_colors: QueryColors, // @CTB could be refs
     hash_to_color: HashToColor,
 }
 
@@ -74,10 +74,7 @@ pub trait RevIndexOps {
 
     fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record>;
 
-    fn prepare_gather_counters(
-        &self,
-        query: &KmerMinHash,
-    ) -> CounterGather;
+    fn prepare_gather_counters(&self, query: &KmerMinHash) -> CounterGather;
 
     fn update(self, collection: CollectionSet) -> Result<RevIndex>
     where
@@ -113,10 +110,7 @@ impl CounterGather {
         self.counter.len()
     }
 
-    pub fn peek(
-        &self,
-        threshold: usize,
-    ) -> Option<(Idx, usize)> {
+    pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
         let (dataset_id, size) = self.counter.k_most_common_ordered(1)[0];
         if size > 0 && size >= threshold {
             Some((dataset_id, size))
@@ -130,10 +124,7 @@ impl CounterGather {
     }
 
     /// consume: remove all hashes from intersect, and adjust counter
-    pub fn consume(
-        &mut self,
-        intersect_mh: &KmerMinHash,
-    ) -> () {
+    pub fn consume(&mut self, intersect_mh: &KmerMinHash) -> () {
         intersect_mh
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
@@ -148,10 +139,11 @@ impl CounterGather {
             });
 
         // remove empty
-        let empty_keys = self.counter
-            .clone()
-            .into_iter()
-            .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
+        let empty_keys =
+            self.counter
+                .clone()
+                .into_iter()
+                .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
 
         for k in empty_keys.into_iter() {
             self.counter.remove(&k);
@@ -623,12 +615,7 @@ mod test {
 
         let mut cg = index.prepare_gather_counters(&query);
 
-        let matches = index.gather(
-            &mut cg,
-            0,
-            &query,
-            Some(selection),
-        )?;
+        let matches = index.gather(&mut cg, 0, &query, Some(selection))?;
 
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].name(), ""); // signature name is empty
@@ -836,12 +823,7 @@ mod test {
 
         let mut cg = index.prepare_gather_counters(&query);
 
-        let matches = index.gather(
-            &mut cg,
-            0,
-            &query,
-            Some(selection),
-        )?;
+        let matches = index.gather(&mut cg, 0, &query, Some(selection))?;
 
         // should be 3.
         // see sourmash#3193.
@@ -973,12 +955,7 @@ mod test {
         let mut cg = index.prepare_gather_counters(&query);
 
         let matches_external = index
-            .gather(
-                &mut cg,
-                0,
-                &query,
-                Some(selection.clone()),
-            )
+            .gather(&mut cg, 0, &query, Some(selection.clone()))
             .expect("failed to gather!");
 
         {
@@ -989,12 +966,7 @@ mod test {
 
             let mut cg = index.prepare_gather_counters(&query);
 
-            let matches_internal = index.gather(
-                &mut cg,
-                0,
-                &query,
-                Some(selection.clone()),
-            )?;
+            let matches_internal = index.gather(&mut cg, 0, &query, Some(selection.clone()))?;
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
@@ -1004,12 +976,7 @@ mod test {
 
         let mut cg = index.prepare_gather_counters(&query);
 
-        let matches_moved = index.gather(
-            &mut cg,
-            0,
-            &query,
-            Some(selection.clone()),
-        )?;
+        let matches_moved = index.gather(&mut cg, 0, &query, Some(selection.clone()))?;
         assert_eq!(matches_external, matches_moved);
 
         Ok(())

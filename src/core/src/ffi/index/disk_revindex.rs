@@ -3,15 +3,15 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::collection::{Collection, CollectionSet};
+use crate::ffi::index::mem_revindex::{from_template, SourmashRevIndex};
 use crate::ffi::index::SourmashSearchResult;
-use crate::ffi::index::mem_revindex::{ SourmashRevIndex, from_template };
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
+use crate::index::revindex::mem_revindex;
 use crate::index::revindex::RevIndex as BasicRevIndex;
 use crate::index::revindex::{CounterGather, DatasetPicklist, RevIndexOps};
-use crate::index::revindex::mem_revindex;
 use std::collections::HashSet;
 use std::ffi::CString;
 use std::path::Path;
@@ -394,7 +394,6 @@ unsafe fn disk_revindex_peek(
 }
 }
 
-
 // implement prefetch/containment separately from search/jaccard
 
 ffi_fn! {
@@ -499,7 +498,6 @@ unsafe fn disk_revindex_countergather_peek(
     Ok(SourmashSignature::from_rust(match_sig.into()))
 }
 }
-
 
 ffi_fn! {
 unsafe fn disk_revindex_countergather_signatures(

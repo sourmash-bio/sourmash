@@ -554,7 +554,7 @@ class DiskRevIndex(RustObject, Index):
     def consume(self, intersect_mh):
         pass
 
-    def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
+    def counter_gather_OLD_2(self, query_ss, threshold_bp=0, **kwargs):
         if not query_ss.minhash:
             raise ValueError("empty query")
 
@@ -597,6 +597,7 @@ class DiskRevIndex(RustObject, Index):
         #    x.add(ss)
 
         return x
+    counter_gather = counter_gather_colors
 
     def counter_gather_OLD(self, query, threshold_bp, **kwargs):
         counter = RevIndex_CounterGather(query, self, threshold_bp)
@@ -693,21 +694,26 @@ class RevIndex_CounterGather_Colors(RustObject):
         self._objptr = objptr
         self.db = db
         self.found_mh = query_ss.minhash.copy_and_clear().to_mutable()
+        self._scaled = self.found_mh.scaled
+
+        for ss in self.signatures():
+            self.found_mh += ss.minhash.downsample(scaled=self.scaled)
 
     @property
     def scaled(self):
-        return self.db.scaled
+        return self._scaled
 
     def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
         raise NotImplementedError
         pass
 
     def peek(self, query_mh, *, threshold_bp=0):
+        threshold_hashes = int(threshold_bp / query_mh.scaled)
         try:
             match_ss_ptr = self._methodcall(lib.disk_revindex_countergather_peek,
                                             self.db._objptr,
                                             query_mh._objptr,
-                                            threshold_bp)
+                                            threshold_hashes)
         except sourmash.exceptions.Panic:
             return []
 
@@ -721,8 +727,6 @@ class RevIndex_CounterGather_Colors(RustObject):
     def consume(self, intersect_mh): # @CTB rust
         _ = self._methodcall(lib.disk_revindex_countergather_consume,
                              intersect_mh._objptr)
-
-        self.found_mh += intersect_mh
 
     @property
     def union_found(self):

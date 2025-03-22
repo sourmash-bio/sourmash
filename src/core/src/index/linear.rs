@@ -12,7 +12,7 @@ use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::selection::Select;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::{ KmerMinHash, KmerMinHashBTree };
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::SigStore;
 use crate::Result;
@@ -152,8 +152,14 @@ impl LinearIndex {
             .internal_location()
             .into();
         let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-        let result =
-            self.stats_for_match(match_sig, query, match_size, match_path, round as u32, orig_query)?;
+        let result = self.stats_for_match(
+            match_sig,
+            query,
+            match_size,
+            match_path,
+            round as u32,
+            orig_query,
+        )?;
         Ok(result)
     }
 
@@ -262,7 +268,13 @@ impl LinearIndex {
             };
 
             let query_mh = KmerMinHash::from(query.clone());
-            let result = self.gather_round(dataset_id, match_size, &query_mh, matches.len(), &orig_query)?;
+            let result = self.gather_round(
+                dataset_id,
+                match_size,
+                &query_mh,
+                matches.len(),
+                &orig_query,
+            )?;
 
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets

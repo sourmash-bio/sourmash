@@ -10,11 +10,11 @@ use rayon::prelude::*;
 use crate::collection::Collection;
 use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::revindex::{ CounterGather, Datasets, HashToColor, QueryColors };
+use crate::index::revindex::{CounterGather, Datasets, HashToColor, QueryColors};
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{ KmerMinHash, KmerMinHashBTree };
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::Result;
 use crate::ScaledType;
@@ -219,9 +219,13 @@ impl RevIndex {
             // eprintln!("dataset_id: {} {}", dataset_id, match_size);
 
             let query_mh = KmerMinHash::from(query.clone());
-            let result = self
-                .linear
-                .gather_round(dataset_id, match_size, &query_mh, matches.len(), &orig_query)?;
+            let result = self.linear.gather_round(
+                dataset_id,
+                match_size,
+                &query_mh,
+                matches.len(),
+                &orig_query,
+            )?;
             if let Some(Sketch::MinHash(match_mh)) =
                 result.match_.select_sketch(self.linear.template())
             {
@@ -232,16 +236,16 @@ impl RevIndex {
 
                 cg.consume(&isect_mh);
                 //cg.consume(dataset_id, &isect_mh); @CTB dataset_id
-/*
-                // Prepare counter for finding the next match by decrementing
-                // all hashes found in the current match in other datasets
-                for hash in match_mh.iter_mins() {
-                    if let Some(color) = self.hash_to_color.get(hash) {
-                        counter.subtract(self.colors.indices(color).cloned());
-                    }
-                }
-                counter.remove(&dataset_id);
-*/
+                /*
+                                // Prepare counter for finding the next match by decrementing
+                                // all hashes found in the current match in other datasets
+                                for hash in match_mh.iter_mins() {
+                                    if let Some(color) = self.hash_to_color.get(hash) {
+                                        counter.subtract(self.colors.indices(color).cloned());
+                                    }
+                                }
+                                counter.remove(&dataset_id);
+                */
                 matches.push(result);
                 query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
             } else {
@@ -344,9 +348,7 @@ impl RevIndex {
             .collect()
     }
 
-    pub fn prepare_gather_counters(
-        &self,
-        query: &KmerMinHash) -> CounterGather {
+    pub fn prepare_gather_counters(&self, query: &KmerMinHash) -> CounterGather {
         let counter = self.counter_for_query(query);
         let hash_to_color = self.hash_to_color.clone();
         // eprintln!("hash_to_color: {:?}", hash_to_color);
@@ -360,8 +362,12 @@ impl RevIndex {
             .collect();
 
         //eprintln!("query_colors: {:?}", query_colors);
-        
-        CounterGather { counter, query_colors, hash_to_color }
+
+        CounterGather {
+            counter,
+            query_colors,
+            hash_to_color,
+        }
     }
 }
 
@@ -534,11 +540,9 @@ mod test {
         ]
         .into_iter()
         .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
-            .collect();
+        .collect();
 
-        let query_sig = Signature::from_path(
-            "../../tests/test-data/63.fa.sig",
-        )
+        let query_sig = Signature::from_path("../../tests/test-data/63.fa.sig")
             .expect("error processing query")
             .swap_remove(0)
             .select(&selection)
@@ -567,11 +571,9 @@ mod test {
         ]
         .into_iter()
         .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
-            .collect();
+        .collect();
 
-        let query_sig = Signature::from_path(
-            "../../tests/test-data/SRR606249.sig.gz",
-        )
+        let query_sig = Signature::from_path("../../tests/test-data/SRR606249.sig.gz")
             .expect("error processing query")
             .swap_remove(0)
             .select(&selection)
@@ -644,10 +646,9 @@ mod test {
         let mut cg = index.prepare_gather_counters(&query);
 
         let matches = index.gather(
-            &mut cg,
-            5, // 50kb threshold
+            &mut cg, 5, // 50kb threshold
             &query,
-//            Some(selection),
+            //            Some(selection),
         )?;
 
         // should be 11, based on test_gather_metagenome_num_results

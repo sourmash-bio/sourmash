@@ -13,9 +13,8 @@ use rocksdb::MergeOperands;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, DatasetPicklist, Datasets, DbStats, QueryColors,
+    self as module, stats_for_cf, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors,
     RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
-    CounterGather,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::{Manifest, Record};
@@ -320,10 +319,7 @@ impl RevIndexOps for RevIndex {
             .collect()
     }
 
-    fn prepare_gather_counters(
-        &self,
-        query: &KmerMinHash,
-    ) -> CounterGather {
+    fn prepare_gather_counters(&self, query: &KmerMinHash) -> CounterGather {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -359,7 +355,11 @@ impl RevIndexOps for RevIndex {
             })
             .collect();
 
-        CounterGather { counter, query_colors, hash_to_color }
+        CounterGather {
+            counter,
+            query_colors,
+            hash_to_color,
+        }
     }
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
