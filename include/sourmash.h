@@ -72,6 +72,8 @@ typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
 
+typedef struct SourmashRevIndex_CounterGather SourmashRevIndex_CounterGather;
+
 typedef struct SourmashSearchResult SourmashSearchResult;
 
 typedef struct SourmashSignature SourmashSignature;
@@ -152,6 +154,14 @@ SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db
                                                   uint16_t threshold_bp,
                                                   const SourmashDatasetPicklist *dataset_picklist_ptr);
 
+void disk_revindex_countergather_consume(SourmashRevIndex_CounterGather *cg_ptr,
+                                         const SourmashKmerMinHash *isect_ptr);
+
+SourmashSignature *disk_revindex_countergather_peek(const SourmashRevIndex_CounterGather *cg_ptr,
+                                                    const SourmashDiskRevIndex *db_ptr,
+                                                    const SourmashKmerMinHash *query_ptr,
+                                                    uint64_t threshold_bp);
+
 void disk_revindex_free(SourmashDiskRevIndex *ptr);
 
 uint32_t disk_revindex_ksize(const SourmashDiskRevIndex *ptr);
@@ -176,6 +186,10 @@ const SourmashSearchResult *const *disk_revindex_prefetch(const SourmashDiskRevI
                                                           uint64_t threshold_bp,
                                                           uintptr_t *return_size,
                                                           const SourmashDatasetPicklist *dataset_picklist_ptr);
+
+SourmashRevIndex_CounterGather *disk_revindex_prefetch_to_countergather(const SourmashDiskRevIndex *db_ptr,
+                                                                        const SourmashSignature *query_ptr,
+                                                                        const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 SourmashRevIndex *disk_revindex_prefetch_to_mem_revindex(const SourmashDiskRevIndex *db_ptr,
                                                          const SourmashSignature *query_ptr,
@@ -381,6 +395,8 @@ void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
+
+void revindex_countergather_free(SourmashRevIndex_CounterGather *ptr);
 
 void revindex_free(SourmashRevIndex *ptr);
 

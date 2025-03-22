@@ -105,15 +105,15 @@ pub trait RevIndexOps {
 }
 
 impl CounterGather {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.counter.is_empty()
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.counter.len()
     }
 
-    fn peek(
+    pub fn peek(
         &self,
         threshold: usize,
     ) -> Option<(Idx, usize)> {
@@ -125,12 +125,10 @@ impl CounterGather {
         }
     }
 
-    fn consume(
+    pub fn consume(
         &mut self,
-        dataset_id: Idx,
         intersect_mh: &KmerMinHash,
     ) -> () {
-        // eprintln!("intersect_mh: {} {}", intersect_mh.mins().len(), intersect_mh.scaled());
         intersect_mh
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
@@ -141,11 +139,8 @@ impl CounterGather {
             .for_each(|dataset| {
                 // TODO: collect the flat_map into a Counter, and remove more
                 //       than one at a time...
-                // eprintln!("xxx {:?}", self.counter.entry(dataset));
                 self.counter.entry(dataset).and_modify(|e| *e -= 1);
             });
-
-        self.counter.remove(&dataset_id);
     }
 }
 

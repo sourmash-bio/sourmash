@@ -489,7 +489,8 @@ impl RevIndexOps for RevIndex {
             // @CTB use isect_mh here instead of match_mh?
             query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
 
-            cg.consume(dataset_id, &isect_mh);
+            //cg.consume(dataset_id, &isect_mh); // @CTB dataset_id
+            cg.consume(&isect_mh);
         }
         Ok(matches)
     }

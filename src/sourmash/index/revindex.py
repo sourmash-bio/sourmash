@@ -235,7 +235,7 @@ class RevIndex(RustObject):  # , Index):
         found = self.search(query_ss, threshold=threshold, do_containment=True)
 
         if found:
-            match_mh = found[0].signature.minhash.flatten()
+            match_mh = found[0].signature.minhash.flatten() # @CTB flatten?
             intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
             return found[0], intersect_mh
         return []
@@ -582,6 +582,25 @@ class DiskRevIndex(RustObject, Index):
 
         return x
 
+    def counter_gather_colors(self, query_ss, threshold_bp=0, **kwargs):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        cg_ptr = self._methodcall(
+            lib.disk_revindex_prefetch_to_countergather,
+            query_ss._get_objptr(),
+            self._ffi_idx_picklist,
+        )
+        if cg_ptr == ffi.NULL:
+            raise ValueError("no matches")
+
+        x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self, threshold_bp)
+        #for ss in ri.signatures():
+        #    ri._orig_signatures[ss.md5sum()] = ss
+        #    x.add(ss)
+
+        return x
+
     def counter_gather_OLD(self, query, threshold_bp, **kwargs):
         counter = RevIndex_CounterGather(query, self, threshold_bp)
         for result in self.prefetch(query, threshold_bp=threshold_bp):
@@ -667,6 +686,56 @@ class RevIndex_CounterGather:
         return self.found_mh
 
     def signatures(self):
+        # don't track actual signatures - go back to RevIndex
+        for sr in self.db.prefetch(self.query):
+            yield sr.signature
+
+
+class RevIndex_CounterGather_Colors(RustObject):
+    def __init__(self, objptr, query_ss, db, threshold_bp):
+        self._objptr = objptr
+        self.db = db
+        self.query = query_ss
+        self.orig_query_mh = query_ss.minhash.copy().flatten()
+        self.found_mh = query_ss.minhash.copy_and_clear().to_mutable()
+        self.threshold_bp = threshold_bp
+        self.locations = {}
+
+    @property
+    def scaled(self):
+        return self.db.scaled
+
+    def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
+        raise NotImplementedError
+        pass
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        try:
+            match_ss_ptr = self._methodcall(lib.disk_revindex_countergather_peek,
+                                            self.db._objptr,
+                                            query_mh._objptr,
+                                            threshold_bp)
+        except sourmash.exceptions.Panic:
+            return []
+
+        match_ss = SourmashSignature._from_objptr(match_ss_ptr)
+        match_mh = match_ss.minhash
+        intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
+        containment = len(intersect_mh) / len(match_mh)
+
+        return (IndexSearchResult(containment, match_ss, self.db.location), intersect_mh)
+
+    def consume(self, intersect_mh): # @CTB rust
+        _ = self._methodcall(lib.disk_revindex_countergather_consume,
+                             intersect_mh._objptr)
+
+        self.found_mh += intersect_mh
+
+    @property
+    def union_found(self):
+        return self.found_mh
+
+    def signatures(self):       # @CTB rust
         # don't track actual signatures - go back to RevIndex
         for sr in self.db.prefetch(self.query):
             yield sr.signature

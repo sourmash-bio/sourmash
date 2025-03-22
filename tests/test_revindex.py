@@ -413,3 +413,104 @@ def test_against_bad_abund_rocksdb(runtmp):
     metag = utils.get_test_data("SRR606249.sig.gz")
 
     runtmp.sourmash("gather", metag, db)
+
+
+def test_rocksdb_prefetch_to_cg_colors_1():
+    sig63 = utils.get_test_data("63.fa.sig")
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
+
+    rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(ss63, threshold_bp=0)
+    sr, isect_mh = cg.peek(ss63.minhash)
+    assert sr.score == 1.0
+
+
+def test_rocksdb_prefetch_to_cg_colors_2():
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(ss47, threshold_bp=0)
+    sr, isect_mh = cg.peek(ss47.minhash)
+    assert round(sr.score, 5) == 0.48282
+
+    cg.consume(isect_mh)
+    assert not cg.peek(ss47.minhash)
+
+
+def test_rocksdb_prefetch_to_cg_colors_3():
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+
+    rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(ss2, threshold_bp=0)
+    sr, isect_mh = cg.peek(ss2.minhash)
+    print(sr)
+    assert sr.score == 1.0
+
+    cg.consume(isect_mh)
+
+
+def test_rocksdb_prefetch_to_cg_colors_4():
+    # test peek/consume on db that contains 63 and 2, but not 47
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    sig63 = utils.get_test_data("63.fa.sig")
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
+
+    rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(ss47, threshold_bp=0)
+    sr, isect_mh = cg.peek(ss47.minhash)
+    assert round(sr.score, 5) == 0.48282
+
+    cg.consume(isect_mh)
+
+    sr, isect_mh = cg.peek(ss63.minhash)
+    assert round(sr.score, 5) == 0
+
+
+def test_rocksdb_prefetch_to_cg_colors_5():
+    # test peek/consume on db that contains 47, 63 and 2
+    metag_path = utils.get_test_data("SRR606249.sig.gz")
+    metag = load_one_signature_from_json(metag_path, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(metag, threshold_bp=0)
+
+    # round 1
+    sr, isect_mh = cg.peek(metag.minhash)
+    assert sr.signature.name.startswith('NC_011663.1')
+    print(sr.signature.name)
+    assert round(sr.score, 5) == 0.0084
+
+    cg.consume(isect_mh)
+
+    # round 2
+    mh = metag.minhash.to_mutable()
+    mh.remove_many(isect_mh)
+
+    sr, isect_mh = cg.peek(mh)
+    assert sr.signature.name.startswith('CP001071.1')
+    print(sr.signature.name)
+    assert round(sr.score, 5) == 0.00815
+
+    cg.consume(isect_mh)
+
+    # round 3
+    mh.remove_many(isect_mh)
+
+    sr, isect_mh = cg.peek(mh)
+    assert sr.signature.name.startswith('NC_009665.1')
+    print(sr.signature.name)
+    assert round(sr.score, 5) == 0.00348

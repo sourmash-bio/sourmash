@@ -10,7 +10,7 @@ use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex::RevIndex as DDRevIndex;
 use crate::index::revindex::RevIndex as BasicRevIndex;
-use crate::index::revindex::{DatasetPicklist, RevIndexOps};
+use crate::index::revindex::{CounterGather, DatasetPicklist, RevIndexOps};
 use crate::index::revindex::mem_revindex;
 use std::collections::HashSet;
 use std::ffi::CString;
@@ -23,15 +23,18 @@ use crate::sketch::Sketch;
 // use crate::ScaledType;
 
 pub struct SourmashDiskRevIndex;
-
 impl ForeignObject for SourmashDiskRevIndex {
     type RustObject = BasicRevIndex;
 }
 
 pub struct SourmashDatasetPicklist;
-
 impl ForeignObject for SourmashDatasetPicklist {
     type RustObject = DatasetPicklist;
+}
+
+pub struct SourmashRevIndex_CounterGather;
+impl ForeignObject for SourmashRevIndex_CounterGather {
+    type RustObject = CounterGather;
 }
 
 unsafe fn retrieve_picklist(
@@ -99,6 +102,11 @@ unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
 #[no_mangle]
 pub unsafe extern "C" fn disk_revindex_free(ptr: *mut SourmashDiskRevIndex) {
     SourmashDiskRevIndex::drop(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn revindex_countergather_free(ptr: *mut SourmashRevIndex_CounterGather) {
+    SourmashRevIndex_CounterGather::drop(ptr);
 }
 
 ffi_fn! {
@@ -426,5 +434,68 @@ unsafe fn disk_revindex_prefetch_to_mem_revindex(
     let selection = from_template(&template_sketch);
     let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
     Ok(SourmashRevIndex::from_rust(revindex))
+}
+}
+
+// return a CounterGather object instead
+
+ffi_fn! {
+unsafe fn disk_revindex_prefetch_to_countergather(
+    db_ptr: *const SourmashDiskRevIndex,
+    query_ptr: *const SourmashSignature,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
+) -> Result<*mut SourmashRevIndex_CounterGather> {
+    let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
+    let sig = SourmashSignature::as_rust(query_ptr);
+
+    // extract KmerMinHash for query
+    let query_mh: KmerMinHash = sig.clone()
+        .try_into().expect("cannot get kmerminhash");
+
+    // picklist?
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
+    // do search & get matches - @CTB picklist needed!
+    let counter = revindex.prepare_gather_counters(&query_mh);
+
+    Ok(SourmashRevIndex_CounterGather::from_rust(counter))
+}
+}
+
+ffi_fn! {
+unsafe fn disk_revindex_countergather_consume(
+    cg_ptr: *mut SourmashRevIndex_CounterGather,
+    isect_ptr: *const SourmashKmerMinHash,
+) -> Result<()> {
+    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
+    let isect_mh = SourmashKmerMinHash::as_rust(isect_ptr);
+
+    cg.consume(&isect_mh);
+
+    Ok(())
+}
+}
+
+ffi_fn! {
+unsafe fn disk_revindex_countergather_peek(
+    cg_ptr: *const SourmashRevIndex_CounterGather,
+    db_ptr: *const SourmashDiskRevIndex,
+    query_ptr: *const SourmashKmerMinHash,
+    threshold_bp: u64,
+) -> Result<*mut SourmashSignature> {
+    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
+    let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
+    let query_mh = SourmashKmerMinHash::as_rust(query_ptr);
+
+    let result = cg.peek(threshold_bp as usize);
+
+    // if result.is_none() { // @CTB...
+    // }
+
+    let (dataset_id, match_size) = result.unwrap();
+
+    let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
+
+    Ok(SourmashSignature::from_rust(match_sig.into()))
 }
 }

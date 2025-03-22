@@ -230,7 +230,8 @@ impl RevIndex {
                 isect_mh.clear();
                 isect_mh.add_many(&matched_hashes)?;
 
-                cg.consume(dataset_id, &isect_mh);
+                cg.consume(&isect_mh);
+                //cg.consume(dataset_id, &isect_mh); @CTB dataset_id
 /*
                 // Prepare counter for finding the next match by decrementing
                 // all hashes found in the current match in other datasets
