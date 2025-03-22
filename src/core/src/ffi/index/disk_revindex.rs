@@ -545,3 +545,13 @@ unsafe fn disk_revindex_countergather_found_hashes(
     Ok(SourmashKmerMinHash::from_rust(found_mh))
 }
 }
+
+ffi_fn! {
+unsafe fn disk_revindex_countergather_len(
+    cg_ptr: *mut SourmashRevIndex_CounterGather,
+) -> Result<u64> {
+    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
+
+    Ok(cg.len() as u64)
+}
+}

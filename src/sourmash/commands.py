@@ -969,6 +969,7 @@ def gather(args):
                 prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         noident_mh = prefetch_query.minhash.to_mutable()
+        total_prefetch = 0
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
         # set up prefetch CSV output
@@ -990,7 +991,9 @@ def gather(args):
                 # catch "no signatures to search" ValueError if empty db.
                 continue
 
-            save_prefetch.add_many(counter.signatures())
+            total_prefetch += len(counter)
+            if args.save_prefetch:
+                save_prefetch.add_many(counter.signatures())
 
             # update found/not found hashes from the union/intersection of
             # found.
@@ -1023,7 +1026,7 @@ def gather(args):
 
         display_bp = format_bp(args.threshold_bp)
         notify(
-            f"Prefetch found {len(save_prefetch)} signatures with overlap >= {display_bp}."
+            f"Prefetch found {total_prefetch} signatures with overlap >= {display_bp}."
         )
         save_prefetch.close()
         if prefetch_csvout_fp:

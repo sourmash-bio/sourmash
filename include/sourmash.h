@@ -160,6 +160,8 @@ void disk_revindex_countergather_consume(SourmashRevIndex_CounterGather *cg_ptr,
 const SourmashKmerMinHash *disk_revindex_countergather_found_hashes(SourmashRevIndex_CounterGather *cg_ptr,
                                                                     const SourmashKmerMinHash *template_ptr);
 
+uint64_t disk_revindex_countergather_len(SourmashRevIndex_CounterGather *cg_ptr);
+
 SourmashSignature *disk_revindex_countergather_peek(const SourmashRevIndex_CounterGather *cg_ptr,
                                                     const SourmashDiskRevIndex *db_ptr,
                                                     const SourmashKmerMinHash *query_ptr,

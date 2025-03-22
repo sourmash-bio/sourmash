@@ -749,6 +749,9 @@ class RevIndex_CounterGather_Colors(RustObject):
     def union_found(self):
         return self.found_mh
 
+    def __len__(self):
+        return self._methodcall(lib.disk_revindex_countergather_len)
+
     def signatures(self):
         print("colors: getting signatures!")
         size = ffi.new("uintptr_t *")
