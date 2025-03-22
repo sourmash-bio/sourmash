@@ -818,6 +818,9 @@ class CounterGather:
             self.scaled = scaled
         return self.scaled
 
+    def __len__(self):
+        return len(self.siglist)
+
     def signatures(self):
         "Return all signatures."
         yield from self.siglist.values()

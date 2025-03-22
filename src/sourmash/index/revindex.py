@@ -592,8 +592,6 @@ class DiskRevIndex(RustObject, Index):
         if cg_ptr == ffi.NULL:
             raise ValueError("no matches")
 
-        print("colors: create! poof!")
-
         x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
         # for ss in ri.signatures():
         #    ri._orig_signatures[ss.md5sum()] = ss
@@ -631,6 +629,9 @@ class RevIndex_CounterGather:
         self.threshold_bp = threshold_bp
         self.allow_insert = allow_insert
         self.locations = {}
+
+    def __len__(self):
+        return len(self.db)
 
     @property
     def scaled(self):
@@ -717,7 +718,6 @@ class RevIndex_CounterGather_Colors(RustObject):
         raise NotImplementedError
 
     def peek(self, query_mh, *, threshold_bp=0):
-        print("colors: peekaboo!")
         threshold_hashes = int(threshold_bp / query_mh.scaled)
         try:
             match_ss_ptr = self._methodcall(
@@ -740,7 +740,6 @@ class RevIndex_CounterGather_Colors(RustObject):
         )
 
     def consume(self, intersect_mh):
-        print("colors: consume! yummy!")
         _ = self._methodcall(
             lib.disk_revindex_countergather_consume, intersect_mh._objptr
         )
@@ -753,13 +752,11 @@ class RevIndex_CounterGather_Colors(RustObject):
         return self._methodcall(lib.disk_revindex_countergather_len)
 
     def signatures(self):
-        print("colors: getting signatures!")
         size = ffi.new("uintptr_t *")
         sigs_ptr = self._methodcall(
             lib.disk_revindex_countergather_signatures, self.db._objptr, size
         )
         size = size[0]
-        print(f"colors: got {size} signatures...")
 
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
