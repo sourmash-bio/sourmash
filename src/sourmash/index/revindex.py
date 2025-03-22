@@ -82,9 +82,6 @@ class RevIndex(RustObject):  # , Index):
         sigs = []
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
-            sigs.append(sig)
-
-        for sig in sigs:
             yield sig
 
     def signatures_with_location(self):
@@ -594,7 +591,7 @@ class DiskRevIndex(RustObject, Index):
         if cg_ptr == ffi.NULL:
             raise ValueError("no matches")
 
-        x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self, threshold_bp)
+        x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
         #for ss in ri.signatures():
         #    ri._orig_signatures[ss.md5sum()] = ss
         #    x.add(ss)
@@ -692,14 +689,10 @@ class RevIndex_CounterGather:
 
 
 class RevIndex_CounterGather_Colors(RustObject):
-    def __init__(self, objptr, query_ss, db, threshold_bp):
+    def __init__(self, objptr, query_ss, db):
         self._objptr = objptr
         self.db = db
-        self.query = query_ss
-        self.orig_query_mh = query_ss.minhash.copy().flatten()
         self.found_mh = query_ss.minhash.copy_and_clear().to_mutable()
-        self.threshold_bp = threshold_bp
-        self.locations = {}
 
     @property
     def scaled(self):
@@ -735,7 +728,14 @@ class RevIndex_CounterGather_Colors(RustObject):
     def union_found(self):
         return self.found_mh
 
-    def signatures(self):       # @CTB rust
-        # don't track actual signatures - go back to RevIndex
-        for sr in self.db.prefetch(self.query):
-            yield sr.signature
+    def signatures(self):
+        size = ffi.new("uintptr_t *")
+        sigs_ptr = self._methodcall(lib.disk_revindex_countergather_signatures,
+                                    self.db._objptr,
+                                    size)
+        size = size[0]
+
+        sigs = []
+        for i in range(size):
+            sig = SourmashSignature._from_objptr(sigs_ptr[i])
+            yield sig

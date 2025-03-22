@@ -485,7 +485,7 @@ unsafe fn disk_revindex_countergather_peek(
 ) -> Result<*mut SourmashSignature> {
     let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
-    let query_mh = SourmashKmerMinHash::as_rust(query_ptr);
+    let query_mh = SourmashKmerMinHash::as_rust(query_ptr); // @CTB remove
 
     let result = cg.peek(threshold_bp as usize);
 
@@ -497,5 +497,39 @@ unsafe fn disk_revindex_countergather_peek(
     let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
 
     Ok(SourmashSignature::from_rust(match_sig.into()))
+}
+}
+
+
+ffi_fn! {
+unsafe fn disk_revindex_countergather_signatures(
+    cg_ptr: *const SourmashRevIndex_CounterGather,
+    db_ptr: *const SourmashDiskRevIndex,
+    size: *mut usize,
+) -> Result<*mut *mut SourmashSignature> {
+    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
+    let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
+
+    let coll = revindex.collection();
+    let sigs: Vec<Signature> = cg
+        .dataset_ids()
+        .into_iter()
+        .map(|idx| { coll
+                     .sig_for_dataset(idx)
+                     .expect("cannot retrieve sig!?")
+                     .into()
+        })
+        .collect();
+
+    // FIXME: use the ForeignObject trait, maybe define new method there...
+    let ptr_sigs: Vec<*mut SourmashSignature> = sigs
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *mut SourmashSignature)
+        .collect();
+
+    let b = ptr_sigs.into_boxed_slice();
+    *size = b.len();
+
+    Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
 }
 }

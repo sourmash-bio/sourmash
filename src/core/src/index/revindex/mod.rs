@@ -125,6 +125,11 @@ impl CounterGather {
         }
     }
 
+    pub fn dataset_ids(&self) -> Vec<Idx> {
+        self.counter.keys().map(|k| *k).collect()
+    }
+
+    /// consume: remove all hashes from intersect, and adjust counter
     pub fn consume(
         &mut self,
         intersect_mh: &KmerMinHash,
@@ -141,6 +146,16 @@ impl CounterGather {
                 //       than one at a time...
                 self.counter.entry(dataset).and_modify(|e| *e -= 1);
             });
+
+        // remove empty
+        let empty_keys = self.counter
+            .clone()
+            .into_iter()
+            .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
+
+        for k in empty_keys.into_iter() {
+            self.counter.remove(&k);
+        }
     }
 }
 

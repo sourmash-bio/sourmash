@@ -494,7 +494,9 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     print(sr.signature.name)
     assert round(sr.score, 5) == 0.0084
 
+    assert len(list(cg.signatures())) == 3
     cg.consume(isect_mh)
+    assert len(list(cg.signatures())) == 2
 
     # round 2
     mh = metag.minhash.to_mutable()
@@ -505,7 +507,9 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     print(sr.signature.name)
     assert round(sr.score, 5) == 0.00815
 
+    assert len(list(cg.signatures())) == 2
     cg.consume(isect_mh)
+    assert len(list(cg.signatures())) == 1
 
     # round 3
     mh.remove_many(isect_mh)
@@ -514,3 +518,49 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     assert sr.signature.name.startswith('NC_009665.1')
     print(sr.signature.name)
     assert round(sr.score, 5) == 0.00348
+
+    assert len(list(cg.signatures())) == 1
+    cg.consume(isect_mh)
+    assert len(list(cg.signatures())) == 0
+
+
+def test_rocksdb_prefetch_to_cg_colors_6():
+    # test signatures on db that contains 47, 63 and 2
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(ss47, threshold_bp=0)
+
+    siglist = list(cg.signatures())
+    assert len(siglist) == 2
+
+
+def test_rocksdb_prefetch_to_cg_colors_7():
+    # test signatures on db that contains 47, 63 and 2
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(ss2, threshold_bp=0)
+
+    siglist = list(cg.signatures())
+    assert len(siglist) == 1
+
+
+def test_rocksdb_prefetch_to_cg_colors_8():
+    # test peek/consume on db that contains 47, 63 and 2
+    metag_path = utils.get_test_data("SRR606249.sig.gz")
+    metag = load_one_signature_from_json(metag_path, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather_colors(metag, threshold_bp=0)
+
+    siglist = list(cg.signatures())
+    assert len(siglist) == 3

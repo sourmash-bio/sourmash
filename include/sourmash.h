@@ -162,6 +162,10 @@ SourmashSignature *disk_revindex_countergather_peek(const SourmashRevIndex_Count
                                                     const SourmashKmerMinHash *query_ptr,
                                                     uint64_t threshold_bp);
 
+SourmashSignature **disk_revindex_countergather_signatures(const SourmashRevIndex_CounterGather *cg_ptr,
+                                                           const SourmashDiskRevIndex *db_ptr,
+                                                           uintptr_t *size);
+
 void disk_revindex_free(SourmashDiskRevIndex *ptr);
 
 uint32_t disk_revindex_ksize(const SourmashDiskRevIndex *ptr);
