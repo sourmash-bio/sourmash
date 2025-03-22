@@ -74,7 +74,11 @@ pub trait RevIndexOps {
 
     fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record>;
 
-    fn prepare_gather_counters(&self, query: &KmerMinHash) -> CounterGather;
+    fn prepare_gather_counters(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather;
 
     fn update(self, collection: CollectionSet) -> Result<RevIndex>
     where
@@ -625,7 +629,7 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
 
-        let mut cg = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(&mut cg, 0, &query, Some(selection))?;
 
@@ -685,7 +689,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let mut cg = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
             &mut cg,
@@ -833,7 +837,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let mut cg = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(&mut cg, 0, &query, Some(selection))?;
 
@@ -964,7 +968,7 @@ mod test {
 
         let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
 
-        let mut cg = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches_external = index
             .gather(&mut cg, 0, &query, Some(selection.clone()))
@@ -976,7 +980,7 @@ mod test {
                 .internalize_storage()
                 .expect("Error internalizing storage");
 
-            let mut cg = index.prepare_gather_counters(&query);
+            let mut cg = index.prepare_gather_counters(&query, None);
 
             let matches_internal = index.gather(&mut cg, 0, &query, Some(selection.clone()))?;
             assert_eq!(matches_external, matches_internal);
@@ -986,7 +990,7 @@ mod test {
 
         let index = RevIndex::open(new_path, false, None)?;
 
-        let mut cg = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches_moved = index.gather(&mut cg, 0, &query, Some(selection.clone()))?;
         assert_eq!(matches_external, matches_moved);

@@ -455,7 +455,7 @@ unsafe fn disk_revindex_prefetch_to_countergather(
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
     // do search & get matches - @CTB picklist needed!
-    let counter = revindex.prepare_gather_counters(&query_mh);
+    let counter = revindex.prepare_gather_counters(&query_mh, dataset_picklist);
 
     Ok(SourmashRevIndex_CounterGather::from_rust(counter))
 }

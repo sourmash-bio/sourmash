@@ -206,7 +206,7 @@ unsafe fn revindex_gather(
     // TODO: proper threshold calculation
     let threshold: usize = (threshold * (mh.size() as f64)) as _;
 
-    let mut cg = revindex.prepare_gather_counters(mh);
+    let mut cg = revindex.prepare_gather_counters(mh, None);
 
     let results: Vec<(f64, Signature, String)> = revindex
         .gather(&mut cg, threshold, mh)

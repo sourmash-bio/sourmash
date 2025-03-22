@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use crate::collection::Collection;
 use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::revindex::{CounterGather, Datasets, HashToColor, QueryColors};
+use crate::index::revindex::{CounterGather, DatasetPicklist, Datasets, HashToColor, QueryColors};
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
@@ -348,7 +348,11 @@ impl RevIndex {
             .collect()
     }
 
-    pub fn prepare_gather_counters(&self, query: &KmerMinHash) -> CounterGather {
+    pub fn prepare_gather_counters(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather {
         let counter = self.counter_for_query(query);
         let hash_to_color = self.hash_to_color.clone();
         // eprintln!("hash_to_color: {:?}", hash_to_color);
@@ -520,7 +524,7 @@ mod test {
         let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
         assert_eq!(results_rev, results_linear);
 
-        let mut counter_rev = index.prepare_gather_counters(&query_mh);
+        let mut counter_rev = index.prepare_gather_counters(&query_mh, None);
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
         let results_rev = index.gather(&mut counter_rev, 0, &query_mh).unwrap();
@@ -552,7 +556,7 @@ mod test {
 
         let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
 
-        let mut gather_cg = index.prepare_gather_counters(&query_mh);
+        let mut gather_cg = index.prepare_gather_counters(&query_mh, None);
         // eprintln!("gather_cg: {:?}", gather_cg);
         let results = index.gather(&mut gather_cg, 0, &query_mh).unwrap();
 
@@ -584,7 +588,7 @@ mod test {
         let index = RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
 
         // run the CounterGather-style gather:
-        let mut gather_cg = index.prepare_gather_counters(&query_mh);
+        let mut gather_cg = index.prepare_gather_counters(&query_mh, None);
         // eprintln!("gather_cg: {:?}", gather_cg);
         let results = index.gather(&mut gather_cg, 0, &query_mh).unwrap();
         assert_eq!(results.len(), 3);
@@ -643,7 +647,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let mut cg = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
             &mut cg, 5, // 50kb threshold

@@ -319,7 +319,11 @@ impl RevIndexOps for RevIndex {
             .collect()
     }
 
-    fn prepare_gather_counters(&self, query: &KmerMinHash) -> CounterGather {
+    fn prepare_gather_counters(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -345,6 +349,15 @@ impl RevIndexOps for RevIndex {
                 let raw = r.ok().unwrap_or(None);
                 raw.map(|raw| {
                     let new_vals = Datasets::from_slice(&raw).unwrap();
+                    /*
+                                        if let Some(pl) = &picklist {
+                                            let val_set: HashSet<_> = new_vals
+                                                .into_iter()
+                                                .filter(|&i| pl.dataset_ids.contains(&i))
+                                                .collect();
+                                            new_vals = Box::new(val_set.into_iter());
+                                        }
+                    */
                     let color = compute_color(&new_vals);
                     query_colors
                         .entry(color)
