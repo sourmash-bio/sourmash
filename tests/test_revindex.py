@@ -490,7 +490,7 @@ def test_rocksdb_prefetch_to_cg_colors_5():
 
     # round 1
     sr, isect_mh = cg.peek(metag.minhash)
-    assert sr.signature.name.startswith('NC_011663.1')
+    assert sr.signature.name.startswith("NC_011663.1")
     print(sr.signature.name)
     assert round(sr.score, 5) == 0.0084
 
@@ -503,7 +503,7 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     mh.remove_many(isect_mh)
 
     sr, isect_mh = cg.peek(mh)
-    assert sr.signature.name.startswith('CP001071.1')
+    assert sr.signature.name.startswith("CP001071.1")
     print(sr.signature.name)
     assert round(sr.score, 5) == 0.00815
 
@@ -515,7 +515,7 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     mh.remove_many(isect_mh)
 
     sr, isect_mh = cg.peek(mh)
-    assert sr.signature.name.startswith('NC_009665.1')
+    assert sr.signature.name.startswith("NC_009665.1")
     print(sr.signature.name)
     assert round(sr.score, 5) == 0.00348
 
