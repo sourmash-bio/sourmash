@@ -210,22 +210,22 @@ impl RevIndex {
 
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         while match_size > threshold && !cg.is_empty() {
-            let result = cg.peek(threshold);
-            if result.is_none() {
+            let next_match = cg.peek(threshold);
+            if next_match.is_none() {
                 break;
             }
-            let (dataset_id, match_size) = result.unwrap();
+            let (dataset_id, match_size) = next_match.unwrap();
 
             // eprintln!("dataset_id: {} {}", dataset_id, match_size);
 
             let query_mh = KmerMinHash::from(query.clone());
             let result = self
                 .linear
-                .gather_round(dataset_id, match_size, &query_mh, matches.len())?;
+                .gather_round(dataset_id, match_size, &query_mh, matches.len(), &orig_query)?;
             if let Some(Sketch::MinHash(match_mh)) =
                 result.match_.select_sketch(self.linear.template())
             {
-                let (matched_hashes, _intersection) = match_mh.intersection(&query_mh).expect("cannot get intersection!?");
+                let (matched_hashes, _) = match_mh.intersection(&query_mh)?;
                 let mut isect_mh = match_mh.clone();
                 isect_mh.clear();
                 isect_mh.add_many(&matched_hashes)?;
