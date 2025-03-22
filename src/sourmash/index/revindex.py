@@ -704,7 +704,7 @@ class RevIndex_CounterGather_Colors(RustObject):
         # populate found_mh with found hashes:
         found_mh_ptr = self._methodcall(
             lib.disk_revindex_countergather_found_hashes,
-            query_mh.copy_and_clear()._objptr
+            query_mh.copy_and_clear()._objptr,
         )
 
         self.found_mh = MinHash._from_objptr(found_mh_ptr)
