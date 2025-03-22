@@ -532,7 +532,6 @@ unsafe fn disk_revindex_countergather_signatures(
 }
 }
 
-
 ffi_fn! {
 unsafe fn disk_revindex_countergather_found_hashes(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
