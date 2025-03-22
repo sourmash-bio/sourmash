@@ -79,7 +79,6 @@ class RevIndex(RustObject):  # , Index):
         sigs_ptr = self._methodcall(lib.revindex_signatures, size)
         size = size[0]
 
-        sigs = []
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
             yield sig
@@ -232,7 +231,7 @@ class RevIndex(RustObject):  # , Index):
         found = self.search(query_ss, threshold=threshold, do_containment=True)
 
         if found:
-            match_mh = found[0].signature.minhash.flatten() # @CTB flatten?
+            match_mh = found[0].signature.minhash.flatten()  # @CTB flatten?
             intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
             return found[0], intersect_mh
         return []
@@ -596,11 +595,12 @@ class DiskRevIndex(RustObject, Index):
         print('colors: create! poof!')
 
         x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
-        #for ss in ri.signatures():
+        # for ss in ri.signatures():
         #    ri._orig_signatures[ss.md5sum()] = ss
         #    x.add(ss)
 
         return x
+
     counter_gather = counter_gather_colors
 
     def counter_gather_OLD(self, query, threshold_bp, **kwargs):
@@ -715,10 +715,12 @@ class RevIndex_CounterGather_Colors(RustObject):
         print('colors: peekaboo!')
         threshold_hashes = int(threshold_bp / query_mh.scaled)
         try:
-            match_ss_ptr = self._methodcall(lib.disk_revindex_countergather_peek,
-                                            self.db._objptr,
-                                            query_mh._objptr,
-                                            threshold_hashes)
+            match_ss_ptr = self._methodcall(
+                lib.disk_revindex_countergather_peek,
+                self.db._objptr,
+                query_mh._objptr,
+                threshold_hashes,
+            )
         except sourmash.exceptions.Panic:
             return []
 
@@ -727,12 +729,16 @@ class RevIndex_CounterGather_Colors(RustObject):
         intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
         containment = len(intersect_mh) / len(match_mh)
 
-        return (IndexSearchResult(containment, match_ss, self.db.location), intersect_mh)
+        return (
+            IndexSearchResult(containment, match_ss, self.db.location),
+            intersect_mh,
+        )
 
-    def consume(self, intersect_mh): # @CTB rust
+    def consume(self, intersect_mh):
         print('colors: consume! yummy!')
-        _ = self._methodcall(lib.disk_revindex_countergather_consume,
-                             intersect_mh._objptr)
+        _ = self._methodcall(
+            lib.disk_revindex_countergather_consume, intersect_mh._objptr
+        )
 
     @property
     def union_found(self):
@@ -740,12 +746,11 @@ class RevIndex_CounterGather_Colors(RustObject):
 
     def signatures(self):
         size = ffi.new("uintptr_t *")
-        sigs_ptr = self._methodcall(lib.disk_revindex_countergather_signatures,
-                                    self.db._objptr,
-                                    size)
+        sigs_ptr = self._methodcall(
+            lib.disk_revindex_countergather_signatures, self.db._objptr, size
+        )
         size = size[0]
 
-        sigs = []
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
             yield sig
