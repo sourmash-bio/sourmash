@@ -531,3 +531,17 @@ unsafe fn disk_revindex_countergather_signatures(
     Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
 }
 }
+
+
+ffi_fn! {
+unsafe fn disk_revindex_countergather_found_hashes(
+    cg_ptr: *mut SourmashRevIndex_CounterGather,
+    template_ptr: *const SourmashKmerMinHash,
+) -> Result<*const SourmashKmerMinHash> {
+    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
+    let template_mh = SourmashKmerMinHash::as_rust(template_ptr);
+
+    let found_mh = cg.found_hashes(&template_mh);
+    Ok(SourmashKmerMinHash::from_rust(found_mh))
+}
+}

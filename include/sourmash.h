@@ -157,6 +157,9 @@ SourmashSignature *disk_revindex_best_containment(const SourmashDiskRevIndex *db
 void disk_revindex_countergather_consume(SourmashRevIndex_CounterGather *cg_ptr,
                                          const SourmashKmerMinHash *isect_ptr);
 
+const SourmashKmerMinHash *disk_revindex_countergather_found_hashes(SourmashRevIndex_CounterGather *cg_ptr,
+                                                                    const SourmashKmerMinHash *template_ptr);
+
 SourmashSignature *disk_revindex_countergather_peek(const SourmashRevIndex_CounterGather *cg_ptr,
                                                     const SourmashDiskRevIndex *db_ptr,
                                                     const SourmashKmerMinHash *query_ptr,

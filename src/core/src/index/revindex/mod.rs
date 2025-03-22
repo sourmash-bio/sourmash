@@ -110,6 +110,18 @@ impl CounterGather {
         self.counter.len()
     }
 
+    // @CTB maybe use a KmerMinHashBTree?
+    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
+        let mut found_mh = template.clone();
+        found_mh.clear();
+
+        for hash in self.hash_to_color.0.keys() {
+            found_mh.add_hash(*hash);
+        }
+
+        found_mh
+    }
+
     pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
         let (dataset_id, size) = self.counter.k_most_common_ordered(1)[0];
         if size > 0 && size >= threshold {

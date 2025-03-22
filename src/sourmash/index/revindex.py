@@ -699,14 +699,15 @@ class RevIndex_CounterGather_Colors(RustObject):
         self._objptr = objptr
         self.db = db
         query_mh = query_ss.minhash
-        self.found_mh = query_mh.copy_and_clear().to_mutable()
-        self._scaled = self.found_mh.scaled
+        self._scaled = query_mh.scaled
 
-        for n, ss in enumerate(self.signatures()):
-            if n % 100 == 0:
-                print("... adding:", n)
-            intersect_mh = flatten_and_intersect_scaled(ss.minhash, query_mh)
-            self.found_mh += intersect_mh
+        # populate found_mh with found hashes:
+        found_mh_ptr = self._methodcall(
+            lib.disk_revindex_countergather_found_hashes,
+            query_mh.copy_and_clear()._objptr
+        )
+
+        self.found_mh = MinHash._from_objptr(found_mh_ptr)
 
     @property
     def scaled(self):
