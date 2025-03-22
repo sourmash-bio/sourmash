@@ -593,6 +593,8 @@ class DiskRevIndex(RustObject, Index):
         if cg_ptr == ffi.NULL:
             raise ValueError("no matches")
 
+        print('colors: create! poof!')
+
         x = RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
         #for ss in ri.signatures():
         #    ri._orig_signatures[ss.md5sum()] = ss
@@ -708,9 +710,9 @@ class RevIndex_CounterGather_Colors(RustObject):
 
     def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
         raise NotImplementedError
-        pass
 
     def peek(self, query_mh, *, threshold_bp=0):
+        print('colors: peekaboo!')
         threshold_hashes = int(threshold_bp / query_mh.scaled)
         try:
             match_ss_ptr = self._methodcall(lib.disk_revindex_countergather_peek,
@@ -728,6 +730,7 @@ class RevIndex_CounterGather_Colors(RustObject):
         return (IndexSearchResult(containment, match_ss, self.db.location), intersect_mh)
 
     def consume(self, intersect_mh): # @CTB rust
+        print('colors: consume! yummy!')
         _ = self._methodcall(lib.disk_revindex_countergather_consume,
                              intersect_mh._objptr)
 
