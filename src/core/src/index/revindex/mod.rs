@@ -140,7 +140,7 @@ impl CounterGather {
     }
 
     /// consume: remove all hashes from intersect, and adjust counter
-    pub fn consume(&mut self, intersect_mh: &KmerMinHash) -> () {
+    pub fn consume(&mut self, intersect_mh: &KmerMinHash) {
         intersect_mh
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))

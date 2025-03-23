@@ -32,6 +32,7 @@ impl ForeignObject for SourmashDatasetPicklist {
     type RustObject = DatasetPicklist;
 }
 
+#[allow(non_camel_case_types)]
 pub struct SourmashRevIndex_CounterGather;
 impl ForeignObject for SourmashRevIndex_CounterGather {
     type RustObject = CounterGather;
@@ -469,7 +470,7 @@ unsafe fn disk_revindex_countergather_consume(
     let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
     let isect_mh = SourmashKmerMinHash::as_rust(isect_ptr);
 
-    cg.consume(&isect_mh);
+    cg.consume(isect_mh);
 
     Ok(())
 }
@@ -479,19 +480,17 @@ ffi_fn! {
 unsafe fn disk_revindex_countergather_peek(
     cg_ptr: *const SourmashRevIndex_CounterGather,
     db_ptr: *const SourmashDiskRevIndex,
-    query_ptr: *const SourmashKmerMinHash,
     threshold_bp: u64,
 ) -> Result<*mut SourmashSignature> {
     let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
     let revindex: &BasicRevIndex = SourmashDiskRevIndex::as_rust(db_ptr);
-    let query_mh = SourmashKmerMinHash::as_rust(query_ptr); // @CTB remove
 
     let result = cg.peek(threshold_bp as usize);
 
     // if result.is_none() { // @CTB...
     // }
 
-    let (dataset_id, match_size) = result.unwrap();
+    let (dataset_id, _match_size) = result.unwrap();
 
     let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
 
@@ -540,7 +539,7 @@ unsafe fn disk_revindex_countergather_found_hashes(
     let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
     let template_mh = SourmashKmerMinHash::as_rust(template_ptr);
 
-    let found_mh = cg.found_hashes(&template_mh);
+    let found_mh = cg.found_hashes(template_mh);
     Ok(SourmashKmerMinHash::from_rust(found_mh))
 }
 }

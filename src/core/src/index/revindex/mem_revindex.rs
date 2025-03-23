@@ -224,7 +224,7 @@ impl RevIndex {
                 match_size,
                 &query_mh,
                 matches.len(),
-                &orig_query,
+                orig_query,
             )?;
             if let Some(Sketch::MinHash(match_mh)) =
                 result.match_.select_sketch(self.linear.template())

@@ -273,7 +273,7 @@ impl LinearIndex {
                 match_size,
                 &query_mh,
                 matches.len(),
-                &orig_query,
+                orig_query,
             )?;
 
             // Prepare counter for finding the next match by decrementing
@@ -295,10 +295,10 @@ impl LinearIndex {
                 isect_mh.clear();
                 isect_mh.add_many(&matched_hashes)?;
 
-                if isect_mh.size() as usize > *value {
+                if isect_mh.size() > *value {
                     to_remove.insert(*dataset);
                 } else {
-                    *value -= isect_mh.size() as usize;
+                    *value -= isect_mh.size();
                 };
                 query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
             }

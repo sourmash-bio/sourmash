@@ -723,7 +723,6 @@ class RevIndex_CounterGather_Colors(RustObject):
             match_ss_ptr = self._methodcall(
                 lib.disk_revindex_countergather_peek,
                 self.db._objptr,
-                query_mh._objptr,
                 threshold_hashes,
             )
         except sourmash.exceptions.Panic:
