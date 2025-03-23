@@ -346,25 +346,33 @@ impl RevIndexOps for RevIndex {
             .iter_mins()
             .zip(self.db.multi_get_cf(hashes_iter))
             .filter_map(|(k, r)| {
-                let raw = r.ok().unwrap_or(None);
-                raw.map(|raw| {
-                    let new_vals = Datasets::from_slice(&raw).unwrap();
-                    /*
-                                        if let Some(pl) = &picklist {
-                                            let val_set: HashSet<_> = new_vals
-                                                .into_iter()
-                                                .filter(|&i| pl.dataset_ids.contains(&i))
-                                                .collect();
-                                            new_vals = Box::new(val_set.into_iter());
-                                        }
-                    */
-                    let color = compute_color(&new_vals);
-                    query_colors
-                        .entry(color)
-                        .or_insert_with(|| new_vals.clone());
-                    counter.update(new_vals);
-                    (*k, color)
-                })
+                let raw: Option<Vec<u8>> = r.ok().unwrap_or(None);
+
+                if let Some(r) = raw {
+                    let mut new_vals = Datasets::from_slice(&r).unwrap();
+
+                    // filter by picklist?
+                    if let Some(pl) = &picklist {
+                        let val_set: Vec<Idx> = new_vals
+                            .into_iter()
+                            .filter(|&i| pl.dataset_ids.contains(&i))
+                            .collect();
+                        new_vals = Datasets::new(&val_set[..]);
+                    }
+
+                    if new_vals.len() > 0 {
+                        let color = compute_color(&new_vals);
+                        query_colors
+                            .entry(color)
+                            .or_insert_with(|| new_vals.clone());
+                        counter.update(new_vals);
+                        Some((*k, color))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             })
             .collect();
 
