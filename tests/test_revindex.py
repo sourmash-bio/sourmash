@@ -474,7 +474,7 @@ def test_rocksdb_prefetch_to_cg_colors_4():
 
     cg.consume(isect_mh)
 
-    assert cg.peek(ss63.minhash) == [] # @CTB why?
+    assert cg.peek(ss63.minhash) == []  # @CTB why?
 
 
 def test_rocksdb_prefetch_to_cg_colors_5():
