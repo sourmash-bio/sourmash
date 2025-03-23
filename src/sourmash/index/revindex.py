@@ -727,12 +727,12 @@ class RevIndex_CounterGather_Colors(RustObject):
                 threshold_hashes,
             )
         except sourmash.exceptions.Panic:
-            return []
+            raise ValueError
 
         match_ss = SourmashSignature._from_objptr(match_ss_ptr)
         match_mh = match_ss.minhash
         intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
-        containment = len(intersect_mh) / len(match_mh)
+        containment = len(intersect_mh) / len(query_mh)
 
         return (
             IndexSearchResult(containment, match_ss, self.db.location),
