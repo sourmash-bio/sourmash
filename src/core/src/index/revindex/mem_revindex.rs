@@ -8,12 +8,15 @@ use log::{debug, info};
 use rayon::prelude::*;
 
 use crate::collection::Collection;
+use crate::collection::CollectionSet;
 use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps};
+use crate::index::revindex::{
+    self as module, CounterGather, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors,
+    RevIndexOps,
+};
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::manifest::Record;
-use crate::collection::CollectionSet;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
@@ -287,7 +290,11 @@ impl RevIndex {
 }
 
 impl RevIndexOps for RevIndex {
-    fn counter_for_query(&self, query: &KmerMinHash, picklist: Option<DatasetPicklist>) -> SigCounter {
+    fn counter_for_query(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> SigCounter {
         query
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
@@ -395,7 +402,7 @@ impl RevIndexOps for RevIndex {
         unimplemented!()
     }
 
-    fn compact(&self) { }
+    fn compact(&self) {}
 
     fn flush(&self) -> Result<()> {
         Ok(())

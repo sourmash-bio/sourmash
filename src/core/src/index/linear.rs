@@ -268,13 +268,8 @@ impl LinearIndex {
             };
 
             let query_mh = KmerMinHash::from(query.clone());
-            let result = self.gather_round(
-                dataset_id,
-                match_size,
-                &query_mh,
-                matches.len(),
-                orig_query,
-            )?;
+            let result =
+                self.gather_round(dataset_id, match_size, &query_mh, matches.len(), orig_query)?;
 
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
