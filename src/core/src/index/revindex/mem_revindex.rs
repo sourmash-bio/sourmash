@@ -293,7 +293,7 @@ impl RevIndexOps for RevIndex {
     fn counter_for_query(
         &self,
         query: &KmerMinHash,
-        picklist: Option<DatasetPicklist>,
+        _picklist: Option<DatasetPicklist>,
     ) -> SigCounter {
         query
             .iter_mins()
@@ -329,11 +329,15 @@ impl RevIndexOps for RevIndex {
         }
     }
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
+    fn matches_from_counter(
+        &self,
+        _counter: SigCounter,
+        _threshold: usize,
+    ) -> Vec<(String, usize)> {
         vec![]
     }
 
-    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+    fn records_from_counter(&self, _counter: SigCounter, _threshold: usize) -> Vec<&Record> {
         vec![]
     }
 
@@ -342,7 +346,7 @@ impl RevIndexOps for RevIndex {
         cg: &mut CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
-        selection: Option<Selection>,
+        _selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
@@ -394,11 +398,11 @@ impl RevIndexOps for RevIndex {
         Ok(matches)
     }
 
-    fn update(mut self, collection: CollectionSet) -> Result<module::RevIndex> {
+    fn update(self, _collection: CollectionSet) -> Result<module::RevIndex> {
         Ok(module::RevIndex::Mem(self))
     }
 
-    fn check(&self, quick: bool) -> DbStats {
+    fn check(&self, _quick: bool) -> DbStats {
         unimplemented!()
     }
 

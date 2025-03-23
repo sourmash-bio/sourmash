@@ -43,7 +43,8 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/errors.rs \
                     src/core/cbindgen.toml
 	cd src/core && \
-	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@ -v
+	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@ -v && \
+	touch ../../$@
 
 coverage: all
 	tox -e coverage
