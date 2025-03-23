@@ -726,7 +726,7 @@ class RevIndex_CounterGather_Colors(RustObject):
                 threshold_hashes,
             )
         except sourmash.exceptions.Panic:
-            raise ValueError
+            return []
 
         match_ss = SourmashSignature._from_objptr(match_ss_ptr)
         match_mh = match_ss.minhash

@@ -6,6 +6,7 @@ use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::mem_revindex;
+use crate::index::revindex::RevIndexOps;
 use crate::index::Index;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
@@ -209,7 +210,7 @@ unsafe fn revindex_gather(
     let mut cg = revindex.prepare_gather_counters(mh, None);
 
     let results: Vec<(f64, Signature, String)> = revindex
-        .gather(&mut cg, threshold, mh)
+        .gather(&mut cg, threshold, mh, None)
         .unwrap() // TODO: proper error handling
         .into_iter()
         .map(|r| {

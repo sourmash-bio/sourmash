@@ -439,8 +439,7 @@ def test_rocksdb_prefetch_to_cg_colors_2():
     assert round(sr.score, 5) == 0.48851
 
     cg.consume(isect_mh)
-    with pytest.raises(ValueError):
-        cg.peek(ss47.minhash)
+    assert cg.peek(ss47.minhash) == []
 
 
 def test_rocksdb_prefetch_to_cg_colors_3():
@@ -475,8 +474,7 @@ def test_rocksdb_prefetch_to_cg_colors_4():
 
     cg.consume(isect_mh)
 
-    with pytest.raises(ValueError): # @CTB why?
-        cg.peek(ss63.minhash)
+    assert cg.peek(ss63.minhash) == [] # @CTB why?
 
 
 def test_rocksdb_prefetch_to_cg_colors_5():

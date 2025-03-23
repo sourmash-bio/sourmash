@@ -10,8 +10,10 @@ use rayon::prelude::*;
 use crate::collection::Collection;
 use crate::encodings::{Colors, Idx};
 use crate::index::linear::LinearIndex;
-use crate::index::revindex::{CounterGather, DatasetPicklist, Datasets, HashToColor, QueryColors};
+use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps};
 use crate::index::{GatherResult, Index, SigCounter};
+use crate::manifest::Record;
+use crate::collection::CollectionSet;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
@@ -199,11 +201,141 @@ impl RevIndex {
         self.linear.search(counter, similarity, threshold)
     }
 
-    pub fn gather(
+    pub fn template(&self) -> Sketch {
+        self.linear.template().clone()
+    }
+
+    pub fn scaled(&self) -> ScaledType {
+        if let Sketch::MinHash(mh) = self.linear.template() {
+            mh.clone().scaled() // @CTB avoid clone
+        } else {
+            unimplemented!()
+        }
+    }
+
+    // TODO: mh should be a sketch, or even a sig...
+    pub(crate) fn find_signatures(
+        &self,
+        mh: &KmerMinHash,
+        threshold: f64,
+        containment: bool,
+        _ignore_scaled: bool,
+    ) -> Result<Vec<(f64, Signature, String)>> {
+        let index_scaled = self.scaled();
+        let query_scaled = mh.scaled();
+
+        // @CTB avoid clones?
+        let query_mh = {
+            if query_scaled < index_scaled {
+                mh.clone()
+                    .downsample_scaled(index_scaled)
+                    .expect("cannot downsample query")
+            } else {
+                mh.clone()
+            }
+        };
+
+        // TODO: proper threshold calculation
+        let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
+
+        let counter = self.counter_for_query(&query_mh, None);
+
+        debug!(
+            "number of matching signatures for hashes: {}",
+            counter.len()
+        );
+
+        let mut results = vec![];
+        for (dataset_id, size) in counter.most_common() {
+            if size < threshold {
+                break;
+            };
+
+            let match_sig = self.linear.sig_for_dataset(dataset_id)?;
+            let match_path = self
+                .linear
+                .collection()
+                .record_for_dataset(dataset_id)?
+                .internal_location();
+
+            let mut match_mh = None;
+            //@CTB use something other than mh here?
+            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {
+                match_mh = Some(mh);
+            }
+            let match_mh = match_mh.unwrap();
+
+            if size >= threshold {
+                let score = if containment {
+                    size as f64 / query_mh.size() as f64
+                } else {
+                    query_mh
+                        .jaccard(match_mh)
+                        .expect("cannot calculate Jaccard")
+                };
+                let filename = match_path.to_string();
+                let mut sig: Signature = match_sig.clone().into();
+                sig.reset_sketches();
+                sig.push(Sketch::MinHash(match_mh.clone()));
+                results.push((score, sig, filename));
+            } else {
+                break;
+            };
+        }
+        Ok(results)
+    }
+}
+
+impl RevIndexOps for RevIndex {
+    fn counter_for_query(&self, query: &KmerMinHash, picklist: Option<DatasetPicklist>) -> SigCounter {
+        query
+            .iter_mins()
+            .filter_map(|hash| self.hash_to_color.get(hash))
+            .flat_map(|color| self.colors.indices(color))
+            .cloned()
+            .collect()
+    }
+
+    fn prepare_gather_counters(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather {
+        let counter = self.counter_for_query(query, picklist);
+        let hash_to_color = self.hash_to_color.clone();
+        // eprintln!("hash_to_color: {:?}", hash_to_color);
+        let query_colors: QueryColors = query
+            .iter_mins()
+            .filter_map(|hash| hash_to_color.get(hash))
+            .map(|color| (*color, self.colors.indices(color)))
+            .map(|(color, indices)| (color, indices.cloned().collect::<Vec<u32>>()))
+            // @CTB could we add a 'from' to Datasets for this?
+            .map(|(color, indices)| (color, Datasets::new(&indices)))
+            .collect();
+
+        //eprintln!("query_colors: {:?}", query_colors);
+
+        CounterGather {
+            counter,
+            query_colors,
+            hash_to_color,
+        }
+    }
+
+    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
+        vec![]
+    }
+
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+        vec![]
+    }
+
+    fn gather(
         &self,
         cg: &mut CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
+        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
@@ -255,123 +387,30 @@ impl RevIndex {
         Ok(matches)
     }
 
-    pub fn template(&self) -> Sketch {
-        self.linear.template().clone()
+    fn update(mut self, collection: CollectionSet) -> Result<module::RevIndex> {
+        Ok(module::RevIndex::Mem(self))
     }
 
-    pub fn scaled(&self) -> ScaledType {
-        if let Sketch::MinHash(mh) = self.linear.template() {
-            mh.clone().scaled() // @CTB avoid clone
-        } else {
-            unimplemented!()
-        }
+    fn check(&self, quick: bool) -> DbStats {
+        unimplemented!()
     }
 
-    // TODO: mh should be a sketch, or even a sig...
-    pub(crate) fn find_signatures(
-        &self,
-        mh: &KmerMinHash,
-        threshold: f64,
-        containment: bool,
-        _ignore_scaled: bool,
-    ) -> Result<Vec<(f64, Signature, String)>> {
-        let index_scaled = self.scaled();
-        let query_scaled = mh.scaled();
+    fn compact(&self) { }
 
-        // @CTB avoid clones?
-        let query_mh = {
-            if query_scaled < index_scaled {
-                mh.clone()
-                    .downsample_scaled(index_scaled)
-                    .expect("cannot downsample query")
-            } else {
-                mh.clone()
-            }
-        };
-
-        // TODO: proper threshold calculation
-        let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
-
-        let counter = self.counter_for_query(&query_mh);
-
-        debug!(
-            "number of matching signatures for hashes: {}",
-            counter.len()
-        );
-
-        let mut results = vec![];
-        for (dataset_id, size) in counter.most_common() {
-            if size < threshold {
-                break;
-            };
-
-            let match_sig = self.linear.sig_for_dataset(dataset_id)?;
-            let match_path = self
-                .linear
-                .collection()
-                .record_for_dataset(dataset_id)?
-                .internal_location();
-
-            let mut match_mh = None;
-            //@CTB use something other than mh here?
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {
-                match_mh = Some(mh);
-            }
-            let match_mh = match_mh.unwrap();
-
-            if size >= threshold {
-                let score = if containment {
-                    size as f64 / query_mh.size() as f64
-                } else {
-                    query_mh
-                        .jaccard(match_mh)
-                        .expect("cannot calculate Jaccard")
-                };
-                let filename = match_path.to_string();
-                let mut sig: Signature = match_sig.clone().into();
-                sig.reset_sketches();
-                sig.push(Sketch::MinHash(match_mh.clone()));
-                results.push((score, sig, filename));
-            } else {
-                break;
-            };
-        }
-        Ok(results)
+    fn flush(&self) -> Result<()> {
+        Ok(())
     }
 
-    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
-        query
-            .iter_mins()
-            .filter_map(|hash| self.hash_to_color.get(hash))
-            .flat_map(|color| self.colors.indices(color))
-            .cloned()
-            .collect()
+    fn collection(&self) -> &CollectionSet {
+        &self.linear.collection()
     }
 
-    pub fn prepare_gather_counters(
-        &self,
-        query: &KmerMinHash,
-        picklist: Option<DatasetPicklist>,
-    ) -> CounterGather {
-        let counter = self.counter_for_query(query);
-        let hash_to_color = self.hash_to_color.clone();
-        // eprintln!("hash_to_color: {:?}", hash_to_color);
-        let query_colors: QueryColors = query
-            .iter_mins()
-            .filter_map(|hash| hash_to_color.get(hash))
-            .map(|color| (*color, self.colors.indices(color)))
-            .map(|(color, indices)| (color, indices.cloned().collect::<Vec<u32>>()))
-            // @CTB could we add a 'from' to Datasets for this?
-            .map(|(color, indices)| (color, Datasets::new(&indices)))
-            .collect();
+    fn internalize_storage(&mut self) -> Result<()> {
+        Ok(())
+    }
 
-        //eprintln!("query_colors: {:?}", query_colors);
-
-        CounterGather {
-            counter,
-            query_colors,
-            hash_to_color,
-        }
+    fn convert(&self, _output_db: module::RevIndex) -> Result<()> {
+        todo!()
     }
 }
 
