@@ -35,7 +35,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 }
 
 #[derive(Clone)]
-pub struct RevIndex {
+pub struct DiskRevIndex {
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
@@ -74,7 +74,7 @@ pub fn repair(path: &Path) {
 }
 */
 
-impl RevIndex {
+impl DiskRevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
         let mut opts = db_options();
         opts.create_if_missing(true);
@@ -127,7 +127,7 @@ impl RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(index))
+        Ok(module::RevIndex::Disk(index))
     }
 
     pub fn open<P: AsRef<Path>>(
@@ -164,7 +164,7 @@ impl RevIndex {
             false,
         )?));
 
-        Ok(module::RevIndex::Plain(Self {
+        Ok(module::RevIndex::Disk(Self {
             db,
             collection,
             processed,
@@ -281,7 +281,7 @@ impl RevIndex {
     }
 }
 
-impl RevIndexOps for RevIndex {
+impl RevIndexOps for DiskRevIndex {
     fn counter_for_query(
         &self,
         query: &KmerMinHash,
@@ -565,7 +565,7 @@ impl RevIndexOps for RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(self))
+        Ok(module::RevIndex::Disk(self))
     }
 
     fn check(&self, quick: bool) -> DbStats {

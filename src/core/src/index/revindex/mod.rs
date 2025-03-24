@@ -49,7 +49,7 @@ pub struct CounterGather {
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
     //Color(color_revindex::ColorRevIndex),
-    Plain(disk_revindex::RevIndex),
+    Disk(disk_revindex::DiskRevIndex),
     Mem(mem_revindex::MemRevIndex),
 }
 
@@ -281,7 +281,7 @@ impl RevIndex {
         if colors {
             todo!() //color_revindex::ColorRevIndex::create(index)
         } else {
-            disk_revindex::RevIndex::create(index.as_ref(), collection)
+            disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
         }
     }
 
@@ -294,7 +294,7 @@ impl RevIndex {
             //       due to pending unmerged colors
             todo!() //color_revindex::ColorRevIndex::open(index, false)
         } else {
-            disk_revindex::RevIndex::open(index, read_only, spec)
+            disk_revindex::DiskRevIndex::open(index, read_only, spec)
         }
     }
 }

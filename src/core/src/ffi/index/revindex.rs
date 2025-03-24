@@ -56,7 +56,7 @@ unsafe fn revindex_new_from_rocksdb(
         CStr::from_ptr(path_ptr)
     }.to_str()?;
 
-    let rocksdb = disk_revindex::RevIndex::open(
+    let rocksdb = disk_revindex::DiskRevIndex::open(
         rocksdb_path,
         true,
         None
@@ -91,7 +91,7 @@ unsafe fn revindex_disk_create(
 
     let rocksdb_path = Path::new(rocksdb_path);
 
-    let mut revindex = disk_revindex::RevIndex::create(rocksdb_path, cs).expect("cannot create RocksDB");
+    let mut revindex = disk_revindex::DiskRevIndex::create(rocksdb_path, cs).expect("cannot create RocksDB");
     revindex.internalize_storage().expect("failed to internalize storage.");
     Ok(())
 }
