@@ -334,7 +334,7 @@ def test_rocksdb_ksize():
 
 
 def test_create_dataset_picklist_1():
-    dataset_picks = revindex.DiskRevIndex_DatasetPicklist([0, 1])
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
 
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
@@ -358,7 +358,7 @@ def test_create_dataset_picklist_1():
 
 
 def test_create_dataset_picklist_2():
-    dataset_picks = revindex.DiskRevIndex_DatasetPicklist([0, 1])
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
 
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
@@ -382,7 +382,7 @@ def test_create_dataset_picklist_2():
 
 
 def test_create_dataset_picklist_3():
-    dataset_picks = revindex.DiskRevIndex_DatasetPicklist([0, 1])
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
 
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
