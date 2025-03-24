@@ -120,9 +120,11 @@ class RevIndex(RustObject, Index):
             return []
 
         match_mh = match_ss.minhash
-        query_mh = query_mh.downsample(scaled=match_mh.scaled)
-        intersect_mh = flatten_and_intersect_scaled(match_mh, query_mh)
-        containment = intersect_mh.contained_by(query_mh)
+        common_scaled = max(match_mh.scaled, query_mh.scaled)
+        query_mh = query_mh.flatten().downsample(scaled=common_scaled)
+        match_mh = match_mh.flatten().downsample(scaled=common_scaled)
+        intersect_mh = query_mh & match_mh
+        containment = query_mh.contained_by(intersect_mh)
 
         return (IndexSearchResult(containment, match_ss, self.location), intersect_mh)
 

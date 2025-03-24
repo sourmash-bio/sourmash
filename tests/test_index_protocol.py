@@ -1157,7 +1157,8 @@ def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
     assert len(results) == 1
 
     sr, overlap_count = results[0]
-    assert sr.score == 0.5
+    print(sr, overlap_count)
+    assert sr.score == 0.5, sr
     assert overlap_count == 10
 
     # any one of the three is valid
