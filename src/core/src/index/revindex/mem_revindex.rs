@@ -346,7 +346,7 @@ impl RevIndexOps for MemRevIndex {
 
     fn gather(
         &self,
-        cg: &mut CounterGather,
+        mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
         _selection: Option<Selection>,
@@ -601,7 +601,7 @@ mod test {
         let mut counter_rev = index.prepare_gather_counters(&query_mh, None);
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
-        let results_rev = index.gather(&mut counter_rev, 0, &query_mh, None).unwrap();
+        let results_rev = index.gather(counter_rev, 0, &query_mh, None).unwrap();
         let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
         assert_eq!(results_rev.len(), 1);
         assert_eq!(results_rev, results_linear);
@@ -635,9 +635,9 @@ mod test {
             _ => unimplemented!(),
         };
 
-        let mut gather_cg = index.prepare_gather_counters(&query_mh, None);
+        let gather_cg = index.prepare_gather_counters(&query_mh, None);
         // eprintln!("gather_cg: {:?}", gather_cg);
-        let results = index.gather(&mut gather_cg, 0, &query_mh, None).unwrap();
+        let results = index.gather(gather_cg, 0, &query_mh, None).unwrap();
 
         assert_eq!(results.len(), 1);
 
@@ -672,9 +672,9 @@ mod test {
         };
 
         // run the CounterGather-style gather:
-        let mut gather_cg = index.prepare_gather_counters(&query_mh, None);
+        let gather_cg = index.prepare_gather_counters(&query_mh, None);
         // eprintln!("gather_cg: {:?}", gather_cg);
-        let results = index.gather(&mut gather_cg, 0, &query_mh, None).unwrap();
+        let results = index.gather(gather_cg, 0, &query_mh, None).unwrap();
         assert_eq!(results.len(), 3);
 
         // compare to linear gather.
@@ -735,7 +735,7 @@ mod test {
         let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            &mut cg,
+            cg,
             5, // 50kb threshold
             &query,
             Some(selection),

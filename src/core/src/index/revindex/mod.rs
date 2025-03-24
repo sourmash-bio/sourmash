@@ -112,7 +112,7 @@ pub trait RevIndexOps {
 
     fn gather(
         &self,
-        cg: &mut CounterGather,
+        cg: CounterGather,
         threshold: usize,
         query: &KmerMinHash,
         selection: Option<Selection>,
@@ -264,7 +264,7 @@ impl FromIterator<(HashIntoType, Color)> for HashToColor {
 
 impl RevIndex {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool) {
+         pub fn repair(index: &Path, colors: bool) {
             if colors {
                 color_revindex::repair(index);
             } else {
@@ -649,7 +649,7 @@ mod test {
 
         let mut cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(&mut cg, 0, &query, Some(selection))?;
+        let matches = index.gather(cg, 0, &query, Some(selection))?;
 
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].name(), ""); // signature name is empty
@@ -710,7 +710,7 @@ mod test {
         let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            &mut cg,
+            cg,
             5, // 50kb threshold
             &query,
             Some(selection),
@@ -857,7 +857,7 @@ mod test {
 
         let mut cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(&mut cg, 0, &query, Some(selection))?;
+        let matches = index.gather(cg, 0, &query, Some(selection))?;
 
         // should be 3.
         // see sourmash#3193.
@@ -986,10 +986,10 @@ mod test {
 
         let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
 
-        let mut cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None);
 
         let matches_external = index
-            .gather(&mut cg, 0, &query, Some(selection.clone()))
+            .gather(cg, 0, &query, Some(selection.clone()))
             .expect("failed to gather!");
 
         {
@@ -998,9 +998,9 @@ mod test {
                 .internalize_storage()
                 .expect("Error internalizing storage");
 
-            let mut cg = index.prepare_gather_counters(&query, None);
+            let cg = index.prepare_gather_counters(&query, None);
 
-            let matches_internal = index.gather(&mut cg, 0, &query, Some(selection.clone()))?;
+            let matches_internal = index.gather(cg, 0, &query, Some(selection.clone()))?;
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
@@ -1008,9 +1008,9 @@ mod test {
 
         let index = RevIndex::open(new_path, false, None)?;
 
-        let mut cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_moved = index.gather(&mut cg, 0, &query, Some(selection.clone()))?;
+        let matches_moved = index.gather(cg, 0, &query, Some(selection.clone()))?;
         assert_eq!(matches_external, matches_moved);
 
         Ok(())

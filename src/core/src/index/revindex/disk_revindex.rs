@@ -41,14 +41,6 @@ pub struct DiskRevIndex {
     processed: Arc<RwLock<Datasets>>,
 }
 
-/// Track a name/minhash for reporting purposes. @CTB may not be necessary
-pub struct SignatureInfo {
-    pub location: String,
-    pub name: String,
-    pub md5sum: String,
-    pub minhash: KmerMinHash,
-}
-
 pub(crate) fn merge_datasets(
     _: &[u8],
     existing_val: Option<&[u8]>,
@@ -429,7 +421,7 @@ impl RevIndexOps for DiskRevIndex {
 
     fn gather(
         &self,
-        cg: &mut CounterGather,
+        mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
@@ -507,10 +499,8 @@ impl RevIndexOps for DiskRevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            // @CTB use isect_mh here instead of match_mh?
-            query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
+            query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
 
-            //cg.consume(dataset_id, &isect_mh); // @CTB dataset_id
             cg.consume(&isect_mh);
         }
         Ok(matches)
