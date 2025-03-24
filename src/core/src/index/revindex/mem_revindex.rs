@@ -88,6 +88,7 @@ impl LinearIndex {
 }
 
 impl MemRevIndex {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(
         search_sigs: &[PathBuf],
         selection: &Selection,

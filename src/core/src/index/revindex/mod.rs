@@ -154,7 +154,7 @@ impl CounterGather {
     }
 
     pub fn dataset_ids(&self) -> Vec<Idx> {
-        self.counter.keys().map(|k| *k).collect()
+        self.counter.keys().copied().collect()
     }
 
     /// consume: remove all hashes from intersect, and adjust counter
