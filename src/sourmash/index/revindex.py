@@ -662,6 +662,7 @@ class RevIndex_CounterGather_Colors(RustObject):
     """
     Implementation of CounterGather using colors, internally.
     """
+    __dealloc_func__ = lib.revindex_countergather_free
 
     def __init__(self, objptr, query_ss, db):
         self._objptr = objptr

@@ -67,7 +67,7 @@ unsafe fn revindex_new_from_rocksdb(
 }
 
 ffi_fn! {
-unsafe fn revindex_disk_create( // @CTB rename to create
+unsafe fn revindex_disk_create(
     sigs_ptr: *const *const SourmashSignature,
     insigs: usize,
     path_ptr: *const c_char,
@@ -402,7 +402,7 @@ unsafe fn revindex_prefetch_to_countergather(
     // picklist?
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
-    // do search & get matches - @CTB picklist needed!
+    // do search & get matches
     let counter = revindex.prepare_gather_counters(&query_mh, dataset_picklist);
 
     Ok(SourmashRevIndex_CounterGather::from_rust(counter))
