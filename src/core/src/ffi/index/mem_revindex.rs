@@ -10,7 +10,7 @@ use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::mem_revindex;
 // use crate::index::revindex::disk_revindex;
-use crate::index::revindex::{CounterGather, RevIndexOps};
+use crate::index::revindex::{self as module, CounterGather, RevIndexOps};
 use crate::index::Index;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
@@ -21,7 +21,7 @@ use crate::ScaledType;
 pub struct SourmashMemRevIndex;
 
 impl ForeignObject for SourmashMemRevIndex {
-    type RustObject = mem_revindex::RevIndex;
+    type RustObject = module::RevIndex;
 }
 
 // TODO: remove this when it is possible to pass Selection thru the FFI
@@ -167,6 +167,11 @@ unsafe fn revindex_search(
         unimplemented!()
     };
 
+    let revindex = match revindex {
+        module::RevIndex::Mem(r) => r,
+        _ => unimplemented!(),
+    };
+
     let results: Vec<(f64, Signature, String)> = revindex
         .find_signatures(mh, threshold, do_containment, true)?
         .into_iter()
@@ -241,6 +246,12 @@ unsafe fn revindex_gather(
 #[no_mangle]
 pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashMemRevIndex) -> ScaledType {
     let revindex = SourmashMemRevIndex::as_rust(ptr);
+
+    let revindex = match revindex {
+        module::RevIndex::Mem(r) => r,
+        _ => unimplemented!(),
+    };
+
     if let Sketch::MinHash(mh) = revindex.template() {
         mh.scaled()
     } else {
@@ -251,6 +262,13 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashMemRevIndex) -> Sca
 #[no_mangle]
 pub unsafe extern "C" fn revindex_len(ptr: *const SourmashMemRevIndex) -> u64 {
     let revindex = SourmashMemRevIndex::as_rust(ptr);
+
+    // @CTB implement for RevIndexOps
+    let revindex = match revindex {
+        module::RevIndex::Mem(r) => r,
+        _ => unimplemented!(),
+    };
+
     revindex.len() as u64
 }
 
@@ -260,6 +278,12 @@ unsafe fn revindex_signatures(
     size: *mut usize,
 ) -> Result<*mut *mut SourmashSignature> {
     let revindex = SourmashMemRevIndex::as_rust(ptr);
+
+    // @CTB implement for RevIndexOps
+    let revindex = match revindex {
+        module::RevIndex::Mem(r) => r,
+        _ => unimplemented!(),
+    };
 
     let sigs = revindex.signatures();
 
@@ -273,122 +297,5 @@ unsafe fn revindex_signatures(
     *size = b.len();
 
     Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
-}
-}
-
-// return a CounterGather object with prefetch results
-
-ffi_fn! {
-unsafe fn mem_revindex_prefetch_to_countergather(
-    db_ptr: *const SourmashMemRevIndex,
-    query_ptr: *const SourmashSignature,
-    dataset_picklist_ptr: *const SourmashDatasetPicklist,
-) -> Result<*mut SourmashRevIndex_CounterGather> {
-    let revindex: &mem_revindex::RevIndex = SourmashMemRevIndex::as_rust(db_ptr);
-    let sig = SourmashSignature::as_rust(query_ptr);
-
-    // extract KmerMinHash for query
-    let query_mh: KmerMinHash = sig.clone()
-        .try_into().expect("cannot get kmerminhash");
-
-    // picklist?
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
-
-    // do search & get matches - @CTB picklist needed!
-    let counter = revindex.prepare_gather_counters(&query_mh, dataset_picklist);
-
-    Ok(SourmashRevIndex_CounterGather::from_rust(counter))
-}
-}
-
-ffi_fn! {
-unsafe fn mem_revindex_countergather_consume(
-    cg_ptr: *mut SourmashRevIndex_CounterGather,
-    isect_ptr: *const SourmashKmerMinHash,
-) -> Result<()> {
-    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
-    let isect_mh = SourmashKmerMinHash::as_rust(isect_ptr);
-
-    cg.consume(isect_mh);
-
-    Ok(())
-}
-}
-
-ffi_fn! {
-unsafe fn mem_revindex_countergather_peek(
-    cg_ptr: *const SourmashRevIndex_CounterGather,
-    db_ptr: *const SourmashMemRevIndex,
-    threshold_bp: u64,
-) -> Result<*mut SourmashSignature> {
-    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
-    let revindex: &mem_revindex::RevIndex = SourmashMemRevIndex::as_rust(db_ptr);
-
-    let result = cg.peek(threshold_bp as usize);
-
-    // if result.is_none() { // @CTB...
-    // }
-
-    let (dataset_id, _match_size) = result.unwrap();
-
-    let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-
-    Ok(SourmashSignature::from_rust(match_sig.into()))
-}
-}
-
-ffi_fn! {
-unsafe fn mem_revindex_countergather_signatures(
-    cg_ptr: *const SourmashRevIndex_CounterGather,
-    db_ptr: *const SourmashMemRevIndex,
-    size: *mut usize,
-) -> Result<*mut *mut SourmashSignature> {
-    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
-    let revindex: &mem_revindex::RevIndex = SourmashMemRevIndex::as_rust(db_ptr);
-
-    let coll = revindex.collection();
-    let sigs: Vec<Signature> = cg
-        .dataset_ids()
-        .into_iter()
-        .map(|idx| { coll
-                     .sig_for_dataset(idx)
-                     .expect("cannot retrieve sig!?")
-                     .into()
-        })
-        .collect();
-
-    // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*mut SourmashSignature> = sigs
-        .into_iter()
-        .map(|x| Box::into_raw(Box::new(x)) as *mut SourmashSignature)
-        .collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
-}
-}
-
-ffi_fn! {
-unsafe fn mem_revindex_countergather_found_hashes(
-    cg_ptr: *mut SourmashRevIndex_CounterGather,
-    template_ptr: *const SourmashKmerMinHash,
-) -> Result<*const SourmashKmerMinHash> {
-    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
-    let template_mh = SourmashKmerMinHash::as_rust(template_ptr);
-
-    let found_mh = cg.found_hashes(template_mh);
-    Ok(SourmashKmerMinHash::from_rust(found_mh))
-}
-}
-
-ffi_fn! {
-unsafe fn mem_revindex_countergather_len(
-    cg_ptr: *mut SourmashRevIndex_CounterGather,
-) -> Result<u64> {
-    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
-
-    Ok(cg.len() as u64)
 }
 }

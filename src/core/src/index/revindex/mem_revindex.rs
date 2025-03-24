@@ -94,14 +94,16 @@ impl RevIndex {
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
         _keep_sigs: bool,
-    ) -> Result<RevIndex> {
+    ) -> Result<module::RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let collection = Collection::from_paths(search_sigs)?.select(selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
-        Ok(linear.index(threshold, merged_query, queries))
+        let idx = linear.index(threshold, merged_query, queries);
+
+        Ok(module::RevIndex::Mem(idx))
     }
 
     pub fn from_zipfile<P: AsRef<Path>>(
@@ -110,14 +112,16 @@ impl RevIndex {
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
         _keep_sigs: bool,
-    ) -> Result<RevIndex> {
+    ) -> Result<module::RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let collection = Collection::from_zipfile(zipfile)?.select(selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
-        Ok(linear.index(threshold, merged_query, queries))
+
+        let idx = linear.index(threshold, merged_query, queries);
+        Ok(module::RevIndex::Mem(idx))
     }
 
     fn merge_queries(qs: &[KmerMinHash], threshold: usize) -> Option<KmerMinHash> {
@@ -137,7 +141,7 @@ impl RevIndex {
         selection: &Selection,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
-    ) -> Result<RevIndex> {
+    ) -> Result<module::RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
@@ -146,7 +150,7 @@ impl RevIndex {
 
         let idx = linear.index(threshold, merged_query, queries);
 
-        Ok(idx)
+        Ok(module::RevIndex::Mem(idx))
     }
 
     fn map_hashes_colors(
