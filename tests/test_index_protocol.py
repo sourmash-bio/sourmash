@@ -18,7 +18,7 @@ from sourmash.index import (
 )
 from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
-from sourmash.index.revindex import RevIndex, DiskRevIndex
+from sourmash.index.revindex import MemRevIndex, DiskRevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
@@ -150,7 +150,7 @@ def build_sqlite_index(runtmp):
 def build_revindex(runtmp):
     ss2, ss47, ss63 = _load_three_sigs()
 
-    lidx = RevIndex(template=ss2.minhash)
+    lidx = MemRevIndex(template=ss2.minhash)
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
@@ -707,7 +707,7 @@ class CounterGather_LCA:
 def build_RevIndex_CounterGather(query):
     from sourmash.index.revindex import RevIndex_CounterGather
 
-    ri = RevIndex(template=query.minhash)
+    ri = MemRevIndex(template=query.minhash)
     cg = RevIndex_CounterGather(query, ri, 0, allow_insert=True)
     return cg
 

@@ -7,7 +7,7 @@ import sourmash_tst_utils as utils
 import shutil
 
 from sourmash.index import revindex
-from sourmash.index.revindex import RevIndex, DiskRevIndex
+from sourmash.index.revindex import MemRevIndex, DiskRevIndex
 from sourmash.signature import load_one_signature_from_json
 from sourmash.search import JaccardSearch, SearchType
 from sourmash import SourmashSignature
@@ -42,7 +42,7 @@ class JaccardSearchBestOnly_ButIgnore(JaccardSearch):  # @CTB remove?
 def test_revindex_empty():
     sig2 = utils.get_test_data("2.fa.sig")
     ss2 = load_one_signature_from_json(sig2, ksize=31)
-    lidx = RevIndex(template=ss2.minhash)
+    lidx = MemRevIndex(template=ss2.minhash)
 
     with pytest.raises(ValueError):
         list(lidx.signatures())
@@ -58,7 +58,7 @@ def test_revindex_index_search():
     ss47 = load_one_signature_from_json(sig47)
     ss63 = load_one_signature_from_json(sig63)
 
-    lidx = RevIndex(template=ss2.minhash)
+    lidx = MemRevIndex(template=ss2.minhash)
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
@@ -105,7 +105,7 @@ def test_revindex_index_search_retrieve_orig():
 
     # store downsampled:
     ds_mh = ss2.minhash.downsample(scaled=10_000)
-    lidx = RevIndex(template=ds_mh)
+    lidx = MemRevIndex(template=ds_mh)
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
@@ -150,7 +150,7 @@ def test_revindex_best_containment():
     ss47 = load_one_signature_from_json(sig47)
     ss63 = load_one_signature_from_json(sig63)
 
-    lidx = RevIndex(template=ss2.minhash)
+    lidx = MemRevIndex(template=ss2.minhash)
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
@@ -178,7 +178,7 @@ def test_revindex_gather_ignore():
     ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     # construct an index...
-    lidx = RevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
+    lidx = MemRevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
 
     # ...now search with something that should ignore sig47, the exact match.
     search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
@@ -207,7 +207,7 @@ def test_revindex_insert_after_init():
     ss47 = load_one_signature_from_json(sig47)
     load_one_signature_from_json(sig63)
 
-    lidx = RevIndex(template=ss2.minhash)
+    lidx = MemRevIndex(template=ss2.minhash)
     lidx.insert(ss2)
     lidx._init_inner()
 
@@ -422,7 +422,7 @@ def test_rocksdb_prefetch_to_cg_colors_1():
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(ss63, threshold_bp=0)
+    cg = db.counter_gather(ss63, threshold_bp=0)
     sr, isect_mh = cg.peek(ss63.minhash)
     assert sr.score == 1.0
 
@@ -434,7 +434,7 @@ def test_rocksdb_prefetch_to_cg_colors_2():
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(ss47, threshold_bp=0)
+    cg = db.counter_gather(ss47, threshold_bp=0)
     sr, isect_mh = cg.peek(ss47.minhash)
     assert round(sr.score, 5) == 0.48851
 
@@ -449,7 +449,7 @@ def test_rocksdb_prefetch_to_cg_colors_3():
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(ss2, threshold_bp=0)
+    cg = db.counter_gather(ss2, threshold_bp=0)
     sr, isect_mh = cg.peek(ss2.minhash)
     print(sr)
     assert sr.score == 1.0
@@ -468,7 +468,7 @@ def test_rocksdb_prefetch_to_cg_colors_4():
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(ss47, threshold_bp=0)
+    cg = db.counter_gather(ss47, threshold_bp=0)
     sr, isect_mh = cg.peek(ss47.minhash)
     assert round(sr.score, 5) == 0.48851
 
@@ -485,7 +485,7 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(metag, threshold_bp=0)
+    cg = db.counter_gather(metag, threshold_bp=0)
 
     # round 1
     sr, isect_mh = cg.peek(metag.minhash)
@@ -531,7 +531,7 @@ def test_rocksdb_prefetch_to_cg_colors_6():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(ss47, threshold_bp=0)
+    cg = db.counter_gather(ss47, threshold_bp=0)
 
     siglist = list(cg.signatures())
     assert len(siglist) == 2
@@ -545,7 +545,7 @@ def test_rocksdb_prefetch_to_cg_colors_7():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(ss2, threshold_bp=0)
+    cg = db.counter_gather(ss2, threshold_bp=0)
 
     siglist = list(cg.signatures())
     assert len(siglist) == 1
@@ -559,7 +559,7 @@ def test_rocksdb_prefetch_to_cg_colors_8():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather_colors(metag, threshold_bp=0)
+    cg = db.counter_gather(metag, threshold_bp=0)
 
     siglist = list(cg.signatures())
     assert len(siglist) == 3

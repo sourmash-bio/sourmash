@@ -15,13 +15,119 @@ from sourmash.minhash import flatten_and_intersect_scaled
 from sourmash.manifest import CollectionManifest
 
 
-class RevIndex(RustObject):  # , Index):
+class RevIndex(RustObject, Index):
     __dealloc_func__ = lib.revindex_free
     manifest = None
     is_database = True
     location = None
 
+    def __init__(self):
+        self._objptr = ffi.NULL
+        self._idx_picklist = None
+
+    @property
+    def _ffi_idx_picklist(self):
+        if self._idx_picklist is None:
+            return ffi.NULL
+        return self._idx_picklist._objptr
+
+    def signatures(self):
+        self._init_inner()
+
+        size = ffi.new("uintptr_t *")
+        sigs_ptr = self._methodcall(lib.revindex_signatures, size)
+        size = size[0]
+
+        for i in range(size):
+            sig = SourmashSignature._from_objptr(sigs_ptr[i])
+            yield sig
+
+    def signatures_with_location(self):
+        for ss in self.signatures():
+            yield ss, self.location  # @CTB
+
+    def _signatures_with_internal(self):
+        # CTB fix: don't use signatures() once we start paying attention
+        # to picklists.
+        for n, ss in enumerate(self.signatures()):
+            yield ss, n
+
+    def __len__(self):
+        self._init_inner()
+        return self._methodcall(lib.revindex_len)
+
+    @property
+    def scaled(self):
+        scaled = self._methodcall(lib.revindex_scaled)
+        return scaled
+
+    def insert(self, sig):
+        if sig.minhash.scaled > self._scaled:
+            self._scaled = sig.minhash.scaled
+
+        self._check_not_init()
+        self._signatures.append(sig)
+
+    def save(self, path):
+        pass
+
+    @classmethod
+    def load(cls, location):
+        pass
+
+    def consume(self, intersect_mh):
+        pass
+
+    def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
+        print("v3 RevIndex Counter Gather - colors!")
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        self._init_inner()
+
+        cg_ptr = self._methodcall(
+            lib.revindex_prefetch_to_countergather,
+            query_ss._get_objptr(),
+            self._ffi_idx_picklist,
+        )
+        if cg_ptr == ffi.NULL:
+            raise ValueError("no matches")
+
+        return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
+
+
+class SearchResult(RustObject):
+    __dealloc_func__ = lib.searchresult_free
+
+    def __repr__(self):
+        return f"SearchResult({self.score}, {self.signature}, {self.location})"
+
+    def __iter__(self):
+        return iter((self.score, self.signature, self.location))
+
+    def __getitem__(self, i):
+        return list(self)[i]
+
+    @property
+    def score(self):
+        return self._methodcall(lib.searchresult_score)
+
+    @property
+    def signature(self):
+        sig_ptr = self._methodcall(lib.searchresult_signature)
+        return SourmashSignature._from_objptr(sig_ptr)
+
+    @property
+    def location(self):
+        result = decode_str(self._methodcall(lib.searchresult_filename))
+        if result == "":
+            return None
+        return result
+
+
+class MemRevIndex(RevIndex):
     def __init__(self, *, template=None):
+        super().__init__()
         assert template is not None
         assert isinstance(template, MinHash)
         if template.num != 0:
@@ -30,8 +136,6 @@ class RevIndex(RustObject):  # , Index):
         self._scaled = template.scaled
         self._signatures = []
         self._orig_signatures = {}
-        self._objptr = ffi.NULL
-        self._idx_picklist = None
 
     def _check_not_init(self, *, do_raise=True):
         if self._objptr != ffi.NULL:
@@ -73,44 +177,6 @@ class RevIndex(RustObject):  # , Index):
         ):
             self._orig_signatures[stored_ss.md5sum()] = orig_ss
 
-    @property
-    def _ffi_idx_picklist(self):
-        if self._idx_picklist is None:
-            return ffi.NULL
-        return self._idx_picklist._objptr
-
-    def signatures(self):
-        self._init_inner()
-
-        size = ffi.new("uintptr_t *")
-        sigs_ptr = self._methodcall(lib.revindex_signatures, size)
-        size = size[0]
-
-        for i in range(size):
-            sig = SourmashSignature._from_objptr(sigs_ptr[i])
-            yield sig
-
-    def signatures_with_location(self):
-        for ss in self.signatures():
-            yield ss, self.location  # @CTB
-
-    def __len__(self):
-        self._init_inner()
-        return self._methodcall(lib.revindex_len)
-
-    def insert(self, sig):
-        if sig.minhash.scaled > self._scaled:
-            self._scaled = sig.minhash.scaled
-
-        self._check_not_init()
-        self._signatures.append(sig)
-
-    def save(self, path):
-        pass
-
-    @classmethod
-    def load(cls, location):
-        pass
 
     def select(
         self,
@@ -203,10 +269,6 @@ class RevIndex(RustObject):  # , Index):
 
         return results
 
-    @property
-    def scaled(self):
-        self._init_inner()
-        return self._methodcall(lib.revindex_scaled)
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
         query_mh = query_ss.minhash
@@ -243,57 +305,8 @@ class RevIndex(RustObject):  # , Index):
             return found[0], intersect_mh
         return []
 
-    def consume(self, intersect_mh):
-        pass
 
-    def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
-        print("v3 RevIndex Counter Gather - colors! (mem version)")
-        if not query_ss.minhash:
-            raise ValueError("empty query")
-
-        self._init_inner()
-
-        cg_ptr = self._methodcall(
-            lib.revindex_prefetch_to_countergather,
-            query_ss._get_objptr(),
-            self._ffi_idx_picklist,
-        )
-        if cg_ptr == ffi.NULL:
-            raise ValueError("no matches")
-
-        return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
-
-
-class SearchResult(RustObject):
-    __dealloc_func__ = lib.searchresult_free
-
-    def __repr__(self):
-        return f"SearchResult({self.score}, {self.signature}, {self.location})"
-
-    def __iter__(self):
-        return iter((self.score, self.signature, self.location))
-
-    def __getitem__(self, i):
-        return list(self)[i]
-
-    @property
-    def score(self):
-        return self._methodcall(lib.searchresult_score)
-
-    @property
-    def signature(self):
-        sig_ptr = self._methodcall(lib.searchresult_signature)
-        return SourmashSignature._from_objptr(sig_ptr)
-
-    @property
-    def location(self):
-        result = decode_str(self._methodcall(lib.searchresult_filename))
-        if result == "":
-            return None
-        return result
-
-
-class DiskRevIndex(RustObject, Index):
+class DiskRevIndex(RevIndex):
     """
     RocksDB-based low-memory on disk inverted index, implemented in Rust.
     """
@@ -303,6 +316,7 @@ class DiskRevIndex(RustObject, Index):
     manifest = None
 
     def __init__(self, path):
+        super().__init__()
         check_file = os.path.join(path, "CURRENT")
         if not os.path.exists(check_file):
             raise ValueError("not a RocksDB")
@@ -332,7 +346,7 @@ class DiskRevIndex(RustObject, Index):
         raise NotImplementedError
 
     @classmethod
-    def from_sigs(self, siglist, path):
+    def from_sigs(self, siglist, path): # @CTB rename? create?
         path_b = path.encode("utf-8")
 
         collected = []
@@ -346,14 +360,6 @@ class DiskRevIndex(RustObject, Index):
         _ = rustcall(lib.revindex_disk_create, sigs_ptr, sig_size, path_b)
 
         return DiskRevIndex(path)
-
-    def __len__(self):
-        return self._methodcall(lib.revindex_len)
-
-    @property
-    def scaled(self):
-        scaled = self._methodcall(lib.revindex_scaled)
-        return scaled
 
     def select(
         self,
@@ -416,25 +422,6 @@ class DiskRevIndex(RustObject, Index):
         if self._idx_picklist is None:
             return ffi.NULL
         return self._idx_picklist._objptr
-
-    def signatures(self):  # @CTB add picklist
-        size = ffi.new("uintptr_t *")
-        sigs_ptr = self._methodcall(lib.revindex_signatures, size)
-        size = size[0]
-
-        for i in range(size):
-            sig = SourmashSignature._from_objptr(sigs_ptr[i])
-            yield sig
-
-    def signatures_with_location(self):
-        for ss in self.signatures():
-            yield ss, self.location
-
-    def _signatures_with_internal(self):
-        # CTB fix: don't use signatures() once we start paying attention
-        # to picklists.
-        for n, ss in enumerate(self.signatures()):
-            yield ss, n
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
         if not query_ss.minhash:
@@ -551,26 +538,6 @@ class DiskRevIndex(RustObject, Index):
         containment = intersect_mh.contained_by(query_mh)
 
         return (IndexSearchResult(containment, match_ss, self.location), intersect_mh)
-
-    def consume(self, intersect_mh):
-        pass
-
-    def counter_gather_colors(self, query_ss, threshold_bp=0, **kwargs):
-        print("v3 RevIndex Counter Gather - colors!")
-        if not query_ss.minhash:
-            raise ValueError("empty query")
-
-        cg_ptr = self._methodcall(
-            lib.revindex_prefetch_to_countergather,
-            query_ss._get_objptr(),
-            self._ffi_idx_picklist,
-        )
-        if cg_ptr == ffi.NULL:
-            raise ValueError("no matches")
-
-        return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
-
-    counter_gather = counter_gather_colors
 
 
 class RevIndex_CounterGather:

@@ -321,9 +321,9 @@ class Index(ABC):
             return counter
         else:
             print("XXX NOTE: Using RevIndex CounterGather")
-            from .revindex import RevIndex_CounterGather, RevIndex
+            from .revindex import RevIndex_CounterGather, MemRevIndex
 
-            revindex = RevIndex(template=prefetch_query.minhash)
+            revindex = MemRevIndex(template=prefetch_query.minhash)
             cg = RevIndex_CounterGather(
                 prefetch_query, revindex, threshold_bp, allow_insert=True
             )

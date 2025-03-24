@@ -945,13 +945,13 @@ def gather(args):
     elif 1:
         # @CTB foo revindex
         print("XXX NOTE: using RevIndex for ZipFileLinearIndex")
-        from sourmash.index.revindex import RevIndex
+        from sourmash.index.revindex import MemRevIndex
         from sourmash.index import ZipFileLinearIndex
 
         xx = []
         for db in databases:
             if isinstance(db, ZipFileLinearIndex):
-                ri = RevIndex(template=query.minhash)
+                ri = MemRevIndex(template=query.minhash)
                 for ss in db.signatures():
                     ri.insert(ss)
                     xx.append(ri)
