@@ -370,17 +370,19 @@ unsafe fn revindex_peek(
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(query_mh, dataset_picklist);
-    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
+    if counter.len() >= 1 {
+        let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
-    if size as u64 >= threshold_bp {
-        // load into SigStore & convert to Signature.
-        let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-        let match_sig: Signature = match_sig.into();
+        if size as u64 >= threshold_bp {
+            // load into SigStore & convert to Signature.
+            let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
+            let match_sig: Signature = match_sig.into();
 
-        Ok(SourmashSignature::from_rust(match_sig))
-    } else {
-        Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
+            return Ok(SourmashSignature::from_rust(match_sig));
+        }
     }
+
+    Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
 }
 }
 

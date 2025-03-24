@@ -81,6 +81,24 @@ class RevIndex(RustObject, Index):
     def load(cls, location):
         pass
 
+    def peek(self, query_mh, *, threshold_bp=0):
+        self._init_inner()
+        ss_ptr = self._methodcall(
+            lib.revindex_peek,
+            query_mh._get_objptr(),
+            int(threshold_bp),
+            self._ffi_idx_picklist,
+        )
+
+        match_ss = SourmashSignature._from_objptr(ss_ptr)
+        if not match_ss:
+            return []
+
+        intersect_mh = flatten_and_intersect_scaled(match_ss.minhash, query_mh)
+        containment = intersect_mh.contained_by(query_mh)
+
+        return (IndexSearchResult(containment, match_ss, self.location), intersect_mh)
+
     def consume(self, intersect_mh):
         pass
 
@@ -298,7 +316,7 @@ class MemRevIndex(RevIndex):
             return results[0]
         raise ValueError("no results")
 
-    def peek(self, query_mh, *, threshold_bp=0):
+    def peek_OLD(self, query_mh, *, threshold_bp=0):
         if not len(query_mh):
             raise ValueError
         threshold = threshold_bp / query_mh.scaled / len(query_mh)
@@ -515,24 +533,6 @@ class DiskRevIndex(RevIndex):
     #
     # implement CounterGather API
     #
-
-    def peek(self, query_mh, *, threshold_bp=0):
-        ss_ptr = self._methodcall(
-            lib.revindex_peek,
-            query_mh._get_objptr(),
-            int(threshold_bp),
-            self._ffi_idx_picklist,
-        )
-
-        match_ss = SourmashSignature._from_objptr(ss_ptr)
-        if not match_ss:
-            return []
-
-        intersect_mh = flatten_and_intersect_scaled(match_ss.minhash, query_mh)
-        containment = intersect_mh.contained_by(query_mh)
-
-        return (IndexSearchResult(containment, match_ss, self.location), intersect_mh)
-
 
 class RevIndex_CounterGather:
     """
