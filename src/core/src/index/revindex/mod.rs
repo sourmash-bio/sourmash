@@ -68,6 +68,10 @@ pub trait RevIndexOps {
         self.collection().len()
     }
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn signatures(&self) -> Vec<Signature> {
         let coll = self.collection();
         coll.iter()

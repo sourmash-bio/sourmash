@@ -416,7 +416,7 @@ impl RevIndexOps for RevIndex {
     }
 
     fn collection(&self) -> &CollectionSet {
-        &self.linear.collection()
+        self.linear.collection()
     }
 
     fn internalize_storage(&mut self) -> Result<()> {
