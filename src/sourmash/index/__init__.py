@@ -324,7 +324,7 @@ class Index(ABC):
             from .revindex import RevIndex_CounterGather, MemRevIndex
 
             revindex = MemRevIndex(template=prefetch_query.minhash)
-            cg = RevIndex_CounterGather( # @CTB merge/use Colors?
+            cg = RevIndex_CounterGather(  # @CTB merge/use Colors?
                 prefetch_query, revindex, threshold_bp, allow_insert=True
             )
 

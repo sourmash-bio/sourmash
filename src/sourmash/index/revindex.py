@@ -32,7 +32,6 @@ class RevIndex(RustObject, Index):
         return self._idx_picklist._objptr
 
     def _generate_idx_picklist_from_manifest(self, mf):
-
         # grab internal indices
         idx_list = [int(row["internal_location"]) for row in mf.rows]
         self._idx_picklist = RevIndex_DatasetPicklist(idx_list)
@@ -253,7 +252,6 @@ class MemRevIndex(RevIndex):
         ):
             self._orig_signatures[stored_ss.md5sum()] = orig_ss
 
-
     def select(
         self,
         ksize=None,
@@ -386,7 +384,7 @@ class DiskRevIndex(RevIndex):
         raise NotImplementedError
 
     @classmethod
-    def from_sigs(self, siglist, path): # @CTB rename? create?
+    def from_sigs(self, siglist, path):  # @CTB rename? create?
         path_b = path.encode("utf-8")
 
         collected = []
@@ -592,6 +590,7 @@ class RevIndex_CounterGather_Colors(RustObject):
     """
     Implementation of CounterGather using colors, internally.
     """
+
     __dealloc_func__ = lib.revindex_countergather_free
 
     def __init__(self, objptr, query_ss, db):
@@ -637,9 +636,7 @@ class RevIndex_CounterGather_Colors(RustObject):
         )
 
     def consume(self, intersect_mh):
-        _ = self._methodcall(
-            lib.revindex_countergather_consume, intersect_mh._objptr
-        )
+        _ = self._methodcall(lib.revindex_countergather_consume, intersect_mh._objptr)
 
     @property
     def union_found(self):
@@ -664,6 +661,7 @@ class RevIndex_DatasetPicklist(RustObject):
     """
     Intermediate class for holding lists of Idx.
     """
+
     __dealloc_func__ = lib.dataset_picklist_free
 
     def __init__(self, idxs):
