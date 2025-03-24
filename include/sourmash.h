@@ -366,13 +366,6 @@ void revindex_disk_create(const SourmashSignature *const *sigs_ptr,
 
 void revindex_free(SourmashRevIndex *ptr);
 
-const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
-                                                   const SourmashSignature *sig_ptr,
-                                                   double threshold,
-                                                   bool _do_containment,
-                                                   bool _ignore_abundance,
-                                                   uintptr_t *size);
-
 uint32_t revindex_ksize(const SourmashRevIndex *ptr);
 
 uint64_t revindex_len(const SourmashRevIndex *ptr);
@@ -399,11 +392,6 @@ const SourmashSearchResult *const *revindex_prefetch(const SourmashRevIndex *db_
 SourmashRevIndex_CounterGather *revindex_prefetch_to_countergather(const SourmashRevIndex *db_ptr,
                                                                    const SourmashSignature *query_ptr,
                                                                    const SourmashDatasetPicklist *dataset_picklist_ptr);
-
-SourmashRevIndex *revindex_prefetch_to_mem_revindex(const SourmashRevIndex *db_ptr,
-                                                    const SourmashSignature *query_ptr,
-                                                    uint64_t threshold_bp,
-                                                    const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 uint32_t revindex_scaled(const SourmashRevIndex *ptr);
 

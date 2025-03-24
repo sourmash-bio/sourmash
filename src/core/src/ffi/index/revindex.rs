@@ -134,7 +134,7 @@ pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist
 #[no_mangle]
 pub unsafe extern "C" fn revindex_len(ptr: *const SourmashRevIndex) -> u64 {
     let revindex = SourmashRevIndex::as_rust(ptr);
-    revindex.collection().len() as u64
+    revindex.len() as u64
 }
 
 #[no_mangle]
@@ -180,16 +180,7 @@ unsafe fn revindex_signatures(
 ) -> Result<*mut *mut SourmashSignature> {
     let revindex = &SourmashRevIndex::as_rust(ptr);
 
-    let coll = revindex.collection();
-
-    // @CTB implement for RevIndexOps - signatures()
-    let sigs: Vec<Signature> = coll
-        .iter()
-        .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
-            Ok(sig) => { Some(sig.into()) },
-            Err(_) => None,
-        })
-        .collect();
+    let sigs = revindex.signatures();
 
     // FIXME: use the ForeignObject trait, maybe define new method there...
     let ptr_sigs: Vec<*mut SourmashSignature> = sigs
@@ -393,48 +384,6 @@ unsafe fn revindex_peek(
 }
 }
 
-// implement prefetch/containment separately from search/jaccard
-
-ffi_fn! {
-unsafe fn revindex_prefetch_to_mem_revindex(
-    db_ptr: *const SourmashRevIndex,
-    query_ptr: *const SourmashSignature,
-    threshold_bp: u64,
-    dataset_picklist_ptr: *const SourmashDatasetPicklist,
-) -> Result<*mut SourmashRevIndex> {
-    let revindex = &SourmashRevIndex::as_rust(db_ptr);
-    let sig = SourmashSignature::as_rust(query_ptr);
-
-    // extract KmerMinHash for query
-    let query_mh: KmerMinHash = sig.clone()
-        .try_into().expect("cannot get kmerminhash");
-    let scaled = query_mh.scaled();
-    let threshold_bp: usize = threshold_bp as usize / scaled as usize;
-
-    // picklist?
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
-
-    // do search & get matches
-    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
-
-    let records = revindex.records_from_counter(counter, threshold_bp);
-
-    //if records.is_empty() {
-    //    return Ok(std::ptr::null::<*mut SourmashMemRevIndex>());
-    //}
-
-    let search_sigs: Vec<Signature> = records
-        .iter()
-        .map(|r| revindex.collection().sig_from_record(r).expect("error retrieving record").into())
-        .collect();
-
-    let template_sketch = Sketch::MinHash(query_mh);
-    let selection = from_template(&template_sketch);
-    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
-    Ok(SourmashRevIndex::from_rust(revindex))
-}
-}
-
 // return a CounterGather object with prefetch results
 
 ffi_fn! {
@@ -584,62 +533,6 @@ pub fn from_template(template: &Sketch) -> Selection {
         .build()
 }
 
-/*
-ffi_fn! {
-unsafe fn revindex_new_with_paths(
-    search_sigs_ptr: *const *const SourmashStr,
-    insigs: usize,
-    template_ptr: *const SourmashKmerMinHash,
-    threshold: usize,
-    queries_ptr: *const *const SourmashKmerMinHash,
-    inqueries: usize,
-    keep_sigs: bool,
-) -> Result<*mut SourmashRevIndex> {
-    let search_sigs: Vec<PathBuf> = {
-        assert!(!search_sigs_ptr.is_null());
-        slice::from_raw_parts(search_sigs_ptr, insigs)
-            .iter()
-            .map(|path| {
-                let mut new_path = PathBuf::new();
-                new_path.push(SourmashStr::as_rust(*path).as_str());
-                new_path
-            })
-            .collect()
-    };
-
-    let template = {
-        assert!(!template_ptr.is_null());
-        //TODO: avoid clone here
-        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
-    };
-
-    let queries_vec: Vec<KmerMinHash>;
-    let queries: Option<&[KmerMinHash]> = if queries_ptr.is_null() {
-        None
-    } else {
-        queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
-            .iter()
-            .map(|mh_ptr|
-            // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
-            .collect();
-        Some(queries_vec.as_ref())
-    };
-
-    let selection = from_template(&template);
-
-    let revindex = mem_revindex::RevIndex::new(
-        search_sigs.as_ref(),
-        &selection,
-        threshold,
-        queries,
-        keep_sigs,
-    )?;
-    Ok(SourmashRevIndex::from_rust(revindex))
-}
-}
-*/
-
 ffi_fn! {
 unsafe fn revindex_mem_new_with_sigs(
     search_sigs_ptr: *const *const SourmashSignature,
@@ -713,85 +606,3 @@ unsafe fn revindex_search(
     Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
-
-ffi_fn! {
-unsafe fn revindex_gather(
-    ptr: *const SourmashRevIndex,
-    sig_ptr: *const SourmashSignature,
-    threshold: f64,
-    _do_containment: bool,
-    _ignore_abundance: bool,
-    size: *mut usize,
-) -> Result<*const *const SourmashSearchResult> {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    let sig = SourmashSignature::as_rust(sig_ptr);
-
-    if sig.signatures.is_empty() {
-        *size = 0;
-        return Ok(std::ptr::null::<*const SourmashSearchResult>());
-    }
-
-    let mh = if let Sketch::MinHash(mh) = &sig.signatures[0] {
-        mh
-    } else {
-        // TODO: what if it is not a mh?
-        unimplemented!()
-    };
-
-    // TODO: proper threshold calculation
-    let threshold: usize = (threshold * (mh.size() as f64)) as _;
-
-    let mut cg = revindex.prepare_gather_counters(mh, None);
-
-    let results: Vec<(f64, Signature, String)> = revindex
-        .gather(&mut cg, threshold, mh, None)
-        .unwrap() // TODO: proper error handling
-        .into_iter()
-        .map(|r| {
-            let filename = r.filename().to_owned();
-            let sig = r.get_match();
-            (r.f_match(), sig, filename)
-        })
-        .collect();
-
-    // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*const SourmashSearchResult> = results
-        .into_iter()
-        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
-        .collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
-}
-}
-
-/*
-ffi_fn! {
-unsafe fn revindex_signatures(
-    ptr: *const SourmashRevIndex,
-    size: *mut usize,
-) -> Result<*mut *mut SourmashSignature> {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-
-    let revindex = match revindex {
-        module::RevIndex::Mem(r) => r,
-        _ => unimplemented!(),
-    };
-
-    let sigs = revindex.signatures();
-
-    // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*mut SourmashSignature> = sigs
-        .into_iter()
-        .map(|x| Box::into_raw(Box::new(x)) as *mut SourmashSignature)
-        .collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
-}
-}
-*/
