@@ -13,11 +13,11 @@ use rocksdb::MergeOperands;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, DatasetPicklist, Datasets, DbStats, HashToColor, QueryColors,
+    self as module, stats_for_cf, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors,
     RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
@@ -35,7 +35,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 }
 
 #[derive(Clone)]
-pub struct RevIndex {
+pub struct DiskRevIndex {
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
@@ -66,7 +66,7 @@ pub fn repair(path: &Path) {
 }
 */
 
-impl RevIndex {
+impl DiskRevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
         let mut opts = db_options();
         opts.create_if_missing(true);
@@ -119,7 +119,7 @@ impl RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(index))
+        Ok(module::RevIndex::Disk(index))
     }
 
     pub fn open<P: AsRef<Path>>(
@@ -156,7 +156,7 @@ impl RevIndex {
             false,
         )?));
 
-        Ok(module::RevIndex::Plain(Self {
+        Ok(module::RevIndex::Disk(Self {
             db,
             collection,
             processed,
@@ -273,7 +273,7 @@ impl RevIndex {
     }
 }
 
-impl RevIndexOps for RevIndex {
+impl RevIndexOps for DiskRevIndex {
     fn counter_for_query(
         &self,
         query: &KmerMinHash,
@@ -314,7 +314,8 @@ impl RevIndexOps for RevIndex {
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor) {
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -332,25 +333,46 @@ impl RevIndexOps for RevIndex {
         let mut query_colors: QueryColors = Default::default();
         let mut counter: SigCounter = Default::default();
 
-        info!("Building hash_to_colors and query_colors");
-        let hash_to_colors = query
+        info!("Building hash_to_color and query_colors");
+        let hash_to_color = query
             .iter_mins()
             .zip(self.db.multi_get_cf(hashes_iter))
             .filter_map(|(k, r)| {
-                let raw = r.ok().unwrap_or(None);
-                raw.map(|raw| {
-                    let new_vals = Datasets::from_slice(&raw).unwrap();
-                    let color = compute_color(&new_vals);
-                    query_colors
-                        .entry(color)
-                        .or_insert_with(|| new_vals.clone());
-                    counter.update(new_vals);
-                    (*k, color)
-                })
+                let raw: Option<Vec<u8>> = r.ok().unwrap_or(None);
+
+                if let Some(r) = raw {
+                    let mut new_vals = Datasets::from_slice(&r).unwrap();
+
+                    // filter by picklist?
+                    if let Some(pl) = &picklist {
+                        let val_set: Vec<Idx> = new_vals
+                            .into_iter()
+                            .filter(|&i| pl.dataset_ids.contains(&i))
+                            .collect();
+                        new_vals = Datasets::new(&val_set[..]);
+                    }
+
+                    if new_vals.len() > 0 {
+                        let color = compute_color(&new_vals);
+                        query_colors
+                            .entry(color)
+                            .or_insert_with(|| new_vals.clone());
+                        counter.update(new_vals);
+                        Some((*k, color))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             })
             .collect();
 
-        (counter, query_colors, hash_to_colors)
+        CounterGather {
+            counter,
+            query_colors,
+            hash_to_color,
+        }
     }
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
@@ -378,16 +400,33 @@ impl RevIndexOps for RevIndex {
             .collect()
     }
 
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+        info!("get matches from counter");
+        counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, size)| {
+                if size >= threshold {
+                    let row = self
+                        .collection
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
+                    Some(row)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     fn gather(
         &self,
-        mut counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
-        let mut match_size = usize::MAX;
+        let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
@@ -401,16 +440,15 @@ impl RevIndexOps for RevIndex {
         let calc_ani_ci = false;
         let ani_confidence_interval_fraction = None;
 
-        while match_size > threshold && !counter.is_empty() {
-            trace!("counter len: {}", counter.len());
+        while match_size > threshold && !cg.is_empty() {
+            trace!("counter len: {}", cg.len());
             trace!("match size: {}", match_size);
 
-            let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
-            match_size = if size >= threshold { size } else { break };
-            // handle special case where threshold was set to 0
-            if match_size == 0 {
+            let result = cg.peek(threshold);
+            if result.is_none() {
                 break;
             }
+            let (dataset_id, match_size) = result.unwrap();
 
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
             let match_mh = match_sig.minhash().unwrap().clone();
@@ -461,25 +499,9 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
+            query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
 
-            // TODO: Use HashesToColors here instead. If not initialized,
-            //       build it.
-            isect
-                .0
-                .iter()
-                .filter_map(|hash| hash_to_color.get(hash))
-                .flat_map(|color| {
-                    // TODO: remove this clone
-                    query_colors.get(color).unwrap().clone().into_iter()
-                })
-                .for_each(|dataset| {
-                    // TODO: collect the flat_map into a Counter, and remove more
-                    //       than one at a time...
-                    counter.entry(dataset).and_modify(|e| *e -= 1);
-                });
-
-            counter.remove(&dataset_id);
+            cg.consume(&isect_mh);
         }
         Ok(matches)
     }
@@ -533,7 +555,7 @@ impl RevIndexOps for RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(self))
+        Ok(module::RevIndex::Disk(self))
     }
 
     fn check(&self, quick: bool) -> DbStats {

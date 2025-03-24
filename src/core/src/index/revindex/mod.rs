@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
+use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
@@ -31,15 +32,25 @@ const VERSION: &str = "version";
 const PROCESSED: &str = "processed";
 
 type QueryColors = HashMap<Color, Datasets>;
+
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
-#[derive(Serialize, Deserialize)]
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HashToColor(HashToColorT);
+
+#[derive(Debug)]
+pub struct CounterGather {
+    // add orig_query? threshold?
+    counter: SigCounter,
+    query_colors: QueryColors, // @CTB could be refs
+    hash_to_color: HashToColor,
+}
 
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
     //Color(color_revindex::ColorRevIndex),
-    Plain(disk_revindex::RevIndex),
-    //Mem(mem_revindex::RevIndex),
+    Disk(disk_revindex::DiskRevIndex),
+    Mem(mem_revindex::MemRevIndex),
 }
 
 #[derive(Clone)]
@@ -50,8 +61,26 @@ pub struct DatasetPicklist {
 #[enum_dispatch]
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool);
+       pub fn repair(index: &Path, colors: bool);
     */
+
+    fn len(&self) -> usize {
+        self.collection().len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn signatures(&self) -> Vec<Signature> {
+        let coll = self.collection();
+        coll.iter()
+            .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
+                Ok(sig) => Some(sig.into()),
+                Err(_) => None,
+            })
+            .collect()
+    }
 
     fn counter_for_query(
         &self,
@@ -61,10 +90,13 @@ pub trait RevIndexOps {
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
 
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record>;
+
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor);
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather;
 
     fn update(self, collection: CollectionSet) -> Result<RevIndex>
     where
@@ -80,9 +112,7 @@ pub trait RevIndexOps {
 
     fn gather(
         &self,
-        counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        cg: CounterGather,
         threshold: usize,
         query: &KmerMinHash,
         selection: Option<Selection>,
@@ -91,6 +121,68 @@ pub trait RevIndexOps {
     fn collection(&self) -> &CollectionSet;
 
     fn internalize_storage(&mut self) -> Result<()>;
+}
+
+impl CounterGather {
+    pub fn is_empty(&self) -> bool {
+        self.counter.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.counter.len()
+    }
+
+    // @CTB maybe use a KmerMinHashBTree?
+    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
+        let mut found_mh = template.clone();
+        found_mh.clear();
+
+        for hash in self.hash_to_color.0.keys() {
+            found_mh.add_hash(*hash);
+        }
+
+        found_mh
+    }
+
+    pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
+        let (dataset_id, size) = self.counter.k_most_common_ordered(1)[0];
+        if size > 0 && size >= threshold {
+            Some((dataset_id, size))
+        } else {
+            None
+        }
+    }
+
+    pub fn dataset_ids(&self) -> Vec<Idx> {
+        self.counter.keys().copied().collect()
+    }
+
+    /// consume: remove all hashes from intersect, and adjust counter
+    pub fn consume(&mut self, intersect_mh: &KmerMinHash) {
+        intersect_mh
+            .iter_mins()
+            .filter_map(|hash| self.hash_to_color.get(hash))
+            .flat_map(|color| {
+                // TODO: remove this clone
+                self.query_colors.get(color).unwrap().clone().into_iter()
+            })
+            .for_each(|dataset| {
+                // TODO: collect the flat_map into a Counter, and remove more
+                //       than one at a time...
+                self.counter.entry(dataset).and_modify(|e| *e -= 1);
+            });
+
+        // remove empty
+        let empty_keys =
+            self.counter
+                .clone()
+                .into_iter()
+                .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
+
+        for k in empty_keys.into_iter() {
+            self.counter.remove(&k);
+        }
+    }
 }
 
 impl HashToColor {
@@ -172,7 +264,7 @@ impl FromIterator<(HashIntoType, Color)> for HashToColor {
 
 impl RevIndex {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool) {
+         pub fn repair(index: &Path, colors: bool) {
             if colors {
                 color_revindex::repair(index);
             } else {
@@ -189,7 +281,7 @@ impl RevIndex {
         if colors {
             todo!() //color_revindex::ColorRevIndex::create(index)
         } else {
-            disk_revindex::RevIndex::create(index.as_ref(), collection)
+            disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
         }
     }
 
@@ -202,7 +294,7 @@ impl RevIndex {
             //       due to pending unmerged colors
             todo!() //color_revindex::ColorRevIndex::open(index, false)
         } else {
-            disk_revindex::RevIndex::open(index, read_only, spec)
+            disk_revindex::DiskRevIndex::open(index, read_only, spec)
         }
     }
 }
@@ -555,16 +647,9 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection),
-        )?;
+        let matches = index.gather(cg, 0, &query, Some(selection))?;
 
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].name(), ""); // signature name is empty
@@ -622,12 +707,10 @@ mod test {
         }
         let query = query.unwrap();
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
+            cg,
             5, // 50kb threshold
             &query,
             Some(selection),
@@ -772,16 +855,9 @@ mod test {
         }
         let query = query.unwrap();
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let mut cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection),
-        )?;
+        let matches = index.gather(cg, 0, &query, Some(selection))?;
 
         // should be 3.
         // see sourmash#3193.
@@ -910,17 +986,10 @@ mod test {
 
         let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
 
         let matches_external = index
-            .gather(
-                counter,
-                query_colors,
-                hash_to_color,
-                0,
-                &query,
-                Some(selection.clone()),
-            )
+            .gather(cg, 0, &query, Some(selection.clone()))
             .expect("failed to gather!");
 
         {
@@ -929,16 +998,9 @@ mod test {
                 .internalize_storage()
                 .expect("Error internalizing storage");
 
-            let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+            let cg = index.prepare_gather_counters(&query, None);
 
-            let matches_internal = index.gather(
-                counter,
-                query_colors,
-                hash_to_color,
-                0,
-                &query,
-                Some(selection.clone()),
-            )?;
+            let matches_internal = index.gather(cg, 0, &query, Some(selection.clone()))?;
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
@@ -946,16 +1008,9 @@ mod test {
 
         let index = RevIndex::open(new_path, false, None)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_moved = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection.clone()),
-        )?;
+        let matches_moved = index.gather(cg, 0, &query, Some(selection.clone()))?;
         assert_eq!(matches_external, matches_moved);
 
         Ok(())

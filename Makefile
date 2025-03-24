@@ -37,13 +37,13 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/signature.rs \
                     src/core/src/ffi/nodegraph.rs \
                     src/core/src/ffi/index/mod.rs \
-                    src/core/src/ffi/index/mem_revindex.rs \
-                    src/core/src/ffi/index/disk_revindex.rs \
+                    src/core/src/ffi/index/revindex.rs \
                     src/core/src/ffi/storage.rs \
                     src/core/src/errors.rs \
                     src/core/cbindgen.toml
 	cd src/core && \
-	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@ -v
+	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@ -v && \
+	touch ../../$@
 
 coverage: all
 	tox -e coverage

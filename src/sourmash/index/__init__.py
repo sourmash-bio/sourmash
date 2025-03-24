@@ -311,7 +311,7 @@ class Index(ABC):
         with query.update() as prefetch_query:
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
-        if 0:  # @CTB
+        if 1:  # @CTB
             # find all matches and construct a CounterGather object.
             counter = CounterGather(prefetch_query)
             for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
@@ -321,10 +321,10 @@ class Index(ABC):
             return counter
         else:
             print("XXX NOTE: Using RevIndex CounterGather")
-            from .revindex import RevIndex_CounterGather, RevIndex
+            from .revindex import RevIndex_CounterGather, MemRevIndex
 
-            revindex = RevIndex(template=prefetch_query.minhash)
-            cg = RevIndex_CounterGather(
+            revindex = MemRevIndex(template=prefetch_query.minhash)
+            cg = RevIndex_CounterGather(  # @CTB merge/use Colors?
                 prefetch_query, revindex, threshold_bp, allow_insert=True
             )
 
@@ -817,6 +817,9 @@ class CounterGather:
         if scaled > self.scaled:
             self.scaled = scaled
         return self.scaled
+
+    def __len__(self):
+        return len(self.siglist)
 
     def signatures(self):
         "Return all signatures."
