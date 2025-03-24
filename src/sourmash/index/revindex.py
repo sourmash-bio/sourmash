@@ -81,10 +81,35 @@ class RevIndex(RustObject, Index):
     def load(cls, location):
         pass
 
+    def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        self._init_inner()
+        threshold_bp = int(threshold_bp)
+        query_mh = query_ss.minhash
+
+        try:
+            ss_ptr = self._methodcall(
+                lib.revindex_best_containment,
+                query_mh._get_objptr(),
+                threshold_bp,
+                self._ffi_idx_picklist,
+            )
+            match_ss = SourmashSignature._from_objptr(ss_ptr)
+            if not match_ss.minhash:
+                raise ValueError("no results")
+        except:
+            raise ValueError("no results")
+        containment = query_ss.contained_by(match_ss)
+
+        return IndexSearchResult(containment, match_ss, self.location)
+
     def peek(self, query_mh, *, threshold_bp=0):
+        # @CTB: reimplement in terms of best_containment python fn?
         self._init_inner()
         ss_ptr = self._methodcall(
-            lib.revindex_peek,
+            lib.revindex_best_containment,
             query_mh._get_objptr(),
             int(threshold_bp),
             self._ffi_idx_picklist,
@@ -118,6 +143,29 @@ class RevIndex(RustObject, Index):
             raise ValueError("no matches")
 
         return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
+
+    def prefetch(self, query_ss, threshold_bp=0, **kwargs):
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        self._init_inner()
+        threshold_bp = int(threshold_bp)
+
+        size = ffi.new("uintptr_t *")
+        results_ptr = self._methodcall(
+            lib.revindex_prefetch,
+            query_ss._get_objptr(),
+            threshold_bp,
+            size,
+            self._ffi_idx_picklist,
+        )
+        size = size[0]
+
+        matches = []
+        for i in range(size):
+            match = SearchResult._from_objptr(results_ptr[i])
+            matches.append(match)
+        return matches
 
 
 class SearchResult(RustObject):
@@ -294,42 +342,6 @@ class MemRevIndex(RevIndex):
         return results
 
 
-    def prefetch(self, query_ss, threshold_bp=0, **kwargs):
-        query_mh = query_ss.minhash
-        if not query_mh:
-            raise ValueError
-        query_mh = query_mh.downsample(scaled=self._scaled)
-        ss = SourmashSignature(query_mh)
-        threshold = threshold_bp / query_mh.scaled / len(query_mh)
-        sr = self.search(ss, threshold=threshold, do_containment=True)
-        return sr
-
-    def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
-        query_mh = query_ss.minhash
-        if not query_mh:
-            raise ValueError("empty query")
-        threshold = threshold_bp / query_mh.scaled / len(query_mh)
-        results = self.search(query_ss, threshold=threshold, do_containment=True)
-
-        if results:
-            results.sort(key=lambda x: -x.score)
-            return results[0]
-        raise ValueError("no results")
-
-    def peek_OLD(self, query_mh, *, threshold_bp=0):
-        if not len(query_mh):
-            raise ValueError
-        threshold = threshold_bp / query_mh.scaled / len(query_mh)
-        query_ss = sourmash.SourmashSignature(query_mh)
-        found = self.search(query_ss, threshold=threshold, do_containment=True)
-
-        if found:
-            match_mh = found[0].signature.minhash.flatten()  # @CTB flatten?
-            intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
-            return found[0], intersect_mh
-        return []
-
-
 class DiskRevIndex(RevIndex):
     """
     RocksDB-based low-memory on disk inverted index, implemented in Rust.
@@ -435,28 +447,6 @@ class DiskRevIndex(RevIndex):
 
         return self
 
-    def prefetch(self, query_ss, threshold_bp=0, **kwargs):
-        if not query_ss.minhash:
-            raise ValueError("empty query")
-
-        threshold_bp = int(threshold_bp)
-
-        size = ffi.new("uintptr_t *")
-        results_ptr = self._methodcall(
-            lib.revindex_prefetch,
-            query_ss._get_objptr(),
-            threshold_bp,
-            size,
-            self._ffi_idx_picklist,
-        )
-        size = size[0]
-
-        matches = []
-        for i in range(size):
-            match = SearchResult._from_objptr(results_ptr[i])
-            matches.append(match)
-        return matches
-
     def search(
         self,
         query_ss,
@@ -508,31 +498,6 @@ class DiskRevIndex(RevIndex):
 
         return matches
 
-    def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
-        if not query_ss.minhash:
-            raise ValueError("empty query")
-
-        threshold_bp = int(threshold_bp)
-
-        try:
-            ss_ptr = self._methodcall(
-                lib.revindex_best_containment,
-                query_ss._get_objptr(),
-                threshold_bp,
-                self._ffi_idx_picklist,
-            )
-            match_ss = SourmashSignature._from_objptr(ss_ptr)
-            if not match_ss.minhash:
-                raise ValueError("no results")
-        except:
-            raise ValueError("no results")
-        containment = query_ss.contained_by(match_ss)
-
-        return IndexSearchResult(containment, match_ss, self.location)
-
-    #
-    # implement CounterGather API
-    #
 
 class RevIndex_CounterGather:
     """

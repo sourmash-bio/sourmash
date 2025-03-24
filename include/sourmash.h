@@ -338,8 +338,8 @@ SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t n_tables);
 
 SourmashSignature *revindex_best_containment(const SourmashRevIndex *db_ptr,
-                                             const SourmashSignature *query_ptr,
-                                             uint16_t threshold_bp,
+                                             const SourmashKmerMinHash *query_ptr,
+                                             uint64_t threshold_bp,
                                              const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 void revindex_countergather_consume(SourmashRevIndex_CounterGather *cg_ptr,
@@ -377,11 +377,6 @@ SourmashRevIndex *revindex_mem_new_with_sigs(const SourmashSignature *const *sea
 const char *revindex_moltype(const SourmashRevIndex *ptr);
 
 SourmashRevIndex *revindex_new_from_rocksdb(const char *path_ptr);
-
-SourmashSignature *revindex_peek(const SourmashRevIndex *db_ptr,
-                                 const SourmashKmerMinHash *query_ptr,
-                                 uint64_t threshold_bp,
-                                 const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 const SourmashSearchResult *const *revindex_prefetch(const SourmashRevIndex *db_ptr,
                                                      const SourmashSignature *query_ptr,

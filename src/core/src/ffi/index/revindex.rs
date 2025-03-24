@@ -195,41 +195,6 @@ unsafe fn revindex_signatures(
 }
 }
 
-ffi_fn! {
-unsafe fn revindex_best_containment(
-    db_ptr: *const SourmashRevIndex,
-    query_ptr: *const SourmashSignature,
-    threshold_bp: u16,
-    dataset_picklist_ptr: *const SourmashDatasetPicklist,
-) -> Result<*mut SourmashSignature> {
-    let revindex = &SourmashRevIndex::as_rust(db_ptr);
-    let sig = SourmashSignature::as_rust(query_ptr);
-
-    // extract KmerMinHash for query
-    let query_mh: KmerMinHash = sig.clone()
-        .try_into().expect("cannot get kmerminhash");
-    let scaled = query_mh.scaled();
-    let threshold = threshold_bp as u32 / scaled;
-
-    // picklist?
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
-
-    // do search & get first/best match
-    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
-    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
-
-    if size as u32 >= threshold {
-        // load into SigStore & convert to Signature.
-        let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-        let match_sig: Signature = match_sig.into();
-
-        Ok(SourmashSignature::from_rust(match_sig))
-    } else {
-        Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
-    }
-}
-}
-
 // implement prefetch/containment separately from search/jaccard
 
 ffi_fn! {
@@ -351,10 +316,10 @@ unsafe fn revindex_search_jaccard(
 }
 }
 
-// implement peek: used in 'gather' to retrieve best containment possible
+// implement prefetch/containment separately from search/jaccard
 
 ffi_fn! {
-unsafe fn revindex_peek(
+unsafe fn revindex_best_containment(
     db_ptr: *const SourmashRevIndex,
     query_ptr: *const SourmashKmerMinHash,
     threshold_bp: u64,
