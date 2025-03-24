@@ -40,9 +40,8 @@ pub struct HashToColor(HashToColorT);
 
 #[derive(Debug)]
 pub struct CounterGather {
-    // add orig_query? threshold?
     counter: SigCounter,
-    query_colors: QueryColors, // @CTB could be refs
+    query_colors: QueryColors,
     hash_to_color: HashToColor,
 }
 
