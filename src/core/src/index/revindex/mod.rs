@@ -49,8 +49,8 @@ pub struct CounterGather {
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
     //Color(color_revindex::ColorRevIndex),
-    Plain(disk_revindex::RevIndex),
-    Mem(mem_revindex::RevIndex),
+    Disk(disk_revindex::DiskRevIndex),
+    Mem(mem_revindex::MemRevIndex),
 }
 
 #[derive(Clone)]
@@ -61,8 +61,26 @@ pub struct DatasetPicklist {
 #[enum_dispatch]
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool);
+       pub fn repair(index: &Path, colors: bool);
     */
+
+    fn len(&self) -> usize {
+        self.collection().len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn signatures(&self) -> Vec<Signature> {
+        let coll = self.collection();
+        coll.iter()
+            .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
+                Ok(sig) => Some(sig.into()),
+                Err(_) => None,
+            })
+            .collect()
+    }
 
     fn counter_for_query(
         &self,
@@ -263,7 +281,7 @@ impl RevIndex {
         if colors {
             todo!() //color_revindex::ColorRevIndex::create(index)
         } else {
-            disk_revindex::RevIndex::create(index.as_ref(), collection)
+            disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
         }
     }
 
@@ -276,7 +294,7 @@ impl RevIndex {
             //       due to pending unmerged colors
             todo!() //color_revindex::ColorRevIndex::open(index, false)
         } else {
-            disk_revindex::RevIndex::open(index, read_only, spec)
+            disk_revindex::DiskRevIndex::open(index, read_only, spec)
         }
     }
 }

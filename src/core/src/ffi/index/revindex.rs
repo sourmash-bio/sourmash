@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::collection::{Collection, CollectionSet};
-use crate::ffi::index::mem_revindex::{from_template, SourmashMemRevIndex};
+use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
@@ -11,18 +11,16 @@ use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex;
 use crate::index::revindex::mem_revindex;
 use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, RevIndexOps};
-use std::collections::HashSet;
-use std::ffi::CString;
-use std::path::Path;
-// use crate::index::Index;
-// use crate::prelude::*;
+use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-// use crate::ScaledType;
+use std::collections::HashSet;
+use std::ffi::CString;
+use std::path::Path;
 
-pub struct SourmashDiskRevIndex;
-impl ForeignObject for SourmashDiskRevIndex {
+pub struct SourmashRevIndex;
+impl ForeignObject for SourmashRevIndex {
     type RustObject = module::RevIndex;
 }
 
@@ -49,27 +47,27 @@ pub unsafe fn retrieve_picklist(
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_new_from_rocksdb(
+unsafe fn revindex_new_from_rocksdb(
     path_ptr: *const c_char,
-) -> Result<*mut SourmashDiskRevIndex> {
+) -> Result<*mut SourmashRevIndex> {
     // FIXME use buffer + len instead of cstr
     let rocksdb_path = {
         assert!(!path_ptr.is_null());
         CStr::from_ptr(path_ptr)
     }.to_str()?;
 
-    let rocksdb = disk_revindex::RevIndex::open(
+    let rocksdb = disk_revindex::DiskRevIndex::open(
         rocksdb_path,
         true,
         None
     )?;
 
-    Ok(SourmashDiskRevIndex::from_rust(rocksdb))
+    Ok(SourmashRevIndex::from_rust(rocksdb))
 }
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
+unsafe fn revindex_disk_create(
     sigs_ptr: *const *const SourmashSignature,
     insigs: usize,
     path_ptr: *const c_char,
@@ -93,15 +91,15 @@ unsafe fn disk_revindex_new_with_sigs( // @CTB rename to create
 
     let rocksdb_path = Path::new(rocksdb_path);
 
-    let mut revindex = disk_revindex::RevIndex::create(rocksdb_path, cs).expect("cannot create RocksDB");
+    let mut revindex = disk_revindex::DiskRevIndex::create(rocksdb_path, cs).expect("cannot create RocksDB");
     revindex.internalize_storage().expect("failed to internalize storage.");
     Ok(())
 }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn disk_revindex_free(ptr: *mut SourmashDiskRevIndex) {
-    SourmashDiskRevIndex::drop(ptr);
+pub unsafe extern "C" fn revindex_free(ptr: *mut SourmashRevIndex) {
+    SourmashRevIndex::drop(ptr);
 }
 
 #[no_mangle]
@@ -134,14 +132,14 @@ pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn disk_revindex_len(ptr: *const SourmashDiskRevIndex) -> u64 {
-    let revindex = SourmashDiskRevIndex::as_rust(ptr);
-    revindex.collection().len() as u64
+pub unsafe extern "C" fn revindex_len(ptr: *const SourmashRevIndex) -> u64 {
+    let revindex = SourmashRevIndex::as_rust(ptr);
+    revindex.len() as u64
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn disk_revindex_ksize(ptr: *const SourmashDiskRevIndex) -> u32 {
-    let revindex = SourmashDiskRevIndex::as_rust(ptr);
+pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
+    let revindex = SourmashRevIndex::as_rust(ptr);
 
     revindex
         .collection()
@@ -152,8 +150,8 @@ pub unsafe extern "C" fn disk_revindex_ksize(ptr: *const SourmashDiskRevIndex) -
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn disk_revindex_scaled(ptr: *const SourmashDiskRevIndex) -> u32 {
-    let revindex = SourmashDiskRevIndex::as_rust(ptr);
+pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
+    let revindex = SourmashRevIndex::as_rust(ptr);
     let (_, scaled) = revindex
         .collection()
         .min_max_scaled()
@@ -162,8 +160,8 @@ pub unsafe extern "C" fn disk_revindex_scaled(ptr: *const SourmashDiskRevIndex) 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn disk_revindex_moltype(ptr: *const SourmashDiskRevIndex) -> *const c_char {
-    let revindex = SourmashDiskRevIndex::as_rust(ptr);
+pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> *const c_char {
+    let revindex = SourmashRevIndex::as_rust(ptr);
     let moltype = revindex
         .collection()
         .manifest()
@@ -176,21 +174,13 @@ pub unsafe extern "C" fn disk_revindex_moltype(ptr: *const SourmashDiskRevIndex)
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_signatures(
-    ptr: *const SourmashDiskRevIndex,
+unsafe fn revindex_signatures(
+    ptr: *const SourmashRevIndex,
     size: *mut usize,
 ) -> Result<*mut *mut SourmashSignature> {
-    let revindex = &SourmashDiskRevIndex::as_rust(ptr);
+    let revindex = &SourmashRevIndex::as_rust(ptr);
 
-    let coll = revindex.collection();
-
-    let sigs: Vec<Signature> = coll
-        .iter()
-        .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
-            Ok(sig) => { Some(sig.into()) },
-            Err(_) => None,
-        })
-        .collect();
+    let sigs = revindex.signatures();
 
     // FIXME: use the ForeignObject trait, maybe define new method there...
     let ptr_sigs: Vec<*mut SourmashSignature> = sigs
@@ -205,52 +195,17 @@ unsafe fn disk_revindex_signatures(
 }
 }
 
-ffi_fn! {
-unsafe fn disk_revindex_best_containment(
-    db_ptr: *const SourmashDiskRevIndex,
-    query_ptr: *const SourmashSignature,
-    threshold_bp: u16,
-    dataset_picklist_ptr: *const SourmashDatasetPicklist,
-) -> Result<*mut SourmashSignature> {
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
-    let sig = SourmashSignature::as_rust(query_ptr);
-
-    // extract KmerMinHash for query
-    let query_mh: KmerMinHash = sig.clone()
-        .try_into().expect("cannot get kmerminhash");
-    let scaled = query_mh.scaled();
-    let threshold = threshold_bp as u32 / scaled;
-
-    // picklist?
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
-
-    // do search & get first/best match
-    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
-    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
-
-    if size as u32 >= threshold {
-        // load into SigStore & convert to Signature.
-        let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-        let match_sig: Signature = match_sig.into();
-
-        Ok(SourmashSignature::from_rust(match_sig))
-    } else {
-        Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
-    }
-}
-}
-
 // implement prefetch/containment separately from search/jaccard
 
 ffi_fn! {
-unsafe fn disk_revindex_prefetch(
-    db_ptr: *const SourmashDiskRevIndex,
+unsafe fn revindex_prefetch(
+    db_ptr: *const SourmashRevIndex,
     query_ptr: *const SourmashSignature,
     threshold_bp: u64,
     return_size: *mut usize,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*const *const SourmashSearchResult> {
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
 
     // extract KmerMinHash for query
@@ -304,14 +259,14 @@ unsafe fn disk_revindex_prefetch(
 // implement search/jaccard separately from search/jaccard asdf @CTB
 
 ffi_fn! {
-unsafe fn disk_revindex_search_jaccard(
-    db_ptr: *const SourmashDiskRevIndex,
+unsafe fn revindex_search_jaccard(
+    db_ptr: *const SourmashRevIndex,
     query_ptr: *const SourmashSignature,
     threshold: f64,
     return_size: *mut usize,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*const *const SourmashSearchResult> {
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
 
     // extract KmerMinHash for query
@@ -361,16 +316,16 @@ unsafe fn disk_revindex_search_jaccard(
 }
 }
 
-// implement peek: used in 'gather' to retrieve best containment possible
+// implement prefetch/containment separately from search/jaccard
 
 ffi_fn! {
-unsafe fn disk_revindex_peek(
-    db_ptr: *const SourmashDiskRevIndex,
+unsafe fn revindex_best_containment(
+    db_ptr: *const SourmashRevIndex,
     query_ptr: *const SourmashKmerMinHash,
     threshold_bp: u64,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*mut SourmashSignature> {
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
     let query_mh = SourmashKmerMinHash::as_rust(query_ptr);
     let scaled = query_mh.scaled();
     let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
@@ -380,71 +335,31 @@ unsafe fn disk_revindex_peek(
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(query_mh, dataset_picklist);
-    let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
+    if counter.len() >= 1 {
+        let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
-    if size as u64 >= threshold_bp {
-        // load into SigStore & convert to Signature.
-        let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-        let match_sig: Signature = match_sig.into();
+        if size as u64 >= threshold_bp {
+            // load into SigStore & convert to Signature.
+            let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
+            let match_sig: Signature = match_sig.into();
 
-        Ok(SourmashSignature::from_rust(match_sig))
-    } else {
-        Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
+            return Ok(SourmashSignature::from_rust(match_sig));
+        }
     }
-}
-}
 
-// implement prefetch/containment separately from search/jaccard
-
-ffi_fn! {
-unsafe fn disk_revindex_prefetch_to_mem_revindex(
-    db_ptr: *const SourmashDiskRevIndex,
-    query_ptr: *const SourmashSignature,
-    threshold_bp: u64,
-    dataset_picklist_ptr: *const SourmashDatasetPicklist,
-) -> Result<*mut SourmashMemRevIndex> {
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
-    let sig = SourmashSignature::as_rust(query_ptr);
-
-    // extract KmerMinHash for query
-    let query_mh: KmerMinHash = sig.clone()
-        .try_into().expect("cannot get kmerminhash");
-    let scaled = query_mh.scaled();
-    let threshold_bp: usize = threshold_bp as usize / scaled as usize;
-
-    // picklist?
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
-
-    // do search & get matches
-    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
-
-    let records = revindex.records_from_counter(counter, threshold_bp);
-
-    //if records.is_empty() {
-    //    return Ok(std::ptr::null::<*mut SourmashMemRevIndex>());
-    //}
-
-    let search_sigs: Vec<Signature> = records
-        .iter()
-        .map(|r| revindex.collection().sig_from_record(r).expect("error retrieving record").into())
-        .collect();
-
-    let template_sketch = Sketch::MinHash(query_mh);
-    let selection = from_template(&template_sketch);
-    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
-    Ok(SourmashMemRevIndex::from_rust(revindex))
+    Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
 }
 }
 
 // return a CounterGather object with prefetch results
 
 ffi_fn! {
-unsafe fn disk_revindex_prefetch_to_countergather(
-    db_ptr: *const SourmashDiskRevIndex,
+unsafe fn revindex_prefetch_to_countergather(
+    db_ptr: *const SourmashRevIndex,
     query_ptr: *const SourmashSignature,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*mut SourmashRevIndex_CounterGather> {
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
     let sig = SourmashSignature::as_rust(query_ptr);
 
     // extract KmerMinHash for query
@@ -454,7 +369,7 @@ unsafe fn disk_revindex_prefetch_to_countergather(
     // picklist?
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
-    // do search & get matches - @CTB picklist needed!
+    // do search & get matches
     let counter = revindex.prepare_gather_counters(&query_mh, dataset_picklist);
 
     Ok(SourmashRevIndex_CounterGather::from_rust(counter))
@@ -462,7 +377,7 @@ unsafe fn disk_revindex_prefetch_to_countergather(
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_countergather_consume(
+unsafe fn revindex_countergather_consume(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
     isect_ptr: *const SourmashKmerMinHash,
 ) -> Result<()> {
@@ -476,13 +391,13 @@ unsafe fn disk_revindex_countergather_consume(
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_countergather_peek(
+unsafe fn revindex_countergather_peek(
     cg_ptr: *const SourmashRevIndex_CounterGather,
-    db_ptr: *const SourmashDiskRevIndex,
+    db_ptr: *const SourmashRevIndex,
     threshold_bp: u64,
 ) -> Result<*mut SourmashSignature> {
     let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
 
     let result = cg.peek(threshold_bp as usize);
 
@@ -498,13 +413,13 @@ unsafe fn disk_revindex_countergather_peek(
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_countergather_signatures(
+unsafe fn revindex_countergather_signatures(
     cg_ptr: *const SourmashRevIndex_CounterGather,
-    db_ptr: *const SourmashDiskRevIndex,
+    db_ptr: *const SourmashRevIndex,
     size: *mut usize,
 ) -> Result<*mut *mut SourmashSignature> {
     let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
-    let revindex = &SourmashDiskRevIndex::as_rust(db_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
 
     let coll = revindex.collection();
     let sigs: Vec<Signature> = cg
@@ -531,7 +446,7 @@ unsafe fn disk_revindex_countergather_signatures(
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_countergather_found_hashes(
+unsafe fn revindex_countergather_found_hashes(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
     template_ptr: *const SourmashKmerMinHash,
 ) -> Result<*const SourmashKmerMinHash> {
@@ -544,11 +459,116 @@ unsafe fn disk_revindex_countergather_found_hashes(
 }
 
 ffi_fn! {
-unsafe fn disk_revindex_countergather_len(
+unsafe fn revindex_countergather_len(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
 ) -> Result<u64> {
     let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
 
     Ok(cg.len() as u64)
+}
+}
+
+// TODO: remove this when it is possible to pass Selection thru the FFI
+pub fn from_template(template: &Sketch) -> Selection {
+    let (num, scaled) = match template {
+        Sketch::MinHash(mh) => (mh.num(), mh.scaled()),
+        Sketch::LargeMinHash(mh) => (mh.num(), mh.scaled()),
+        _ => unimplemented!(),
+    };
+
+    let (ksize, moltype) = match template {
+        Sketch::MinHash(mh) => (mh.ksize() as u32, mh.hash_function()),
+        Sketch::LargeMinHash(mh) => (mh.ksize() as u32, mh.hash_function()),
+        _ => unimplemented!(),
+    };
+
+    let adj_ksize: u32 = match moltype {
+        HashFunctions::Murmur64Dna => ksize,
+        HashFunctions::Murmur64Protein => ksize / 3,
+        HashFunctions::Murmur64Dayhoff => ksize / 3,
+        HashFunctions::Murmur64Hp => ksize / 3,
+        HashFunctions::Murmur64Skipm1n3 => ksize,
+        HashFunctions::Murmur64Skipm2n3 => ksize,
+        _ => ksize,
+    };
+
+    Selection::builder()
+        .ksize(adj_ksize)
+        .num(num)
+        .scaled(scaled)
+        .build()
+}
+
+ffi_fn! {
+unsafe fn revindex_mem_new_with_sigs(
+    search_sigs_ptr: *const *const SourmashSignature,
+    insigs: usize,
+    template_ptr: *const SourmashKmerMinHash,
+) -> Result<*mut SourmashRevIndex> {
+    let search_sigs: Vec<Signature> = {
+        assert!(!search_sigs_ptr.is_null());
+        slice::from_raw_parts(search_sigs_ptr, insigs)
+            .iter()
+            .map(|sig| SourmashSignature::as_rust(*sig))
+            .cloned()
+            .collect()
+    };
+
+    let template = {
+        assert!(!template_ptr.is_null());
+        //TODO: avoid clone here
+        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+    };
+
+    let selection = from_template(&template);
+    let revindex = mem_revindex::MemRevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
+    Ok(SourmashRevIndex::from_rust(revindex))
+}
+}
+
+ffi_fn! {
+unsafe fn revindex_search(
+    ptr: *const SourmashRevIndex,
+    sig_ptr: *const SourmashSignature,
+    threshold: f64,
+    do_containment: bool,
+    _ignore_abundance: bool,
+    size: *mut usize,
+) -> Result<*const *const SourmashSearchResult> {
+    let revindex = SourmashRevIndex::as_rust(ptr);
+    let sig = SourmashSignature::as_rust(sig_ptr);
+
+    if sig.signatures.is_empty() {
+        *size = 0;
+        return Ok(std::ptr::null::<*const SourmashSearchResult>());
+    }
+
+    let mh = if let Sketch::MinHash(mh) = &sig.signatures[0] {
+        mh
+    } else {
+        // TODO: what if it is not a mh?
+        unimplemented!()
+    };
+
+    let revindex = match revindex {
+        module::RevIndex::Mem(r) => r,
+        _ => unimplemented!(),
+    };
+
+    let results: Vec<(f64, Signature, String)> = revindex
+        .find_signatures(mh, threshold, do_containment, true)?
+        .into_iter()
+        .collect();
+
+    // FIXME: use the ForeignObject trait, maybe define new method there...
+    let ptr_sigs: Vec<*const SourmashSearchResult> = results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+        .collect();
+
+    let b = ptr_sigs.into_boxed_slice();
+    *size = b.len();
+
+    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
