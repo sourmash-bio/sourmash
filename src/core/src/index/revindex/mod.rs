@@ -50,7 +50,7 @@ pub struct CounterGather {
 pub enum RevIndex {
     //Color(color_revindex::ColorRevIndex),
     Plain(disk_revindex::RevIndex),
-    Mem(mem_revindex::RevIndex),
+    Mem(mem_revindex::MemRevIndex),
 }
 
 #[derive(Clone)]

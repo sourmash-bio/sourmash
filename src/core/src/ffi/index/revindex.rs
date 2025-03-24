@@ -521,7 +521,7 @@ unsafe fn revindex_mem_new_with_sigs(
     };
 
     let selection = from_template(&template);
-    let revindex = mem_revindex::RevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
+    let revindex = mem_revindex::MemRevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
