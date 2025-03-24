@@ -31,6 +31,12 @@ class RevIndex(RustObject, Index):
             return ffi.NULL
         return self._idx_picklist._objptr
 
+    def _generate_idx_picklist_from_manifest(self, mf):
+
+        # grab internal indices
+        idx_list = [int(row["internal_location"]) for row in mf.rows]
+        self._idx_picklist = RevIndex_DatasetPicklist(idx_list)
+
     def signatures(self):
         self._init_inner()
 
@@ -410,18 +416,6 @@ class DiskRevIndex(RevIndex):
             self._idx_picklist = RevIndex_DatasetPicklist.from_manifest(m)
 
         return self
-
-    def _generate_idx_picklist_from_manifest(self, mf):
-
-        # grab internal indices
-        idx_list = [int(row["internal_location"]) for row in mf.rows]
-        self._idx_picklist = RevIndex_DatasetPicklist(idx_list)
-
-    @property
-    def _ffi_idx_picklist(self):
-        if self._idx_picklist is None:
-            return ffi.NULL
-        return self._idx_picklist._objptr
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
         if not query_ss.minhash:
