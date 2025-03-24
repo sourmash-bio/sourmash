@@ -734,7 +734,8 @@ mod test {
         let mut cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            &mut cg, 5, // 50kb threshold
+            &mut cg,
+            5, // 50kb threshold
             &query,
             Some(selection),
         )?;
