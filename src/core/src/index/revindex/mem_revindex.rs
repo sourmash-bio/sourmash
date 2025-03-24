@@ -119,7 +119,6 @@ impl RevIndex {
         let collection = Collection::from_zipfile(zipfile)?.select(selection)?;
         let linear = LinearIndex::from_collection(collection.try_into()?);
 
-
         let idx = linear.index(threshold, merged_query, queries);
         Ok(module::RevIndex::Mem(idx))
     }

@@ -61,8 +61,8 @@ pub struct DatasetPicklist {
 #[enum_dispatch]
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool);
-     */
+       pub fn repair(index: &Path, colors: bool);
+    */
 
     fn len(&self) -> usize {
         self.collection().len()
@@ -70,10 +70,9 @@ pub trait RevIndexOps {
 
     fn signatures(&self) -> Vec<Signature> {
         let coll = self.collection();
-        coll
-            .iter()
+        coll.iter()
             .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
-                Ok(sig) => { Some(sig.into()) },
+                Ok(sig) => Some(sig.into()),
                 Err(_) => None,
             })
             .collect()

@@ -3,6 +3,7 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::collection::{Collection, CollectionSet};
+use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
@@ -10,14 +11,13 @@ use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex;
 use crate::index::revindex::mem_revindex;
 use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, RevIndexOps};
-use std::collections::HashSet;
-use std::ffi::CString;
-use std::path::Path;
 use crate::prelude::*;
-use crate::encodings::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use std::collections::HashSet;
+use std::ffi::CString;
+use std::path::Path;
 
 pub struct SourmashRevIndex;
 impl ForeignObject for SourmashRevIndex {
@@ -467,7 +467,6 @@ unsafe fn revindex_countergather_len(
     Ok(cg.len() as u64)
 }
 }
-
 
 // TODO: remove this when it is possible to pass Selection thru the FFI
 pub fn from_template(template: &Sketch) -> Selection {
