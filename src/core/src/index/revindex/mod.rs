@@ -144,6 +144,10 @@ impl CounterGather {
     }
 
     pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
+        if self.counter.is_empty() {
+            return None;
+        }
+
         let (dataset_id, size) = self.counter.k_most_common_ordered(1)[0];
         if size > 0 && size >= threshold {
             Some((dataset_id, size))
@@ -524,9 +528,13 @@ mod test {
 
     use crate::collection::Collection;
     use crate::prelude::*;
+    use crate::index::revindex::disk_revindex;
     use crate::selection::Selection;
+    use crate::sketch::minhash::KmerMinHash;
+    use crate::signature::SigsTrait;
     use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
+    use crate::encodings::*;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
 
@@ -599,13 +607,13 @@ mod test {
         if let Some(q) = prepare_query(query_sig, &selection) {
             query = Some(q);
         }
-        let query = query.unwrap();
+        let q = query.unwrap();
 
         let new_collection = Collection::from_paths(&new_siglist)?.select(&selection)?;
         let index =
             RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
-        let counter = index.counter_for_query(&query, None);
+        let counter = index.counter_for_query(&q, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
@@ -646,7 +654,9 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
 
-        let mut cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None);
+        assert_eq!(cg.len(), 1);
+        assert_eq!(cg.is_empty(), false);
 
         let matches = index.gather(cg, 0, &query, Some(selection))?;
 
@@ -706,7 +716,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let mut cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
             cg,
@@ -854,7 +864,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let mut cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(cg, 0, &query, Some(selection))?;
 
@@ -1094,5 +1104,74 @@ mod test {
             Err(_) => Ok(()),
             Ok(_) => panic!("test should not reach here"),
         }
+    }
+
+    #[test]
+    fn countergather_basic() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+
+        let db = disk_revindex::DiskRevIndex::open("../../tests/test-data/3sigs.branch_0913.rocksdb", true, None).expect("cannot open rocksdb");
+
+        let query_sig = Signature::from_path("../../tests/test-data/SRR606249.sig.gz")
+            .expect("error processing query")
+            .swap_remove(0)
+            .select(&selection)
+            .expect("error getting compatible sig");
+
+        let mut query_mh = prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+
+        let compute_isect = |a: &KmerMinHash, b: &KmerMinHash| -> KmerMinHash {
+            let isect = a.intersection(&b).expect("intersection failed");
+            let mut isect_mh = a.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0[..]).expect("add many failed");
+            isect_mh
+        };
+
+        let load_sig = |db: &RevIndex, dataset_id: &Idx, selection: &Selection| -> KmerMinHash {
+            let m1: Signature = db
+                .collection()
+                .sig_for_dataset(*dataset_id)
+                .expect("cannot load dataset_id")
+                .into();
+            let m1 = m1.select(selection).expect("cannot find compatible sig");
+            m1.try_into().expect("cannot extract minhash")
+        };
+
+        let mut cg = db.prepare_gather_counters(&query_mh, None);
+
+        let (dataset_id, size) = cg.peek(0).unwrap();
+
+        // match 1:
+        let m1 = load_sig(&db, &dataset_id, &selection);
+        let isect_mh = compute_isect(&m1, &query_mh);
+        assert_eq!(isect_mh.size(), size);
+
+        cg.consume(&isect_mh);
+        query_mh.remove_many(isect_mh.mins()).expect("cannot remove_many");
+
+        let (dataset_id, size) = cg.peek(0).unwrap();
+
+        // match 2:
+        let m2 = load_sig(&db, &dataset_id, &selection);
+        let isect_mh = compute_isect(&m2, &query_mh);
+        assert_eq!(isect_mh.size(), size);
+
+        cg.consume(&isect_mh);
+        query_mh.remove_many(isect_mh.mins()).expect("cannot remove_many");
+
+        let (dataset_id, size) = cg.peek(0).unwrap();
+
+        // match 3:
+        let m3 = load_sig(&db, &dataset_id, &selection);
+        let isect_mh = compute_isect(&m3, &query_mh);
+        assert_eq!(isect_mh.size(), size);
+
+        cg.consume(&isect_mh);
+
+        let r4 = cg.peek(0);
+        assert_eq!(r4, None);
+
+        Ok(())
     }
 }

@@ -599,7 +599,7 @@ mod test {
         let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
         assert_eq!(results_rev, results_linear);
 
-        let mut counter_rev = index.prepare_gather_counters(&query_mh, None);
+        let counter_rev = index.prepare_gather_counters(&query_mh, None);
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
         let results_rev = index.gather(counter_rev, 0, &query_mh, None).unwrap();
@@ -733,7 +733,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let mut cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
             cg,
