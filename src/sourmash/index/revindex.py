@@ -88,18 +88,17 @@ class RevIndex(RustObject, Index):
         threshold_bp = int(threshold_bp)
         query_mh = query_ss.minhash
 
-        try:
-            ss_ptr = self._methodcall(
-                lib.revindex_best_containment,
-                query_mh._get_objptr(),
-                threshold_bp,
-                self._ffi_idx_picklist,
-            )
-            match_ss = SourmashSignature._from_objptr(ss_ptr)
-            if not match_ss.minhash:
-                raise ValueError("no results")
-        except:
+        ss_ptr = self._methodcall(
+            lib.revindex_best_containment,
+            query_mh._get_objptr(),
+            threshold_bp,
+            self._ffi_idx_picklist,
+        )
+
+        match_ss = SourmashSignature._from_objptr(ss_ptr)
+        if not match_ss:
             raise ValueError("no results")
+
         containment = query_ss.contained_by(match_ss)
 
         return IndexSearchResult(containment, match_ss, self.location)
@@ -616,16 +615,17 @@ class RevIndex_CounterGather_Colors(RustObject):
 
     def peek(self, query_mh, *, threshold_bp=0):
         threshold_hashes = int(threshold_bp / query_mh.scaled)
-        try:
-            match_ss_ptr = self._methodcall(
-                lib.revindex_countergather_peek,
-                self.db._objptr,
-                threshold_hashes,
-            )
-        except sourmash.exceptions.Panic:
+        match_ss_ptr = self._methodcall(
+            lib.revindex_countergather_peek,
+            self.db._objptr,
+            threshold_hashes,
+        )
+
+        # empty SourmashSignature => nothing found.
+        match_ss = SourmashSignature._from_objptr(match_ss_ptr)
+        if not match_ss:
             return []
 
-        match_ss = SourmashSignature._from_objptr(match_ss_ptr)
         match_mh = match_ss.minhash
         intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
         containment = len(intersect_mh) / len(query_mh)

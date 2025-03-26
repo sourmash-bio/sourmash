@@ -229,7 +229,7 @@ unsafe fn revindex_prefetch(
         .into_iter()
         .filter_map(|(dataset_id, size)| {
             if size as u64 >= threshold_bp {
-                let filename = "some rocksdb database"; // @CTB
+                let filename = "some rocksdb database"; // @CTB fixme
                 let sig: Signature = revindex
                     .collection()
                     .sig_for_dataset(dataset_id)
@@ -256,7 +256,8 @@ unsafe fn revindex_prefetch(
 }
 }
 
-// implement search/jaccard separately from search/jaccard asdf @CTB
+// implement search/jaccard separately from prefetch/containment
+// @CTB: test for disk rev index.
 
 ffi_fn! {
 unsafe fn revindex_search_jaccard(
@@ -316,7 +317,8 @@ unsafe fn revindex_search_jaccard(
 }
 }
 
-// implement prefetch/containment separately from search/jaccard
+// implement prefetch/containment separately from search/jaccard.
+// This can be done efficiently on RevIndexes.
 
 ffi_fn! {
 unsafe fn revindex_best_containment(
@@ -340,14 +342,17 @@ unsafe fn revindex_best_containment(
 
         if size as u64 >= threshold_bp {
             // load into SigStore & convert to Signature.
-            let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
+            let match_sig = revindex
+                .collection()
+                .sig_for_dataset(dataset_id)
+                .expect("cannot load signature");
             let match_sig: Signature = match_sig.into();
 
             return Ok(SourmashSignature::from_rust(match_sig));
         }
     }
 
-    Ok(SourmashSignature::from_rust(Signature::default())) // @CTB
+    Ok(SourmashSignature::from_rust(Signature::default()))
 }
 }
 
@@ -401,14 +406,15 @@ unsafe fn revindex_countergather_peek(
 
     let result = cg.peek(threshold_bp as usize);
 
-    // if result.is_none() { // @CTB...
-    // }
-
-    let (dataset_id, _match_size) = result.unwrap();
-
-    let match_sig = revindex.collection().sig_for_dataset(dataset_id)?;
-
-    Ok(SourmashSignature::from_rust(match_sig.into()))
+    if let Some((dataset_id, _match_size)) = result {
+        let match_sig = revindex
+            .collection()
+            .sig_for_dataset(dataset_id)
+            .expect("cannot load signature");
+        Ok(SourmashSignature::from_rust(match_sig.into()))
+    } else {
+        Ok(SourmashSignature::from_rust(Signature::default()))
+    }
 }
 }
 
@@ -521,7 +527,7 @@ unsafe fn revindex_mem_new_with_sigs(
     };
 
     let selection = from_template(&template);
-    let revindex = mem_revindex::MemRevIndex::new_with_sigs(search_sigs, &selection, 0, None)?;
+    let revindex = mem_revindex::MemRevIndex::new_with_sigs(search_sigs, &selection, 0, None).expect("cannot create MemRevIndex");
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
