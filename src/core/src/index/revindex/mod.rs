@@ -1,5 +1,4 @@
 /// Reverse index data structures.
-
 pub mod disk_revindex;
 pub mod mem_revindex;
 
@@ -272,19 +271,19 @@ impl RevIndex {
             }
         }
     */
-/*
-    pub fn create<P: AsRef<Path>>(
-        index: P,
-        collection: CollectionSet,
-        colors: bool,
-    ) -> Result<Self> {
-        if colors {
-            todo!() //color_revindex::ColorRevIndex::create(index)
-        } else {
-            disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
+    /*
+        pub fn create<P: AsRef<Path>>(
+            index: P,
+            collection: CollectionSet,
+            colors: bool,
+        ) -> Result<Self> {
+            if colors {
+                todo!() //color_revindex::ColorRevIndex::create(index)
+            } else {
+                disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
+            }
         }
-    }
-*/
+    */
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
         let opts = db_options();
         let cfs = DB::list_cf(&opts, index.as_ref())?;
@@ -296,7 +295,7 @@ impl RevIndex {
         } else {
             disk_revindex::DiskRevIndex::open(index, read_only, spec)
         }
-}
+    }
 }
 
 pub fn prepare_query(search_sig: Signature, selection: &Selection) -> Option<KmerMinHash> {
@@ -524,14 +523,14 @@ mod test {
     use tempfile::TempDir;
 
     use crate::collection::Collection;
-    use crate::prelude::*;
+    use crate::encodings::*;
     use crate::index::revindex::disk_revindex;
+    use crate::prelude::*;
     use crate::selection::Selection;
-    use crate::sketch::minhash::KmerMinHash;
     use crate::signature::SigsTrait;
+    use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
-    use crate::encodings::*;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
 
@@ -1107,7 +1106,12 @@ mod test {
     fn countergather_basic() -> Result<()> {
         let selection = Selection::builder().ksize(31).scaled(100000).build();
 
-        let db = disk_revindex::DiskRevIndex::open("../../tests/test-data/3sigs.branch_0913.rocksdb", true, None).expect("cannot open rocksdb");
+        let db = disk_revindex::DiskRevIndex::open(
+            "../../tests/test-data/3sigs.branch_0913.rocksdb",
+            true,
+            None,
+        )
+        .expect("cannot open rocksdb");
 
         let query_sig = Signature::from_path("../../tests/test-data/SRR606249.sig.gz")
             .expect("error processing query")
@@ -1115,7 +1119,8 @@ mod test {
             .select(&selection)
             .expect("error getting compatible sig");
 
-        let mut query_mh = prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+        let mut query_mh =
+            prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
 
         let compute_isect = |a: &KmerMinHash, b: &KmerMinHash| -> KmerMinHash {
             let isect = a.intersection(&b).expect("intersection failed");
@@ -1145,7 +1150,9 @@ mod test {
         assert_eq!(isect_mh.size(), size);
 
         cg.consume(&isect_mh);
-        query_mh.remove_many(isect_mh.mins()).expect("cannot remove_many");
+        query_mh
+            .remove_many(isect_mh.mins())
+            .expect("cannot remove_many");
 
         let (dataset_id, size) = cg.peek(0).unwrap();
 
@@ -1155,7 +1162,9 @@ mod test {
         assert_eq!(isect_mh.size(), size);
 
         cg.consume(&isect_mh);
-        query_mh.remove_many(isect_mh.mins()).expect("cannot remove_many");
+        query_mh
+            .remove_many(isect_mh.mins())
+            .expect("cannot remove_many");
 
         let (dataset_id, size) = cg.peek(0).unwrap();
 

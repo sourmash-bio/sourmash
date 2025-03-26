@@ -232,7 +232,9 @@ impl MemRevIndex {
         let query_scaled = mh.scaled();
 
         let query_mh = if query_scaled < index_scaled {
-            mh.clone().downsample_scaled(index_scaled).expect("cannot downsample query")
+            mh.clone()
+                .downsample_scaled(index_scaled)
+                .expect("cannot downsample query")
         } else {
             mh.clone()
         };
