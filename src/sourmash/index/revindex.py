@@ -52,8 +52,8 @@ class RevIndex(RustObject, Index):
             yield ss, self.location  # @CTB
 
     def _signatures_with_internal(self):
-        # CTB fix: don't use signatures() once we start paying attention
-        # to picklists.
+        # CTB fix: adjust signatures() to pay attention to picklists,
+        # vs internal signatures
         for n, ss in enumerate(self.signatures()):
             yield ss, n
 
@@ -375,14 +375,14 @@ class DiskRevIndex(RevIndex):
     def insert(self, *args, **kwargs):
         raise NotImplementedError
 
-    def load(self, *args, **kwargs):  # @CTB
+    def load(self, *args, **kwargs):
         raise NotImplementedError
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
 
     @classmethod
-    def from_sigs(self, siglist, path):  # @CTB rename? create?
+    def create_from_sigs(self, siglist, path):
         path_b = path.encode("utf-8")
 
         collected = []
@@ -546,7 +546,7 @@ class RevIndex_CounterGather:
 
         self.found_mh += intersect_mh
 
-    def peek(self, query_mh, *, threshold_bp=0):  # threshold_bp default?? @CTB
+    def peek(self, query_mh, *, threshold_bp=0):
         if not query_mh:
             return []
 

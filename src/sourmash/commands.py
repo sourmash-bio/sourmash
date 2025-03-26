@@ -660,7 +660,7 @@ def index(args):
         from sourmash.index.revindex import DiskRevIndex  # @CTB
 
         print("CREATING ROCKSDB W00T XXX", output_name, len(full_siglist))
-        DiskRevIndex.from_sigs(full_siglist, output_name)
+        DiskRevIndex.create_from_sigs(full_siglist, output_name)
 
 
 def search(args):
