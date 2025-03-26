@@ -348,7 +348,7 @@ impl RevIndexOps for MemRevIndex {
         let match_size = usize::MAX;
         let mut matches = vec![];
 
-        let mut query = KmerMinHashBTree::from(orig_query.clone());
+        let mut running_query = KmerMinHashBTree::from(orig_query.clone());
         while match_size > threshold && !cg.is_empty() {
             let next_match = cg.peek(threshold);
             if next_match.is_none() {
@@ -358,7 +358,7 @@ impl RevIndexOps for MemRevIndex {
 
             // eprintln!("dataset_id: {} {}", dataset_id, match_size);
 
-            let query_mh = KmerMinHash::from(query.clone());
+            let query_mh = KmerMinHash::from(running_query.clone());
             let result = self.linear.gather_round(
                 dataset_id,
                 match_size,
@@ -376,7 +376,7 @@ impl RevIndexOps for MemRevIndex {
 
                 cg.consume(&isect_mh);
                 matches.push(result);
-                query.remove_many(isect_mh.iter_mins().copied())?; // @CTB is there a better way?
+                running_query.remove_many(isect_mh.iter_mins().copied())?;
             } else {
                 unimplemented!()
             }
@@ -663,7 +663,7 @@ mod test {
         // compare to linear gather.
         let counter_lin = index.linear.counter_for_query(&query_mh);
         let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
-        // assert_eq!(results_linear.len(), 3); @CTB
+        // assert_eq!(results_linear.len(), 3); @CTB fixme: linear gather
 
         assert_eq!(results[0], results_linear[0]);
 
