@@ -104,7 +104,6 @@ class RevIndex(RustObject, Index):
         return IndexSearchResult(containment, match_ss, self.location)
 
     def peek(self, query_mh, *, threshold_bp=0):
-        # @CTB: reimplement in terms of best_containment python fn?
         self._init_inner()
         ss_ptr = self._methodcall(
             lib.revindex_best_containment,
