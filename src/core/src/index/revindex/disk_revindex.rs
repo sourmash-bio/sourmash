@@ -14,7 +14,7 @@ use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
     self as module, stats_for_cf, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors,
-    RevIndexOps, MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
+    RevIndexOps
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::{Manifest, Record};
@@ -28,6 +28,13 @@ use crate::storage::{
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
+
+// DB metadata saved in the METADATA column family
+const MANIFEST: &str = "manifest";
+const STORAGE_SPEC: &str = "storage_spec";
+const VERSION: &str = "version";
+const PROCESSED: &str = "processed";
+
 
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();

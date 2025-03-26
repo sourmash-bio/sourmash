@@ -214,7 +214,7 @@ impl MemRevIndex {
 
     pub fn scaled(&self) -> ScaledType {
         if let Sketch::MinHash(mh) = self.linear.template() {
-            mh.clone().scaled() // @CTB avoid clone
+            mh.scaled()
         } else {
             unimplemented!()
         }
@@ -231,15 +231,10 @@ impl MemRevIndex {
         let index_scaled = self.scaled();
         let query_scaled = mh.scaled();
 
-        // @CTB avoid clones?
-        let query_mh = {
-            if query_scaled < index_scaled {
-                mh.clone()
-                    .downsample_scaled(index_scaled)
-                    .expect("cannot downsample query")
-            } else {
-                mh.clone()
-            }
+        let query_mh = if query_scaled < index_scaled {
+            mh.clone().downsample_scaled(index_scaled).expect("cannot downsample query")
+        } else {
+            mh.clone()
         };
 
         // TODO: proper threshold calculation
@@ -265,12 +260,10 @@ impl MemRevIndex {
                 .record_for_dataset(dataset_id)?
                 .internal_location();
 
-            let mut match_mh = None;
-            //@CTB use something other than mh here?
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {
-                match_mh = Some(mh);
-            }
-            let match_mh = match_mh.unwrap();
+            let match_mh = match match_sig.select_sketch(self.linear.template()) {
+                Some(Sketch::MinHash(mh)) => mh,
+                _ => unimplemented!(),
+            };
 
             if size >= threshold {
                 let score = if containment {
@@ -320,7 +313,7 @@ impl RevIndexOps for MemRevIndex {
             .filter_map(|hash| hash_to_color.get(hash))
             .map(|color| (*color, self.colors.indices(color)))
             .map(|(color, indices)| (color, indices.cloned().collect::<Vec<u32>>()))
-            // @CTB could we add a 'from' to Datasets for this?
+            // CTB: could we add a 'from' to Datasets for this?
             .map(|(color, indices)| (color, Datasets::new(&indices)))
             .collect();
 
@@ -382,19 +375,8 @@ impl RevIndexOps for MemRevIndex {
                 isect_mh.add_many(&matched_hashes)?;
 
                 cg.consume(&isect_mh);
-                //cg.consume(dataset_id, &isect_mh); @CTB dataset_id
-                /*
-                                // Prepare counter for finding the next match by decrementing
-                                // all hashes found in the current match in other datasets
-                                for hash in match_mh.iter_mins() {
-                                    if let Some(color) = self.hash_to_color.get(hash) {
-                                        counter.subtract(self.colors.indices(color).cloned());
-                                    }
-                                }
-                                counter.remove(&dataset_id);
-                */
                 matches.push(result);
-                query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
+                query.remove_many(isect_mh.iter_mins().copied())?; // @CTB is there a better way?
             } else {
                 unimplemented!()
             }

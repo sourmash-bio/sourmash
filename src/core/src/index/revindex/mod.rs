@@ -1,3 +1,5 @@
+/// Reverse index data structures.
+
 pub mod disk_revindex;
 pub mod mem_revindex;
 
@@ -25,12 +27,6 @@ use crate::storage::rocksdb::{db_options, COLORS, DB};
 use crate::HashIntoType;
 use crate::Result;
 
-// DB metadata saved in the METADATA column family
-const MANIFEST: &str = "manifest";
-const STORAGE_SPEC: &str = "storage_spec";
-const VERSION: &str = "version";
-const PROCESSED: &str = "processed";
-
 type QueryColors = HashMap<Color, Datasets>;
 
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
@@ -38,6 +34,8 @@ type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HashToColor(HashToColorT);
 
+/// Struct to hold interim results of a containment analysis, supporting
+/// iterative peek/consume.
 #[derive(Debug)]
 pub struct CounterGather {
     counter: SigCounter,
@@ -47,7 +45,6 @@ pub struct CounterGather {
 
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
-    //Color(color_revindex::ColorRevIndex),
     Disk(disk_revindex::DiskRevIndex),
     Mem(mem_revindex::MemRevIndex),
 }
@@ -275,7 +272,7 @@ impl RevIndex {
             }
         }
     */
-
+/*
     pub fn create<P: AsRef<Path>>(
         index: P,
         collection: CollectionSet,
@@ -287,7 +284,7 @@ impl RevIndex {
             disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
         }
     }
-
+*/
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
         let opts = db_options();
         let cfs = DB::list_cf(&opts, index.as_ref())?;
@@ -299,7 +296,7 @@ impl RevIndex {
         } else {
             disk_revindex::DiskRevIndex::open(index, read_only, spec)
         }
-    }
+}
 }
 
 pub fn prepare_query(search_sig: Signature, selection: &Selection) -> Option<KmerMinHash> {
