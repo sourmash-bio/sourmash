@@ -167,7 +167,6 @@ def test_revindex_best_containment():
 
 
 def test_revindex_gather_ignore():
-    raise pytest.skip("not implemented")
     # check that RevIndex gather ignores things properly.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -178,7 +177,10 @@ def test_revindex_gather_ignore():
     ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     # construct an index...
-    lidx = MemRevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
+    lidx = MemRevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
 
     # ...now search with something that should ignore sig47, the exact match.
     search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
