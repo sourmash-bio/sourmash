@@ -98,17 +98,13 @@ def test_search_metagenome_index_downsample_fail(runtmp, disk_index_type):
     assert os.path.exists(runtmp.output(db_out))
 
     with pytest.raises(utils.SourmashCommandFailed):
-        runtmp.sourmash(
-            "search", query_sig, db_out, "-k", "21", "--scaled", "100000"
-        )
+        runtmp.sourmash("search", query_sig, db_out, "-k", "21", "--scaled", "100000")
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == -1
-    assert (
-        f"ERROR: cannot use '{db_out}' for this query." in runtmp.last_result.err
-    )
+    assert f"ERROR: cannot use '{db_out}' for this query." in runtmp.last_result.err
     assert (
         "search scaled value 100000 is less than database scaled value of 10000"
         in runtmp.last_result.err
