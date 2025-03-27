@@ -78,7 +78,7 @@ def test_search_metagenome(runtmp, disk_index_type):
 # explanation: you cannot downsample a scaled index to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an index.)
-def test_search_metagenome_index_downsample_fail(runtmp):
+def test_search_metagenome_index_downsample_fail(runtmp, disk_index_type):
     raise pytest.xfail("mismatch scaled")  # @CTB
     # test downsample on index => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
@@ -86,17 +86,20 @@ def test_search_metagenome_index_downsample_fail(runtmp):
 
     query_sig = utils.get_test_data("gather/combined.sig")
 
-    cmd = ["index", "gcf_all.rocksdb"]
+    db_out = runtmp.output(_index_filename("gcf_all", disk_index_type))
+    cmd = ["index", "-F", disk_index_type, db_out]
     cmd.extend(testdata_sigs)
     cmd.extend(["-k", "21"])
 
+    print(" ".join(cmd))
+
     runtmp.sourmash(*cmd)
 
-    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+    assert os.path.exists(runtmp.output(db_out))
 
     with pytest.raises(utils.SourmashCommandFailed):
         runtmp.sourmash(
-            "search", query_sig, "gcf_all.rocksdb", "-k", "21", "--scaled", "100000"
+            "search", query_sig, db_out, "-k", "21", "--scaled", "100000"
         )
 
     print(runtmp.last_result.out)
@@ -104,7 +107,7 @@ def test_search_metagenome_index_downsample_fail(runtmp):
 
     assert runtmp.last_result.status == -1
     assert (
-        "ERROR: cannot use 'gcf_all.rocksdb' for this query." in runtmp.last_result.err
+        f"ERROR: cannot use '{db_out}' for this query." in runtmp.last_result.err
     )
     assert (
         "search scaled value 100000 is less than database scaled value of 10000"
