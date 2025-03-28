@@ -56,8 +56,8 @@ pub struct DatasetPicklist {
 #[enum_dispatch]
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-       pub fn repair(index: &Path, colors: bool);
-     */
+      pub fn repair(index: &Path, colors: bool);
+    */
 
     fn location(&self) -> &str;
 
@@ -273,10 +273,7 @@ impl RevIndex {
             }
         }
     */
-    pub fn create<P: AsRef<Path>>(
-        index: P,
-        collection: CollectionSet,
-    ) -> Result<Self> {
+    pub fn create<P: AsRef<Path>>(index: P, collection: CollectionSet) -> Result<Self> {
         disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
     }
 
