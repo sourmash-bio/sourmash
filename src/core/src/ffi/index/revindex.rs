@@ -295,7 +295,13 @@ unsafe fn revindex_search_jaccard(
                 .into();
 
             let match_mh = sig.minhash().expect("cannot retrieve match");
-            let f_match = query_mh.jaccard(match_mh).expect("cannot calculate Jaccard");
+
+            let f_match = if match_mh.scaled() != query_mh.scaled() {
+                let match_ds = match_mh.clone().downsample_scaled(query_mh.scaled()).expect("cannot downsample");
+                query_mh.jaccard(&match_ds).expect("cannot calculate Jaccard")
+            } else {
+                query_mh.jaccard(&match_mh).expect("cannot calculate Jaccard")
+            };
 
             if f_match >= threshold {
                 Some((f_match, sig, filename.to_owned()))
