@@ -49,7 +49,7 @@ class RevIndex(RustObject, Index):
 
     def signatures_with_location(self):
         for ss in self.signatures():
-            yield ss, self.location  # @CTB
+            yield ss, self.location
 
     def _signatures_with_internal(self):
         # CTB fix: adjust signatures() to pay attention to picklists,
@@ -425,14 +425,14 @@ class DiskRevIndex(RevIndex):
 
         my_ksize = self._methodcall(lib.revindex_ksize)
         my_scaled = self._methodcall(lib.revindex_scaled)
-        my_moltype = self._methodcall(lib.revindex_moltype)
+        my_moltype = decode_str(self._methodcall(lib.revindex_moltype))
 
         if ksize is not None:
             if ksize != my_ksize:
                 raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
         if scaled is not None and scaled < my_scaled:
             raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if 0 and moltype is not None and moltype != my_moltype:  #  @CTB
+        if moltype is not None and moltype != my_moltype:
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
@@ -458,7 +458,9 @@ class DiskRevIndex(RevIndex):
         best_only=False,
         **kwargs,
     ):
-        # @CTB: best_only? sorting?
+        # CTB: could optimize for best_only, I 'spose. But only makes a
+        # difference for RevIndex when searching with containment.
+
         if not query_ss.minhash:
             raise ValueError("empty query")
 
@@ -527,7 +529,7 @@ class RevIndex_CounterGather:
     def scaled(self):
         return self.db.scaled
 
-    def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
+    def add(self, match_ss, *, location=None, require_overlap=True):
         if self.allow_insert:
             if self.db._check_not_init(do_raise=False):
                 self.db.insert(match_ss)
@@ -610,7 +612,7 @@ class RevIndex_CounterGather_Colors(RustObject):
     def scaled(self):
         return self._scaled
 
-    def add(self, match_ss, *, location=None, require_overlap=True):  # @CTB location
+    def add(self, match_ss, *, location=None, require_overlap=True):
         raise NotImplementedError
 
     def peek(self, query_mh, *, threshold_bp=0):

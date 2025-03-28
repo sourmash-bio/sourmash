@@ -8,6 +8,7 @@ use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
+use crate::ffi::index::SourmashStr;
 use crate::index::revindex::disk_revindex;
 use crate::index::revindex::mem_revindex;
 use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, RevIndexOps};
@@ -16,7 +17,6 @@ use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use std::collections::HashSet;
-use std::ffi::CString;
 use std::path::Path;
 
 pub struct SourmashRevIndex;
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> *const c_char {
+pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> SourmashStr {
     let revindex = SourmashRevIndex::as_rust(ptr);
     let moltype = revindex
         .collection()
@@ -169,8 +169,7 @@ pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> *cons
         .expect("no records!?")
         .moltype();
     let moltype_str = moltype.to_string();
-    let c_string = CString::new(moltype_str).expect("foo");
-    c_string.as_ptr()
+    moltype_str.into()
 }
 
 ffi_fn! {

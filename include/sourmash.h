@@ -374,7 +374,7 @@ SourmashRevIndex *revindex_mem_new_with_sigs(const SourmashSignature *const *sea
                                              uintptr_t insigs,
                                              const SourmashKmerMinHash *template_ptr);
 
-const char *revindex_moltype(const SourmashRevIndex *ptr);
+SourmashStr revindex_moltype(const SourmashRevIndex *ptr);
 
 SourmashRevIndex *revindex_new_from_rocksdb(const char *path_ptr);
 
