@@ -68,7 +68,7 @@ def test_revindex_index_search():
     print([s[1].name for s in sr])
     assert len(sr) == 1
     assert sr[0][1] == ss2
-    assert sr[0][2] == None
+    assert sr[0][2] is None
 
     # search for sig47 with lower threshold; search order not guaranteed.
     sr = lidx.search(ss47, threshold=0.1)
@@ -77,7 +77,7 @@ def test_revindex_index_search():
     sr.sort(key=lambda x: -x[0])
     assert sr[0][1] == ss47
     assert sr[1][1] == ss63
-    assert sr[1][2] == None     # location
+    assert sr[1][2] is None  # location
 
     # search for sig63 with lower threshold; search order not guaranteed.
     sr = lidx.search(ss63, threshold=0.1)
@@ -86,7 +86,7 @@ def test_revindex_index_search():
     sr.sort(key=lambda x: -x[0])
     assert sr[0][1] == ss63
     assert sr[1][1] == ss47
-    assert sr[1][2] == None     # location
+    assert sr[1][2] is None  # location
 
     # search for sig63 with high threshold => 1 match
     sr = lidx.search(ss63, threshold=0.8)
@@ -303,7 +303,6 @@ def test_rocksdb_best_containment():
         result.signature.name == "NC_011663.1 Shewanella baltica OS223, complete genome"
     ), result.signature.name
     assert result.location == rocksdb_path
-
 
 
 def test_rocksdb_prefetch():
