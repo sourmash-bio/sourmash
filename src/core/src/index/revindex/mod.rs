@@ -57,7 +57,9 @@ pub struct DatasetPicklist {
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
        pub fn repair(index: &Path, colors: bool);
-    */
+     */
+
+    fn location(&self) -> &str;
 
     fn len(&self) -> usize {
         self.collection().len()

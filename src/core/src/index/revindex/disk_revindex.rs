@@ -42,6 +42,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 
 #[derive(Clone)]
 pub struct DiskRevIndex {
+    location: String,
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
@@ -93,6 +94,7 @@ impl DiskRevIndex {
         )?));
 
         let index = Self {
+            location: String::from(path.to_str().expect("cannot extract path")),
             db,
             collection,
             processed: processed.clone(),
@@ -163,6 +165,7 @@ impl DiskRevIndex {
         )?));
 
         Ok(module::RevIndex::Disk(Self {
+            location: String::from(path.as_ref().to_str().expect("cannot extract path")),
             db,
             collection,
             processed,
@@ -280,6 +283,10 @@ impl DiskRevIndex {
 }
 
 impl RevIndexOps for DiskRevIndex {
+    fn location(&self) -> &str {
+        &self.location.as_str()
+    }
+
     fn counter_for_query(
         &self,
         query: &KmerMinHash,

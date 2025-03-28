@@ -224,12 +224,12 @@ unsafe fn revindex_prefetch(
     // we could probably truncate the search here in some way, yes?
     // but it would require changing this to a loop rather than using an
     // iterator I think.
+    let filename = revindex.location();
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, size)| {
             if size as u64 >= threshold_bp {
-                let filename = "some rocksdb database"; // @CTB fixme
                 let sig: Signature = revindex
                     .collection()
                     .sig_for_dataset(dataset_id)
@@ -283,11 +283,11 @@ unsafe fn revindex_search_jaccard(
     // retrieve/convert matches. I don't think there's a simple way to
     // truncate this without going through all the matches, so it's
     // potentially (much) more expensive than prefetch.
+    let filename = revindex.location();
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
         .into_iter()
         .filter_map(|(dataset_id, _size)| {
-            let filename = "some rocksdb database"; // @CTB
             let sig: Signature = revindex
                 .collection()
                 .sig_for_dataset(dataset_id)

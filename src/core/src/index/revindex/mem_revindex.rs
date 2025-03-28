@@ -256,11 +256,7 @@ impl MemRevIndex {
             };
 
             let match_sig = self.linear.sig_for_dataset(dataset_id)?;
-            let match_path = self
-                .linear
-                .collection()
-                .record_for_dataset(dataset_id)?
-                .internal_location();
+            let match_path = self.location();
 
             let match_mh = match match_sig.select_sketch(self.linear.template()) {
                 Some(Sketch::MinHash(mh)) => mh,
@@ -289,6 +285,10 @@ impl MemRevIndex {
 }
 
 impl RevIndexOps for MemRevIndex {
+    fn location(&self) -> &str {
+        ""
+    }
+
     fn counter_for_query(
         &self,
         query: &KmerMinHash,
