@@ -542,9 +542,6 @@ def index(args):
             error("cannot use --sparseness with a RocksDB index type")
             sys.exit(-1)
 
-        if not output_name.endswith(".sig.zip"):
-            assert 0, output_name  # @CTB
-
         save_sigs = sourmash_args.SaveSignaturesToLocation(output_name)
         save_sigs.open()
 
@@ -558,8 +555,6 @@ def index(args):
             full_siglist.append(sigobj)
 
         output_name = args.name
-        if not output_name.endswith(".rocksdb"):
-            assert 0, output_name  # @CTB
     else:
         error(f"ERROR: unknown index type '{index_type}'; quitting.")
         sys.exit(-1)
@@ -1389,7 +1384,6 @@ def multigather(args):
                         name,
                     )
 
-                ## @CTB
                 if csv_writer is None:
                     csv_writer = result.init_dictwriter(csv_outfp)
                 result.write(csv_writer)
