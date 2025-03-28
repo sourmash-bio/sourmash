@@ -271,19 +271,13 @@ impl RevIndex {
             }
         }
     */
-    /*
-        pub fn create<P: AsRef<Path>>(
-            index: P,
-            collection: CollectionSet,
-            colors: bool,
-        ) -> Result<Self> {
-            if colors {
-                todo!() //color_revindex::ColorRevIndex::create(index)
-            } else {
-                disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
-            }
-        }
-    */
+    pub fn create<P: AsRef<Path>>(
+        index: P,
+        collection: CollectionSet,
+    ) -> Result<Self> {
+        disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
+    }
+
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
         let opts = db_options();
         let cfs = DB::list_cf(&opts, index.as_ref())?;
@@ -560,7 +554,7 @@ mod test {
         let query = query.unwrap();
 
         let collection = Collection::from_paths(&siglist)?.select(&selection)?;
-        let index = RevIndex::create(output.path(), collection.try_into()?, false)?;
+        let index = RevIndex::create(output.path(), collection.try_into()?)?;
 
         let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
@@ -589,7 +583,7 @@ mod test {
         let mut new_siglist = siglist.clone();
         {
             let collection = Collection::from_paths(&siglist)?.select(&selection)?;
-            RevIndex::create(output.path(), collection.try_into()?, false)?;
+            RevIndex::create(output.path(), collection.try_into()?)?;
         }
 
         let mut filename = basedir.clone();
@@ -645,7 +639,7 @@ mod test {
 
         {
             let collection = Collection::from_paths(&siglist)?.select(&selection)?;
-            let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+            let _index = RevIndex::create(output.path(), collection.try_into()?);
         }
 
         let index = RevIndex::open(output.path(), true, None)?;
@@ -696,7 +690,7 @@ mod test {
         let output = TempDir::new()?;
 
         let collection = Collection::from_paths(&against)?.select(&selection)?;
-        let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+        let _index = RevIndex::create(output.path(), collection.try_into()?);
 
         let index = RevIndex::open(output.path(), true, None)?;
 
@@ -844,7 +838,7 @@ mod test {
         let output = TempDir::new()?;
 
         let collection = Collection::from_paths(&against)?.select(&selection)?;
-        let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+        let _index = RevIndex::create(output.path(), collection.try_into()?);
 
         let index = RevIndex::open(output.path(), true, None)?;
 
@@ -929,7 +923,7 @@ mod test {
         let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
 
         {
-            RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+            RevIndex::create(output.as_path(), collection.try_into()?)?;
         }
 
         {
@@ -989,7 +983,7 @@ mod test {
 
         let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
 
-        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+        let index = RevIndex::create(output.as_path(), collection.try_into()?)?;
 
         let cg = index.prepare_gather_counters(&query, None);
 
@@ -1045,7 +1039,7 @@ mod test {
         let output = outdir.path().join("index");
 
         // Step 1: create an index
-        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+        let index = RevIndex::create(output.as_path(), collection.try_into()?)?;
 
         // Step 2: internalize the storage for the index
         {
