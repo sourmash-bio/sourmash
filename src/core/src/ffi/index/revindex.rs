@@ -300,7 +300,7 @@ unsafe fn revindex_search_jaccard(
                 let match_ds = match_mh.clone().downsample_scaled(query_mh.scaled()).expect("cannot downsample");
                 query_mh.jaccard(&match_ds).expect("cannot calculate Jaccard")
             } else {
-                query_mh.jaccard(&match_mh).expect("cannot calculate Jaccard")
+                query_mh.jaccard(match_mh).expect("cannot calculate Jaccard")
             };
 
             if f_match >= threshold {

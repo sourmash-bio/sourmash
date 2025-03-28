@@ -284,7 +284,7 @@ impl DiskRevIndex {
 
 impl RevIndexOps for DiskRevIndex {
     fn location(&self) -> &str {
-        &self.location.as_str()
+        self.location.as_str()
     }
 
     fn counter_for_query(
