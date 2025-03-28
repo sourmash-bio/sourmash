@@ -129,7 +129,7 @@ impl CounterGather {
         self.counter.len()
     }
 
-    // @CTB maybe use a KmerMinHashBTree?
+    // CTB: maybe use a KmerMinHashBTree?
     pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
         let mut found_mh = template.clone();
         found_mh.clear();

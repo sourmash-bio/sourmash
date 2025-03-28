@@ -701,9 +701,6 @@ class CounterGather_LCA:
         self.query_started = 1
 
 
-## XXX @CTB
-
-
 def build_RevIndex_CounterGather(query):
     from sourmash.index.revindex import RevIndex_CounterGather
 

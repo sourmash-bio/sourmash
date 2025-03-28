@@ -436,7 +436,8 @@ class DiskRevIndex(RevIndex):
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
-            # @CTB building manifest this way is expensive!!
+            # CTB note: building a manifest this way is expensive!!
+            # FIXME: see https://github.com/sourmash-bio/sourmash/issues/3593
             m = CollectionManifest.create_manifest(
                 self._signatures_with_internal(), include_signature=False
             )

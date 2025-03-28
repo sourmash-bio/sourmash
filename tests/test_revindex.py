@@ -18,7 +18,7 @@ from sourmash import SourmashSignature
 ##
 
 
-class JaccardSearchBestOnly_ButIgnore(JaccardSearch):  # @CTB remove?
+class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
     "A class that ignores certain results, but still does all the pruning."
 
     def __init__(self, ignore_list):
