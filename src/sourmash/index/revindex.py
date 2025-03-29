@@ -129,7 +129,6 @@ class RevIndex(RustObject, Index):
         pass
 
     def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
-        print("v3 RevIndex Counter Gather - colors!")
         if not query_ss.minhash:
             raise ValueError("empty query")
 
@@ -506,6 +505,9 @@ class RevIndex_CounterGather:
     """
     Simple implementation of CounterGather API that tracks matches
     while passing most calls back to the parent RevIndex.
+
+    CTB note: This is not used in the code base currently, but _is_
+    tested in test_index_protocol, so I'm leaving it in for now.
     """
 
     def __init__(self, query, db, threshold_bp, *, allow_insert=False):
