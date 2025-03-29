@@ -311,32 +311,13 @@ class Index(ABC):
         with query.update() as prefetch_query:
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
-        if 1:  # @CTB
-            # find all matches and construct a CounterGather object.
-            counter = CounterGather(prefetch_query)
-            for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-                counter.add(result.signature, location=result.location)
+        # find all matches and construct a CounterGather object.
+        counter = CounterGather(prefetch_query)
+        for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
+            counter.add(result.signature, location=result.location)
 
-            # tada!
-            return counter
-        else:
-            print("XXX NOTE: Using RevIndex CounterGather")
-            from .revindex import RevIndex_CounterGather, MemRevIndex
-
-            revindex = MemRevIndex(template=prefetch_query.minhash)
-            cg = RevIndex_CounterGather(  # @CTB merge/use Colors?
-                prefetch_query, revindex, threshold_bp, allow_insert=True
-            )
-
-            n_added = 0
-            for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-                cg.add(result.signature, location=result.location)
-                n_added += 1
-
-            if n_added == 0:
-                raise ValueError("no signatures to count")
-
-            return cg
+        # tada!
+        return counter
 
     @abstractmethod
     def select(
