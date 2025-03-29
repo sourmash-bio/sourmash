@@ -302,6 +302,7 @@ impl RevIndexOps for MemRevIndex {
             .collect()
     }
 
+    /// build a CounterGather struct for a particular query
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
@@ -309,7 +310,20 @@ impl RevIndexOps for MemRevIndex {
     ) -> CounterGather {
         let counter = self.counter_for_query(query, picklist);
         let hash_to_color = self.hash_to_color.clone();
-        // eprintln!("hash_to_color: {:?}", hash_to_color);
+
+        // restrict hash_to_color to hashes contained in query
+        let hash_to_color: HashToColor = query
+            .iter_mins()
+            .filter_map(|&hash| {
+                let color = hash_to_color.get(&hash);
+                match color {
+                    Some(c) => Some((hash, *c)),
+                    None => None
+                }
+            })
+            .collect();
+
+        // build a list of colors for the query
         let query_colors: QueryColors = query
             .iter_mins()
             .filter_map(|hash| hash_to_color.get(hash))

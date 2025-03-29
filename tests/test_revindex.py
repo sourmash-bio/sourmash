@@ -221,6 +221,32 @@ def test_revindex_insert_after_init():
         lidx.insert(ss47)
 
 
+def test_revindex_union_found():
+    # confirm that RevIndex works
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    # construct with 2 & 63
+    lidx = MemRevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss63)
+
+    # gather with 47
+    counter = lidx.counter_gather(ss47, 0)
+
+    # check found hashes
+    ident_mh = counter.union_found
+    print(ident_mh.contained_by(ss47.minhash))
+    print(ss47.minhash.contained_by(ident_mh))
+    assert ident_mh.contained_by(ss47.minhash) == 1.0
+    assert round(ss47.minhash.contained_by(ident_mh), 5) == 0.48851
+
+
 def test_rocksdb_prefetch_to_revindex():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
@@ -571,3 +597,23 @@ def test_rocksdb_prefetch_to_cg_colors_8():
 
     siglist = list(cg.signatures())
     assert len(siglist) == 3
+
+
+def test_disk_revindex_union_found():
+    # test union_found on db that contains 63 and 2, but not 47
+    sig47 = utils.get_test_data("47.fa.sig")
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+
+    sig63 = utils.get_test_data("63.fa.sig")
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
+
+    rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    # gather with 47
+    counter = db.counter_gather(ss47, 0)
+
+    # check found hashes
+    ident_mh = counter.union_found
+    assert ident_mh.contained_by(ss47.minhash) == 1.0
+    assert round(ss47.minhash.contained_by(ident_mh), 5) == 0.48851
