@@ -502,6 +502,91 @@ class DiskRevIndex(RevIndex):
         return matches
 
 
+class RevIndex_CounterGather:
+    """
+    Simple implementation of CounterGather API that tracks matches
+    while passing most calls back to the parent RevIndex.
+    """
+
+    def __init__(self, query, db, threshold_bp, *, allow_insert=False):
+        """
+        Initialize a CounterGather obj.
+
+        Here, 'db' can be either a RevIndex or a DiskRevIndex.
+        """
+        self.query = query
+        self.orig_query_mh = query.minhash.copy().flatten()
+        self.found_mh = query.minhash.copy_and_clear().to_mutable()
+        self.db = db
+        self.threshold_bp = threshold_bp
+        self.allow_insert = allow_insert
+        self.locations = {}
+
+    def __len__(self):
+        return len(self.db)
+
+    @property
+    def scaled(self):
+        return self.db.scaled
+
+    def add(self, match_ss, *, location=None, require_overlap=True):
+        if self.allow_insert:
+            if self.db._check_not_init(do_raise=False):
+                self.db.insert(match_ss)
+            else:
+                raise ValueError
+
+        self.locations[match_ss.md5sum()] = location
+
+        query_mh = self.orig_query_mh
+        match_mh = match_ss.minhash
+        intersect_mh = flatten_and_intersect_scaled(query_mh, match_mh)
+        if require_overlap and not intersect_mh:
+            raise ValueError("require overlap")
+
+        if self.found_mh.scaled < intersect_mh.scaled:
+            self.found_mh = self.found_mh.downsample(scaled=intersect_mh.scaled)
+
+        self.found_mh += intersect_mh
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        if not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh, True) != 1.0:
+            raise ValueError
+        # assert threshold_bp is not None
+
+        res = self.db.peek(query_mh, threshold_bp=threshold_bp)
+        if not res:
+            return []
+
+        sr, intersect_mh = res
+        sr_ss = sr.signature
+        sr_score = sr.score
+        new_sr = IndexSearchResult(sr_score, sr_ss, self.locations.get(sr_ss.md5sum()))
+        return new_sr, intersect_mh
+
+    def consume(self, intersect_mh):
+        self.db._init_inner()
+
+        if self.found_mh.scaled < intersect_mh.scaled:
+            self.found_mh = self.found_mh.downsample(scaled=intersect_mh.scaled)
+        elif self.found_mh.scaled > intersect_mh.scaled:
+            intersect_mh = intersect_mh.downsample(scaled=self.found_mh.scaled)
+
+        self.found_mh += intersect_mh
+
+    @property
+    def union_found(self):
+        return self.found_mh
+
+    def signatures(self):
+        # don't track actual signatures - go back to RevIndex
+        for sr in self.db.prefetch(self.query):
+            yield sr.signature
+
+
 class RevIndex_CounterGather_Colors(RustObject):
     """
     Implementation of CounterGather using colors, internally.
