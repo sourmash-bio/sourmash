@@ -937,23 +937,6 @@ def gather(args):
 
     if args.linear:  # force linear traversal?
         databases = [LazyLinearIndex(db) for db in databases]
-    elif 0:
-        # @CTB foo revindex
-        print("XXX NOTE: using RevIndex for ZipFileLinearIndex")
-        from sourmash.index.revindex import MemRevIndex
-        from sourmash.index import ZipFileLinearIndex
-
-        xx = []
-        for db in databases:
-            if isinstance(db, ZipFileLinearIndex):
-                ri = MemRevIndex(template=query.minhash)
-                for ss in db.signatures():
-                    ri.insert(ss)
-                    xx.append(ri)
-                xx.append(ri)
-            else:
-                xx.append(db)
-        databases = xx
 
     size_may_be_inaccurate = False
     if args.prefetch:  # note: on by default!
