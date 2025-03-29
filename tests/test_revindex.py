@@ -605,7 +605,7 @@ def test_disk_revindex_union_found():
     ss47 = load_one_signature_from_json(sig47, ksize=31)
 
     sig63 = utils.get_test_data("63.fa.sig")
-    ss63 = load_one_signature_from_json(sig63, ksize=31)
+    load_one_signature_from_json(sig63, ksize=31)
 
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
