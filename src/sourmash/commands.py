@@ -24,6 +24,8 @@ from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import FileOutput, FileOutputCSV, SaveSignaturesToLocation
 from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
+from sourmash.index.revindex import DiskRevIndex
+
 
 WATERMARK_SIZE = 10000
 
@@ -649,12 +651,10 @@ def index(args):
         if tree.storage:
             tree.storage.close()
     elif index_type == "zip":
-        print("CREATING sig zip W00T XXX", output_name, len(full_siglist))
+        notify(f'loaded {n} sigs; saving zip file under "{output_name}"')
         save_sigs.close()
     elif index_type == "rocksdb":
-        from sourmash.index.revindex import DiskRevIndex  # @CTB
-
-        print("CREATING ROCKSDB W00T XXX", output_name, len(full_siglist))
+        notify(f'loaded {n} sigs; saving rocksdb index under "{output_name}"')
         DiskRevIndex.create_from_sigs(full_siglist, output_name)
 
 
