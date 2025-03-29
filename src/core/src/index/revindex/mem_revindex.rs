@@ -316,10 +316,7 @@ impl RevIndexOps for MemRevIndex {
             .iter_mins()
             .filter_map(|&hash| {
                 let color = hash_to_color.get(&hash);
-                match color {
-                    Some(c) => Some((hash, *c)),
-                    None => None
-                }
+                color.map(|c| (hash, *c))
             })
             .collect();
 
