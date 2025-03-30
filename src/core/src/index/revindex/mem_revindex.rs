@@ -219,69 +219,6 @@ impl MemRevIndex {
             unimplemented!()
         }
     }
-
-    // TODO: mh should be a sketch, or even a sig...
-    pub(crate) fn find_signatures(
-        &self,
-        mh: &KmerMinHash,
-        threshold: f64,
-        containment: bool,
-        _ignore_scaled: bool,
-    ) -> Result<Vec<(f64, Signature, String)>> {
-        let index_scaled = self.scaled();
-        let query_scaled = mh.scaled();
-
-        let query_mh = if query_scaled < index_scaled {
-            mh.clone()
-                .downsample_scaled(index_scaled)
-                .expect("cannot downsample query")
-        } else {
-            mh.clone()
-        };
-
-        // TODO: proper threshold calculation
-        let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
-
-        let counter = self.counter_for_query(&query_mh, None);
-
-        debug!(
-            "number of matching signatures for hashes: {}",
-            counter.len()
-        );
-
-        let mut results = vec![];
-        for (dataset_id, size) in counter.most_common() {
-            if size < threshold {
-                break;
-            };
-
-            let match_sig = self.linear.sig_for_dataset(dataset_id)?;
-            let match_path = self.location();
-
-            let match_mh = match match_sig.select_sketch(self.linear.template()) {
-                Some(Sketch::MinHash(mh)) => mh,
-                _ => unimplemented!(),
-            };
-
-            if size >= threshold {
-                let score = if containment {
-                    size as f64 / query_mh.size() as f64
-                } else {
-                    query_mh
-                        .jaccard(match_mh)
-                        .expect("cannot calculate Jaccard")
-                };
-                let filename = match_path.to_string();
-                let mut sig: Signature = match_sig.clone().into();
-                sig.reset_sketches();
-                sig.push(Sketch::MinHash(match_mh.clone()));
-                results.push((score, sig, filename));
-            } else {
-                break;
-            };
-        }
-        Ok(results)
-    }
 }
 
 impl RevIndexOps for MemRevIndex {
@@ -421,6 +358,63 @@ impl RevIndexOps for MemRevIndex {
 
     fn convert(&self, _output_db: module::RevIndex) -> Result<()> {
         todo!()
+    }
+
+    fn find_signatures(
+        &self,
+        mh: &KmerMinHash,
+        threshold: f64,
+    ) -> Result<Vec<(f64, Signature, String)>> {
+        let index_scaled = self.scaled();
+        let query_scaled = mh.scaled();
+
+        let query_mh = if query_scaled < index_scaled {
+            mh.clone()
+                .downsample_scaled(index_scaled)
+                .expect("cannot downsample query")
+        } else {
+            mh.clone()
+        };
+
+        // TODO: proper threshold calculation
+        let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
+
+        let counter = self.counter_for_query(&query_mh, None);
+
+        debug!(
+            "number of matching signatures for hashes: {}",
+            counter.len()
+        );
+
+        let mut results = vec![];
+        for (dataset_id, size) in counter.most_common() {
+            if size < threshold {
+                break;
+            };
+
+            let match_sig = self.linear.sig_for_dataset(dataset_id)?;
+            let match_path = self.location();
+
+            let match_mh = match match_sig.select_sketch(self.linear.template()) {
+                Some(Sketch::MinHash(mh)) => mh,
+                _ => unimplemented!(),
+            };
+
+            if size >= threshold {
+                let score = query_mh
+                        .jaccard(match_mh)
+                    .expect("cannot calculate Jaccard");
+
+                let filename = match_path.to_string();
+                let mut sig: Signature = match_sig.clone().into();
+                sig.reset_sketches();
+                sig.push(Sketch::MinHash(match_mh.clone()));
+                results.push((score, sig, filename));
+            } else {
+                break;
+            };
+        }
+        Ok(results)
     }
 }
 

@@ -561,13 +561,8 @@ unsafe fn revindex_search(
         unimplemented!()
     };
 
-    let revindex = match revindex {
-        module::RevIndex::Mem(r) => r,
-        _ => unimplemented!(),
-    };
-
     let results: Vec<(f64, Signature, String)> = revindex
-        .find_signatures(mh, threshold, do_containment, true)?
+        .find_signatures(mh, threshold)?
         .into_iter()
         .collect();
 

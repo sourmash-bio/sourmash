@@ -359,7 +359,7 @@ class MemRevIndex(RevIndex):
 
         return self
 
-    def search(self, query, *args, **kwargs):
+    def search_OLD(self, query, *args, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -404,6 +404,15 @@ class MemRevIndex(RevIndex):
                 results.append(IndexSearchResult(match.score, orig_ss, match.location))
 
         return results
+
+    def search(self, *args, **kwargs):
+        results = super().search(*args, **kwargs)
+        results2 = []
+        for match in results:
+            match_md5 = match.signature.md5sum()
+            orig_ss = self._orig_signatures[match_md5]
+            results2.append(IndexSearchResult(match.score, orig_ss, match.location))
+        return results2
 
 
 class DiskRevIndex(RevIndex):

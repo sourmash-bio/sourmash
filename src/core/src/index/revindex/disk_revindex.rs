@@ -674,4 +674,11 @@ impl RevIndexOps for DiskRevIndex {
         }
         */
     }
+    fn find_signatures(
+        &self,
+        mh: &KmerMinHash,
+        threshold: f64,
+    ) -> Result<Vec<(f64, Signature, String)>> {
+        unimplemented!();
+    }
 }

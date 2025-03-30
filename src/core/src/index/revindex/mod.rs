@@ -118,6 +118,12 @@ pub trait RevIndexOps {
     fn collection(&self) -> &CollectionSet;
 
     fn internalize_storage(&mut self) -> Result<()>;
+
+    fn find_signatures(
+        &self,
+        mh: &KmerMinHash,
+        threshold: f64,
+    ) -> Result<Vec<(f64, Signature, String)>>;
 }
 
 impl CounterGather {
