@@ -256,7 +256,7 @@ unsafe fn revindex_prefetch(
 }
 
 // implement search/jaccard separately from prefetch/containment
-// @CTB: test for disk rev index.
+// @CTB: test for disk rev index, which uses revindex_search.
 
 ffi_fn! {
 unsafe fn revindex_search_jaccard(

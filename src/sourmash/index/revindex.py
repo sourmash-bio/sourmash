@@ -80,6 +80,73 @@ class RevIndex(RustObject, Index):
     def load(cls, location):
         pass
 
+    def search(
+        self,
+        query_ss,
+        *,
+        threshold=None,
+        do_containment=False,
+        do_max_containment=False,
+        best_only=False,
+        ignore_abundance=False,
+        **kwargs,
+    ):
+        """Return set of matches with similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+
+        Optional arguments:
+          * do_containment: default False. If True, use Jaccard containment.
+          * ignore_abundance: default False. If True, and query signature
+            and database support k-mer abundances, ignore those abundances.
+        """
+        # CTB: could optimize for best_only, I 'spose. But only makes a
+        # difference for RevIndex when searching with containment.
+
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
+
+        self._init_inner()
+
+        size = ffi.new("uintptr_t *")
+        if do_containment:
+            # calculate threshold_bp from threshold
+            query_mh = query_ss.minhash
+            threshold_bp = int(round(threshold * len(query_mh) * query_mh.scaled))
+            results_ptr = self._methodcall(
+                lib.revindex_prefetch,
+                query_ss._get_objptr(),
+                threshold_bp,
+                size,
+                self._ffi_idx_picklist,
+            )
+        elif do_max_containment:
+            raise NotImplementedError(
+                "max_containment is not (yet) available on RevIndex"
+            )
+        else:  # jaccard
+            results_ptr = self._methodcall(
+                lib.revindex_search,
+                query_ss._get_objptr(),
+                threshold,
+                do_containment,
+                ignore_abundance,
+                size,
+#                self._ffi_idx_picklist,
+            )
+
+        size = size[0]
+
+        matches = []
+        for i in range(size):
+            match = SearchResult._from_objptr(results_ptr[i])
+            matches.append(match)
+
+        return matches
+
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
         if not query_ss.minhash:
             raise ValueError("empty query")
@@ -301,8 +368,6 @@ class MemRevIndex(RevIndex):
           * do_containment: default False. If True, use Jaccard containment.
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
-
-        Note, the "best only" hint is ignored by LCA_Database
         """
         if not query.minhash:
             return []
@@ -446,59 +511,6 @@ class DiskRevIndex(RevIndex):
             self._idx_picklist = RevIndex_DatasetPicklist.from_manifest(m)
 
         return self
-
-    def search(
-        self,
-        query_ss,
-        *,
-        threshold=None,
-        do_containment=False,
-        do_max_containment=False,
-        best_only=False,
-        **kwargs,
-    ):
-        # CTB: could optimize for best_only, I 'spose. But only makes a
-        # difference for RevIndex when searching with containment.
-
-        if not query_ss.minhash:
-            raise ValueError("empty query")
-
-        if threshold is None:
-            raise TypeError("'search' requires 'threshold'")
-
-        size = ffi.new("uintptr_t *")
-        if do_containment:
-            # calculate threshold_bp from threshold
-            query_mh = query_ss.minhash
-            threshold_bp = int(round(threshold * len(query_mh) * query_mh.scaled))
-            results_ptr = self._methodcall(
-                lib.revindex_prefetch,
-                query_ss._get_objptr(),
-                threshold_bp,
-                size,
-                self._ffi_idx_picklist,
-            )
-        elif do_max_containment:
-            raise NotImplementedError(
-                "max_containment is not (yet) available on RocksDB"
-            )
-        else:  # jaccard
-            results_ptr = self._methodcall(
-                lib.revindex_search_jaccard,
-                query_ss._get_objptr(),
-                threshold,
-                size,
-                self._ffi_idx_picklist,
-            )
-
-        size = size[0]
-
-        matches = []
-        for i in range(size):
-            match = SearchResult._from_objptr(results_ptr[i])
-            matches.append(match)
-
-        return matches
 
 
 class RevIndex_CounterGather:
