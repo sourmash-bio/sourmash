@@ -680,39 +680,46 @@ impl RevIndexOps for DiskRevIndex {
         threshold: f64,
         picklist: Option<DatasetPicklist>,
     ) -> Result<Vec<(f64, Signature, String)>> {
-    // do search
-    let counter = self.counter_for_query(&query_mh, picklist);
+        // do search
+        let counter = self.counter_for_query(query_mh, picklist);
 
-    // retrieve/convert matches. I don't think there's a simple way to
-    // truncate this without going through all the matches, so it's
-    // potentially (much) more expensive than prefetch.
-    let filename = self.location();
-    let results: Vec<(f64, Signature, String)> = counter
-        .most_common()
-        .into_iter()
-        .filter_map(|(dataset_id, _size)| {
-            let sig: Signature = self
-                .collection()
-                .sig_for_dataset(dataset_id)
-                .expect("dataset not found")
-                .into();
+        // retrieve/convert matches. I don't think there's a simple way to
+        // truncate this without going through all the matches, so it's
+        // potentially (much) more expensive than prefetch.
+        let filename = self.location();
+        let results: Vec<(f64, Signature, String)> = counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, _size)| {
+                let sig: Signature = self
+                    .collection()
+                    .sig_for_dataset(dataset_id)
+                    .expect("dataset not found")
+                    .into();
 
-            let match_mh = sig.minhash().expect("cannot retrieve match");
+                let match_mh = sig.minhash().expect("cannot retrieve match");
 
-            let f_match = if match_mh.scaled() != query_mh.scaled() {
-                let match_ds = match_mh.clone().downsample_scaled(query_mh.scaled()).expect("cannot downsample");
-                query_mh.jaccard(&match_ds).expect("cannot calculate Jaccard")
-            } else {
-                query_mh.jaccard(match_mh).expect("cannot calculate Jaccard")
-            };
+                let f_match = if match_mh.scaled() != query_mh.scaled() {
+                    let match_ds = match_mh
+                        .clone()
+                        .downsample_scaled(query_mh.scaled())
+                        .expect("cannot downsample");
+                    query_mh
+                        .jaccard(&match_ds)
+                        .expect("cannot calculate Jaccard")
+                } else {
+                    query_mh
+                        .jaccard(match_mh)
+                        .expect("cannot calculate Jaccard")
+                };
 
-            if f_match >= threshold {
-                Some((f_match, sig, filename.to_owned()))
-            } else {
-                None
-            }
-        })
-        .collect();
+                if f_match >= threshold {
+                    Some((f_match, sig, filename.to_owned()))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         Ok(results)
     }

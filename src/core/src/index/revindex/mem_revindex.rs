@@ -379,7 +379,7 @@ impl RevIndexOps for MemRevIndex {
 
         let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
 
-        let counter = self.counter_for_query(&query_mh, None);
+        let counter = self.counter_for_query(&query_mh, picklist); // @CTB testme
 
         debug!(
             "number of matching signatures for hashes: {}",
@@ -402,7 +402,7 @@ impl RevIndexOps for MemRevIndex {
 
             if size >= threshold {
                 let score = query_mh
-                        .jaccard(match_mh)
+                    .jaccard(match_mh)
                     .expect("cannot calculate Jaccard");
 
                 let filename = match_path.to_string();
