@@ -502,13 +502,20 @@ def test_rocksdb_prefetch_to_cg_colors_4():
     rocksdb_path = utils.get_test_data("2sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    cg = db.counter_gather(ss47, threshold_bp=0)
+    combined_mh = ss47.minhash.to_mutable().copy()
+    combined_mh += ss63.minhash
+    combined_ss = SourmashSignature(combined_mh)
+
+    cg = db.counter_gather(combined_ss, threshold_bp=0)
     sr, isect_mh = cg.peek(ss47.minhash)
     assert round(sr.score, 5) == 0.48851
 
     cg.consume(isect_mh)
 
-    assert cg.peek(ss63.minhash) == []  # @CTB why?
+    sr, intersect_mh = cg.peek(ss63.minhash)
+    print(sr)
+    assert sr
+    assert len(intersect_mh) == 5238
 
 
 def test_rocksdb_prefetch_to_cg_colors_5():
