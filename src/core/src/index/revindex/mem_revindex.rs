@@ -364,6 +364,7 @@ impl RevIndexOps for MemRevIndex {
         &self,
         mh: &KmerMinHash,
         threshold: f64,
+        picklist: Option<DatasetPicklist>,
     ) -> Result<Vec<(f64, Signature, String)>> {
         let index_scaled = self.scaled();
         let query_scaled = mh.scaled();
@@ -376,7 +377,6 @@ impl RevIndexOps for MemRevIndex {
             mh.clone()
         };
 
-        // TODO: proper threshold calculation
         let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
 
         let counter = self.counter_for_query(&query_mh, None);

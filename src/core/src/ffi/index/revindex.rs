@@ -255,73 +255,52 @@ unsafe fn revindex_prefetch(
 }
 }
 
-// implement search/jaccard separately from prefetch/containment
-// @CTB: test for disk rev index, which uses revindex_search.
+// implement jaccard search separately from containment analysis, since
+// the latter can be done more efficiently on RevIndexes.
 
 ffi_fn! {
 unsafe fn revindex_search_jaccard(
-    db_ptr: *const SourmashRevIndex,
-    query_ptr: *const SourmashSignature,
+    ptr: *const SourmashRevIndex,
+    sig_ptr: *const SourmashSignature,
     threshold: f64,
-    return_size: *mut usize,
+    size: *mut usize,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*const *const SourmashSearchResult> {
-    let revindex = &SourmashRevIndex::as_rust(db_ptr);
-    let sig = SourmashSignature::as_rust(query_ptr);
-
-    // extract KmerMinHash for query
-    let query_mh: KmerMinHash = sig.clone()
-        .try_into().expect("cannot get kmerminhash");
+    let revindex = SourmashRevIndex::as_rust(ptr);
+    let sig = SourmashSignature::as_rust(sig_ptr);
 
     // picklist?
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
-    // do search
-    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
+    if sig.signatures.is_empty() {
+        *size = 0;
+        return Ok(std::ptr::null::<*const SourmashSearchResult>());
+    }
 
-    // retrieve/convert matches. I don't think there's a simple way to
-    // truncate this without going through all the matches, so it's
-    // potentially (much) more expensive than prefetch.
-    let filename = revindex.location();
-    let results: Vec<(f64, Signature, String)> = counter
-        .most_common()
+    let mh = if let Sketch::MinHash(mh) = &sig.signatures[0] {
+        mh
+    } else {
+        // TODO: what if it is not a mh?
+        unimplemented!()
+    };
+
+    let results: Vec<(f64, Signature, String)> = revindex
+        .find_signatures(mh, threshold, dataset_picklist)?
         .into_iter()
-        .filter_map(|(dataset_id, _size)| {
-            let sig: Signature = revindex
-                .collection()
-                .sig_for_dataset(dataset_id)
-                .expect("dataset not found")
-                .into();
-
-            let match_mh = sig.minhash().expect("cannot retrieve match");
-
-            let f_match = if match_mh.scaled() != query_mh.scaled() {
-                let match_ds = match_mh.clone().downsample_scaled(query_mh.scaled()).expect("cannot downsample");
-                query_mh.jaccard(&match_ds).expect("cannot calculate Jaccard")
-            } else {
-                query_mh.jaccard(match_mh).expect("cannot calculate Jaccard")
-            };
-
-            if f_match >= threshold {
-                Some((f_match, sig, filename.to_owned()))
-            } else {
-                None
-            }
-        })
         .collect();
 
-    // convert to ffi.
-    let ptr_results: Vec<*const SourmashSearchResult> = results
+    // FIXME: use the ForeignObject trait, maybe define new method there...
+    let ptr_sigs: Vec<*const SourmashSearchResult> = results
         .into_iter()
         .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
         .collect();
 
-    let b = ptr_results.into_boxed_slice();
-    *return_size = b.len();
+    let b = ptr_sigs.into_boxed_slice();
+    *size = b.len();
+
     Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
-
 // implement prefetch/containment separately from search/jaccard.
 // This can be done efficiently on RevIndexes.
 
@@ -534,47 +513,5 @@ unsafe fn revindex_mem_new_with_sigs(
     let selection = from_template(&template);
     let revindex = mem_revindex::MemRevIndex::new_with_sigs(search_sigs, &selection, 0, None).expect("cannot create MemRevIndex");
     Ok(SourmashRevIndex::from_rust(revindex))
-}
-}
-
-ffi_fn! {
-unsafe fn revindex_search(
-    ptr: *const SourmashRevIndex,
-    sig_ptr: *const SourmashSignature,
-    threshold: f64,
-    do_containment: bool,
-    _ignore_abundance: bool,
-    size: *mut usize,
-) -> Result<*const *const SourmashSearchResult> {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    let sig = SourmashSignature::as_rust(sig_ptr);
-
-    if sig.signatures.is_empty() {
-        *size = 0;
-        return Ok(std::ptr::null::<*const SourmashSearchResult>());
-    }
-
-    let mh = if let Sketch::MinHash(mh) = &sig.signatures[0] {
-        mh
-    } else {
-        // TODO: what if it is not a mh?
-        unimplemented!()
-    };
-
-    let results: Vec<(f64, Signature, String)> = revindex
-        .find_signatures(mh, threshold)?
-        .into_iter()
-        .collect();
-
-    // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*const SourmashSearchResult> = results
-        .into_iter()
-        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
-        .collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }

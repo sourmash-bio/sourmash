@@ -123,6 +123,7 @@ pub trait RevIndexOps {
         &self,
         mh: &KmerMinHash,
         threshold: f64,
+        picklist: Option<DatasetPicklist>,
     ) -> Result<Vec<(f64, Signature, String)>>;
 }
 

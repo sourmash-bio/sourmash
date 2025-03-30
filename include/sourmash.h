@@ -390,17 +390,10 @@ SourmashRevIndex_CounterGather *revindex_prefetch_to_countergather(const Sourmas
 
 uint32_t revindex_scaled(const SourmashRevIndex *ptr);
 
-const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
-                                                   const SourmashSignature *sig_ptr,
-                                                   double threshold,
-                                                   bool do_containment,
-                                                   bool _ignore_abundance,
-                                                   uintptr_t *size);
-
-const SourmashSearchResult *const *revindex_search_jaccard(const SourmashRevIndex *db_ptr,
-                                                           const SourmashSignature *query_ptr,
+const SourmashSearchResult *const *revindex_search_jaccard(const SourmashRevIndex *ptr,
+                                                           const SourmashSignature *sig_ptr,
                                                            double threshold,
-                                                           uintptr_t *return_size,
+                                                           uintptr_t *size,
                                                            const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr, uintptr_t *size);

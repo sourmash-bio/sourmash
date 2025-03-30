@@ -129,13 +129,11 @@ class RevIndex(RustObject, Index):
             )
         else:  # jaccard
             results_ptr = self._methodcall(
-                lib.revindex_search,
+                lib.revindex_search_jaccard,
                 query_ss._get_objptr(),
                 threshold,
-                do_containment,
-                ignore_abundance,
                 size,
-#                self._ffi_idx_picklist,
+                self._ffi_idx_picklist,
             )
 
         size = size[0]
@@ -359,53 +357,13 @@ class MemRevIndex(RevIndex):
 
         return self
 
-    def search_OLD(self, query, *args, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
-
-        Results will be sorted by similarity, highest to lowest.
-
-        Optional arguments:
-          * do_containment: default False. If True, use Jaccard containment.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
-        """
-        if not query.minhash:
-            return []
-
-        # check arguments
-        if "threshold" not in kwargs:
-            raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs["threshold"]
-        do_containment = kwargs.get("do_containment", False)
-        ignore_abundance = kwargs.get("ignore_abundance", False)
-
-        self._init_inner()
-
-        size = ffi.new("uintptr_t *")
-        results_ptr = self._methodcall(
-            lib.revindex_search,
-            query._get_objptr(),
-            threshold,
-            do_containment,
-            ignore_abundance,
-            size,
-        )
-
-        size = size[0]
-        if size == 0:
-            return []
-
-        results = []
-        for i in range(size):
-            match = SearchResult._from_objptr(results_ptr[i])
-            if match.score >= threshold:
-                match_md5 = match.signature.md5sum()
-                orig_ss = self._orig_signatures[match_md5]
-                results.append(IndexSearchResult(match.score, orig_ss, match.location))
-
-        return results
-
     def search(self, *args, **kwargs):
+        """
+        Implement a search that returns the original signatures, not
+        just the indexed ones.
+
+        See also https://github.com/sourmash-bio/sourmash/issues/3601.
+        """
         results = super().search(*args, **kwargs)
         results2 = []
         for match in results:
