@@ -526,13 +526,13 @@ mod test {
     use crate::collection::Collection;
     use crate::encodings::*;
     use crate::index::revindex::disk_revindex;
+    use crate::index::revindex::DatasetPicklist;
     use crate::prelude::*;
     use crate::selection::Selection;
     use crate::signature::SigsTrait;
     use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
-    use crate::index::revindex::DatasetPicklist;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
 
@@ -563,7 +563,10 @@ mod test {
 
         let collection = Collection::from_paths(&siglist)?.select(&selection)?;
         let index = RevIndex::create(output.path(), collection.try_into()?)?;
-        assert_eq!(index.location(), output.path().to_str().expect("cannot convert"));
+        assert_eq!(
+            index.location(),
+            output.path().to_str().expect("cannot convert")
+        );
 
         let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
@@ -956,7 +959,9 @@ mod test {
         let query = query.unwrap();
 
         // build a picklist with only one match
-        let pl = DatasetPicklist { dataset_ids: vec![0].into_iter().collect() };
+        let pl = DatasetPicklist {
+            dataset_ids: vec![0].into_iter().collect(),
+        };
 
         let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
 
@@ -1010,12 +1015,16 @@ mod test {
         assert_eq!(results.len(), 1);
 
         // build a picklist with only one Idx (2.fa) => no match
-        let pl = DatasetPicklist { dataset_ids: vec![0].into_iter().collect() };
+        let pl = DatasetPicklist {
+            dataset_ids: vec![0].into_iter().collect(),
+        };
         let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
         assert_eq!(results.len(), 0);
 
         // build a picklist with only one Idx (47.fa) => one match
-        let pl = DatasetPicklist { dataset_ids: vec![1].into_iter().collect() };
+        let pl = DatasetPicklist {
+            dataset_ids: vec![1].into_iter().collect(),
+        };
         let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
         assert_eq!(results.len(), 1);
 

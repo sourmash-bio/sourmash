@@ -489,7 +489,6 @@ unsafe fn revindex_countergather_len(
 }
 }
 
-
 // convert a sketch template into a Selection, for use by the Rust layer.
 // TODO: remove this when it is possible to pass Selection thru the FFI
 

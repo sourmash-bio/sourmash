@@ -869,16 +869,19 @@ mod test {
         assert_eq!(results.len(), 1);
 
         // build a picklist with only one Idx (2.fa) => no match
-        let pl = DatasetPicklist { dataset_ids: vec![0].into_iter().collect() };
+        let pl = DatasetPicklist {
+            dataset_ids: vec![0].into_iter().collect(),
+        };
         let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
         assert_eq!(results.len(), 0);
 
         // build a picklist with only one Idx (47.fa) => one match
-        let pl = DatasetPicklist { dataset_ids: vec![1].into_iter().collect() };
+        let pl = DatasetPicklist {
+            dataset_ids: vec![1].into_iter().collect(),
+        };
         let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
         assert_eq!(results.len(), 1);
 
         Ok(())
     }
-
 }
