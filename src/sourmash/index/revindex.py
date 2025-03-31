@@ -22,6 +22,7 @@ class RevIndex(RustObject, Index):
     Provides core FFI functionality to connect to Rust code, and implements
     basic RevIndex functionality based on RevIndexOps trait.
     """
+
     __dealloc_func__ = lib.revindex_free
     manifest = None
     is_database = True
@@ -106,10 +107,10 @@ class RevIndex(RustObject, Index):
         # difference for RevIndex when searching with containment.
 
         if not query_ss.minhash:
-            raise ValueError("empty query") # @CTB test
+            raise ValueError("empty query")  # @CTB test
 
         if threshold is None:
-            raise TypeError("'search' requires 'threshold'") # @CTB test
+            raise TypeError("'search' requires 'threshold'")  # @CTB test
 
         self._init_inner()
 
@@ -126,9 +127,7 @@ class RevIndex(RustObject, Index):
                 self._ffi_idx_picklist,
             )
         elif do_max_containment:
-            raise NotImplementedError(
-                "max_containment is not available on RevIndex"
-            )
+            raise NotImplementedError("max_containment is not available on RevIndex")
         else:  # jaccard similarity
             results_ptr = self._methodcall(
                 lib.revindex_search_jaccard,
@@ -192,7 +191,7 @@ class RevIndex(RustObject, Index):
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)
         if not match_ss:
-            return []           # @CTB test
+            return []  # @CTB test
 
         # calculate the intersection
         match_mh = match_ss.minhash
@@ -216,7 +215,7 @@ class RevIndex(RustObject, Index):
         'gather', and can be used to get iterative results.
         """
         if not query_ss.minhash:
-            raise ValueError("empty query") # @CTB test
+            raise ValueError("empty query")  # @CTB test
 
         self._init_inner()
         cg_ptr = self._methodcall(
@@ -225,7 +224,7 @@ class RevIndex(RustObject, Index):
             self._ffi_idx_picklist,
         )
         if cg_ptr == ffi.NULL:
-            raise ValueError("no matches") # @CTB test
+            raise ValueError("no matches")  # @CTB test
 
         return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
 
@@ -234,7 +233,7 @@ class RevIndex(RustObject, Index):
         Return all containment matches above threshold for the query.
         """
         if not query_ss.minhash:
-            raise ValueError("empty query") # @CTB test
+            raise ValueError("empty query")  # @CTB test
 
         self._init_inner()
         threshold_bp = int(threshold_bp)
@@ -327,6 +326,7 @@ class SearchResult(RustObject):
     """
     Hold SearchResults from Rust.
     """
+
     __dealloc_func__ = lib.searchresult_free
 
     def __repr__(self):
@@ -359,6 +359,7 @@ class MemRevIndex(RevIndex):
     """
     Memory-based RevIndex.
     """
+
     def __init__(self, *, template=None):
         """
         Create an empty MemRevIndex, holding sketches that match the template.
@@ -367,10 +368,10 @@ class MemRevIndex(RevIndex):
         assert template is not None
         assert isinstance(template, MinHash)
         if template.num != 0:
-            raise ValueError("must use scaled sketches") # @CTB test
+            raise ValueError("must use scaled sketches")  # @CTB test
         self.template = template.copy_and_clear()
         self._scaled = template.scaled
-        self._signatures = []   # hold sketches _prior_ to construction
+        self._signatures = []  # hold sketches _prior_ to construction
         self._orig_signatures = {}
 
     def _check_not_init(self, *, do_raise=True):
@@ -414,7 +415,7 @@ class MemRevIndex(RevIndex):
         )
 
         # provide a mapping between original signatures, and potentially
-        # downsampled signatures stored in this object, based on md5sum 
+        # downsampled signatures stored in this object, based on md5sum
         # See https://github.com/sourmash-bio/sourmash/issues/3601.
         for n, (orig_ss, stored_ss) in enumerate(
             zip(self._signatures, self.signatures())
@@ -599,6 +600,7 @@ class RevIndex_CounterGather_Colors(RustObject):
     """
     Implementation of CounterGather using RevIndex color-based counters.
     """
+
     __dealloc_func__ = lib.revindex_countergather_free
 
     def __init__(self, objptr, query_ss, db):
