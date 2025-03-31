@@ -229,12 +229,23 @@ impl RevIndexOps for MemRevIndex {
     fn counter_for_query(
         &self,
         query: &KmerMinHash,
-        _picklist: Option<DatasetPicklist>,
+        picklist: Option<DatasetPicklist>,
     ) -> SigCounter {
         query
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
             .flat_map(|color| self.colors.indices(color))
+            .filter_map(|idx| {
+                if let Some(pl) = &picklist {
+                    if pl.dataset_ids.contains(&idx) {
+                        Some(idx)
+                    } else {
+                        None
+                    }
+                } else {
+                    Some(idx)
+                }
+            })
             .cloned()
             .collect()
     }

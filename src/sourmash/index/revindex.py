@@ -232,6 +232,58 @@ class RevIndex(RustObject, Index):
             matches.append(match)
         return matches
 
+    def select(
+        self,
+        ksize=None,
+        moltype=None,
+        scaled=None,
+        num=None,
+        abund=None,
+        containment=None,
+        picklist=None,
+        **kwargs,
+    ):
+        _check_select_parameters(
+            ksize=ksize,
+            moltype=moltype,
+            scaled=scaled,
+            num=num,
+            abund=abund,
+            containment=containment,
+            picklist=picklist,
+            **kwargs,
+        )
+        self._init_inner()
+
+        assert not abund
+        assert num is None or num == 0
+        # ignore containment!
+
+        my_ksize = self._methodcall(lib.revindex_ksize)
+        my_scaled = self._methodcall(lib.revindex_scaled)
+        my_moltype = decode_str(self._methodcall(lib.revindex_moltype))
+
+        if ksize is not None:
+            if ksize != my_ksize:
+                raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
+        if scaled is not None and scaled < my_scaled:
+            raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
+        if moltype is not None and moltype != my_moltype:
+            raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
+
+        if picklist is not None:
+            # CTB note: building a manifest this way is expensive!!
+            # FIXME: see https://github.com/sourmash-bio/sourmash/issues/3593
+            m = CollectionManifest.create_manifest(
+                self._signatures_with_internal(), include_signature=False
+            )
+            if self._idx_picklist is not None:
+                raise Exception("cannot use picklists multiple times, sorry")
+            m = m.select_to_manifest(picklist=picklist)
+            self._idx_picklist = RevIndex_DatasetPicklist.from_manifest(m)
+
+        return self
+
 
 class SearchResult(RustObject):
     __dealloc_func__ = lib.searchresult_free
@@ -314,49 +366,6 @@ class MemRevIndex(RevIndex):
         ):
             self._orig_signatures[stored_ss.md5sum()] = orig_ss
 
-    def select(
-        self,
-        ksize=None,
-        moltype=None,
-        scaled=None,
-        num=None,
-        abund=None,
-        containment=None,
-        picklist=None,
-        **kwargs,
-    ):
-        _check_select_parameters(
-            ksize=ksize,
-            moltype=moltype,
-            scaled=scaled,
-            num=num,
-            abund=abund,
-            containment=containment,
-            picklist=picklist,
-            **kwargs,
-        )
-
-        assert not abund
-        assert num is None or num == 0
-        # ignore containment!
-
-        my_ksize = self.template.ksize
-        my_scaled = self.template.scaled
-        my_moltype = self.template.moltype
-
-        if ksize is not None:
-            if ksize != my_ksize:
-                raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
-        if scaled is not None and scaled < my_scaled:
-            raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if moltype is not None and moltype != my_moltype:
-            raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
-
-        if picklist is not None:
-            raise Exception("cannot use picklists, sry")
-
-        return self
-
     def search(self, *args, **kwargs):
         """
         Implement a search that returns the original signatures, not
@@ -427,57 +436,6 @@ class DiskRevIndex(RevIndex):
         _ = rustcall(lib.revindex_disk_create, sigs_ptr, sig_size, path_b)
 
         return DiskRevIndex(path)
-
-    def select(
-        self,
-        ksize=None,
-        moltype=None,
-        scaled=None,
-        num=None,
-        abund=None,
-        containment=None,
-        picklist=None,
-        **kwargs,
-    ):
-        _check_select_parameters(
-            ksize=ksize,
-            moltype=moltype,
-            scaled=scaled,
-            num=num,
-            abund=abund,
-            containment=containment,
-            picklist=picklist,
-            **kwargs,
-        )
-
-        assert not abund
-        assert num is None or num == 0
-        # ignore containment!
-
-        my_ksize = self._methodcall(lib.revindex_ksize)
-        my_scaled = self._methodcall(lib.revindex_scaled)
-        my_moltype = decode_str(self._methodcall(lib.revindex_moltype))
-
-        if ksize is not None:
-            if ksize != my_ksize:
-                raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
-        if scaled is not None and scaled < my_scaled:
-            raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
-        if moltype is not None and moltype != my_moltype:
-            raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
-
-        if picklist is not None:
-            # CTB note: building a manifest this way is expensive!!
-            # FIXME: see https://github.com/sourmash-bio/sourmash/issues/3593
-            m = CollectionManifest.create_manifest(
-                self._signatures_with_internal(), include_signature=False
-            )
-            if self._idx_picklist is not None:
-                raise Exception("cannot use picklists multiple times, sorry")
-            m = m.select_to_manifest(picklist=picklist)
-            self._idx_picklist = RevIndex_DatasetPicklist.from_manifest(m)
-
-        return self
 
 
 class RevIndex_CounterGather:

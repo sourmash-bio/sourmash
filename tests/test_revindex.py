@@ -11,6 +11,7 @@ from sourmash.index.revindex import MemRevIndex, DiskRevIndex
 from sourmash.signature import load_one_signature_from_json
 from sourmash.search import JaccardSearch, SearchType
 from sourmash import SourmashSignature
+from sourmash.picklist import SignaturePicklist
 
 ##
 ## test a slightly outre version of JaccardSearch - this is a test of the
@@ -94,6 +95,41 @@ def test_revindex_index_search():
     assert len(sr) == 1
     sr.sort(key=lambda x: -x[0])
     assert sr[0][1] == ss63
+
+
+def test_revindex_index_search_picklist(runtmp):
+    # confirm that RevIndex works w/picklists
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    lidx = MemRevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    pl = SignaturePicklist('ident')
+    pl.init(values=['CP001071.1'])
+    lidx = lidx.select(picklist=pl)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+    assert sr[0][2] is None
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    assert len(sr) == 0
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    assert len(sr) == 0
 
 
 def test_revindex_index_search_retrieve_orig():
@@ -624,3 +660,35 @@ def test_disk_revindex_union_found():
     ident_mh = counter.union_found
     assert ident_mh.contained_by(ss47.minhash) == 1.0
     assert round(ss47.minhash.contained_by(ident_mh), 5) == 0.48851
+
+
+def test_disk_revindex_index_search_picklist(runtmp):
+    # confirm that disk-based RevIndex works w/picklists
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    pl = SignaturePicklist('ident')
+    pl.init(values=['CP001071.1'])
+    db = db.select(picklist=pl)
+
+    # now, search for sig2
+    sr = db.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+
+    # search for sig47 with lower threshold; should be no result.
+    sr = db.search(ss47, threshold=0.1)
+    assert len(sr) == 0
+
+    # search for sig63 with lower threshold; should be no result.
+    sr = db.search(ss63, threshold=0.1)
+    assert len(sr) == 0
