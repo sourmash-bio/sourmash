@@ -20,7 +20,7 @@ class RevIndex(RustObject, Index):
     Base class for both MemRevIndex and DiskRevIndex.
 
     Provides core FFI functionality to connect to Rust code, and implements
-    basic RevIndex functionality.
+    basic RevIndex functionality based on RevIndexOps trait.
     """
     __dealloc_func__ = lib.revindex_free
     manifest = None
