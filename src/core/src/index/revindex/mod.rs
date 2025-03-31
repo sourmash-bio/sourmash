@@ -519,6 +519,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 
 #[cfg(test)]
 mod test {
+    // CTB: should the disk_revindex tests be moved into disk_revindex.rs?
     use camino::Utf8PathBuf as PathBuf;
     use tempfile::TempDir;
 
@@ -531,11 +532,12 @@ mod test {
     use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
+    use crate::index::revindex::DatasetPicklist;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
 
     #[test]
-    fn revindex_index() -> Result<()> {
+    fn disk_revindex_index() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/scaled/");
 
@@ -561,6 +563,7 @@ mod test {
 
         let collection = Collection::from_paths(&siglist)?.select(&selection)?;
         let index = RevIndex::create(output.path(), collection.try_into()?)?;
+        assert_eq!(index.location(), output.path().to_str().expect("cannot convert"));
 
         let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
@@ -571,7 +574,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_update() -> Result<()> {
+    fn disk_revindex_update() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/scaled/");
 
@@ -619,7 +622,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_load_and_gather() -> Result<()> {
+    fn disk_revindex_load_and_gather() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/scaled/");
 
@@ -664,7 +667,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_load_and_gather_2() -> Result<()> {
+    fn disk_revindex_load_and_gather_2() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
@@ -821,7 +824,7 @@ mod test {
     #[test]
     // a more detailed/focused version of revindex_load_and_gather_2,
     // added in sourmash#3193 for debugging purposes.
-    fn revindex_load_and_gather_3() -> Result<()> {
+    fn disk_revindex_load_and_gather_3() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
@@ -904,7 +907,83 @@ mod test {
     }
 
     #[test]
-    fn revindex_move() -> Result<()> {
+    fn revindex_load_and_gather_picklist() -> Result<()> {
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/gather/");
+
+        let against = vec![
+            "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+            "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+            "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+            "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+            "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+            "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+            "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+            "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+            "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+            "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+            "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+            "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+        ];
+        let against: Vec<_> = against
+            .iter()
+            .map(|sig| {
+                let mut filename = basedir.clone();
+                filename.push(sig);
+                filename
+            })
+            .collect();
+
+        // build 'against' sketches into a revindex
+        let selection = Selection::builder().ksize(21).scaled(10000).build();
+        let output = TempDir::new()?;
+
+        let collection = Collection::from_paths(&against)?.select(&selection)?;
+        let _index = RevIndex::create(output.path(), collection.try_into()?);
+
+        let index = RevIndex::open(output.path(), true, None)?;
+
+        let mut query = None;
+        let mut query_filename = basedir.clone();
+        query_filename.push("combined.sig");
+        let query_sig = Signature::from_path(query_filename)?
+            .swap_remove(0)
+            .select(&selection)?;
+
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        // build a picklist with only one match
+        let pl = DatasetPicklist { dataset_ids: vec![0].into_iter().collect() };
+
+        let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
+
+        let matches = index.gather(
+            cg,
+            5, // 50kb threshold
+            &query,
+            Some(selection),
+        )?;
+
+        // should be 1, b/c of picklist.
+        assert_eq!(matches.len(), 1);
+
+        // also do a basic test of containment with picklists -
+        let counter = index.counter_for_query(&query, Some(pl.clone()));
+        let matches = index.matches_from_counter(counter, 0);
+        assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
+
+        let counter = index.counter_for_query(&query, Some(pl));
+        let records = index.records_from_counter(counter, 0);
+        assert_eq!(records.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn disk_revindex_move() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let mut zip_collection = basedir.clone();
@@ -965,7 +1044,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_internalize_storage() -> Result<()> {
+    fn disk_revindex_internalize_storage() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let mut zip_collection = basedir.clone();
