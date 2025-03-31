@@ -292,10 +292,12 @@ impl RevIndexOps for MemRevIndex {
         _counter: SigCounter,
         _threshold: usize,
     ) -> Vec<(String, usize)> {
+        // @CTB
         vec![]
     }
 
     fn records_from_counter(&self, _counter: SigCounter, _threshold: usize) -> Vec<&Record> {
+        // @CTB
         vec![]
     }
 

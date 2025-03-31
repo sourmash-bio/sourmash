@@ -137,7 +137,7 @@ impl CounterGather {
     }
 
     // CTB: maybe use a KmerMinHashBTree?
-    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
+    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash { // @CTB test
         let mut found_mh = template.clone();
         found_mh.clear();
 
@@ -161,7 +161,7 @@ impl CounterGather {
         }
     }
 
-    pub fn dataset_ids(&self) -> Vec<Idx> {
+    pub fn dataset_ids(&self) -> Vec<Idx> { // @CTB test
         self.counter.keys().copied().collect()
     }
 
@@ -999,6 +999,11 @@ mod test {
         let output = TempDir::new()?;
         let collection = Collection::from_paths(&search_sigs[..])?.select(&selection)?;
         let index = RevIndex::create(output.path(), collection.try_into()?)?;
+
+        assert!(!index.is_empty());
+        assert_eq!(index.len(), 3);
+        let sigs = index.signatures();
+        assert_eq!(sigs.len(), 3);
 
         let query_sig = Signature::from_path("../../tests/test-data/63.fa.sig")
             .expect("error processing query")
