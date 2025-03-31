@@ -1,5 +1,5 @@
 """
-RevIndex and DiskRevIndex - a Rust-based reverse indexes by hashes.
+RevIndex and DiskRevIndex - Rust-based reverse indexes by hashes.
 """
 
 import os
@@ -16,6 +16,12 @@ from sourmash.manifest import CollectionManifest
 
 
 class RevIndex(RustObject, Index):
+    """
+    Base class for both MemRevIndex and DiskRevIndex.
+
+    Provides core FFI functionality to connect to Rust code, and implements
+    basic RevIndex functionality.
+    """
     __dealloc_func__ = lib.revindex_free
     manifest = None
     is_database = True
@@ -37,6 +43,8 @@ class RevIndex(RustObject, Index):
         self._idx_picklist = RevIndex_DatasetPicklist(idx_list)
 
     def signatures(self):
+        # CTB fix: adjust signatures() to pay attention to picklists,
+        # vs internal signatures.
         self._init_inner()
 
         size = ffi.new("uintptr_t *")
@@ -52,8 +60,8 @@ class RevIndex(RustObject, Index):
             yield ss, self.location
 
     def _signatures_with_internal(self):
-        # CTB fix: adjust signatures() to pay attention to picklists,
-        # vs internal signatures
+        # CTB note: this should return _all_ signatures, independent of
+        # picklist. @CTB test/check.
         for n, ss in enumerate(self.signatures()):
             yield ss, n
 
@@ -66,19 +74,12 @@ class RevIndex(RustObject, Index):
         scaled = self._methodcall(lib.revindex_scaled)
         return scaled
 
-    def insert(self, sig):
-        if sig.minhash.scaled > self._scaled:
-            self._scaled = sig.minhash.scaled
-
-        self._check_not_init()
-        self._signatures.append(sig)
-
     def save(self, path):
-        pass
+        raise NotImplementedException
 
     @classmethod
     def load(cls, location):
-        pass
+        raise NotImplementedException
 
     def search(
         self,
@@ -96,18 +97,19 @@ class RevIndex(RustObject, Index):
         Results will be sorted by similarity, highest to lowest.
 
         Optional arguments:
-          * do_containment: default False. If True, use Jaccard containment.
+          * do_containment: default False. If True, use Jaccard containment
+            instead of Jaccard similarity.
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
         """
-        # CTB: could optimize for best_only, I 'spose. But only makes a
+        # CTB note: could optimize for best_only, I 'spose. But only makes a
         # difference for RevIndex when searching with containment.
 
         if not query_ss.minhash:
-            raise ValueError("empty query")
+            raise ValueError("empty query") # @CTB test
 
         if threshold is None:
-            raise TypeError("'search' requires 'threshold'")
+            raise TypeError("'search' requires 'threshold'") # @CTB test
 
         self._init_inner()
 
@@ -125,9 +127,9 @@ class RevIndex(RustObject, Index):
             )
         elif do_max_containment:
             raise NotImplementedError(
-                "max_containment is not (yet) available on RevIndex"
+                "max_containment is not available on RevIndex"
             )
-        else:  # jaccard
+        else:  # jaccard similarity
             results_ptr = self._methodcall(
                 lib.revindex_search_jaccard,
                 query_ss._get_objptr(),
@@ -136,6 +138,7 @@ class RevIndex(RustObject, Index):
                 self._ffi_idx_picklist,
             )
 
+        # retrieve results => SearchResult
         size = size[0]
 
         matches = []
@@ -146,6 +149,10 @@ class RevIndex(RustObject, Index):
         return matches
 
     def best_containment(self, query_ss, *, threshold_bp=0, **kwargs):
+        """
+        Return a SearchResult tuple for the sketch with the highest
+        containment of the query.
+        """
         if not query_ss.minhash:
             raise ValueError("empty query")
 
@@ -162,13 +169,19 @@ class RevIndex(RustObject, Index):
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)
         if not match_ss:
-            raise ValueError("no results")
+            raise ValueError("no match")
 
         containment = query_ss.contained_by(match_ss)
 
         return IndexSearchResult(containment, match_ss, self.location)
 
     def peek(self, query_mh, *, threshold_bp=0):
+        """
+        Return the best containment match for the query MinHash,
+        plus the intersected hashes between the query and the match.
+
+        Used for CounterGather functionality.
+        """
         self._init_inner()
         ss_ptr = self._methodcall(
             lib.revindex_best_containment,
@@ -179,8 +192,9 @@ class RevIndex(RustObject, Index):
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)
         if not match_ss:
-            return []
+            return []           # @CTB test
 
+        # calculate the intersection
         match_mh = match_ss.minhash
         common_scaled = max(match_mh.scaled, query_mh.scaled)
         query_mh = query_mh.flatten().downsample(scaled=common_scaled)
@@ -191,27 +205,36 @@ class RevIndex(RustObject, Index):
         return (IndexSearchResult(containment, match_ss, self.location), intersect_mh)
 
     def consume(self, intersect_mh):
+        """
+        Provide CounterGather API - does nothing, in this case.
+        """
         pass
 
     def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
+        """
+        Return a CounterGather object that holds interim results for a
+        'gather', and can be used to get iterative results.
+        """
         if not query_ss.minhash:
-            raise ValueError("empty query")
+            raise ValueError("empty query") # @CTB test
 
         self._init_inner()
-
         cg_ptr = self._methodcall(
             lib.revindex_prefetch_to_countergather,
             query_ss._get_objptr(),
             self._ffi_idx_picklist,
         )
         if cg_ptr == ffi.NULL:
-            raise ValueError("no matches")
+            raise ValueError("no matches") # @CTB test
 
         return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
 
     def prefetch(self, query_ss, threshold_bp=0, **kwargs):
+        """
+        Return all containment matches above threshold for the query.
+        """
         if not query_ss.minhash:
-            raise ValueError("empty query")
+            raise ValueError("empty query") # @CTB test
 
         self._init_inner()
         threshold_bp = int(threshold_bp)
@@ -243,6 +266,15 @@ class RevIndex(RustObject, Index):
         picklist=None,
         **kwargs,
     ):
+        """
+        Implement selection protocol, including picklists.
+
+        Since RevIndex have fixed ksize and moltype and scaled, this
+        mostly just checks to see that the desired ksize and moltype match,
+        and the desired scaled is greater than the RevIndex scaled.
+
+        Also does picklist matching using RevIndex-specific Idx.
+        """
         _check_select_parameters(
             ksize=ksize,
             moltype=moltype,
@@ -272,20 +304,29 @@ class RevIndex(RustObject, Index):
             raise ValueError(f"revindex moltype is {my_moltype}, not {moltype}")
 
         if picklist is not None:
+            if self._idx_picklist is not None:
+                raise Exception("cannot use picklists multiple times, sorry")
+
             # CTB note: building a manifest this way is expensive!!
             # FIXME: see https://github.com/sourmash-bio/sourmash/issues/3593
+
+            # build a manifest, with internal Idx that we can use to pick
+            # out a subset of sketches.
             m = CollectionManifest.create_manifest(
                 self._signatures_with_internal(), include_signature=False
             )
-            if self._idx_picklist is not None:
-                raise Exception("cannot use picklists multiple times, sorry")
             m = m.select_to_manifest(picklist=picklist)
+
+            # build the internal picklist sing the internal Idx identifiers.
             self._idx_picklist = RevIndex_DatasetPicklist.from_manifest(m)
 
         return self
 
 
 class SearchResult(RustObject):
+    """
+    Hold SearchResults from Rust.
+    """
     __dealloc_func__ = lib.searchresult_free
 
     def __repr__(self):
@@ -315,18 +356,25 @@ class SearchResult(RustObject):
 
 
 class MemRevIndex(RevIndex):
+    """
+    Memory-based RevIndex.
+    """
     def __init__(self, *, template=None):
+        """
+        Create an empty MemRevIndex, holding sketches that match the template.
+        """
         super().__init__()
         assert template is not None
         assert isinstance(template, MinHash)
         if template.num != 0:
-            raise ValueError("must use scaled sketches")
-        self.template = template.copy_and_clear().to_mutable()
+            raise ValueError("must use scaled sketches") # @CTB test
+        self.template = template.copy_and_clear()
         self._scaled = template.scaled
-        self._signatures = []
+        self._signatures = []   # hold sketches _prior_ to construction
         self._orig_signatures = {}
 
     def _check_not_init(self, *, do_raise=True):
+        "Confirm that this object is not initialized, optionally raising exc."
         if self._objptr != ffi.NULL:
             if do_raise:
                 raise Exception("already initialized")
@@ -334,6 +382,9 @@ class MemRevIndex(RevIndex):
         return True
 
     def _init_inner(self):
+        """
+        Initialize the MemRevIndex from all signatures in self._signatures.
+        """
         if self._objptr != ffi.NULL:
             # Already initialized
             return
@@ -341,9 +392,10 @@ class MemRevIndex(RevIndex):
         if not self._signatures and self._objptr == ffi.NULL:
             raise ValueError("No signatures provided")
 
-        if self.template.scaled != self._scaled:
+        if self.template.scaled < self._scaled:
             self.template = self.template.downsample(scaled=self._scaled)
 
+        # prepare FFI call
         template_ptr = self.template._get_objptr()
 
         search_sigs_ptr = ffi.NULL
@@ -361,10 +413,21 @@ class MemRevIndex(RevIndex):
             template_ptr,
         )
 
+        # provide a mapping between original signatures, and potentially
+        # downsampled signatures stored in this object, based on md5sum 
+        # See https://github.com/sourmash-bio/sourmash/issues/3601.
         for n, (orig_ss, stored_ss) in enumerate(
             zip(self._signatures, self.signatures())
         ):
             self._orig_signatures[stored_ss.md5sum()] = orig_ss
+
+    def insert(self, sig):
+        "Add signature to internal list, tracking max scaled along way."
+        self._check_not_init()
+
+        if sig.minhash.scaled > self._scaled:
+            self._scaled = sig.minhash.scaled
+        self._signatures.append(sig)
 
     def search(self, *args, **kwargs):
         """
@@ -392,6 +455,9 @@ class DiskRevIndex(RevIndex):
     manifest = None
 
     def __init__(self, path):
+        """
+        Initialize based on a pre-existing RocksDB.
+        """
         super().__init__()
         check_file = os.path.join(path, "CURRENT")
         if not os.path.exists(check_file):
@@ -403,7 +469,6 @@ class DiskRevIndex(RevIndex):
 
         # store location
         self._path = path
-        self._idx_picklist = None
 
     def _init_inner(self):
         pass
@@ -415,14 +480,11 @@ class DiskRevIndex(RevIndex):
     def insert(self, *args, **kwargs):
         raise NotImplementedError
 
-    def load(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def save(self, *args, **kwargs):
-        raise NotImplementedError
-
     @classmethod
     def create_from_sigs(self, siglist, path):
+        """
+        Create a _new_ DiskRevIndex based on a list of signatures.
+        """
         path_b = path.encode("utf-8")
 
         collected = []
@@ -489,6 +551,9 @@ class RevIndex_CounterGather:
         self.found_mh += intersect_mh
 
     def peek(self, query_mh, *, threshold_bp=0):
+        """
+        CounterGather API: return best matching minhash, plus intersection.
+        """
         if not query_mh:
             return []
 
@@ -507,6 +572,7 @@ class RevIndex_CounterGather:
         return new_sr, intersect_mh
 
     def consume(self, intersect_mh):
+        "CounterGather API: track found sketches."
         self.db._init_inner()
 
         if self.found_mh.scaled < intersect_mh.scaled:
@@ -514,37 +580,42 @@ class RevIndex_CounterGather:
         elif self.found_mh.scaled > intersect_mh.scaled:
             intersect_mh = intersect_mh.downsample(scaled=self.found_mh.scaled)
 
+        # CTB: is this right?
         self.found_mh += intersect_mh
 
     @property
     def union_found(self):
+        "Return all hashes found."
         return self.found_mh
 
     def signatures(self):
         # don't track actual signatures - go back to RevIndex
+        # this is probably overkill.
         for sr in self.db.prefetch(self.query):
             yield sr.signature
 
 
 class RevIndex_CounterGather_Colors(RustObject):
     """
-    Implementation of CounterGather using colors, internally.
+    Implementation of CounterGather using RevIndex color-based counters.
     """
-
     __dealloc_func__ = lib.revindex_countergather_free
 
     def __init__(self, objptr, query_ss, db):
+        """
+        Track originating query & RevIndex.
+        """
         self._objptr = objptr
+        assert isinstance(db, RevIndex)
         self.db = db
         query_mh = query_ss.minhash
         self._scaled = query_mh.scaled
 
-        # populate found_mh with found hashes:
+        # track found hashes:
         found_mh_ptr = self._methodcall(
             lib.revindex_countergather_found_hashes,
             query_mh.copy_and_clear()._objptr,
         )
-
         self.found_mh = MinHash._from_objptr(found_mh_ptr)
 
     @property
@@ -555,6 +626,9 @@ class RevIndex_CounterGather_Colors(RustObject):
         raise NotImplementedError
 
     def peek(self, query_mh, *, threshold_bp=0):
+        """
+        CounterGather API: return matching SearchResult + intersecting minhash.
+        """
         threshold_hashes = int(threshold_bp / query_mh.scaled)
         match_ss_ptr = self._methodcall(
             lib.revindex_countergather_peek,
@@ -577,16 +651,20 @@ class RevIndex_CounterGather_Colors(RustObject):
         )
 
     def consume(self, intersect_mh):
+        "CounterGather API: decrement counters."
         _ = self._methodcall(lib.revindex_countergather_consume, intersect_mh._objptr)
 
     @property
     def union_found(self):
+        "Return all found hashes."
         return self.found_mh
 
     def __len__(self):
+        "Return number of distinct matching signatures remaining."
         return self._methodcall(lib.revindex_countergather_len)
 
     def signatures(self):
+        "Return all signatures found."
         size = ffi.new("uintptr_t *")
         sigs_ptr = self._methodcall(
             lib.revindex_countergather_signatures, self.db._objptr, size
@@ -600,7 +678,8 @@ class RevIndex_CounterGather_Colors(RustObject):
 
 class RevIndex_DatasetPicklist(RustObject):
     """
-    Intermediate class for holding lists of Idx.
+    Intermediate class for holding lists of Idx, internal identifiers
+    used by RevIndex structs in Rust.
     """
 
     __dealloc_func__ = lib.dataset_picklist_free
@@ -609,6 +688,7 @@ class RevIndex_DatasetPicklist(RustObject):
         idx_list = list(idxs)
         idx_list_size = len(idx_list)
 
+        # @CTB do some validation on Idx??
         self._objptr = rustcall(
             lib.dataset_picklist_new_from_list, idx_list, idx_list_size
         )
