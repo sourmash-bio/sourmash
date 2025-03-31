@@ -983,6 +983,46 @@ mod test {
     }
 
     #[test]
+    fn disk_revindex_find_signatures() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+        let search_sigs: Vec<PathBuf> = vec![
+            "../../tests/test-data/2.fa.sig".into(),
+            "../../tests/test-data/47.fa.sig".into(),
+            "../../tests/test-data/63.fa.sig".into(),
+        ];
+
+        let output = TempDir::new()?;
+        let collection = Collection::from_paths(&search_sigs[..])?.select(&selection)?;
+        let index = RevIndex::create(output.path(), collection.try_into()?)?;
+
+        let query_sig = Signature::from_path("../../tests/test-data/63.fa.sig")
+            .expect("error processing query")
+            .swap_remove(0)
+            .select(&selection)
+            .expect("error getting compatible sig");
+
+        let query_mh = prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+
+        let results = index.find_signatures(&query_mh, 0.0, None)?;
+        assert_eq!(results.len(), 2);
+
+        let results = index.find_signatures(&query_mh, 1.0, None)?;
+        assert_eq!(results.len(), 1);
+
+        // build a picklist with only one Idx (2.fa) => no match
+        let pl = DatasetPicklist { dataset_ids: vec![0].into_iter().collect() };
+        let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
+        assert_eq!(results.len(), 0);
+
+        // build a picklist with only one Idx (47.fa) => one match
+        let pl = DatasetPicklist { dataset_ids: vec![1].into_iter().collect() };
+        let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
+        assert_eq!(results.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
     fn disk_revindex_move() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
