@@ -19,15 +19,22 @@ use crate::sketch::Sketch;
 use std::collections::HashSet;
 use std::path::Path;
 
+// FFI struct for base RevIndex struct & RevIndexOps trait
+
 pub struct SourmashRevIndex;
 impl ForeignObject for SourmashRevIndex {
     type RustObject = module::RevIndex;
 }
 
+// FFI struct for RevIndex-specific picklist of Idx
+
 pub struct SourmashDatasetPicklist;
 impl ForeignObject for SourmashDatasetPicklist {
     type RustObject = DatasetPicklist;
 }
+
+// FFI struct for CounterGather object to hold intermediate results for
+// gather.
 
 #[allow(non_camel_case_types)]
 pub struct SourmashRevIndex_CounterGather;
@@ -45,6 +52,8 @@ pub unsafe fn retrieve_picklist(
         Some(x.clone())
     }
 }
+
+// Build new RevIndex struct from existing RocksDB/DiskRevIndex.
 
 ffi_fn! {
 unsafe fn revindex_new_from_rocksdb(
@@ -65,6 +74,8 @@ unsafe fn revindex_new_from_rocksdb(
     Ok(SourmashRevIndex::from_rust(rocksdb))
 }
 }
+
+// Create new DiskRevIndex from list of signatures.
 
 ffi_fn! {
 unsafe fn revindex_disk_create(
@@ -107,6 +118,8 @@ pub unsafe extern "C" fn revindex_countergather_free(ptr: *mut SourmashRevIndex_
     SourmashRevIndex_CounterGather::drop(ptr);
 }
 
+// create a DatasetPicklist from a collection of Idx (record references).
+
 ffi_fn! {
 unsafe fn dataset_picklist_new_from_list(
     dataset_idxs_ptr: *const u32,
@@ -141,6 +154,7 @@ pub unsafe extern "C" fn revindex_len(ptr: *const SourmashRevIndex) -> u64 {
 pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
     let revindex = SourmashRevIndex::as_rust(ptr);
 
+    // note: here 'collection' is a CollectionSet, so all the same ksize.
     revindex
         .collection()
         .manifest()
@@ -152,6 +166,8 @@ pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
 #[no_mangle]
 pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
     let revindex = SourmashRevIndex::as_rust(ptr);
+
+    // note: here 'collection' is a CollectionSet, so all the same scaled.
     let (_, scaled) = revindex
         .collection()
         .min_max_scaled()
@@ -162,6 +178,8 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
 #[no_mangle]
 pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> SourmashStr {
     let revindex = SourmashRevIndex::as_rust(ptr);
+
+    // note: here 'collection' is a CollectionSet, so all the same moltype.
     let moltype = revindex
         .collection()
         .manifest()
@@ -194,7 +212,8 @@ unsafe fn revindex_signatures(
 }
 }
 
-// implement prefetch/containment separately from search/jaccard
+// prefetch/containment overlap -> all matches. Implement separately from
+// Jaccard, as this can be done efficiently on RevIndexes.
 
 ffi_fn! {
 unsafe fn revindex_prefetch(
@@ -219,10 +238,15 @@ unsafe fn revindex_prefetch(
     // do search & get matches
     let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
 
+    // @CTB what if empty? test.
+
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
     // but it would require changing this to a loop rather than using an
     // iterator I think.
+    //
+    // we could also adjust 'counter_for_query' to respect a specific
+    // threshold...
     let filename = revindex.location();
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
@@ -301,8 +325,7 @@ unsafe fn revindex_search_jaccard(
     Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
-// implement prefetch/containment separately from search/jaccard.
-// This can be done efficiently on RevIndexes.
+// retrieve best match.
 
 ffi_fn! {
 unsafe fn revindex_best_containment(
@@ -365,6 +388,8 @@ unsafe fn revindex_prefetch_to_countergather(
 }
 }
 
+// decrement counters appropriately.
+
 ffi_fn! {
 unsafe fn revindex_countergather_consume(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
@@ -378,6 +403,8 @@ unsafe fn revindex_countergather_consume(
     Ok(())
 }
 }
+
+// retrieve top match.
 
 ffi_fn! {
 unsafe fn revindex_countergather_peek(
@@ -401,6 +428,8 @@ unsafe fn revindex_countergather_peek(
     }
 }
 }
+
+// retrieve all signatures for a CounterGather.
 
 ffi_fn! {
 unsafe fn revindex_countergather_signatures(
@@ -435,6 +464,8 @@ unsafe fn revindex_countergather_signatures(
 }
 }
 
+// retrieve all hashes present in a CounterGather. Can be done efficiently.
+
 ffi_fn! {
 unsafe fn revindex_countergather_found_hashes(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
@@ -458,7 +489,10 @@ unsafe fn revindex_countergather_len(
 }
 }
 
+
+// convert a sketch template into a Selection, for use by the Rust layer.
 // TODO: remove this when it is possible to pass Selection thru the FFI
+
 pub fn from_template(template: &Sketch) -> Selection {
     let (num, scaled) = match template {
         Sketch::MinHash(mh) => (mh.num(), mh.scaled()),
@@ -488,6 +522,8 @@ pub fn from_template(template: &Sketch) -> Selection {
         .scaled(scaled)
         .build()
 }
+
+// build a new MemRevIndex from a list of sigs.
 
 ffi_fn! {
 unsafe fn revindex_mem_new_with_sigs(
