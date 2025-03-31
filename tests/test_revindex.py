@@ -57,6 +57,8 @@ def test_mem_revindex_basic():
     db.insert(ss2)
 
     db = db.select(ksize=31, scaled=1000, moltype="DNA")
+    assert len(db) == 1
+    assert db.location == None
 
 
 def test_mem_revindex_index_search():
@@ -298,6 +300,8 @@ def test_disk_revindex_basic():
     db = DiskRevIndex(rocksdb_path)
 
     db = db.select(ksize=31, scaled=1000, moltype="DNA")
+    assert len(db) == 3
+    assert db.location == rocksdb_path
 
 
 def test_disk_revindex_prefetch_to_revindex():
