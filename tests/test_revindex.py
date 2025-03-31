@@ -1,5 +1,5 @@
 """
-Tests of the RevIndex and DiskRevIndex classes.
+Tests of the MemRevIndex and DiskRevIndex classes.
 """
 
 import pytest
@@ -40,7 +40,7 @@ class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
         return True
 
 
-def test_revindex_empty():
+def test_mem_revindex_empty():
     sig2 = utils.get_test_data("2.fa.sig")
     ss2 = load_one_signature_from_json(sig2, ksize=31)
     lidx = MemRevIndex(template=ss2.minhash)
@@ -49,7 +49,17 @@ def test_revindex_empty():
         list(lidx.signatures())
 
 
-def test_revindex_index_search():
+def test_mem_revindex_basic():
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+
+    db = MemRevIndex(template=ss2.minhash)
+    db.insert(ss2)
+
+    db = db.select(ksize=31, scaled=1000, moltype="DNA")
+
+
+def test_mem_revindex_index_search():
     # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -97,7 +107,7 @@ def test_revindex_index_search():
     assert sr[0][1] == ss63
 
 
-def test_revindex_index_search_picklist(runtmp):
+def test_mem_revindex_index_search_picklist(runtmp):
     # confirm that RevIndex works w/picklists
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -132,7 +142,7 @@ def test_revindex_index_search_picklist(runtmp):
     assert len(sr) == 0
 
 
-def test_revindex_index_search_retrieve_orig():
+def test_mem_revindex_index_search_retrieve_orig():
     # confirm that RevIndex returns the original, not the downsampled sketches
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -179,7 +189,7 @@ def test_revindex_index_search_retrieve_orig():
     assert sr[0][1] == ss63
 
 
-def test_revindex_best_containment():
+def test_mem_revindex_best_containment():
     # check that RevIndex.best_containment works.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -205,7 +215,7 @@ def test_revindex_best_containment():
     assert match.signature == ss47
 
 
-def test_revindex_gather_ignore():
+def test_mem_revindex_gather_ignore():
     # check that RevIndex gather ignores things properly.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -239,7 +249,7 @@ def test_revindex_gather_ignore():
     assert is_found(ss63, results)
 
 
-def test_revindex_insert_after_init():
+def test_mem_revindex_insert_after_init():
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -257,7 +267,7 @@ def test_revindex_insert_after_init():
         lidx.insert(ss47)
 
 
-def test_revindex_union_found():
+def test_mem_revindex_union_found():
     # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -283,7 +293,14 @@ def test_revindex_union_found():
     assert round(ss47.minhash.contained_by(ident_mh), 5) == 0.48851
 
 
-def test_rocksdb_prefetch_to_revindex():
+def test_disk_revindex_basic():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    db = db.select(ksize=31, scaled=1000, moltype="DNA")
+
+
+def test_disk_revindex_prefetch_to_revindex():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
 
@@ -294,14 +311,14 @@ def test_rocksdb_prefetch_to_revindex():
     assert len(list(ri.signatures())) == 2
 
 
-def test_rocksdb_ksize_wrong():
+def test_disk_revindex_ksize_wrong():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
     with pytest.raises(ValueError):
         db.select(ksize=21)
 
 
-def test_rocksdb_load(runtmp):
+def test_disk_revindex_load(runtmp):
     # check loading from non .rocksdb directories
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
 
@@ -313,14 +330,14 @@ def test_rocksdb_load(runtmp):
     assert len(db) == 3, len(db)
 
 
-def test_rocksdb_len():
+def test_disk_revindex_len():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
     print(db)
     assert len(db) == 3, len(db)
 
 
-def test_rocksdb_signatures():
+def test_disk_revindex_signatures():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
     print(db)
@@ -333,7 +350,7 @@ def test_rocksdb_signatures():
     # victory!
 
 
-def test_rocksdb_signatures_with_internal():
+def test_disk_revindex_signatures_with_internal():
     # check that 'internal' matches enumeration order.
     # CTB note: this is, for now, an important implementation detail,
     # implemented by the Python layer but corresponding to the Rust
@@ -352,7 +369,7 @@ def test_rocksdb_signatures_with_internal():
     # victory!
 
 
-def test_rocksdb_best_containment():
+def test_disk_revindex_best_containment():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
 
@@ -367,7 +384,7 @@ def test_rocksdb_best_containment():
     assert result.location == rocksdb_path
 
 
-def test_rocksdb_prefetch():
+def test_disk_revindex_prefetch():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
 
@@ -389,14 +406,14 @@ def test_rocksdb_prefetch():
     assert len(matches) == 2
 
 
-def test_rocksdb_ksize_wrong():
+def test_disk_revindex_ksize_wrong():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
     with pytest.raises(ValueError):
         db.select(ksize=21)
 
 
-def test_rocksdb_ksize():
+def test_disk_revindex_ksize():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
     print("xxx", db, db.select(ksize=31))
@@ -475,7 +492,7 @@ def test_create_dataset_picklist_3():
     assert round(xx[0].score, 3) == 0.321
 
 
-def test_against_bad_abund_rocksdb(runtmp):
+def test_disk_revindex_against_bad_abund_rocksdb(runtmp):
     # check against a RocksDB that contains sketches w/abund,
     # created by branchwater. An alternative would be to write
     # a test that uses the internal Python API for gather.
@@ -485,7 +502,7 @@ def test_against_bad_abund_rocksdb(runtmp):
     runtmp.sourmash("gather", metag, db)
 
 
-def test_rocksdb_prefetch_to_cg_colors_1():
+def test_disk_revindex_prefetch_to_cg_colors_1():
     sig63 = utils.get_test_data("63.fa.sig")
     ss63 = load_one_signature_from_json(sig63, ksize=31)
 
@@ -497,7 +514,7 @@ def test_rocksdb_prefetch_to_cg_colors_1():
     assert sr.score == 1.0
 
 
-def test_rocksdb_prefetch_to_cg_colors_2():
+def test_disk_revindex_prefetch_to_cg_colors_2():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
 
@@ -512,7 +529,7 @@ def test_rocksdb_prefetch_to_cg_colors_2():
     assert cg.peek(ss47.minhash) == []
 
 
-def test_rocksdb_prefetch_to_cg_colors_3():
+def test_disk_revindex_prefetch_to_cg_colors_3():
     sig2 = utils.get_test_data("2.fa.sig")
     ss2 = load_one_signature_from_json(sig2, ksize=31)
 
@@ -527,7 +544,7 @@ def test_rocksdb_prefetch_to_cg_colors_3():
     cg.consume(isect_mh)
 
 
-def test_rocksdb_prefetch_to_cg_colors_4():
+def test_disk_revindex_prefetch_to_cg_colors_4():
     # test peek/consume on db that contains 63 and 2, but not 47
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
@@ -554,7 +571,7 @@ def test_rocksdb_prefetch_to_cg_colors_4():
     assert len(intersect_mh) == 5238
 
 
-def test_rocksdb_prefetch_to_cg_colors_5():
+def test_disk_revindex_prefetch_to_cg_colors_5():
     # test peek/consume on db that contains 47, 63 and 2
     metag_path = utils.get_test_data("SRR606249.sig.gz")
     metag = load_one_signature_from_json(metag_path, ksize=31)
@@ -600,7 +617,7 @@ def test_rocksdb_prefetch_to_cg_colors_5():
     assert len(list(cg.signatures())) == 0
 
 
-def test_rocksdb_prefetch_to_cg_colors_6():
+def test_disk_revindex_prefetch_to_cg_colors_6():
     # test signatures on db that contains 47, 63 and 2
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)
@@ -614,7 +631,7 @@ def test_rocksdb_prefetch_to_cg_colors_6():
     assert len(siglist) == 2
 
 
-def test_rocksdb_prefetch_to_cg_colors_7():
+def test_disk_revindex_prefetch_to_cg_colors_7():
     # test signatures on db that contains 47, 63 and 2
     sig2 = utils.get_test_data("2.fa.sig")
     ss2 = load_one_signature_from_json(sig2, ksize=31)
@@ -628,7 +645,7 @@ def test_rocksdb_prefetch_to_cg_colors_7():
     assert len(siglist) == 1
 
 
-def test_rocksdb_prefetch_to_cg_colors_8():
+def test_disk_revindex_prefetch_to_cg_colors_8():
     # test peek/consume on db that contains 47, 63 and 2
     metag_path = utils.get_test_data("SRR606249.sig.gz")
     metag = load_one_signature_from_json(metag_path, ksize=31)
