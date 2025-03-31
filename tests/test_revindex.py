@@ -58,7 +58,7 @@ def test_mem_revindex_basic():
 
     db = db.select(ksize=31, scaled=1000, moltype="DNA")
     assert len(db) == 1
-    assert db.location == None
+    assert db.location is None
 
 
 def test_mem_revindex_index_search():
@@ -124,8 +124,8 @@ def test_mem_revindex_index_search_picklist(runtmp):
     lidx.insert(ss47)
     lidx.insert(ss63)
 
-    pl = SignaturePicklist('ident')
-    pl.init(values=['CP001071.1'])
+    pl = SignaturePicklist("ident")
+    pl.init(values=["CP001071.1"])
     lidx = lidx.select(picklist=pl)
 
     # now, search for sig2
@@ -696,8 +696,8 @@ def test_disk_revindex_index_search_picklist(runtmp):
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
 
-    pl = SignaturePicklist('ident')
-    pl.init(values=['CP001071.1'])
+    pl = SignaturePicklist("ident")
+    pl.init(values=["CP001071.1"])
     db = db.select(picklist=pl)
 
     # now, search for sig2
