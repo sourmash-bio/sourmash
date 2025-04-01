@@ -16,7 +16,6 @@ use crate::index::revindex::{
     RevIndexOps,
 };
 use crate::index::{GatherResult, Index, SigCounter};
-use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
@@ -94,7 +93,6 @@ impl MemRevIndex {
         selection: &Selection,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
-        _keep_sigs: bool,
     ) -> Result<module::RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
@@ -112,7 +110,6 @@ impl MemRevIndex {
         selection: &Selection,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
-        _keep_sigs: bool,
     ) -> Result<module::RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
@@ -285,20 +282,6 @@ impl RevIndexOps for MemRevIndex {
             query_colors,
             hash_to_color,
         }
-    }
-
-    fn matches_from_counter(
-        &self,
-        _counter: SigCounter,
-        _threshold: usize,
-    ) -> Vec<(String, usize)> {
-        // @CTB
-        vec![]
-    }
-
-    fn records_from_counter(&self, _counter: SigCounter, _threshold: usize) -> Vec<&Record> {
-        // @CTB
-        vec![]
     }
 
     fn gather(
@@ -477,7 +460,7 @@ mod test {
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig".into(),
             "../../tests/test-data/gather/GCF_000007545.1_ASM754v1_genomic.fna.gz.sig".into(),
         ];
-        let index = MemRevIndex::new(&search_sigs, &selection, 0, None, false)?;
+        let index = MemRevIndex::new(&search_sigs, &selection, 0, None)?;
 
         let index = match index {
             module::RevIndex::Mem(idx) => idx,
@@ -498,7 +481,7 @@ mod test {
             "../../tests/test-data/gather/GCF_000008105.1_ASM810v1_genomic.fna.gz.sig".into(),
         ];
 
-        let index = MemRevIndex::new(&search_sigs, &selection, 0, None, false)?;
+        let index = MemRevIndex::new(&search_sigs, &selection, 0, None)?;
         //dbg!(&index.linear.collection().manifest);
         /*
         dbg!(&index.colors.colors);
@@ -570,7 +553,6 @@ mod test {
             &selection,
             0,
             None,
-            false,
         )
         .expect("error building from ziptorage");
 
@@ -838,6 +820,80 @@ mod test {
             round5(match_.f_unique_to_query()),
             round5(0.0047748976807639800)
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_load_and_gather_picklist() -> Result<()> {
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/gather/");
+
+        let against = vec![
+            "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+            "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+            "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+            "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+            "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+            "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+            "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+            "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+            "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+            "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+            "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+            "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+        ];
+        let against: Vec<PathBuf> = against
+            .iter()
+            .map(|sig| {
+                let mut filename = basedir.clone();
+                filename.push(sig);
+                filename.into()
+            })
+            .collect();
+
+        // build 'against' sketches into a revindex
+        let selection = Selection::builder().ksize(21).scaled(10000).build();
+
+        let index = MemRevIndex::new(&against[..], &selection, 0, None)?;
+
+        let mut query = None;
+        let mut query_filename = basedir.clone();
+        query_filename.push("combined.sig");
+        let query_sig = Signature::from_path(query_filename)?
+            .swap_remove(0)
+            .select(&selection)?;
+
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        // build a picklist with only one match
+        let pl = DatasetPicklist {
+            dataset_ids: vec![0].into_iter().collect(),
+        };
+
+        let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
+
+        let matches = index.gather(
+            cg,
+            5, // 50kb threshold
+            &query,
+            Some(selection),
+        )?;
+
+        // should be 1, b/c of picklist.
+        assert_eq!(matches.len(), 1);
+
+        // also do a basic test of containment with picklists -
+        let counter = index.counter_for_query(&query, Some(pl.clone()));
+        let matches = index.matches_from_counter(counter, 0);
+        assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
+
+        let counter = index.counter_for_query(&query, Some(pl));
+        let records = index.records_from_counter(counter, 0);
+        assert_eq!(records.len(), 1);
 
         Ok(())
     }

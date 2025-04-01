@@ -17,7 +17,7 @@ use crate::index::revindex::{
     RevIndexOps,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
-use crate::manifest::{Manifest, Record};
+use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
@@ -386,50 +386,6 @@ impl RevIndexOps for DiskRevIndex {
             query_colors,
             hash_to_color,
         }
-    }
-
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
-        info!("get matches from counter");
-        counter
-            .most_common()
-            .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = &self
-                        .collection
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
-
-                    let name = [row.name(), row.filename(), row.md5()]
-                        .into_iter()
-                        .find(|v| !v.is_empty())
-                        .unwrap(); // guaranteed to succeed because `md5` always exists
-
-                    Some((name.into(), size))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
-        info!("get matches from counter");
-        counter
-            .most_common()
-            .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = self
-                        .collection
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
-                    Some(row)
-                } else {
-                    None
-                }
-            })
-            .collect()
     }
 
     fn gather(

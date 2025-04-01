@@ -85,9 +85,47 @@ pub trait RevIndexOps {
         picklist: Option<DatasetPicklist>,
     ) -> SigCounter;
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
+    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
+        counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, size)| {
+                if size >= threshold {
+                    let row = &self
+                        .collection()
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
 
-    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record>;
+                    let name = [row.name(), row.filename(), row.md5()]
+                        .into_iter()
+                        .find(|v| !v.is_empty())
+                        .unwrap(); // guaranteed to succeed because `md5` always exists
+
+                    Some((name.into(), size))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+        counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, size)| {
+                if size >= threshold {
+                    let row = self
+                        .collection()
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
+                    Some(row)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 
     fn prepare_gather_counters(
         &self,
@@ -137,7 +175,8 @@ impl CounterGather {
     }
 
     // CTB: maybe use a KmerMinHashBTree?
-    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash { // @CTB test
+    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
+        // @CTB test
         let mut found_mh = template.clone();
         found_mh.clear();
 
@@ -161,7 +200,8 @@ impl CounterGather {
         }
     }
 
-    pub fn dataset_ids(&self) -> Vec<Idx> { // @CTB test
+    pub fn dataset_ids(&self) -> Vec<Idx> {
+        // @CTB test
         self.counter.keys().copied().collect()
     }
 
