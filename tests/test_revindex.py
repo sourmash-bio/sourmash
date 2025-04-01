@@ -496,6 +496,30 @@ def test_create_dataset_picklist_3():
     assert round(xx[0].score, 3) == 0.321
 
 
+def test_create_dataset_picklist_4():
+    # what if picklist -> empty? + prefetch?
+    dataset_picks = revindex.RevIndex_DatasetPicklist([])
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    sig63 = utils.get_test_data("63.fa.sig")
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
+
+    # no picklist
+    xx = list(db.search(ss63, threshold=0))
+    assert len(xx) == 2
+
+    # forcibly set picklist for now
+    db._idx_picklist = dataset_picks
+
+    # picklist, 0 matches
+    xx = list(db.prefetch(ss63, threshold=0))
+    assert len(xx) == 0
+
+
 def test_disk_revindex_against_bad_abund_rocksdb(runtmp):
     # check against a RocksDB that contains sketches w/abund,
     # created by branchwater. An alternative would be to write

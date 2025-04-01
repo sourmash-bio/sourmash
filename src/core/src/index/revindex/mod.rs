@@ -176,7 +176,6 @@ impl CounterGather {
 
     // CTB: maybe use a KmerMinHashBTree?
     pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
-        // @CTB test
         let mut found_mh = template.clone();
         found_mh.clear();
 
@@ -201,7 +200,6 @@ impl CounterGather {
     }
 
     pub fn dataset_ids(&self) -> Vec<Idx> {
-        // @CTB test
         self.counter.keys().copied().collect()
     }
 

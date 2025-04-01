@@ -375,7 +375,7 @@ impl RevIndexOps for MemRevIndex {
 
         let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
 
-        let counter = self.counter_for_query(&query_mh, picklist); // @CTB testme
+        let counter = self.counter_for_query(&query_mh, picklist);
 
         debug!(
             "number of matching signatures for hashes: {}",
@@ -820,6 +820,62 @@ mod test {
             round5(match_.f_unique_to_query()),
             round5(0.0047748976807639800)
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_load_and_test_counter_gather() -> Result<()> {
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/gather/");
+
+        let against = vec![
+            "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+            "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+            "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+            "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+            "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+            "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+            "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+            "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+            "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+            "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+            "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+            "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+        ];
+        let against: Vec<PathBuf> = against
+            .iter()
+            .map(|sig| {
+                let mut filename = basedir.clone();
+                filename.push(sig);
+                filename.into()
+            })
+            .collect();
+
+        // build 'against' sketches into a revindex
+        let selection = Selection::builder().ksize(21).scaled(10000).build();
+
+        let index = MemRevIndex::new(&against[..], &selection, 0, None)?;
+
+        let mut query = None;
+        let mut query_filename = basedir.clone();
+        query_filename.push("combined.sig");
+        let query_sig = Signature::from_path(query_filename)?
+            .swap_remove(0)
+            .select(&selection)?;
+
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        let cg = index.prepare_gather_counters(&query, None);
+
+        let idxlist = cg.dataset_ids();
+        assert_eq!(idxlist.len(), 12);
+
+        let found_mh = cg.found_hashes(&query);
+        assert_eq!(found_mh.size(), 1466);
 
         Ok(())
     }

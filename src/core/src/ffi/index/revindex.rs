@@ -238,8 +238,6 @@ unsafe fn revindex_prefetch(
     // do search & get matches
     let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
 
-    // @CTB what if empty? test.
-
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
     // but it would require changing this to a loop rather than using an
