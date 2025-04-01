@@ -53,7 +53,7 @@ def test_mem_revindex_num():
     mh = minhash.MinHash(500, 4)
 
     with pytest.raises(ValueError):
-        lidx = MemRevIndex(template=mh)
+        MemRevIndex(template=mh)
 
 
 def test_mem_revindex_basic():
