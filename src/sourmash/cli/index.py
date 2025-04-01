@@ -2,25 +2,19 @@
 
 usage = """
 
-   sourmash index -k 31 dbname *.sig
+   sourmash index -k 31 dbname *.sig -F dbtype
 
-Create an on-disk database of signatures that can be searched in low
-memory with 'search' and 'gather'. All signatures must be the same
-k-mer size, molecule type, and num/scaled; the standard signature
-selectors (-k/--ksize, --scaled, --dna/--protein) choose which
-signatures to be added.
+Create an on-disk database of signatures that can be searched quickly
+& in low memory. All signatures must be scaled, and must be the same
+k-mer size and molecule type; the standard signature selectors
+(-k/--ksize, --scaled, --dna/--protein) choose which signatures to be
+added.
 
 The key options for index are:
 
  * `-k/--ksize <int>`: k-mer size to select
  * `--dna` or --protein`: nucleotide or protein signatures (default `--dna`)
-
-If `dbname` ends with `.sbt.json`, index will create the database as a
-collection of multiple files, with an index `dbname.sbt.json` and a
-subdirectory `.sbt.dbname`. If `dbname` ends with `.sbt.zip`, index
-will create a zip archive containing the multiple files. For sourmash
-v2 and v3, `sbt.json` will be added automatically; this behavior will
-change in sourmash v4 to default to `.sbt.zip`.
+ * `-F <dbtype>`: 'SBT' (default), 'rocksdb', or 'zip'. 'rocksdb' is recommended and will be come the default in sourmash v5.
 
 ---
 """
