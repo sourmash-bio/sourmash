@@ -62,7 +62,7 @@ class RevIndex(RustObject, Index):
 
     def _signatures_with_internal(self):
         # CTB note: this should return _all_ signatures, independent of
-        # picklist. @CTB test/check.
+        # picklist.
         for n, ss in enumerate(self.signatures()):
             yield ss, n
 
@@ -107,10 +107,10 @@ class RevIndex(RustObject, Index):
         # difference for RevIndex when searching with containment.
 
         if not query_ss.minhash:
-            raise ValueError("empty query")  # @CTB test
+            raise ValueError("empty query")
 
         if threshold is None:
-            raise TypeError("'search' requires 'threshold'")  # @CTB test
+            raise TypeError("'search' requires 'threshold'")
 
         self._init_inner()
 
@@ -191,7 +191,7 @@ class RevIndex(RustObject, Index):
 
         match_ss = SourmashSignature._from_objptr(ss_ptr)
         if not match_ss:
-            return []  # @CTB test
+            return []
 
         # calculate the intersection
         match_mh = match_ss.minhash
@@ -215,7 +215,7 @@ class RevIndex(RustObject, Index):
         'gather', and can be used to get iterative results.
         """
         if not query_ss.minhash:
-            raise ValueError("empty query")  # @CTB test
+            raise ValueError("empty query")
 
         self._init_inner()
         cg_ptr = self._methodcall(
@@ -223,8 +223,6 @@ class RevIndex(RustObject, Index):
             query_ss._get_objptr(),
             self._ffi_idx_picklist,
         )
-        if cg_ptr == ffi.NULL:
-            raise ValueError("no matches")  # @CTB test
 
         return RevIndex_CounterGather_Colors(cg_ptr, query_ss, self)
 
@@ -233,7 +231,7 @@ class RevIndex(RustObject, Index):
         Return all containment matches above threshold for the query.
         """
         if not query_ss.minhash:
-            raise ValueError("empty query")  # @CTB test
+            raise ValueError("empty query")
 
         self._init_inner()
         threshold_bp = int(threshold_bp)
@@ -368,7 +366,7 @@ class MemRevIndex(RevIndex):
         assert template is not None
         assert isinstance(template, MinHash)
         if template.num != 0:
-            raise ValueError("must use scaled sketches")  # @CTB test
+            raise ValueError("must use scaled sketches")
         self.template = template.copy_and_clear()
         self._scaled = template.scaled
         self._signatures = []  # hold sketches _prior_ to construction
@@ -613,6 +611,9 @@ class RevIndex_CounterGather_Colors(RustObject):
         query_mh = query_ss.minhash
         self._scaled = query_mh.scaled
 
+        if len(self) == 0:
+            raise ValueError("no matches found")
+
         # track found hashes:
         found_mh_ptr = self._methodcall(
             lib.revindex_countergather_found_hashes,
@@ -690,7 +691,7 @@ class RevIndex_DatasetPicklist(RustObject):
         idx_list = list(idxs)
         idx_list_size = len(idx_list)
 
-        # @CTB do some validation on Idx??
+        # CTB do some validation on Idx?
         self._objptr = rustcall(
             lib.dataset_picklist_new_from_list, idx_list, idx_list_size
         )

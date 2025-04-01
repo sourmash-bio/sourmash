@@ -10,7 +10,7 @@ from sourmash.index import revindex
 from sourmash.index.revindex import MemRevIndex, DiskRevIndex
 from sourmash.signature import load_one_signature_from_json
 from sourmash.search import JaccardSearch, SearchType
-from sourmash import SourmashSignature
+from sourmash import SourmashSignature, minhash
 from sourmash.picklist import SignaturePicklist
 
 ##
@@ -47,6 +47,13 @@ def test_mem_revindex_empty():
 
     with pytest.raises(ValueError):
         list(lidx.signatures())
+
+
+def test_mem_revindex_num():
+    mh = minhash.MinHash(500, 4)
+
+    with pytest.raises(ValueError):
+        lidx = MemRevIndex(template=mh)
 
 
 def test_mem_revindex_basic():
@@ -295,6 +302,65 @@ def test_mem_revindex_union_found():
     assert round(ss47.minhash.contained_by(ident_mh), 5) == 0.48851
 
 
+def test_mem_revindex_index_check_errors():
+    # check various errors
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    lidx = MemRevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    empty_mh = ss2.minhash.copy_and_clear()
+    empty_ss = SourmashSignature(empty_mh)
+
+    with pytest.raises(ValueError):
+        lidx.search(empty_ss)
+
+    with pytest.raises(TypeError):
+        lidx.search(ss2, threshold=None)
+
+    with pytest.raises(TypeError):
+        lidx.search(ss2, threshold=None)
+
+    with pytest.raises(ValueError):
+        lidx.counter_gather(empty_ss)
+
+    with pytest.raises(ValueError):
+        lidx.prefetch(empty_ss)
+
+
+def test_mem_revindex_index_check_nomatches():
+    # check what happens if no matches
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
+
+    lidx = MemRevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    pl = SignaturePicklist("ident")
+    pl.init(values=["CP001071.1"])
+    lidx = lidx.select(picklist=pl)
+
+    assert lidx.peek(ss47.minhash) == []
+
+    with pytest.raises(ValueError):
+        lidx.counter_gather(ss47)
+
+
 def test_disk_revindex_basic():
     rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
     db = DiskRevIndex(rocksdb_path)
@@ -518,6 +584,21 @@ def test_create_dataset_picklist_4():
     # picklist, 0 matches
     xx = list(db.prefetch(ss63, threshold=0))
     assert len(xx) == 0
+
+
+def test_create_dataset_picklist_5():
+    # make sure _signatures_with_internal reports everything.
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0])
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    db._idx_picklist = dataset_picks
+
+    siglist = list(db._signatures_with_internal())
+    assert len(siglist) == 3
 
 
 def test_disk_revindex_against_bad_abund_rocksdb(runtmp):
