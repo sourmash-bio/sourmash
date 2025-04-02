@@ -2249,7 +2249,7 @@ Commands that take multiple signatures or collections of signatures
 will also work with one or more indexed databases.
 
 One limitation of indexed databases is that they are all restricted in
-to certain kinds of signatures. RockSDB, SBT, and LCA databases can only
+to certain kinds of signatures. RocksDB, SBT, and LCA databases can only
 contain one "type" of signature (one ksize/one moltype at one scaled
 value). SQLite databases can contain multiple ksizes and moltypes, but
 only at one scaled value. If the database signature type is
