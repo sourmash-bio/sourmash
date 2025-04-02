@@ -82,7 +82,7 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 * `plot` plots similarity matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
-* `index` builds a fast index for many (thousands) of signatures.
+* `index` builds fast indexes for searching many (thousands to millions) of signatures.
 * `prefetch` selects signatures of interest from a very large collection of signatures, for later processing.
 
 There are also a number of commands that work with taxonomic
@@ -120,8 +120,7 @@ walkthrough of some of these commands.
 Finally, there are a number of utility and information commands:
 
 * `info` shows version and software information.
-* `index` indexes many signatures using a Sequence Bloom Tree (SBT).
-* `sbt_combine` combines multiple SBTs.
+* `sbt_combine` combines multiple SBT indexes.
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
 * `multigather` is an experimental command to run multiple gathers against the same collection of databases.
@@ -446,31 +445,31 @@ The results are the same whether `--prefetch` or `--no-prefetch` is
 used.  This option can be used with or without `--linear` (although
 `--no-prefetch --linear` will generally be MUCH slower).
 
-### `sourmash index` - build an SBT index of signatures
+### `sourmash index` - build an index of signatures
 
-The `sourmash index` command creates a Zipped SBT database
-(`.sbt.zip`) from a collection of signatures.  This can be used to
-create databases from private collections of genomes, and can also be
-used to create databases for e.g. subsets of GenBank.
+The `sourmash index` command creates indexed databases from a
+collection of signatures. This can be used to create databases from
+private collections of genomes or metagenomes, and can also be used to create
+databases for e.g. subsets of GenBank.
 
-These databases support fast search and gather on large collections
-of signatures in low memory.
+As of sourmash v4.9.0, there are two types of indexed databases
+supported by sourmash: RocksDB-based inverted indexes, and Sequence
+Bloom Trees (SBTs). RocksDB indexes are a newer form of fast and
+low-memory on-disk indexes that work at massive scale, while SBTs are older
+indexes that we support for legacy reasons.
 
-All signatures in
-an SBT must be of compatible types (i.e. the same k-mer size and
-molecule type). You can specify the usual command line selectors
-(`-k`, `--scaled`, `--dna`, `--protein`, etc.) to pick out the types
-of signatures to include when running `index`.
+All signatures in an index must be of compatible types (i.e. the same
+k-mer size, scaled, and molecule type). You can specify the usual
+command line selectors (`-k`, `--scaled`, `--dna`, `--protein`, etc.)
+to pick out the types of signatures to include when running `index`.
 
 Usage:
 ```
-sourmash index <database_name> <inputfile1> [ <inputfile2> ... ]
+sourmash index <database_name>.rocksdb <inputfile1> [ <inputfile2> ... ] -F rocksdb
 ```
 
-This will create a `database.sbt.zip` file containing the SBT of the
-input signatures. You can create an "unpacked" version by specifying
-`database.sbt.json` and it will create the JSON file as well as a
-subdirectory of files under `.sbt.database`.
+This will create a `database.rocksdb` file containing the
+sketches.
 
 Note that you can use `--from-file` to pass `index` a text file
 containing a list of file names to index; you can also provide individual
@@ -481,6 +480,14 @@ As of sourmash 4.2.0, `index` supports `--picklist`, to
 [select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to index a subset of a large collection, or to
 exclude a few signatures from an index being built from a large collection.
+
+Note: until sourmash v5, the default index type is "SBT"; this is to
+ensure backwards compatibility of the command line API for semantic
+versioning. We no longer recommend SBTs. Also note that a third index
+type, 'zip', is supported by the command line, but this should be used
+solely for testing purposes - it is identical in format to a zipped
+database output by e.g. `sig cat`, but restricted to the same
+ksize/moltype/scaled.
 
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
@@ -2231,19 +2238,18 @@ databases!](databases-advanced.md)
 
 #### Indexed databases
 
-Indexed databases can make searching signatures much faster. SBT
-databases are low memory and disk-intensive databases that allow for
-fast searches using a tree structure, while LCA databases are higher
-memory and (after a potentially significant load time) are quite fast.
-SQLite databases (new in sourmash v4.4.0) are typically larger on disk
-than SBTs and LCAs, but in turn are fast to load and support very low
-memory search.
+Indexed databases can make searching signatures much, much faster.
+RocksDB databases produced by `sourmash index` are low memory and
+disk-intensive databases that allow for fast searches using an
+inverted index.  (We continue to support other indexed database types,
+including SBTs, LCA databases, and SQLite databases, but recommend
+using RocksDB over these other formats.)
 
 Commands that take multiple signatures or collections of signatures
-will also work with indexed databases.
+will also work with one or more indexed databases.
 
 One limitation of indexed databases is that they are all restricted in
-to certain kinds of signatures. Both SBT and LCA databases can only
+to certain kinds of signatures. RocksDB, SBT, and LCA databases can only
 contain one "type" of signature (one ksize/one moltype at one scaled
 value). SQLite databases can contain multiple ksizes and moltypes, but
 only at one scaled value. If the database signature type is
@@ -2254,18 +2260,12 @@ In contrast, signature files and zip collections can contain many
 different types of signatures, and compatible ones will be selected
 automatically.
 
-Use the `sourmash index` command to create an SBT.
-
-Use the `sourmash lca index` command to create an LCA database; the
-database can be saved in JSON or SQL format with `-F json` or `-F sql`.
-
-Use `sourmash sig cat <list of signatures> -o <output>.sqldb` to create
-a SQLite indexed database.
+Use the `sourmash index -F rocksdb` command to create a RocksDB index.
 
 #### Loading signatures within a directory hierarchy
 
 All of the `sourmash` commands support loading signatures (`.sig` or
-`.sig.gz` files) from within directory hierarchies; you can just
+`.sig.gz` files) from within directory hierarchies; you can
 provide the paths to the top-level directory on the command line.
 
 However, this is no longer recommended because it can be very
@@ -2287,10 +2287,10 @@ check`, which will include extra metadata that supports fast loading.
 
 ### Combining search databases on the command line
 
-All of the commands in sourmash operate in "online" mode, so you can
+All of the commands in sourmash operate in "online" mode, so **you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
-them.  The only caveat to this rule is that if you have multiple
+them**.  The only caveat to this rule is that if you have multiple
 identical matches present across the databases, the order in which
 they are used may depend on the order that the files are
 passed in on the command line.

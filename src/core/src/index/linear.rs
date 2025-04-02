@@ -12,7 +12,7 @@ use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::selection::Select;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::storage::SigStore;
 use crate::Result;
@@ -144,6 +144,7 @@ impl LinearIndex {
         match_size: usize,
         query: &KmerMinHash,
         round: usize,
+        orig_query: &KmerMinHash,
     ) -> Result<GatherResult> {
         let match_path = self
             .collection
@@ -151,8 +152,14 @@ impl LinearIndex {
             .internal_location()
             .into();
         let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-        let result =
-            self.stats_for_match(match_sig, query, match_size, match_path, round as u32)?;
+        let result = self.stats_for_match(
+            match_sig,
+            query,
+            match_size,
+            match_path,
+            round as u32,
+            orig_query,
+        )?;
         Ok(result)
     }
 
@@ -163,6 +170,7 @@ impl LinearIndex {
         match_size: usize,
         match_path: PathBuf,
         gather_result_rank: u32,
+        orig_query: &KmerMinHash,
     ) -> Result<GatherResult> {
         let template = self.template();
 
@@ -179,10 +187,10 @@ impl LinearIndex {
         let name = match_sig.name();
         let unique_intersect_bp = (match_mh.scaled() as usize * match_size) as u64;
 
-        let (intersect_orig, _) = match_mh.intersection_size(query)?;
-        let intersect_bp: u64 = match_mh.scaled() as u64 * intersect_orig;
+        let (intersect_hashes, _) = match_mh.intersection_size(query)?;
+        let intersect_bp: u64 = match_mh.scaled() as u64 * intersect_hashes;
 
-        let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
+        let f_unique_to_query = intersect_hashes as f64 / orig_query.size() as f64;
         let match_ = match_sig;
 
         // TODO: all of these
@@ -240,8 +248,9 @@ impl LinearIndex {
         &self,
         mut counter: SigCounter,
         threshold: usize,
-        query: &KmerMinHash,
+        orig_query: &KmerMinHash,
     ) -> std::result::Result<Vec<GatherResult>, Box<dyn std::error::Error>> {
+        let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut match_size = usize::MAX;
         let mut matches = vec![];
         let template = self.template();
@@ -258,7 +267,9 @@ impl LinearIndex {
                 break;
             };
 
-            let result = self.gather_round(dataset_id, match_size, query, matches.len())?;
+            let query_mh = KmerMinHash::from(query.clone());
+            let result =
+                self.gather_round(dataset_id, match_size, &query_mh, matches.len(), orig_query)?;
 
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
@@ -274,12 +285,17 @@ impl LinearIndex {
                 }
                 let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
 
-                let (intersection, _) = query.intersection_size(match_mh)?;
-                if intersection as usize > *value {
+                let (matched_hashes, _) = query_mh.intersection(match_mh)?;
+                let mut isect_mh = match_mh.clone();
+                isect_mh.clear();
+                isect_mh.add_many(&matched_hashes)?;
+
+                if isect_mh.size() > *value {
                     to_remove.insert(*dataset);
                 } else {
-                    *value -= intersection as usize;
+                    *value -= isect_mh.size();
                 };
+                query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
             }
             to_remove.iter().for_each(|dataset_id| {
                 counter.remove(dataset_id);
