@@ -516,10 +516,10 @@ def index(args):
     # check input options
     if index_type != "SBT":
         if args.append:
-            error("cannot use --append with a RocksDB index type")
+            error("cannot only use --append with an SBT index type")
             sys.exit(-1)
         if args.sparseness > 0.0:
-            error("cannot use --sparseness with a RocksDB index type")
+            error("cannot use use --sparseness with an SBT index type")
             sys.exit(-1)
 
     # open writing
@@ -537,13 +537,6 @@ def index(args):
             tree.insert(sigobj)
 
     elif index_type == "zip":
-        if args.append:
-            error("cannot use --append with a RocksDB index type")
-            sys.exit(-1)
-        if args.sparseness > 0.0:
-            error("cannot use --sparseness with a RocksDB index type")
-            sys.exit(-1)
-
         save_sigs = sourmash_args.SaveSignaturesToLocation(output_name)
         save_sigs.open()
 
