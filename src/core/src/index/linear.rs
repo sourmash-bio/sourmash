@@ -292,7 +292,8 @@ impl LinearIndex {
             isect_mh.clear();
             let _ = isect_mh.add_many(&isect_hashes);
 
-            query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
+            query.remove_many(isect_mh.iter_mins().copied())?;
+
             // CTB: could redo this entire loop using a CounterGather-style
             // struct, with peek/consume, I 'spose.
             for (dataset, value) in counter.iter_mut() {
