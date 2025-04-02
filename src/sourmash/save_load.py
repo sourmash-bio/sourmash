@@ -216,7 +216,7 @@ def _load_sqlite_db(filename, **kwargs):
 
 
 @add_loader("load collection from rocksdb", 20)
-def _load_sqlite_db(filename, **kwargs):
+def _load_disk_revindex(filename, **kwargs):
     return DiskRevIndex(filename)
 
 
