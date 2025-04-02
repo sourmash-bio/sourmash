@@ -31,7 +31,7 @@ from sourmash.index.revindex import DiskRevIndex
 WATERMARK_SIZE = 10000
 
 
-class EnumIndexType(enum.StrEnum): # used in 'index'
+class EnumIndexType(enum.StrEnum):  # used in 'index'
     SBT = "SBT"
     ROCKSDB = "rocksdb"
     ZIP = "zip"
