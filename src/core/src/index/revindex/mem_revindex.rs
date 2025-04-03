@@ -665,10 +665,8 @@ mod test {
         // compare to linear gather.
         let counter_lin = index.linear.counter_for_query(&query_mh);
         let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
-        // CTB fixme: see https://github.com/sourmash-bio/sourmash/issues/3594
-        // assert_eq!(results_linear.len(), 3);
-
-        assert_eq!(results[0], results_linear[0]);
+        assert_eq!(results_linear.len(), 3);
+        assert_eq!(results, results_linear);
 
         Ok(())
     }
