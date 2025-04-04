@@ -71,7 +71,6 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -86,7 +85,7 @@ dependencies = [
   "bitstring>=3.1.9,<5",
 ]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [tool.sourmash.metadata]
 authors = [
