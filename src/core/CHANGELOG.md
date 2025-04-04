@@ -7,6 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.19.0] - 2025-02-12
+
+MSRV: 1.74
+
+Changes/additions:
+
+* update MSRV to 1.74, niffler to 3.0.0 (#3530)
+* update to rocksdb 0.23 (#3456)
+* remove finch conversion, support zstd and lzma in wasm (#3521)
+
+Updates:
+
+* Bump serde_json from 1.0.133 to 1.0.138 (#3453) (#3490) (#3500) (#3518)
+* Bump tempfile from 3.14.0 to 3.16.0 (#3472) (#3519)
+* Bump liblzma from 0.3.5 to 0.3.6 (#3526)
+* Bump rand from 0.8.5 to 0.9.0 (#3512)
+* Bump log from 0.4.22 to 0.4.25 (#3501)
+* Bump histogram from 0.11.1 to 0.11.2 (#3498)
+* Bump getset from 0.1.3 to 0.1.4 (#3499)
+* Bump roaring from 0.10.9 to 0.10.10 (#3489)
+* Bump ouroboros from 0.18.4 to 0.18.5 (#3491)
+* Bump itertools from 0.13.0 to 0.14.0 (#3471)
+* Bump serde from 1.0.216 to 1.0.217 (#3464)
+
+
+## [0.18.0] - 2024-12-20
+
+MSRV: 1.66
+
+Changes/additions:
+
+* add skipmer capacity to sourmash python layer via ffi (#3446)
+* add skipmers; switch to reading frame approach for translation, skipmers (#3395)
+* Refactor: Use to_writer/from_reader across the codebase (#3443)
+* adjust `Signature::name()` to return `Option<String>` instead of `filename()` and `md5sum()` (#3434)
+* propagate zipfile errors (#3431)
+
+Updates:
+
+* Bump proptest from 1.5.0 to 1.6.0 (#3437)
+* Bump roaring from 0.10.8 to 0.10.9 (#3438)
+* Bump serde from 1.0.215 to 1.0.216 (#3436)
+* Bump statrs from 0.17.1 to 0.18.0 (#3426)
+* Bump roaring from 0.10.7 to 0.10.8 (#3423)
+* Bump needletail from 0.6.0 to 0.6.1 (#3427)
+* Bump web-sys from 0.3.72 to 0.3.74 (#3411)
+* Bump js-sys from 0.3.72 to 0.3.74 (#3412)
+* Bump roaring from 0.10.6 to 0.10.7 (#3413)
+* Bump serde_json from 1.0.132 to 1.0.133 (#3402)
+* Bump serde from 1.0.214 to 1.0.215 (#3403)
+
+## [0.17.2] - 2024-11-15
+
+MSRV: 1.66
+
+Changes/additions:
+
+* enforce a single scaled on a `CollectionSet` (#3397)
+* change `sig_from_record` to use scaled from `Record` to downsample (#3387)
+
+Updates:
+
+* Upgrade rocksdb to 0.22.0, bump MSRV to 1.66  (#3383)
+* Bump thiserror from 1.0.68 to 2.0.3 (#3389)
+* Bump csv from 1.3.0 to 1.3.1 (#3390)
+* Bump tempfile from 3.13.0 to 3.14.0 (#3391)
+
+## [0.17.1] - 2024-11-11
+
+Changes/additions:
+* fix: Avoid re-calculating md5sum on clone and conversion to KmerMinHashBTree (#3385)
+* build: simplify Rust release (#3392)
+
+## [0.17.0] - 2024-11-05
+
+Changes/additions:
+* standardize on u32 for scaled, and introduce `ScaledType` (#3364)
+* panic when `FSStorage::load_sig` encounters more than one `Signature` in a JSON record (#3333)
+
+Updates:
+
+* Bump needletail from 0.5.1 to 0.6.0 (#3376)
+* Bump histogram from 0.11.0 to 0.11.1 (#3377)
+* Bump serde from 1.0.210 to 1.0.214 (#3368)
+* Bump serde_json from 1.0.128 to 1.0.132 (#3358)
+* Fix clippy lints from 1.83 beta (#3357)
+
+## [0.16.0] - 2024-10-15
+
+MSRV: 1.65
+
+Changes/additions:
+
+* refactor `calculate_gather_stats` to disallow repeated downsampling (#3352)
+* improve downsampling behavior on `KmerMinHash`; fix `RevIndex::gather` bug around `scaled`. (#3342)
+* derive Hash for `HashFunctions` (#3344)
+
+Updates:
+
+* Bump web-sys from 0.3.70 to 0.3.72 (#3354)
+* Bump tempfile from 3.12.0 to 3.13.0 (#3340)
+
+
 ## [0.15.2] - 2024-09-25
 
 MSRV: 1.65
@@ -417,7 +520,17 @@ Fixed:
 - Fix mem leak in get_mins (#807)
 - Fixes for WASI and WASM compilation (#771) (#723)
 
-[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...HEAD
+[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.19.0...HEAD
+[0.19.0]: https://github.com/sourmash-bio/sourmash/compare/r0.18.0...r0.19.0
+[0.18.0]: https://github.com/sourmash-bio/sourmash/compare/r0.17.2...r0.18.0
+[0.17.2]: https://github.com/sourmash-bio/sourmash/compare/r0.17.1...r0.17.2
+[0.17.1]: https://github.com/sourmash-bio/sourmash/compare/r0.17.0...r0.17.1
+[0.17.0]: https://github.com/sourmash-bio/sourmash/compare/r0.16.0...r0.17.0
+[0.16.0]: https://github.com/sourmash-bio/sourmash/compare/r0.15.1...r0.16.0
+[0.15.1]: https://github.com/sourmash-bio/sourmash/compare/r0.15.0...r0.15.1
+[0.15.0]: https://github.com/sourmash-bio/sourmash/compare/r0.14.1...r0.15.0
+[0.14.1]: https://github.com/sourmash-bio/sourmash/compare/r0.14.0...r0.14.1
+[0.14.0]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...r0.14.0
 [0.13.1]: https://github.com/sourmash-bio/sourmash/compare/r0.13.0...r0.13.1
 [0.13.0]: https://github.com/sourmash-bio/sourmash/compare/r0.12.1...r0.13.0
 [0.12.1]: https://github.com/sourmash-bio/sourmash/compare/r0.12.0...r0.12.1

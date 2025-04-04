@@ -345,6 +345,7 @@ def test_protein_override_bad_rust_foo():
     siglist = factory()
     assert len(siglist) == 1
     sig = siglist[0]
+    print(sig.minhash.ksize)
 
     # try adding something
     testdata1 = utils.get_test_data("ecoli.faa")
@@ -354,7 +355,7 @@ def test_protein_override_bad_rust_foo():
     with pytest.raises(ValueError) as exc:
         sig.add_protein(record.sequence)
 
-    assert 'Invalid hash function: "DNA"' in str(exc)
+    assert "invalid DNA character in input k-mer: MRVLKFGGTS" in str(exc)
 
 
 def test_dayhoff_defaults():

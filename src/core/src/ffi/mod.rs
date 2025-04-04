@@ -36,18 +36,23 @@ pub enum HashFunctions {
     Murmur64Protein = 2,
     Murmur64Dayhoff = 3,
     Murmur64Hp = 4,
+    Murmur64Skipm1n3 = 5,
+    Murmur64Skipm2n3 = 6,
 }
 
 impl From<HashFunctions> for crate::encodings::HashFunctions {
     fn from(v: HashFunctions) -> crate::encodings::HashFunctions {
         use crate::encodings::HashFunctions::{
-            Murmur64Dayhoff, Murmur64Dna, Murmur64Hp, Murmur64Protein,
+            Murmur64Dayhoff, Murmur64Dna, Murmur64Hp, Murmur64Protein, Murmur64Skipm1n3,
+            Murmur64Skipm2n3,
         };
         match v {
             HashFunctions::Murmur64Dna => Murmur64Dna,
             HashFunctions::Murmur64Protein => Murmur64Protein,
             HashFunctions::Murmur64Dayhoff => Murmur64Dayhoff,
             HashFunctions::Murmur64Hp => Murmur64Hp,
+            HashFunctions::Murmur64Skipm1n3 => Murmur64Skipm1n3,
+            HashFunctions::Murmur64Skipm2n3 => Murmur64Skipm2n3,
         }
     }
 }
@@ -55,13 +60,16 @@ impl From<HashFunctions> for crate::encodings::HashFunctions {
 impl From<crate::encodings::HashFunctions> for HashFunctions {
     fn from(v: crate::encodings::HashFunctions) -> HashFunctions {
         use crate::encodings::HashFunctions::{
-            Murmur64Dayhoff, Murmur64Dna, Murmur64Hp, Murmur64Protein,
+            Murmur64Dayhoff, Murmur64Dna, Murmur64Hp, Murmur64Protein, Murmur64Skipm1n3,
+            Murmur64Skipm2n3,
         };
         match v {
             Murmur64Dna => HashFunctions::Murmur64Dna,
             Murmur64Protein => HashFunctions::Murmur64Protein,
             Murmur64Dayhoff => HashFunctions::Murmur64Dayhoff,
             Murmur64Hp => HashFunctions::Murmur64Hp,
+            Murmur64Skipm1n3 => HashFunctions::Murmur64Skipm1n3,
+            Murmur64Skipm2n3 => HashFunctions::Murmur64Skipm2n3,
             _ => todo!("Not supported, probably custom"),
         }
     }

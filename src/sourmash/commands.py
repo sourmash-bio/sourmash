@@ -24,6 +24,8 @@ from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import FileOutput, FileOutputCSV, SaveSignaturesToLocation
 from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
+from sourmash.index.revindex import DiskRevIndex
+
 
 WATERMARK_SIZE = 10000
 
@@ -500,19 +502,57 @@ def sbt_combine(args):
 
 def index(args):
     """
-    Build a Sequence Bloom Tree index of the given signatures.
+    Build an on-disk index of the given signatures. Currently supports
+    SBT and RocksDB inverted indices.
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
-    if args.append:
-        tree = load_sbt_index(args.sbt_name)
-    else:
-        tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+    index_type = args.index_type
+    add_sketch = None
+    output_name = args.name
 
-    if args.sparseness < 0 or args.sparseness > 1.0:
-        error("sparseness must be in range [0.0, 1.0].")
+    # check input options
+    if index_type != "SBT":
+        if args.append:
+            error("cannot only use --append with an SBT index type")
+            sys.exit(-1)
+        if args.sparseness > 0.0:
+            error("cannot use use --sparseness with an SBT index type")
+            sys.exit(-1)
+
+    # open writing
+    if index_type == "SBT":
+        if args.sparseness < 0 or args.sparseness > 1.0:
+            error("sparseness must be in range [0.0, 1.0].")
+            sys.exit(-1)
+
+        if args.append:
+            tree = load_sbt_index(args.name)
+        else:
+            tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+
+        def add_sketch(sigobj):
+            tree.insert(sigobj)
+
+    elif index_type == "zip":
+        save_sigs = sourmash_args.SaveSignaturesToLocation(output_name)
+        save_sigs.open()
+
+        def add_sketch(sigobj):
+            save_sigs.add(sigobj)
+
+    elif index_type == "rocksdb":
+        full_siglist = []
+
+        def add_sketch(sigobj):
+            full_siglist.append(sigobj)
+
+        output_name = args.name
+    else:
+        error(f"ERROR: unknown index type '{index_type}'; quitting.")
+        sys.exit(-1)
 
     if args.scaled:
         args.scaled = int(args.scaled)
@@ -527,7 +567,7 @@ def index(args):
         error("ERROR: no files to index!? Supply on command line or use --from-file")
         sys.exit(-1)
 
-    notify(f"loading {len(inp_files)} files into SBT")
+    notify(f"loading {len(inp_files)} files into {index_type} index")
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -536,6 +576,7 @@ def index(args):
     moltypes = set()
     nums = set()
     scaleds = set()
+    full_siglist = []
     for f in inp_files:
         siglist = sourmash_args.load_file_as_signatures(
             f,
@@ -561,7 +602,7 @@ def index(args):
 
             scaleds.add(ss.minhash.scaled)
 
-            tree.insert(ss)
+            add_sketch(ss)
             n += 1
 
         if not ss:
@@ -583,7 +624,7 @@ def index(args):
         elif scaleds == {0} and len(nums) == 1:
             pass  # also good
         else:
-            error("trying to build an SBT with incompatible signatures.")
+            error("trying to build an index with incompatible signatures.")
             error("nums = {}; scaleds = {}", repr(nums), repr(scaleds))
             sys.exit(-1)
 
@@ -591,16 +632,23 @@ def index(args):
 
     # did we load any!?
     if n == 0:
-        error("no signatures found to load into tree!? failing.")
+        error("no signatures found to load into index!? failing.")
         sys.exit(-1)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
-    tree.save(args.sbt_name, sparseness=args.sparseness)
-    if tree.storage:
-        tree.storage.close()
+    if index_type == "SBT":
+        notify(f'loaded {n} sigs; saving SBT under "{output_name}"')
+        tree.save(output_name, sparseness=args.sparseness)
+        if tree.storage:
+            tree.storage.close()
+    elif index_type == "zip":
+        notify(f'loaded {n} sigs; saving zip file under "{output_name}"')
+        save_sigs.close()
+    elif index_type == "rocksdb":
+        notify(f'loaded {n} sigs; saving rocksdb index under "{output_name}"')
+        DiskRevIndex.create_from_sigs(full_siglist, output_name)
 
 
 def search(args):
@@ -892,6 +940,7 @@ def gather(args):
                 prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         noident_mh = prefetch_query.minhash.to_mutable()
+        total_prefetch = 0
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
         # set up prefetch CSV output
@@ -913,7 +962,9 @@ def gather(args):
                 # catch "no signatures to search" ValueError if empty db.
                 continue
 
-            save_prefetch.add_many(counter.signatures())
+            total_prefetch += len(counter)
+            if args.save_prefetch:
+                save_prefetch.add_many(counter.signatures())
 
             # update found/not found hashes from the union/intersection of
             # found.
@@ -946,7 +997,7 @@ def gather(args):
 
         display_bp = format_bp(args.threshold_bp)
         notify(
-            f"Prefetch found {len(save_prefetch)} signatures with overlap >= {display_bp}."
+            f"Prefetch found {total_prefetch} signatures with overlap >= {display_bp}."
         )
         save_prefetch.close()
         if prefetch_csvout_fp:
@@ -1077,7 +1128,7 @@ def gather(args):
             )
 
         print_results(
-            f"the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted)."
+            f"the recovered matches hit {sum_f_uniq_found * 100:.1f}% of the query k-mers (unweighted)."
         )
 
     print_results("")
@@ -1309,7 +1360,6 @@ def multigather(args):
                         name,
                     )
 
-                ## @CTB
                 if csv_writer is None:
                     csv_writer = result.init_dictwriter(csv_outfp)
                 result.write(csv_writer)
@@ -1345,7 +1395,7 @@ def multigather(args):
                 )
 
             print_results(
-                f"the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted)."
+                f"the recovered matches hit {sum_f_uniq_found * 100:.1f}% of the query k-mers (unweighted)."
             )
             print_results("")
 

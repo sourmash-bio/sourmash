@@ -1966,6 +1966,139 @@ def test_metagenome_two_queries_human_output(runtmp):
     assert "test2              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus"
 
 
+def test_metagenome_two_queries_csv_summary_output(runtmp):
+    # remove single-query outputs when working with multiple queries
+    c = runtmp
+    taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
+    g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, "w") as fp:
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace("test1", "test2") + "\n"
+            fp.write(line)
+
+    csv_summary_out = runtmp.output("tst.summarized.csv")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_res,
+        g_res2,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "-F",
+        "csv_summary",
+        "--rank",
+        "phylum",
+        "-o",
+        "tst",
+    )
+
+    assert os.path.exists(csv_summary_out)
+
+    assert c.last_result.status == 0
+    assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
+    assert (
+        f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'"
+        in runtmp.last_result.err
+    )
+    sum_gather_results = [
+        x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()
+    ]
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    # check both queries exist in csv_summary results; check several
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test2,superkingdom,0.2042281611487834,d__Bacteria,md5,test2.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[23]
+    )
+    assert (
+        "test2,phylum,0.11607499002792182,d__Bacteria;p__Bacteroidota,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[25]
+    )
+    assert (
+        "test2,phylum,0.08815317112086159,d__Bacteria;p__Proteobacteria,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[26]
+    )
+    assert (
+        "test2,phylum,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[27]
+    )
+    assert (
+        "test2,class,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[28]
+    )
+    assert (
+        "test2,class,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[29]
+    )
+    assert (
+        "test2,class,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[30]
+    )
+    assert (
+        "test2,order,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[31]
+    )
+    assert (
+        "test2,order,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[32]
+    )
+    assert (
+        "test2,order,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[33]
+    )
+    assert (
+        "test2,family,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[34]
+    )
+    assert (
+        "test2,family,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[35]
+    )
+    assert (
+        "test2,family,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[36]
+    )
+    assert (
+        "test2,genus,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test2.sig,0.05701254275940707,444000"
+        in sum_gather_results[37]
+    )
+    assert (
+        "test2,genus,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[38]
+    )
+    assert (
+        "test2,genus,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola,md5,test2.sig,0.015637726014008795,138000"
+        in sum_gather_results[39]
+    )
+    assert (
+        "test2,genus,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[40]
+    )
+    assert (
+        "test2,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.05701254275940707,444000"
+        in sum_gather_results[41]
+    )
+    assert (
+        "test2,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[42]
+    )
+    assert (
+        "test2,species,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus,md5,test2.sig,0.015637726014008795,138000"
+        in sum_gather_results[43]
+    )
+
+
 def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
     # fail on multiple queries with single query output formats
     c = runtmp
@@ -1979,7 +2112,8 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
             line = line.replace("test1", "test2") + "\n"
             fp.write(line)
 
-    csv_summary_out = runtmp.output("tst.summarized.csv")
+    runtmp.output("tst.summarized.csv")
+    bioboxes_out = runtmp.output("tst.bioboxes.out")
     kreport_out = runtmp.output("tst.kreport.txt")
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -1992,7 +2126,7 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
             "--taxonomy-csv",
             taxonomy_csv,
             "-F",
-            "csv_summary",
+            "bioboxes",
             "kreport",
             "--rank",
             "phylum",
@@ -2001,13 +2135,13 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
         )
     print(str(exc.value))
 
-    assert not os.path.exists(csv_summary_out)
+    assert not os.path.exists(bioboxes_out)
     assert not os.path.exists(kreport_out)
 
     assert c.last_result.status == -1
     assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
     assert (
-        "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport"
+        "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping bioboxes, kreport"
         in c.last_result.err
     )
     assert "ERROR: No output formats remaining." in c.last_result.err
@@ -2028,6 +2162,7 @@ def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
 
     csv_summary_out = runtmp.output("tst.summarized.csv")
     kreport_out = runtmp.output("tst.kreport.txt")
+    bioboxes_out = runtmp.output("tst.bioboxes.txt")
     lineage_summary_out = runtmp.output("tst.lineage_summary.tsv")
 
     c.run_sourmash(
@@ -2040,6 +2175,7 @@ def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
         taxonomy_csv,
         "-F",
         "csv_summary",
+        "bioboxes",
         "kreport",
         "lineage_summary",
         "--rank",
@@ -2048,15 +2184,37 @@ def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
         "tst",
     )
 
-    assert not os.path.exists(csv_summary_out)
     assert not os.path.exists(kreport_out)
+    assert not os.path.exists(bioboxes_out)
+    assert os.path.exists(csv_summary_out)
     assert os.path.exists(lineage_summary_out)
 
     assert c.last_result.status == 0
     assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
     assert (
-        "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport"
+        "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping bioboxes, kreport"
         in c.last_result.err
+    )
+
+    assert (
+        f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'"
+        in runtmp.last_result.err
+    )
+    sum_gather_results = [
+        x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()
+    ]
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    # check both queries exist in csv_summary results
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test2,superkingdom,0.2042281611487834,d__Bacteria,md5,test2.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[23]
     )
 
 
@@ -6058,6 +6216,92 @@ def test_metagenome_LIN_lingroups(runtmp):
     assert (
         "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000"
         in c.last_result.out
+    )
+
+
+def test_metagenome_LIN_lingroups_summary(runtmp):
+    # test lingroups summary file. Can no longer output stdout, b/c will produce 2 files
+    c = runtmp
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.LIN-taxonomy.csv")
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, "w") as out:
+        out.write("lin,name\n")
+        out.write("0;0;0,lg1\n")
+        out.write("1;0;0,lg2\n")
+        out.write("2;0;0,lg3\n")
+        out.write("1;0;1,lg3\n")
+        # write a 19 so we can check the end
+        out.write("1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "--lins",
+        "--lingroup",
+        lg_file,
+        "-o",
+        csv_base,
+        "--output-dir",
+        outdir,
+        "-F",
+        "csv_summary",
+    )
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert (
+        "Read 5 lingroup rows and found 5 distinct lingroup prefixes."
+        in c.last_result.err
+    )
+    assert os.path.exists(csvout)
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
+    print(sum_gather_results)
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    assert (
+        "test1,2,0.08815317112086159,lg1,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.05815279361459521,442000,0.9246458342627294,6139"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test1,2,0.07778220981252493,lg2,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.050496823586903404,390000,0.920920083987624,6139"
+        in sum_gather_results[2]
+    )
+    assert (
+        "test1,2,0.027522935779816515,lg3,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.015637726014008795,138000,0.8905689983332759,6139"
+        in sum_gather_results[3]
+    )
+    assert (
+        "test1,2,0.010769844435580374,lg3,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139"
+        in sum_gather_results[4]
+    )
+    assert (
+        "test1,2,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in sum_gather_results[5]
+    )
+    assert (
+        "test1,19,0.010769844435580374,lg4,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139"
+        in sum_gather_results[6]
+    )
+    assert (
+        "test1,19,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in sum_gather_results[7]
     )
 
 

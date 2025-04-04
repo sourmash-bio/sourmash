@@ -1,7 +1,8 @@
+/// Reverse index data structures.
 pub mod disk_revindex;
 pub mod mem_revindex;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
@@ -16,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
+use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
@@ -24,38 +26,112 @@ use crate::storage::rocksdb::{db_options, COLORS, DB};
 use crate::HashIntoType;
 use crate::Result;
 
-// DB metadata saved in the METADATA column family
-const MANIFEST: &str = "manifest";
-const STORAGE_SPEC: &str = "storage_spec";
-const VERSION: &str = "version";
-const PROCESSED: &str = "processed";
-
 type QueryColors = HashMap<Color, Datasets>;
+
 type HashToColorT = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
-#[derive(Serialize, Deserialize)]
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HashToColor(HashToColorT);
+
+/// Struct to hold interim results of a containment analysis, supporting
+/// iterative peek/consume.
+#[derive(Debug)]
+pub struct CounterGather {
+    counter: SigCounter,
+    query_colors: QueryColors,
+    hash_to_color: HashToColor,
+}
 
 #[enum_dispatch(RevIndexOps)]
 pub enum RevIndex {
-    //Color(color_revindex::ColorRevIndex),
-    Plain(disk_revindex::RevIndex),
-    //Mem(mem_revindex::RevIndex),
+    Disk(disk_revindex::DiskRevIndex),
+    Mem(mem_revindex::MemRevIndex),
+}
+
+#[derive(Clone)]
+pub struct DatasetPicklist {
+    pub dataset_ids: HashSet<Idx>,
 }
 
 #[enum_dispatch]
 pub trait RevIndexOps {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool);
+      pub fn repair(index: &Path, colors: bool);
     */
 
-    fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter;
+    fn location(&self) -> &str;
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
+    fn len(&self) -> usize {
+        self.collection().len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn signatures(&self) -> Vec<Signature> {
+        let coll = self.collection();
+        coll.iter()
+            .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
+                Ok(sig) => Some(sig.into()),
+                Err(_) => None,
+            })
+            .collect()
+    }
+
+    fn counter_for_query(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> SigCounter;
+
+    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
+        counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, size)| {
+                if size >= threshold {
+                    let row = &self
+                        .collection()
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
+
+                    let name = [row.name(), row.filename(), row.md5()]
+                        .into_iter()
+                        .find(|v| !v.is_empty())
+                        .unwrap(); // guaranteed to succeed because `md5` always exists
+
+                    Some((name.into(), size))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+        counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, size)| {
+                if size >= threshold {
+                    let row = self
+                        .collection()
+                        .record_for_dataset(dataset_id)
+                        .expect("dataset not found");
+                    Some(row)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor);
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather;
 
     fn update(self, collection: CollectionSet) -> Result<RevIndex>
     where
@@ -71,9 +147,7 @@ pub trait RevIndexOps {
 
     fn gather(
         &self,
-        counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        cg: CounterGather,
         threshold: usize,
         query: &KmerMinHash,
         selection: Option<Selection>,
@@ -82,6 +156,79 @@ pub trait RevIndexOps {
     fn collection(&self) -> &CollectionSet;
 
     fn internalize_storage(&mut self) -> Result<()>;
+
+    fn find_signatures(
+        &self,
+        mh: &KmerMinHash,
+        threshold: f64,
+        picklist: Option<DatasetPicklist>,
+    ) -> Result<Vec<(f64, Signature, String)>>;
+}
+
+impl CounterGather {
+    pub fn is_empty(&self) -> bool {
+        self.counter.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.counter.len()
+    }
+
+    // CTB: maybe use a KmerMinHashBTree?
+    pub fn found_hashes(&self, template: &KmerMinHash) -> KmerMinHash {
+        let mut found_mh = template.clone();
+        found_mh.clear();
+
+        for hash in self.hash_to_color.0.keys() {
+            found_mh.add_hash(*hash);
+        }
+
+        found_mh
+    }
+
+    pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
+        if self.counter.is_empty() {
+            return None;
+        }
+
+        let (dataset_id, size) = self.counter.k_most_common_ordered(1)[0];
+        if size > 0 && size >= threshold {
+            Some((dataset_id, size))
+        } else {
+            None
+        }
+    }
+
+    pub fn dataset_ids(&self) -> Vec<Idx> {
+        self.counter.keys().copied().collect()
+    }
+
+    /// consume: remove all hashes from intersect, and adjust counter
+    pub fn consume(&mut self, intersect_mh: &KmerMinHash) {
+        intersect_mh
+            .iter_mins()
+            .filter_map(|hash| self.hash_to_color.get(hash))
+            .flat_map(|color| {
+                // TODO: remove this clone
+                self.query_colors.get(color).unwrap().clone().into_iter()
+            })
+            .for_each(|dataset| {
+                // TODO: collect the flat_map into a Counter, and remove more
+                //       than one at a time...
+                self.counter.entry(dataset).and_modify(|e| *e -= 1);
+            });
+
+        // remove empty
+        let empty_keys =
+            self.counter
+                .clone()
+                .into_iter()
+                .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
+
+        for k in empty_keys.into_iter() {
+            self.counter.remove(&k);
+        }
+    }
 }
 
 impl HashToColor {
@@ -163,7 +310,7 @@ impl FromIterator<(HashIntoType, Color)> for HashToColor {
 
 impl RevIndex {
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-        pub fn repair(index: &Path, colors: bool) {
+         pub fn repair(index: &Path, colors: bool) {
             if colors {
                 color_revindex::repair(index);
             } else {
@@ -171,17 +318,8 @@ impl RevIndex {
             }
         }
     */
-
-    pub fn create<P: AsRef<Path>>(
-        index: P,
-        collection: CollectionSet,
-        colors: bool,
-    ) -> Result<Self> {
-        if colors {
-            todo!() //color_revindex::ColorRevIndex::create(index)
-        } else {
-            disk_revindex::RevIndex::create(index.as_ref(), collection)
-        }
+    pub fn create<P: AsRef<Path>>(index: P, collection: CollectionSet) -> Result<Self> {
+        disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
     }
 
     pub fn open<P: AsRef<Path>>(index: P, read_only: bool, spec: Option<&str>) -> Result<Self> {
@@ -193,7 +331,7 @@ impl RevIndex {
             //       due to pending unmerged colors
             todo!() //color_revindex::ColorRevIndex::open(index, false)
         } else {
-            disk_revindex::RevIndex::open(index, read_only, spec)
+            disk_revindex::DiskRevIndex::open(index, read_only, spec)
         }
     }
 }
@@ -419,19 +557,25 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 
 #[cfg(test)]
 mod test {
+    // CTB: should the disk_revindex tests be moved into disk_revindex.rs?
     use camino::Utf8PathBuf as PathBuf;
     use tempfile::TempDir;
 
     use crate::collection::Collection;
+    use crate::encodings::*;
+    use crate::index::revindex::disk_revindex;
+    use crate::index::revindex::DatasetPicklist;
     use crate::prelude::*;
     use crate::selection::Selection;
+    use crate::signature::SigsTrait;
+    use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
     use crate::Result;
 
     use super::{prepare_query, RevIndex, RevIndexOps};
 
     #[test]
-    fn revindex_index() -> Result<()> {
+    fn disk_revindex_index() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/scaled/");
 
@@ -456,9 +600,13 @@ mod test {
         let query = query.unwrap();
 
         let collection = Collection::from_paths(&siglist)?.select(&selection)?;
-        let index = RevIndex::create(output.path(), collection.try_into()?, false)?;
+        let index = RevIndex::create(output.path(), collection.try_into()?)?;
+        assert_eq!(
+            index.location(),
+            output.path().to_str().expect("cannot convert")
+        );
 
-        let counter = index.counter_for_query(&query);
+        let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
@@ -467,7 +615,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_update() -> Result<()> {
+    fn disk_revindex_update() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/scaled/");
 
@@ -485,7 +633,7 @@ mod test {
         let mut new_siglist = siglist.clone();
         {
             let collection = Collection::from_paths(&siglist)?.select(&selection)?;
-            RevIndex::create(output.path(), collection.try_into()?, false)?;
+            RevIndex::create(output.path(), collection.try_into()?)?;
         }
 
         let mut filename = basedir.clone();
@@ -499,13 +647,13 @@ mod test {
         if let Some(q) = prepare_query(query_sig, &selection) {
             query = Some(q);
         }
-        let query = query.unwrap();
+        let q = query.unwrap();
 
         let new_collection = Collection::from_paths(&new_siglist)?.select(&selection)?;
         let index =
             RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
-        let counter = index.counter_for_query(&query);
+        let counter = index.counter_for_query(&q, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
@@ -515,7 +663,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_load_and_gather() -> Result<()> {
+    fn disk_revindex_load_and_gather() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/scaled/");
 
@@ -541,31 +689,26 @@ mod test {
 
         {
             let collection = Collection::from_paths(&siglist)?.select(&selection)?;
-            let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+            let _index = RevIndex::create(output.path(), collection.try_into()?);
         }
 
         let index = RevIndex::open(output.path(), true, None)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
+        assert_eq!(cg.len(), 1);
+        assert_eq!(cg.is_empty(), false);
 
-        let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection),
-        )?;
+        let matches = index.gather(cg, 0, &query, Some(selection))?;
 
         assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].name(), "../genome-s10.fa.gz");
+        assert_eq!(matches[0].name(), ""); // signature name is empty
         assert_eq!(matches[0].f_match(), 1.0);
 
         Ok(())
     }
 
     #[test]
-    fn revindex_load_and_gather_2() -> Result<()> {
+    fn disk_revindex_load_and_gather_2() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
@@ -597,7 +740,7 @@ mod test {
         let output = TempDir::new()?;
 
         let collection = Collection::from_paths(&against)?.select(&selection)?;
-        let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+        let _index = RevIndex::create(output.path(), collection.try_into()?);
 
         let index = RevIndex::open(output.path(), true, None)?;
 
@@ -613,12 +756,10 @@ mod test {
         }
         let query = query.unwrap();
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
+            cg,
             5, // 50kb threshold
             &query,
             Some(selection),
@@ -724,7 +865,7 @@ mod test {
     #[test]
     // a more detailed/focused version of revindex_load_and_gather_2,
     // added in sourmash#3193 for debugging purposes.
-    fn revindex_load_and_gather_3() -> Result<()> {
+    fn disk_revindex_load_and_gather_3() -> Result<()> {
         let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         basedir.push("../../tests/test-data/gather/");
 
@@ -747,7 +888,7 @@ mod test {
         let output = TempDir::new()?;
 
         let collection = Collection::from_paths(&against)?.select(&selection)?;
-        let _index = RevIndex::create(output.path(), collection.try_into()?, false);
+        let _index = RevIndex::create(output.path(), collection.try_into()?);
 
         let index = RevIndex::open(output.path(), true, None)?;
 
@@ -763,16 +904,9 @@ mod test {
         }
         let query = query.unwrap();
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection),
-        )?;
+        let matches = index.gather(cg, 0, &query, Some(selection))?;
 
         // should be 3.
         // see sourmash#3193.
@@ -814,7 +948,134 @@ mod test {
     }
 
     #[test]
-    fn revindex_move() -> Result<()> {
+    fn revindex_load_and_gather_picklist() -> Result<()> {
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/gather/");
+
+        let against = vec![
+            "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+            "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+            "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+            "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+            "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+            "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+            "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+            "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+            "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+            "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+            "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+            "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+        ];
+        let against: Vec<_> = against
+            .iter()
+            .map(|sig| {
+                let mut filename = basedir.clone();
+                filename.push(sig);
+                filename
+            })
+            .collect();
+
+        // build 'against' sketches into a revindex
+        let selection = Selection::builder().ksize(21).scaled(10000).build();
+        let output = TempDir::new()?;
+
+        let collection = Collection::from_paths(&against)?.select(&selection)?;
+        let _index = RevIndex::create(output.path(), collection.try_into()?);
+
+        let index = RevIndex::open(output.path(), true, None)?;
+
+        let mut query = None;
+        let mut query_filename = basedir.clone();
+        query_filename.push("combined.sig");
+        let query_sig = Signature::from_path(query_filename)?
+            .swap_remove(0)
+            .select(&selection)?;
+
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        // build a picklist with only one match
+        let pl = DatasetPicklist {
+            dataset_ids: vec![0].into_iter().collect(),
+        };
+
+        let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
+
+        let matches = index.gather(
+            cg,
+            5, // 50kb threshold
+            &query,
+            Some(selection),
+        )?;
+
+        // should be 1, b/c of picklist.
+        assert_eq!(matches.len(), 1);
+
+        // also do a basic test of containment with picklists -
+        let counter = index.counter_for_query(&query, Some(pl.clone()));
+        let matches = index.matches_from_counter(counter, 0);
+        assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
+
+        let counter = index.counter_for_query(&query, Some(pl));
+        let records = index.records_from_counter(counter, 0);
+        assert_eq!(records.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn disk_revindex_find_signatures() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+        let search_sigs: Vec<PathBuf> = vec![
+            "../../tests/test-data/2.fa.sig".into(),
+            "../../tests/test-data/47.fa.sig".into(),
+            "../../tests/test-data/63.fa.sig".into(),
+        ];
+
+        let output = TempDir::new()?;
+        let collection = Collection::from_paths(&search_sigs[..])?.select(&selection)?;
+        let index = RevIndex::create(output.path(), collection.try_into()?)?;
+
+        assert!(!index.is_empty());
+        assert_eq!(index.len(), 3);
+        let sigs = index.signatures();
+        assert_eq!(sigs.len(), 3);
+
+        let query_sig = Signature::from_path("../../tests/test-data/63.fa.sig")
+            .expect("error processing query")
+            .swap_remove(0)
+            .select(&selection)
+            .expect("error getting compatible sig");
+
+        let query_mh = prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+
+        let results = index.find_signatures(&query_mh, 0.0, None)?;
+        assert_eq!(results.len(), 2);
+
+        let results = index.find_signatures(&query_mh, 1.0, None)?;
+        assert_eq!(results.len(), 1);
+
+        // build a picklist with only one Idx (2.fa) => no match
+        let pl = DatasetPicklist {
+            dataset_ids: vec![0].into_iter().collect(),
+        };
+        let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
+        assert_eq!(results.len(), 0);
+
+        // build a picklist with only one Idx (47.fa) => one match
+        let pl = DatasetPicklist {
+            dataset_ids: vec![1].into_iter().collect(),
+        };
+        let results = index.find_signatures(&query_mh, 0.0, Some(pl))?;
+        assert_eq!(results.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn disk_revindex_move() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let mut zip_collection = basedir.clone();
@@ -839,13 +1100,13 @@ mod test {
         let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
 
         {
-            RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+            RevIndex::create(output.as_path(), collection.try_into()?)?;
         }
 
         {
             let index = RevIndex::open(output.as_path(), false, None)?;
 
-            let counter = index.counter_for_query(&query);
+            let counter = index.counter_for_query(&query, None);
             let matches = index.matches_from_counter(counter, 0);
 
             assert!(matches[0].0.starts_with("NC_009665.1"));
@@ -865,7 +1126,7 @@ mod test {
 
         let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
 
-        let counter = index.counter_for_query(&query);
+        let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
@@ -875,7 +1136,7 @@ mod test {
     }
 
     #[test]
-    fn revindex_internalize_storage() -> Result<()> {
+    fn disk_revindex_internalize_storage() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let mut zip_collection = basedir.clone();
@@ -899,18 +1160,13 @@ mod test {
 
         let query = prepare_query(collection.sig_for_dataset(0)?.into(), &selection).unwrap();
 
-        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+        let index = RevIndex::create(output.as_path(), collection.try_into()?)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_external = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection.clone()),
-        )?;
+        let matches_external = index
+            .gather(cg, 0, &query, Some(selection.clone()))
+            .expect("failed to gather!");
 
         {
             let mut index = index;
@@ -918,16 +1174,9 @@ mod test {
                 .internalize_storage()
                 .expect("Error internalizing storage");
 
-            let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+            let cg = index.prepare_gather_counters(&query, None);
 
-            let matches_internal = index.gather(
-                counter,
-                query_colors,
-                hash_to_color,
-                0,
-                &query,
-                Some(selection.clone()),
-            )?;
+            let matches_internal = index.gather(cg, 0, &query, Some(selection.clone()))?;
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
@@ -935,16 +1184,9 @@ mod test {
 
         let index = RevIndex::open(new_path, false, None)?;
 
-        let (counter, query_colors, hash_to_color) = index.prepare_gather_counters(&query);
+        let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_moved = index.gather(
-            counter,
-            query_colors,
-            hash_to_color,
-            0,
-            &query,
-            Some(selection.clone()),
-        )?;
+        let matches_moved = index.gather(cg, 0, &query, Some(selection.clone()))?;
         assert_eq!(matches_external, matches_moved);
 
         Ok(())
@@ -974,7 +1216,7 @@ mod test {
         let output = outdir.path().join("index");
 
         // Step 1: create an index
-        let index = RevIndex::create(output.as_path(), collection.try_into()?, false)?;
+        let index = RevIndex::create(output.as_path(), collection.try_into()?)?;
 
         // Step 2: internalize the storage for the index
         {
@@ -1029,5 +1271,84 @@ mod test {
             Err(_) => Ok(()),
             Ok(_) => panic!("test should not reach here"),
         }
+    }
+
+    #[test]
+    fn countergather_basic() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+
+        let db = disk_revindex::DiskRevIndex::open(
+            "../../tests/test-data/3sigs.branch_0913.rocksdb",
+            true,
+            None,
+        )
+        .expect("cannot open rocksdb");
+
+        let query_sig = Signature::from_path("../../tests/test-data/SRR606249.sig.gz")
+            .expect("error processing query")
+            .swap_remove(0)
+            .select(&selection)
+            .expect("error getting compatible sig");
+
+        let mut query_mh =
+            prepare_query(query_sig, &selection).expect("can't get compatible MinHash");
+
+        let compute_isect = |a: &KmerMinHash, b: &KmerMinHash| -> KmerMinHash {
+            let isect = a.intersection(&b).expect("intersection failed");
+            let mut isect_mh = a.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0[..]).expect("add many failed");
+            isect_mh
+        };
+
+        let load_sig = |db: &RevIndex, dataset_id: &Idx, selection: &Selection| -> KmerMinHash {
+            let m1: Signature = db
+                .collection()
+                .sig_for_dataset(*dataset_id)
+                .expect("cannot load dataset_id")
+                .into();
+            let m1 = m1.select(selection).expect("cannot find compatible sig");
+            m1.try_into().expect("cannot extract minhash")
+        };
+
+        let mut cg = db.prepare_gather_counters(&query_mh, None);
+
+        let (dataset_id, size) = cg.peek(0).unwrap();
+
+        // match 1:
+        let m1 = load_sig(&db, &dataset_id, &selection);
+        let isect_mh = compute_isect(&m1, &query_mh);
+        assert_eq!(isect_mh.size(), size);
+
+        cg.consume(&isect_mh);
+        query_mh
+            .remove_many(isect_mh.mins())
+            .expect("cannot remove_many");
+
+        let (dataset_id, size) = cg.peek(0).unwrap();
+
+        // match 2:
+        let m2 = load_sig(&db, &dataset_id, &selection);
+        let isect_mh = compute_isect(&m2, &query_mh);
+        assert_eq!(isect_mh.size(), size);
+
+        cg.consume(&isect_mh);
+        query_mh
+            .remove_many(isect_mh.mins())
+            .expect("cannot remove_many");
+
+        let (dataset_id, size) = cg.peek(0).unwrap();
+
+        // match 3:
+        let m3 = load_sig(&db, &dataset_id, &selection);
+        let isect_mh = compute_isect(&m3, &query_mh);
+        assert_eq!(isect_mh.size(), size);
+
+        cg.consume(&isect_mh);
+
+        let r4 = cg.peek(0);
+        assert_eq!(r4, None);
+
+        Ok(())
     }
 }

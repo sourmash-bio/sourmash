@@ -51,6 +51,39 @@ def add_moltype_args(parser):
     parser.set_defaults(hp=False)
 
     parser.add_argument(
+        "--skipm1n3",
+        "--skipmer-m1n3",
+        dest="skipm1n3",
+        action="store_true",
+        help="choose skipmer (m1n3) signatures",
+    )
+
+    parser.add_argument(
+        "--no-skipm1n3",
+        "--no-skipmer-m1n3",
+        dest="skipm1n3",
+        action="store_false",
+        help="do not choose skipmer (m1n3) signatures",
+    )
+    parser.set_defaults(skipm1n3=False)
+
+    parser.add_argument(
+        "--skipm2n3",
+        "--skipmer-m2n3",
+        dest="skipm2n3",
+        action="store_true",
+        help="choose skipmer (m2n3) signatures",
+    )
+    parser.add_argument(
+        "--no-skipm2n3",
+        "--no-skipmer-m2n3",
+        dest="skipm2n3",
+        action="store_false",
+        help="do not choose skipmer (m2n3) signatures",
+    )
+    parser.set_defaults(skipm2n3=False)
+
+    parser.add_argument(
         "--dna",
         "--rna",
         "--nucleotide",

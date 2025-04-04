@@ -16,7 +16,7 @@ from .logging import notify
 
 def check_distance(dist):
     if not 0 <= dist <= 1:
-        raise ValueError(f"Error: distance value {dist :.4f} is not between 0 and 1!")
+        raise ValueError(f"Error: distance value {dist:.4f} is not between 0 and 1!")
     else:
         return dist
 

@@ -1,4 +1,6 @@
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
+use std::cmp::max;
+use std::collections::HashSet;
+use std::hash::{BuildHasher, BuildHasherDefault};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
@@ -11,8 +13,8 @@ use rocksdb::MergeOperands;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps,
-    MANIFEST, PROCESSED, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors,
+    RevIndexOps,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
@@ -27,15 +29,20 @@ use crate::Result;
 
 const DB_VERSION: u8 = 1;
 
+// DB metadata saved in the METADATA column family
+const MANIFEST: &str = "manifest";
+const STORAGE_SPEC: &str = "storage_spec";
+const VERSION: &str = "version";
+const PROCESSED: &str = "processed";
+
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
-    let mut hasher = s.build_hasher();
-    idxs.hash(&mut hasher);
-    hasher.finish()
+    s.hash_one(idxs)
 }
 
 #[derive(Clone)]
-pub struct RevIndex {
+pub struct DiskRevIndex {
+    location: String,
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
@@ -66,7 +73,7 @@ pub fn repair(path: &Path) {
 }
 */
 
-impl RevIndex {
+impl DiskRevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
         let mut opts = db_options();
         opts.create_if_missing(true);
@@ -87,6 +94,7 @@ impl RevIndex {
         )?));
 
         let index = Self {
+            location: String::from(path.to_str().expect("cannot extract path")),
             db,
             collection,
             processed: processed.clone(),
@@ -119,7 +127,7 @@ impl RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(index))
+        Ok(module::RevIndex::Disk(index))
     }
 
     pub fn open<P: AsRef<Path>>(
@@ -156,7 +164,8 @@ impl RevIndex {
             false,
         )?));
 
-        Ok(module::RevIndex::Plain(Self {
+        Ok(module::RevIndex::Disk(Self {
+            location: String::from(path.as_ref().to_str().expect("cannot extract path")),
             db,
             collection,
             processed,
@@ -273,8 +282,16 @@ impl RevIndex {
     }
 }
 
-impl RevIndexOps for RevIndex {
-    fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+impl RevIndexOps for DiskRevIndex {
+    fn location(&self) -> &str {
+        self.location.as_str()
+    }
+
+    fn counter_for_query(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> SigCounter {
         info!("Collecting hashes");
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
@@ -292,7 +309,17 @@ impl RevIndexOps for RevIndex {
             .filter_map(|r| r.ok().unwrap_or(None))
             .flat_map(|raw_datasets| {
                 let new_vals = Datasets::from_slice(&raw_datasets).unwrap();
-                new_vals.into_iter()
+
+                // filter against picklist if need be.
+                if let Some(pl) = &picklist {
+                    let new_vals: HashSet<_> = new_vals
+                        .into_iter()
+                        .filter(|&i| pl.dataset_ids.contains(&i))
+                        .collect();
+                    Box::new(new_vals.into_iter())
+                } else {
+                    new_vals.into_iter()
+                }
             })
             .collect()
     }
@@ -300,7 +327,8 @@ impl RevIndexOps for RevIndex {
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor) {
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -318,61 +346,60 @@ impl RevIndexOps for RevIndex {
         let mut query_colors: QueryColors = Default::default();
         let mut counter: SigCounter = Default::default();
 
-        info!("Building hash_to_colors and query_colors");
-        let hash_to_colors = query
+        info!("Building hash_to_color and query_colors");
+        let hash_to_color = query
             .iter_mins()
             .zip(self.db.multi_get_cf(hashes_iter))
             .filter_map(|(k, r)| {
-                let raw = r.ok().unwrap_or(None);
-                raw.map(|raw| {
-                    let new_vals = Datasets::from_slice(&raw).unwrap();
-                    let color = compute_color(&new_vals);
-                    query_colors
-                        .entry(color)
-                        .or_insert_with(|| new_vals.clone());
-                    counter.update(new_vals);
-                    (*k, color)
-                })
-            })
-            .collect();
+                let raw: Option<Vec<u8>> = r.ok().unwrap_or(None);
 
-        (counter, query_colors, hash_to_colors)
-    }
+                if let Some(r) = raw {
+                    let mut new_vals = Datasets::from_slice(&r).unwrap();
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
-        info!("get matches from counter");
-        counter
-            .most_common()
-            .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = &self
-                        .collection
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
-                    Some((row.name().into(), size))
+                    // filter by picklist?
+                    if let Some(pl) = &picklist {
+                        let val_set: Vec<Idx> = new_vals
+                            .into_iter()
+                            .filter(|&i| pl.dataset_ids.contains(&i))
+                            .collect();
+                        new_vals = Datasets::new(&val_set[..]);
+                    }
+
+                    if new_vals.len() > 0 {
+                        let color = compute_color(&new_vals);
+                        query_colors
+                            .entry(color)
+                            .or_insert_with(|| new_vals.clone());
+                        counter.update(new_vals);
+                        Some((*k, color))
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             })
-            .collect()
+            .collect();
+
+        CounterGather {
+            counter,
+            query_colors,
+            hash_to_color,
+        }
     }
 
     fn gather(
         &self,
-        mut counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
-        let mut match_size = usize::MAX;
+        let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
-        let mut orig_query_ds = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
@@ -382,49 +409,57 @@ impl RevIndexOps for RevIndex {
         let calc_ani_ci = false;
         let ani_confidence_interval_fraction = None;
 
-        while match_size > threshold && !counter.is_empty() {
-            trace!("counter len: {}", counter.len());
+        while match_size > threshold && !cg.is_empty() {
+            trace!("counter len: {}", cg.len());
             trace!("match size: {}", match_size);
 
-            let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
-            match_size = if size >= threshold { size } else { break };
-            // handle special case where threshold was set to 0
-            if match_size == 0 {
+            let result = cg.peek(threshold);
+            if result.is_none() {
                 break;
             }
+            let (dataset_id, match_size) = result.unwrap();
 
-            // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-
-            // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap().clone();
-            query = query.downsample_scaled(match_mh.scaled())?;
-            orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
 
-            // just calculate essentials here
-            let gather_result_rank = matches.len();
+            // make downsampled minhashes
+            let max_scaled = max(match_mh.scaled(), query.scaled());
 
+            let match_mh = match_mh
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample match");
+
+            // repeatedly downsample query, then extract to KmerMinHash
+            // => calculate_gather_stats
+            query = query
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample query");
             let query_mh = KmerMinHash::from(query.clone());
 
-            // grab the specific intersection:
-            let isect = match_mh.intersection(&query_mh)?;
-            let mut isect_mh = match_mh.clone();
-            isect_mh.clear();
-            isect_mh.add_many(&isect.0)?;
+            // just calculate essentials here
+            let gather_result_rank = matches.len() as u32;
 
+            // grab the specific intersection:
             // Calculate stats
-            let gather_result = calculate_gather_stats(
-                &orig_query_ds,
-                KmerMinHash::from(query.clone()),
+            let (gather_result, isect) = calculate_gather_stats(
+                orig_query,
+                query_mh,
                 match_sig,
                 match_size,
                 gather_result_rank,
                 sum_weighted_found,
-                total_weighted_hashes.try_into().unwrap(),
+                total_weighted_hashes,
                 calc_abund_stats,
                 calc_ani_ci,
                 ani_confidence_interval_fraction,
-            )?;
+            )
+            .expect("could not calculate gather stats");
+
+            // use intersection from calc_gather_stats to make a KmerMinHash.
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0)?;
+
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);
@@ -433,25 +468,9 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
+            query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
 
-            // TODO: Use HashesToColors here instead. If not initialized,
-            //       build it.
-            isect
-                .0
-                .iter()
-                .filter_map(|hash| hash_to_color.get(hash))
-                .flat_map(|color| {
-                    // TODO: remove this clone
-                    query_colors.get(color).unwrap().clone().into_iter()
-                })
-                .for_each(|dataset| {
-                    // TODO: collect the flat_map into a Counter, and remove more
-                    //       than one at a time...
-                    counter.entry(dataset).and_modify(|e| *e -= 1);
-                });
-
-            counter.remove(&dataset_id);
+            cg.consume(&isect_mh);
         }
         Ok(matches)
     }
@@ -505,7 +524,7 @@ impl RevIndexOps for RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(self))
+        Ok(module::RevIndex::Disk(self))
     }
 
     fn check(&self, quick: bool) -> DbStats {
@@ -610,5 +629,54 @@ impl RevIndexOps for RevIndex {
             todo!()
         }
         */
+    }
+    fn find_signatures(
+        &self,
+        query_mh: &KmerMinHash,
+        threshold: f64,
+        picklist: Option<DatasetPicklist>,
+    ) -> Result<Vec<(f64, Signature, String)>> {
+        // do search
+        let counter = self.counter_for_query(query_mh, picklist);
+
+        // retrieve/convert matches. I don't think there's a simple way to
+        // truncate this without going through all the matches, so it's
+        // potentially (much) more expensive than prefetch.
+        let filename = self.location();
+        let results: Vec<(f64, Signature, String)> = counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, _size)| {
+                let sig: Signature = self
+                    .collection()
+                    .sig_for_dataset(dataset_id)
+                    .expect("dataset not found")
+                    .into();
+
+                let match_mh = sig.minhash().expect("cannot retrieve match");
+
+                let f_match = if match_mh.scaled() != query_mh.scaled() {
+                    let match_ds = match_mh
+                        .clone()
+                        .downsample_scaled(query_mh.scaled())
+                        .expect("cannot downsample");
+                    query_mh
+                        .jaccard(&match_ds)
+                        .expect("cannot calculate Jaccard")
+                } else {
+                    query_mh
+                        .jaccard(match_mh)
+                        .expect("cannot calculate Jaccard")
+                };
+
+                if f_match >= threshold {
+                    Some((f_match, sig, filename.to_owned()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(results)
     }
 }

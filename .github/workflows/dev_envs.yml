@@ -18,13 +18,11 @@ jobs:
         fetch-depth: 0
 
     - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@v14
-    - name: Run the Magic Nix Cache
-      uses: DeterminateSystems/magic-nix-cache-action@v8
+      uses: DeterminateSystems/nix-installer-action@v16
 
     - run: nix run .# -- --version
 
-    - run: nix develop --command bash -c "tox -e py310"
+    - run: nix develop --command bash -c "tox -e py311"
 
   pixi:
     runs-on: ${{ matrix.os }}
@@ -37,9 +35,9 @@ jobs:
         fetch-depth: 0
 
     - name: set up pixi
-      uses: prefix-dev/setup-pixi@v0.8.1
+      uses: prefix-dev/setup-pixi@v0.8.4
       with:
-        pixi-version: v0.26.1
+        pixi-version: v0.40.3
         cache: true
         frozen: true
 
@@ -67,7 +65,7 @@ jobs:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
 
     - name: setup conda
-      uses: conda-incubator/setup-miniconda@a4260408e20b96e80095f42ff7f1a15b27dd94ca
+      uses: conda-incubator/setup-miniconda@505e6394dae86d6a5c7fbb6e3fb8938e3e863830
       with:
         python-version: "3.10"
         miniforge-version: latest

@@ -18,7 +18,7 @@ from sourmash.index import (
 )
 from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
-from sourmash.index.revindex import RevIndex
+from sourmash.index.revindex import MemRevIndex, DiskRevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
@@ -150,12 +150,18 @@ def build_sqlite_index(runtmp):
 def build_revindex(runtmp):
     ss2, ss47, ss63 = _load_three_sigs()
 
-    lidx = RevIndex(template=ss2.minhash)
+    lidx = MemRevIndex(template=ss2.minhash)
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
 
     return lidx
+
+
+def build_disk_revindex(runtmp):
+    dbpath = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    idx = DiskRevIndex(dbpath)
+    return idx
 
 
 def build_lca_index_save_load_sql(runtmp):
@@ -188,7 +194,8 @@ def build_lca_index_save_load_sql(runtmp):
         build_lca_index_save_load,
         build_sqlite_index,
         build_lca_index_save_load_sql,
-        #                        build_revindex,
+        build_revindex,
+        build_disk_revindex,
     ]
 )
 def index_obj(request, runtmp):
@@ -688,10 +695,18 @@ class CounterGather_LCA:
         location = self.locations[md5]
 
         new_sr = IndexSearchResult(cont, match, location)
-        return [new_sr, intersect_mh]
+        return new_sr, intersect_mh
 
     def consume(self, intersect_mh):
         self.query_started = 1
+
+
+def build_RevIndex_CounterGather(query):
+    from sourmash.index.revindex import RevIndex_CounterGather
+
+    ri = MemRevIndex(template=query.minhash)
+    cg = RevIndex_CounterGather(query, ri, 0, allow_insert=True)
+    return cg
 
 
 @pytest.fixture(
@@ -699,6 +714,7 @@ class CounterGather_LCA:
         CounterGather,
         CounterGather_LinearIndex,
         CounterGather_LCA,
+        build_RevIndex_CounterGather,
     ]
 )
 def counter_gather_constructor(request):
@@ -738,6 +754,7 @@ def test_counter_get_signatures(counter_gather_constructor):
     assert match_ss_3 in siglist
 
 
+# utility function to exhaust a CounterGather set of matches
 def _consume_all(query_mh, counter, threshold_bp=0):
     results = []
     query_mh = query_mh.to_mutable()
@@ -1137,7 +1154,8 @@ def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
     assert len(results) == 1
 
     sr, overlap_count = results[0]
-    assert sr.score == 0.5
+    print(sr, overlap_count)
+    assert sr.score == 0.5, sr
     assert overlap_count == 10
 
     # any one of the three is valid
@@ -1167,7 +1185,9 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
+    print("create")
     counter = counter_gather_constructor(query_ss)
+    print("insert")
     counter.add(query_ss, location="somewhere over the rainbow")
 
     counter.consume(query_ss.minhash)

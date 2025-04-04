@@ -191,7 +191,7 @@ def test_roundtrip_empty(track_abundance):
 
 
 def test_roundtrip_scaled(track_abundance):
-    e = MinHash(n=0, ksize=20, track_abundance=track_abundance, max_hash=10)
+    e = MinHash(n=0, ksize=20, track_abundance=track_abundance, max_hash=2**61)
     e.add_hash(5)
     sig = SourmashSignature(e)
     s = save_signatures_to_json([sig])
@@ -222,14 +222,14 @@ def test_roundtrip_seed(track_abundance):
 
 def test_similarity_downsample(track_abundance):
     e = MinHash(n=0, ksize=20, track_abundance=track_abundance, max_hash=2**63)
-    f = MinHash(n=0, ksize=20, track_abundance=track_abundance, max_hash=2**2)
+    f = MinHash(n=0, ksize=20, track_abundance=track_abundance, max_hash=2**61)
 
     e.add_hash(1)
-    e.add_hash(5)
+    e.add_hash(2**62)
     assert len(e.hashes) == 2
 
     f.add_hash(1)
-    f.add_hash(5)  # should be discarded due to max_hash
+    f.add_hash(2**62)  # should be discarded due to max_hash
     assert len(f.hashes) == 1
 
     ee = SourmashSignature(e)

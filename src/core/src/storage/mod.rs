@@ -16,6 +16,7 @@ use typed_builder::TypedBuilder;
 use crate::errors::ReadDataError;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::{Error, Result};
 
@@ -33,9 +34,11 @@ pub trait Storage {
     /// Load signature from internal path
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -68,6 +71,16 @@ pub enum StorageError {
     #[error("Storage for path {1} requires the '{0}' feature to be enabled")]
     MissingFeature(String, String),
 }
+
+/// InnerStorage: a catch-all type that allows using any Storage in
+/// parallel contexts.
+///
+/// Arc allows ref counting to share it between threads;
+/// RwLock makes sure there is only one writer possible (and a lot of readers);
+/// dyn Storage so we can init with anything that implements the Storage trait.
+
+// Send + Sync + 'static is kind of a cheat to avoid lifetimes issues: we
+//    should get rid of that 'static if possible... -- Luiz.
 
 #[derive(Clone)]
 pub struct InnerStorage(Arc<RwLock<dyn Storage + Send + Sync + 'static>>);
@@ -298,9 +311,12 @@ impl Storage for FSStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed when using 'load_sig'");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -368,9 +384,11 @@ impl Storage for ZipStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -385,22 +403,22 @@ impl ZipStorage {
         let zip_file = File::open(location.as_ref())?;
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
-        let mut storage = ZipStorageBuilder {
+        let mut storage = ZipStorageTryBuilder {
             mapping: Some(mapping),
             archive_builder: |mapping: &Option<memmap2::Mmap>| {
-                piz::ZipArchive::new(mapping.as_ref().unwrap()).unwrap()
+                piz::ZipArchive::new(mapping.as_ref().unwrap())
             },
             metadata_builder: |archive: &piz::ZipArchive| {
-                archive
+                Ok(archive
                     .entries()
                     .iter()
                     .map(|entry| (entry.path.as_os_str(), entry))
-                    .collect()
+                    .collect())
             },
             subdir: None,
             path: Some(location.as_ref().into()),
         }
-        .build();
+        .try_build()?;
 
         let subdir = find_subdirs(storage.borrow_archive())?;
         storage.with_mut(|fields| *fields.subdir = subdir);
@@ -448,7 +466,7 @@ impl ZipStorage {
 
 impl SigStore {
     pub fn new_with_storage(sig: Signature, storage: InnerStorage) -> Self {
-        let name = sig.name();
+        let name = sig.name_str();
         let filename = sig.filename();
 
         SigStore::builder()
@@ -537,7 +555,7 @@ impl Deref for SigStore {
 
 impl From<Signature> for SigStore {
     fn from(other: Signature) -> SigStore {
-        let name = other.name();
+        let name = other.name_str();
         let filename = other.filename();
 
         SigStore::builder()
@@ -547,6 +565,15 @@ impl From<Signature> for SigStore {
             .metadata("")
             .storage(None)
             .build()
+    }
+}
+
+impl TryInto<KmerMinHash> for SigStore {
+    type Error = crate::Error;
+
+    fn try_into(self) -> std::result::Result<KmerMinHash, Self::Error> {
+        let sig: Signature = self.into();
+        sig.try_into()
     }
 }
 

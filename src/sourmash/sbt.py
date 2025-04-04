@@ -763,7 +763,9 @@ class SBT(Index):
                     manifest_rows.append(row)
 
             if n % 100 == 0:
-                notify(f"{format(n+1)} of {format(total_nodes)} nodes saved", end="\r")
+                notify(
+                    f"{format(n + 1)} of {format(total_nodes)} nodes saved", end="\r"
+                )
 
         # now, save the index file and manifests.
         #

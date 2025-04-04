@@ -101,8 +101,8 @@ def _set_num_scaled(mh, num, scaled):
     mh_params = list(mh.__getstate__())
     # Number of hashes is 0th parameter
     mh_params[0] = num
-    # Scale is 8th parameter
-    mh_params[8] = _get_max_hash_for_scaled(scaled)
+    # Scale is 10th parameter
+    mh_params[10] = _get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
@@ -1298,7 +1298,7 @@ def kmers(args):
     found_hashes = set(found_mh.hashes)
     cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
 
-    notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
+    notify(f"found {len(found_mh)} distinct matching hashes ({cont * 100:.1f}%)")
 
     if not kmer_w and not save_seqs:
         notify("NOTE: see --save-kmers or --save-sequences for output options.")

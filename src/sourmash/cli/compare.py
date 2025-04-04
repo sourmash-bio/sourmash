@@ -92,7 +92,7 @@ def subparser(subparsers):
     subparser.add_argument(
         "--csv",
         metavar="F",
-        help="write matrix to specified file in CSV format (with column " "headers)",
+        help="write matrix to specified file in CSV format (with column headers)",
     )
     subparser.add_argument(
         "--labels-to",

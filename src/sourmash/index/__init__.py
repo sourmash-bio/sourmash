@@ -799,6 +799,9 @@ class CounterGather:
             self.scaled = scaled
         return self.scaled
 
+    def __len__(self):
+        return len(self.siglist)
+
     def signatures(self):
         "Return all signatures."
         yield from self.siglist.values()
@@ -1242,7 +1245,7 @@ def _check_select_parameters(**kw):
 
     moltype = kw.get("moltype")
     if moltype is not None:
-        if moltype not in ["DNA", "protein", "dayhoff", "hp"]:
+        if moltype not in ["DNA", "protein", "dayhoff", "hp", "skipm1n3", "skipm2n3"]:
             raise ValueError(f"unknown moltype: {moltype}")
 
     scaled = kw.get("scaled")

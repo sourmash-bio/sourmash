@@ -81,6 +81,13 @@ you upgrade within a major sourmash release (barring bug fixes!). Moreover,
 if you rely on a feature introduced in v3.3.0, that feature will not break
 in v3.4.0, but will also not be backported to version 3.2.0.
 
+### Output file formats
+
+In particular, the CSV output file formats are guaranteed to be stable
+within major versions, with one caveat: we may add or rearrange
+columns between releases.  You should use column headers/column names
+to parse CSV files, and not depend on column order.
+
 ### Python API
 
 We intend to guarantee the Python API at the top level, i.e.
