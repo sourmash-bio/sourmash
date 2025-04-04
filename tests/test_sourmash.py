@@ -6855,6 +6855,7 @@ def test_do_sourmash_index_zipfile_append(c):
     with warnings.catch_warnings(record=True) as record:
         c.run_sourmash("index", "-k", "31", "zzz.sbt.zip", *first_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
+    # @CTB failing on python 3.13.2 on linux??
     assert not record, record
 
     outfile = c.output("zzz.sbt.zip")
