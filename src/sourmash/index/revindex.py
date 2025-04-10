@@ -614,7 +614,6 @@ class RevIndex_CounterGather_Colors(RustObject):
         if len(self) == 0:
             raise ValueError("no matches found")
 
-        print("AAA", query_mh, query_mh.scaled)
         empty_mh = query_mh.copy_and_clear()
 
         # track found hashes:
@@ -623,7 +622,6 @@ class RevIndex_CounterGather_Colors(RustObject):
             empty_mh._objptr,
         )
         self.found_mh = MinHash._from_objptr(found_mh_ptr)
-        print("AAA2", self.found_mh, self.found_mh.scaled)
 
     @property
     def scaled(self):
@@ -664,7 +662,6 @@ class RevIndex_CounterGather_Colors(RustObject):
     @property
     def union_found(self):
         "Return all found hashes."
-        print("ZZZ", self.found_mh, self.found_mh.scaled)
         return self.found_mh
 
     def __len__(self):
