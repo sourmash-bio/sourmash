@@ -660,6 +660,7 @@ class RevIndex_CounterGather_Colors(RustObject):
     @property
     def union_found(self):
         "Return all found hashes."
+        print('ZZZ', self.found_mh)
         return self.found_mh
 
     def __len__(self):
