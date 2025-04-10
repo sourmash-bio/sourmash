@@ -297,7 +297,7 @@ def test_mem_revindex_union_found():
     # check found hashes
     ident_mh = counter.union_found
     print('XXX', ident_mh, ident_mh.scaled)
-    print('YYY', ss47.minhash, ss47.minhash.caled)
+    print('YYY', ss47.minhash, ss47.minhash.scaled)
     print(ident_mh.contained_by(ss47.minhash))
     print(ss47.minhash.contained_by(ident_mh))
     assert ident_mh.contained_by(ss47.minhash) == 1.0

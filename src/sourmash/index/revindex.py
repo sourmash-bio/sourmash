@@ -614,6 +614,8 @@ class RevIndex_CounterGather_Colors(RustObject):
         if len(self) == 0:
             raise ValueError("no matches found")
 
+        print('AAA', query_mh, query_mh.scaled)
+
         # track found hashes:
         found_mh_ptr = self._methodcall(
             lib.revindex_countergather_found_hashes,
@@ -660,7 +662,7 @@ class RevIndex_CounterGather_Colors(RustObject):
     @property
     def union_found(self):
         "Return all found hashes."
-        print('ZZZ', self.found_mh)
+        print('ZZZ', self.found_mh, self.found_mh.scaled)
         return self.found_mh
 
     def __len__(self):
