@@ -15,9 +15,9 @@ Quickly search, compare, and analyze genomic and metagenomic data sets.
 [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/sourmash-minimal.svg)](https://anaconda.org/conda-forge/sourmash-minimal)
 [![Debian Testing](https://badges.debian.net/badges/debian/testing/sourmash/version.svg)](https://packages.debian.org/testing/sourmash) [![Debian Unstable](https://badges.debian.net/badges/debian/unstable/sourmash/version.svg)](https://packages.debian.org/unstable/sourmash)
 
-![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)
 [![Build Status](https://github.com/sourmash-bio/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/sourmash-bio/sourmash/actions/)
 [![codecov](https://codecov.io/gh/sourmash-bio/sourmash/branch/latest/graph/badge.svg)](https://codecov.io/gh/sourmash-bio/sourmash)
 
@@ -77,7 +77,7 @@ A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/t
 
 ### Requirements
 
-sourmash runs under Python 3.10 and later on Windows, Mac OS X, and
+sourmash runs under Python 3.11 and later on Windows, Mac OS X, and
 Linux.  The base requirements are screed, cffi, numpy, matplotlib, and
 scipy.  Conda will install everything necessary, and is
 our recommended installation method (see below).

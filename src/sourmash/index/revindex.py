@@ -614,10 +614,12 @@ class RevIndex_CounterGather_Colors(RustObject):
         if len(self) == 0:
             raise ValueError("no matches found")
 
+        empty_mh = query_mh.copy_and_clear()
+
         # track found hashes:
         found_mh_ptr = self._methodcall(
             lib.revindex_countergather_found_hashes,
-            query_mh.copy_and_clear()._objptr,
+            empty_mh._objptr,
         )
         self.found_mh = MinHash._from_objptr(found_mh_ptr)
 

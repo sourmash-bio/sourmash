@@ -255,6 +255,8 @@ impl LinearIndex {
         let mut matches = vec![];
         let template = self.template();
 
+        // iterate over matches, progressively removing intersections from the
+        // counters.
         while match_size > threshold && !counter.is_empty() {
             let (dataset_id, size) = counter.most_common()[0];
             if threshold == 0 && size == 0 {
@@ -277,6 +279,23 @@ impl LinearIndex {
             let mut to_remove: HashSet<Idx> = Default::default();
             to_remove.insert(dataset_id);
 
+            // retrieve the match
+            let dataset_sig = self.collection.sig_for_dataset(dataset_id)?;
+            let mut match_mh = None;
+            if let Some(Sketch::MinHash(mh)) = dataset_sig.select_sketch(template) {
+                match_mh = Some(mh);
+            }
+            let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
+
+            let (isect_hashes, _) = match_mh.intersection(&query_mh)?;
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            let _ = isect_mh.add_many(&isect_hashes);
+
+            query.remove_many(isect_mh.iter_mins().copied())?;
+
+            // CTB: could redo this entire loop using a CounterGather-style
+            // struct, with peek/consume, I 'spose.
             for (dataset, value) in counter.iter_mut() {
                 let dataset_sig = self.collection.sig_for_dataset(*dataset)?;
                 let mut match_mh = None;
@@ -285,18 +304,20 @@ impl LinearIndex {
                 }
                 let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
 
-                let (matched_hashes, _) = query_mh.intersection(match_mh)?;
-                let mut isect_mh = match_mh.clone();
-                isect_mh.clear();
-                isect_mh.add_many(&matched_hashes)?;
+                // take the intersection of this match with the best
+                // intersection & remove from counter.
+                let (matched_hashes, _) = isect_mh.intersection(match_mh)?;
+                let mut this_isect_mh = match_mh.clone();
+                this_isect_mh.clear();
+                this_isect_mh.add_many(&matched_hashes)?;
 
-                if isect_mh.size() > *value {
+                if this_isect_mh.size() > *value {
                     to_remove.insert(*dataset);
                 } else {
-                    *value -= isect_mh.size();
+                    *value -= this_isect_mh.size();
                 };
-                query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
             }
+
             to_remove.iter().for_each(|dataset_id| {
                 counter.remove(dataset_id);
             });
