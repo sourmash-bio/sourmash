@@ -1080,9 +1080,7 @@ def test_counter_gather_2(counter_gather_constructor):
     testdata_sigs = glob.glob(testdata_glob)
 
     query_ss = load_one_signature(testdata_combined, ksize=21)
-    subject_sigs = [
-        (load_one_signature(t, ksize=21), t) for t in testdata_sigs
-    ]
+    subject_sigs = [(load_one_signature(t, ksize=21), t) for t in testdata_sigs]
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
