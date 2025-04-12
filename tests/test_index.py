@@ -9,7 +9,8 @@ import zipfile
 import shutil
 
 import sourmash
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import SourmashSignature
+from sourmash.sourmash_args import load_one_signature
 from sourmash.index import (
     LinearIndex,
     ZipFileLinearIndex,
