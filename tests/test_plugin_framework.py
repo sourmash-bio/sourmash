@@ -12,6 +12,7 @@ from sourmash.logging import set_quiet
 
 import sourmash_tst_utils as utils
 from sourmash import plugins
+from sourmash.signature import load_one_signature_from_json
 from sourmash.index import LinearIndex
 from sourmash.save_load import Base_SaveSignaturesToLocation, SaveSignaturesToLocation
 
@@ -51,9 +52,9 @@ class Test_EntryPointBasics_LoadFrom:
         ss47 = utils.get_test_data("47.fa.sig")
         ss63 = utils.get_test_data("63.fa.sig")
 
-        sig2 = sourmash.load_one_signature(ss2, ksize=31)
-        sig47 = sourmash.load_one_signature(ss47, ksize=31)
-        sig63 = sourmash.load_one_signature(ss63, ksize=31)
+        sig2 = load_one_signature_from_json(ss2, ksize=31)
+        sig47 = load_one_signature_from_json(ss47, ksize=31)
+        sig63 = load_one_signature_from_json(ss63, ksize=31)
 
         lidx = LinearIndex([sig2, sig47, sig63], location)
 
@@ -92,9 +93,9 @@ class Test_EntryPoint_LoadFrom_Priority:
         ss47 = utils.get_test_data("47.fa.sig")
         ss63 = utils.get_test_data("63.fa.sig")
 
-        sig2 = sourmash.load_one_signature(ss2, ksize=31)
-        sig47 = sourmash.load_one_signature(ss47, ksize=31)
-        sig63 = sourmash.load_one_signature(ss63, ksize=31)
+        sig2 = load_one_signature_from_json(ss2, ksize=31)
+        sig47 = load_one_signature_from_json(ss47, ksize=31)
+        sig63 = load_one_signature_from_json(ss63, ksize=31)
 
         lidx = LinearIndex([sig2, sig47, sig63], location)
 
@@ -219,9 +220,9 @@ class Test_EntryPointBasics_SaveTo:
         ss47 = utils.get_test_data("47.fa.sig")
         ss63 = utils.get_test_data("63.fa.sig")
 
-        sig2 = sourmash.load_one_signature(ss2, ksize=31)
-        sig47 = sourmash.load_one_signature(ss47, ksize=31)
-        sig63 = sourmash.load_one_signature(ss63, ksize=31)
+        sig2 = load_one_signature_from_json(ss2, ksize=31)
+        sig47 = load_one_signature_from_json(ss47, ksize=31)
+        sig63 = load_one_signature_from_json(ss63, ksize=31)
 
         # build a fake location that matches the FakeSaveClass
         # extension
@@ -266,9 +267,9 @@ class Test_EntryPointPriority_SaveTo:
         ss47 = utils.get_test_data("47.fa.sig")
         ss63 = utils.get_test_data("63.fa.sig")
 
-        sig2 = sourmash.load_one_signature(ss2, ksize=31)
-        sig47 = sourmash.load_one_signature(ss47, ksize=31)
-        sig63 = sourmash.load_one_signature(ss63, ksize=31)
+        sig2 = load_one_signature_from_json(ss2, ksize=31)
+        sig47 = load_one_signature_from_json(ss47, ksize=31)
+        sig63 = load_one_signature_from_json(ss63, ksize=31)
 
         # build a fake location that matches the FakeSaveClass
         # extension
