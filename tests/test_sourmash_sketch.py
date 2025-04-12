@@ -27,7 +27,7 @@ from sourmash import VERSION
 
 from sourmash.command_sketch import _signatures_for_sketch_factory
 from sourmash_tst_utils import SourmashCommandFailed
-from sourmash.signature import load_one_signature_from_json as load_one_signature
+from sourmash.sourmash_args import load_one_signature
 from sourmash.signature import load_signatures_from_json
 
 
