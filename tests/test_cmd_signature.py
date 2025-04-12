@@ -20,6 +20,8 @@ from sourmash.signature import (
 )
 from sourmash.manifest import CollectionManifest
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.sourmash_args import load_one_signature
+
 
 ## command line tests
 
@@ -873,7 +875,7 @@ def test_sig_subtract_1_sigzip(runtmp):
 
     test1_sig = sourmash_args.load_one_signature(sig47)
     test2_sig = sourmash_args.load_one_signature(sig63)
-    actual_subtract_sig = sourmash.load_one_signature(out)
+    actual_subtract_sig = load_one_signature_from_json(out)
 
     mins = set(test1_sig.minhash.hashes.keys())
     mins -= set(test2_sig.minhash.hashes.keys())
