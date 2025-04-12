@@ -2,6 +2,7 @@ import pytest
 import sourmash
 
 import sourmash_tst_utils as utils
+from sourmash.sourmash_args import load_one_signature, SaveSignaturesToLocation
 
 
 @utils.in_tempdir
@@ -9,9 +10,10 @@ def test_sourmash_signature_api(c):
     e = sourmash.MinHash(n=1, ksize=20)
     sig = sourmash.SourmashSignature(e)
 
-    with open(c.output("xxx.sig"), "w") as fp:
-        sourmash.save_signatures([sig], fp)
-    sig_x1 = sourmash.load_one_signature(c.output("xxx.sig"))
+    with SaveSignaturesToLocation(c.output("xxx.sig")) as save_sigs:
+        save_sigs.add(sig)
+
+    sig_x1 = load_one_signature(c.output("xxx.sig"))
     sig_x2 = list(sourmash.load_file_as_signatures(c.output("xxx.sig")))[0]
 
     assert sig_x1 == sig
@@ -86,8 +88,8 @@ def test_load_and_search_sbt_api():
         "prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
 
-    tree = sourmash.load_sbt_index(treefile)
-    query = sourmash.load_one_signature(queryfile)
+    tree = sourmash.load_file_as_index(treefile)
+    query = load_one_signature(queryfile)
 
-    results = list(sourmash.search_sbt_index(tree, query, 0))
+    results = list(tree.search(query, threshold=0))
     assert len(results) == 2
