@@ -32,3 +32,22 @@ jobs:
         with:
           run: "cd src/core && cargo codspeed run"
           token: ${{ secrets.CODSPEED_TOKEN }}
+
+  benchmarks-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v2
+        with:
+          token: ${{ secrets.CODSPEED_TOKEN }}
+          run: tox -e codspeed
