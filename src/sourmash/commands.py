@@ -8,6 +8,7 @@ import os.path
 import sys
 import shutil
 import io
+import enum
 
 import screed
 from .compare import (
@@ -28,6 +29,12 @@ from sourmash.index.revindex import DiskRevIndex
 
 
 WATERMARK_SIZE = 10000
+
+
+class EnumIndexType(enum.StrEnum):  # used in 'index'
+    SBT = "SBT"
+    ROCKSDB = "rocksdb"
+    ZIP = "zip"
 
 
 def _get_screen_width():
@@ -523,36 +530,33 @@ def index(args):
             sys.exit(-1)
 
     # open writing
-    if index_type == "SBT":
-        if args.sparseness < 0 or args.sparseness > 1.0:
-            error("sparseness must be in range [0.0, 1.0].")
+    match index_type:
+        case EnumIndexType.SBT:
+            if args.sparseness < 0 or args.sparseness > 1.0:
+                error("sparseness must be in range [0.0, 1.0].")
+                sys.exit(-1)
+
+            if args.append:
+                tree = load_sbt_index(args.name)
+            else:
+                tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+
+            def add_sketch(sigobj):
+                tree.insert(sigobj)
+        case EnumIndexType.ZIP:
+            save_sigs = sourmash_args.SaveSignaturesToLocation(output_name)
+            save_sigs.open()
+
+            def add_sketch(sigobj):
+                save_sigs.add(sigobj)
+        case EnumIndexType.ROCKSDB:
+            full_siglist = []
+
+            def add_sketch(sigobj):
+                full_siglist.append(sigobj)
+        case _:
+            error(f"ERROR: unknown index type '{index_type}'; quitting.")
             sys.exit(-1)
-
-        if args.append:
-            tree = load_sbt_index(args.name)
-        else:
-            tree = create_sbt_index(args.bf_size, n_children=args.n_children)
-
-        def add_sketch(sigobj):
-            tree.insert(sigobj)
-
-    elif index_type == "zip":
-        save_sigs = sourmash_args.SaveSignaturesToLocation(output_name)
-        save_sigs.open()
-
-        def add_sketch(sigobj):
-            save_sigs.add(sigobj)
-
-    elif index_type == "rocksdb":
-        full_siglist = []
-
-        def add_sketch(sigobj):
-            full_siglist.append(sigobj)
-
-        output_name = args.name
-    else:
-        error(f"ERROR: unknown index type '{index_type}'; quitting.")
-        sys.exit(-1)
 
     if args.scaled:
         args.scaled = int(args.scaled)
@@ -638,17 +642,18 @@ def index(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    if index_type == "SBT":
-        notify(f'loaded {n} sigs; saving SBT under "{output_name}"')
-        tree.save(output_name, sparseness=args.sparseness)
-        if tree.storage:
-            tree.storage.close()
-    elif index_type == "zip":
-        notify(f'loaded {n} sigs; saving zip file under "{output_name}"')
-        save_sigs.close()
-    elif index_type == "rocksdb":
-        notify(f'loaded {n} sigs; saving rocksdb index under "{output_name}"')
-        DiskRevIndex.create_from_sigs(full_siglist, output_name)
+    match index_type:
+        case EnumIndexType.SBT:
+            notify(f'loaded {n} sigs; saving SBT under "{output_name}"')
+            tree.save(output_name, sparseness=args.sparseness)
+            if tree.storage:
+                tree.storage.close()
+        case EnumIndexType.ZIP:
+            notify(f'loaded {n} sigs; saving zip file under "{output_name}"')
+            save_sigs.close()
+        case EnumIndexType.ROCKSDB:
+            notify(f'loaded {n} sigs; saving rocksdb index under "{output_name}"')
+            DiskRevIndex.create_from_sigs(full_siglist, output_name)
 
 
 def search(args):
