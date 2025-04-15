@@ -39,6 +39,7 @@ authors = [
   { name="Chase Mateusiak" },
   { name="Bradley Nelson" },
   { name="Ivan Ogasawara" },
+  { name="Aiden Pike" },
   { name="Taylor Reiter" },
   { name="Camille Scott" },
   { name="Andreas Sjödin" },
@@ -115,6 +116,7 @@ authors = [
   { name="Chase Mateusiak", orcid="0000-0002-2890-4242" },
   { name="Bradley Nelson", orcid="0009-0001-1553-932X" },
   { name="Ivan Ogasawara", orcid="0000-0001-5049-4289" },
+  { name="Aiden Pike", orcid="0009-0002-1398-0207"},
   { name="Taylor Reiter", orcid="0000-0002-7388-421X" },
   { name="Camille Scott", orcid="0000-0001-8822-8779" },
   { name="Andreas Sjödin", orcid="0000-0001-5350-4219" },
@@ -129,40 +131,6 @@ authors = [
   { name="C. Titus Brown", orcid="0000-0001-6001-2677" },
 ]
 
-maintainers = [
-  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
-  { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
-  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu", orcid="0000-0002-2942-5331" },
-]
-
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Environment :: Console",
-  "Environment :: MacOS X",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
-  "Natural Language :: English",
-  "Operating System :: POSIX :: Linux",
-  "Operating System :: MacOS :: MacOS X",
-  "Programming Language :: Rust",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.11",
-  "Topic :: Scientific/Engineering :: Bio-Informatics",
-]
-
-dependencies = [
-  "screed>=1.1.3,<2",
-  "cffi>=1.14.0",
-  "numpy",
-  "matplotlib",
-  "scipy",
-  "deprecation>=2.0.6",
-  "cachetools>=4,<6",
-  "bitstring>=3.1.9,<5",
-]
-
-requires-python = ">=3.11"
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
