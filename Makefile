@@ -24,7 +24,7 @@ wheel:
 	$(PYTHON) -m maturin build -r
 
 test: .PHONY
-	tox -e py310
+	tox -e py311
 	cargo nextest run
 
 doc: .PHONY

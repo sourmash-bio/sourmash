@@ -469,7 +469,7 @@ unsafe fn revindex_countergather_found_hashes(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
     template_ptr: *const SourmashKmerMinHash,
 ) -> Result<*const SourmashKmerMinHash> {
-    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
+    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
     let template_mh = SourmashKmerMinHash::as_rust(template_ptr);
 
     let found_mh = cg.found_hashes(template_mh);
@@ -481,7 +481,7 @@ ffi_fn! {
 unsafe fn revindex_countergather_len(
     cg_ptr: *mut SourmashRevIndex_CounterGather,
 ) -> Result<u64> {
-    let cg: &mut CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
+    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust_mut(cg_ptr);
 
     Ok(cg.len() as u64)
 }
