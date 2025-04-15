@@ -10,6 +10,7 @@ import sourmash_tst_utils as utils
 
 import sourmash
 from sourmash import sourmash_args, SourmashSignature
+from sourmash.sourmash_args import load_one_signature
 
 
 def _index_filename(prefix, index_type):
@@ -817,8 +818,8 @@ def test_index_protein(runtmp, disk_index_type):
 
     db2 = sourmash.load_file_as_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature(sigfile1)
+    sig2 = load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -869,7 +870,7 @@ def test_index_protein_search_no_threshold(runtmp, disk_index_type):
 
     db2 = sourmash.load_file_as_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
+    sig1 = load_one_signature(sigfile1)
 
     # and search, gather
     with pytest.raises(TypeError) as exc:
@@ -923,8 +924,8 @@ def test_index_hp_command_index(runtmp, disk_index_type):
 
     db2 = sourmash.load_file_as_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature(sigfile1)
+    sig2 = load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -993,8 +994,8 @@ def test_index_dayhoff_command_index(runtmp, disk_index_type):
 
     db2 = sourmash.load_file_as_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature(sigfile1)
+    sig2 = load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]

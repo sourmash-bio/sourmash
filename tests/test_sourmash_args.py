@@ -17,6 +17,7 @@ import json
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import sourmash_args, manifest
+from sourmash.sourmash_args import load_one_signature
 from sourmash.index import LinearIndex
 from sourmash.cli.utils import add_ksize_arg
 
@@ -26,9 +27,9 @@ from sourmash.signature import load_signatures_from_json, save_signatures_to_jso
 def test_save_signatures_api_none():
     # save to sigfile
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     with sourmash_args.SaveSignaturesToLocation(None) as save_sig:
         print(repr(save_sig))
@@ -41,9 +42,9 @@ def test_save_signatures_api_none():
 def test_save_signatures_to_location_1_sig(runtmp):
     # save to sigfile.sig
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("foo.sig")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -60,9 +61,9 @@ def test_save_signatures_to_location_1_sig(runtmp):
 def test_save_signatures_to_location_1_stdout():
     # save to stdout
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     output_capture = io.StringIO()
     with contextlib.redirect_stdout(output_capture):
@@ -81,9 +82,9 @@ def test_save_signatures_to_location_1_stdout():
 def test_save_signatures_to_location_1_sig_is_default(runtmp):
     # save to sigfile.txt
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("foo.txt")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -100,9 +101,9 @@ def test_save_signatures_to_location_1_sig_is_default(runtmp):
 def test_save_signatures_to_location_1_sig_gz(runtmp):
     # save to sigfile.gz
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("foo.sig.gz")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -124,9 +125,9 @@ def test_save_signatures_to_location_1_sig_gz(runtmp):
 def test_save_signatures_to_location_1_zip(runtmp):
     # save to sigfile.zip
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("foo.zip")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -147,9 +148,9 @@ def test_save_signatures_to_location_1_zip(runtmp):
 def test_save_signatures_to_location_1_zip_bad(runtmp):
     # try saving to bad sigfile.zip
     sig2 = utils.get_test_data("2.fa.sig")
-    sourmash.load_one_signature(sig2, ksize=31)
+    load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    sourmash.load_one_signature(sig47, ksize=31)
+    load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("foo.zip")
 
@@ -168,9 +169,9 @@ def test_save_signatures_to_location_1_zip_bad(runtmp):
 def test_save_signatures_to_location_1_zip_dup(runtmp):
     # save to sigfile.zip
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("foo.zip")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -201,9 +202,9 @@ def test_save_signatures_to_location_1_zip_dup(runtmp):
 def test_save_signatures_to_location_2_zip_add(runtmp):
     # create sigfile.zip; then, add a new signature.
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     # add only ss2
     outloc = runtmp.output("foo.zip")
@@ -234,9 +235,9 @@ def test_save_signatures_to_location_2_zip_add(runtmp):
 def test_save_signatures_to_location_2_zip_add_dup(runtmp):
     # create sigfile.zip; then, add a new signature, plus a ~duplicate.
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     # add only ss2
     outloc = runtmp.output("foo.zip")
@@ -276,9 +277,9 @@ def test_save_signatures_to_location_2_zip_add_dup(runtmp):
 def test_save_signatures_to_location_3_zip_add_fail(runtmp):
     # create sigfile.zip using zipfile, then try to add to it (& fail)
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    sourmash.load_one_signature(sig47, ksize=31)
+    load_one_signature(sig47, ksize=31)
 
     # add only ss2, using zipfile API
     outloc = runtmp.output("foo.zip")
@@ -302,9 +303,9 @@ def test_save_signatures_to_location_3_zip_add_fail(runtmp):
 def test_save_signatures_to_location_3_zip_add_with_manifest(runtmp):
     # create sigfile.zip using zipfile, then try to add to it (& fail)
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     # add only ss2, using zipfile API; add manifest manually.
     outloc = runtmp.output("foo.zip")
@@ -351,9 +352,9 @@ def test_save_signatures_to_location_3_zip_add_with_manifest(runtmp):
 def test_save_signatures_to_location_1_dirout(runtmp):
     # save to sigout/ (directory)
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("sigout/")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -372,9 +373,9 @@ def test_save_signatures_to_location_1_dirout(runtmp):
 def test_save_signatures_to_location_1_dirout_bug_2751(runtmp):
     # check for 2x compressed sig files
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("sigout/")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -395,9 +396,9 @@ def test_save_signatures_to_location_1_dirout_bug_2751(runtmp):
 def test_save_signatures_to_location_1_dirout_duplicate(runtmp):
     # save to sigout/ (directory)
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     outloc = runtmp.output("sigout/")
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
@@ -475,7 +476,7 @@ def test_get_manifest_1():
 def test_get_manifest_2_cannot_build():
     # test what happens when get_manifest cannot build manifest
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47)
+    ss47 = load_one_signature(sig47)
 
     idx = LinearIndex([ss47])
 
@@ -486,7 +487,7 @@ def test_get_manifest_2_cannot_build():
 def test_get_manifest_2_cannot_buildno_require():
     # test what happens when get_manifest cannot build manifest
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47)
+    ss47 = load_one_signature(sig47)
 
     idx = LinearIndex([ss47])
 
@@ -498,7 +499,7 @@ def test_get_manifest_2_cannot_buildno_require():
 def test_get_manifest_3_build():
     # check that manifest is building
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47)
+    ss47 = load_one_signature(sig47)
 
     class FakeIndex(LinearIndex):
         was_called = 0
@@ -521,7 +522,7 @@ def test_get_manifest_3_build():
 def test_get_manifest_3_build_2():
     # check that manifest is building, but only when asked
     sig47 = utils.get_test_data("47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47)
+    ss47 = load_one_signature(sig47)
 
     class FakeIndex(LinearIndex):
         manifest = None

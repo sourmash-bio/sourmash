@@ -15,7 +15,8 @@ from sourmash.index.sqlite_index import (
 )
 
 from sourmash.index import StandaloneManifestIndex
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import SourmashSignature
+from sourmash.sourmash_args import load_one_signature
 from sourmash.picklist import SignaturePicklist, PickStyle
 from sourmash.manifest import CollectionManifest
 from sourmash.tax.tax_utils import MultiLineageDB
@@ -28,7 +29,7 @@ from sourmash import sqlite_utils
 def test_sqlite_index_prefetch_empty():
     # check that an exception is raised upon for an empty database
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature(sig2, ksize=31)
 
     sqlidx = SqliteIndex.create(":memory:")
 
@@ -84,7 +85,7 @@ def test_index_search_subj_scaled_is_lower():
     sigfile = utils.get_test_data(
         "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     )
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature(sigfile)
 
     # double check :)
     assert ss.minhash.scaled == 100
@@ -108,9 +109,9 @@ def test_sqlite_index_save_load(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature(sig2, ksize=31)
+    ss47 = load_one_signature(sig47)
+    ss63 = load_one_signature(sig63)
 
     filename = runtmp.output("foo")
     sqlidx = SqliteIndex.create(filename)
@@ -166,7 +167,7 @@ def test_sqlite_index_insert_num_fail():
     sqlidx = SqliteIndex.create(":memory:")
 
     sig47 = utils.get_test_data("num/47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
     assert ss47.minhash.num != 0
 
     with pytest.raises(ValueError) as exc:
@@ -180,7 +181,7 @@ def test_sqlite_index_insert_abund_fail():
     sqlidx = SqliteIndex.create(":memory:")
 
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss47 = load_one_signature(sig47, ksize=31)
 
     with pytest.raises(ValueError) as exc:
         sqlidx.insert(ss47)
@@ -389,7 +390,7 @@ def test_sqlite_index_create_load_insert_existing(runtmp):
     siglist = list(sqlidx.signatures())
     assert len(siglist) == 2
 
-    ss3 = sourmash.load_one_signature(sig3, ksize=31)
+    ss3 = load_one_signature(sig3, ksize=31)
     sqlidx.insert(ss3)
     sqlidx.commit()
 
@@ -642,7 +643,7 @@ def test_sqlite_manifest_create_insert(runtmp):
     mf = SqliteCollectionManifest.create(mfname)
 
     sigfile = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature(sigfile)
 
     mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, "some.sig"))
     mf.conn.commit()
@@ -667,7 +668,7 @@ def test_sqlite_manifest_create_insert_2(runtmp):
     mfname = runtmp.output("some.sqlmf")
 
     mf = CollectionManifest.load_from_filename(mfname)
-    ss = sourmash.load_one_signature(runtmp.output("some.sig"))
+    ss = load_one_signature(runtmp.output("some.sig"))
     mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, "some.sig"))
     mf.conn.commit()
 
@@ -701,7 +702,7 @@ def test_sqlite_manifest_existing_insert(runtmp):
     assert isinstance(mf, SqliteCollectionManifest)
 
     sigfile = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature(sigfile)
 
     mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, "some.sig"))
     mf.conn.commit()
@@ -742,7 +743,7 @@ def test_sqlite_manifest_existing_mfonly_insert(runtmp):
     assert isinstance(mf, SqliteCollectionManifest)
 
     sigfile = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature(sigfile)
 
     mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, sigfile))
     mf.conn.commit()
@@ -776,7 +777,7 @@ def test_sqlite_manifest_load_existing_index_insert_fail():
 
     # try insert - should fail
     sigfile = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature(sigfile)
 
     with pytest.raises(Exception) as exc:
         mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, sigfile))

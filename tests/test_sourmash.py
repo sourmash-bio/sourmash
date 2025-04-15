@@ -26,6 +26,7 @@ from sourmash.sbtmh import SigLeaf, load_sbt_index
 from sourmash.search import SearchResult, GatherResult
 from sourmash.signature import load_one_signature_from_json as load_one_signature
 from sourmash.signature import load_signatures_from_json
+from sourmash.sourmash_args import load_one_signature
 
 try:
     import matplotlib
@@ -167,7 +168,7 @@ def test_compare_serial(runtmp):
 
     sigs = []
     for fn in testsigs:
-        sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+        sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -176,7 +177,7 @@ def test_compare_serial(runtmp):
 
         sigs = []
         for fn in testsigs:
-            sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+            sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
     assert (cmp_out == cmp_calc).all()
 
 
@@ -195,7 +196,7 @@ def test_compare_serial_distance(runtmp):
 
     sigs = []
     for fn in testsigs:
-        sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+        sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -204,7 +205,7 @@ def test_compare_serial_distance(runtmp):
 
         sigs = []
         for fn in testsigs:
-            sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+            sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
     assert (cmp_out == cmp_calc).all()
 
 
@@ -225,7 +226,7 @@ def test_compare_parallel(runtmp):
 
     sigs = []
     for fn in testsigs:
-        sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+        sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -234,7 +235,7 @@ def test_compare_parallel(runtmp):
 
         sigs = []
         for fn in testsigs:
-            sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+            sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
     assert (cmp_out == cmp_calc).all()
 
 
@@ -258,7 +259,7 @@ def test_compare_do_serial_compare_with_from_file(runtmp):
 
     sigs = []
     for fn in testsigs:
-        sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+        sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -267,7 +268,7 @@ def test_compare_do_serial_compare_with_from_file(runtmp):
 
         sigs = []
         for fn in testsigs:
-            sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+            sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     assert numpy.array_equal(numpy.sort(cmp_out.flat), numpy.sort(cmp_calc.flat))
 
@@ -287,7 +288,7 @@ def test_compare_do_basic_compare_using_rna_arg(runtmp):
 
     sigs = []
     for fn in testsigs:
-        sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+        sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -311,7 +312,7 @@ def test_compare_do_basic_using_nucleotide_arg(runtmp):
 
     sigs = []
     for fn in testsigs:
-        sigs.append(load_one_signature(fn, ksize=21, select_moltype="dna"))
+        sigs.append(load_one_signature(fn, ksize=21, select_moltype="DNA"))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -5477,7 +5478,7 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(
     c.run_sourmash("sig", "describe", c.output("foo.sig"))
     print(c.last_result.out)
 
-    x = load_one_signature(query_sig, ksize=57)
+    x = load_one_signature(query_sig, ksize=19)
     y = load_one_signature(c.output("foo.sig"))
 
     assert x.minhash == y.minhash

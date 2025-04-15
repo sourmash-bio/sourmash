@@ -9,6 +9,7 @@ import sourmash_tst_utils as utils
 import sourmash
 from sourmash.manifest import BaseCollectionManifest, CollectionManifest
 from sourmash.index.sqlite_index import SqliteCollectionManifest
+from sourmash.sourmash_args import load_one_signature
 
 
 def build_simple_manifest(runtmp):
@@ -80,7 +81,7 @@ def test_manifest_bool(manifest_obj):
 def test_make_manifest_row(manifest_obj):
     # build a manifest row from a signature
     sig47 = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sig47)
+    ss = load_one_signature(sig47)
 
     row = manifest_obj.make_manifest_row(ss, "foo", include_signature=False)
     assert "signature" not in row
@@ -101,7 +102,7 @@ def test_make_manifest_row(manifest_obj):
 def test_manifest_create_manifest(manifest_obj):
     # test the 'create_manifest' method
     sig47 = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sig47)
+    ss = load_one_signature(sig47)
 
     def yield_sigs():
         yield ss, "fiz"
@@ -145,12 +146,12 @@ def test_manifest___contains__(manifest_obj):
     sigfile = utils.get_test_data(
         "prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig"
     )
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature(sigfile)
 
     assert ss in manifest_obj
 
     sigfile2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sigfile2, ksize=31)
+    ss2 = load_one_signature(sigfile2, ksize=31)
     assert ss2 not in manifest_obj
 
 
@@ -189,7 +190,7 @@ def test_manifest_filter_cols(manifest_obj):
 def test_manifest_iadd(manifest_obj):
     # test the 'create_manifest' method
     sig47 = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sig47)
+    ss = load_one_signature(sig47)
 
     def yield_sigs():
         yield ss, "fiz"
@@ -204,7 +205,7 @@ def test_manifest_iadd(manifest_obj):
 def test_manifest_add(manifest_obj):
     # test the 'create_manifest' method
     sig47 = utils.get_test_data("47.fa.sig")
-    ss = sourmash.load_one_signature(sig47)
+    ss = load_one_signature(sig47)
 
     def yield_sigs():
         yield ss, "fiz"

@@ -52,6 +52,7 @@ from sourmash.minhash import (
     translate_codon,
 )
 from sourmash import signature
+from sourmash.sourmash_args import load_one_signature
 
 import sourmash_tst_utils as utils
 
@@ -1386,7 +1387,7 @@ def test_set_abundance():
 
 def test_set_abundance_2():
     datapath = utils.get_test_data("genome-s12.fa.gz.sig")
-    sig = sourmash.load_one_signature(datapath, ksize=30, select_moltype="dna")
+    sig = load_one_signature(datapath, ksize=30, select_moltype="DNA")
     new_mh = sig.minhash.copy_and_clear()
     mins = sig.minhash.hashes
     mins = {k: 1 for k in mins}
@@ -2967,8 +2968,8 @@ def test_unique_dataset_hashes(track_abundance):
 def test_containment_ANI():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2, ksize=31).minhash
 
     m1_cont_m2 = mh1.containment_ani(mh2, estimate_ci=True)
     m2_cont_m1 = mh2.containment_ani(mh1, estimate_ci=True)
@@ -3003,8 +3004,8 @@ def test_containment_ANI():
 def test_containment_ANI_precalc_containment():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2, ksize=31).minhash
     # precalc containments and assert same results
     s1c = mh1.contained_by(mh2)
     s2c = mh2.contained_by(mh1)
@@ -3026,8 +3027,8 @@ def test_containment_ANI_precalc_containment():
 def test_avg_containment_ani():
     f1 = utils.get_test_data("47+63.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2, ksize=31).minhash
     # check average_containment_ani
     ac_m1 = mh1.avg_containment_ani(mh2)
     ac_m2 = mh2.avg_containment_ani(mh1)
@@ -3041,8 +3042,8 @@ def test_avg_containment_ani():
 def test_containment_ANI_downsample():
     f2 = utils.get_test_data("2+63.fa.sig")
     f3 = utils.get_test_data("47+63.fa.sig")
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
-    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
+    mh2 = load_one_signature(f2, ksize=31).minhash
+    mh3 = load_one_signature(f3, ksize=31).minhash
     # check that downsampling works properly
     print(mh2.scaled)
     mh2 = mh2.downsample(scaled=1100)
@@ -3077,8 +3078,8 @@ def test_containment_ANI_downsample():
 def test_jaccard_ANI():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2).minhash
 
     print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
 
@@ -3096,8 +3097,8 @@ def test_jaccard_ANI():
 def test_jaccard_ANI_untrustworthy():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2).minhash
 
     print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
 
@@ -3114,8 +3115,8 @@ def test_jaccard_ANI_untrustworthy():
 def test_jaccard_ANI_precalc_jaccard():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2).minhash
     # precalc jaccard and assert same result
     jaccard = mh1.jaccard(mh2)
     print("\nJACCARD_ANI", mh1.jaccard_ani(mh2, jaccard=jaccard))
@@ -3132,8 +3133,8 @@ def test_jaccard_ANI_precalc_jaccard():
 def test_jaccard_ANI_downsample():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2).minhash
 
     print(mh1.scaled)
     mh1 = mh1.downsample(scaled=2000)
@@ -3175,8 +3176,8 @@ def test_containment_ani_ci_tiny_testdata():
 def test_containment_num_fail():
     f1 = utils.get_test_data("num/47.fa.sig")
     f2 = utils.get_test_data("num/63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2, ksize=31).minhash
 
     with pytest.raises(TypeError) as exc:
         mh1.contained_by(mh2)
@@ -3193,8 +3194,8 @@ def test_containment_num_fail():
 def test_ANI_num_fail():
     f1 = utils.get_test_data("num/47.fa.sig")
     f2 = utils.get_test_data("num/63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2, ksize=31).minhash
 
     with pytest.raises(TypeError) as exc:
         mh1.containment_ani(mh2)
@@ -3217,8 +3218,8 @@ def test_ANI_num_fail():
 def test_minhash_set_size_estimate_is_accurate():
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2).minhash
     mh1_ds = mh1.downsample(scaled=100000)
     # check accuracy using default thresholds (rel_err= 0.2, confidence=0.95)
     assert mh1.size_is_accurate() == True
@@ -3261,8 +3262,8 @@ def test_minhash_ani_inaccurate_size_est():
     # you would need
     f1 = utils.get_test_data("2.fa.sig")
     f2 = utils.get_test_data("2+63.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
+    mh2 = load_one_signature(f2).minhash
     # downsample
     mh1_ds = mh1.downsample(scaled=100000)
     mh2_ds = mh2.downsample(scaled=100000)
@@ -3285,7 +3286,7 @@ def test_minhash_ani_inaccurate_size_est():
 
 def test_size_num_fail():
     f1 = utils.get_test_data("num/47.fa.sig")
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh1 = load_one_signature(f1, ksize=31).minhash
 
     with pytest.raises(TypeError) as exc:
         mh1.size_is_accurate()

@@ -23,6 +23,7 @@ from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
 from sourmash.minhash import flatten_and_intersect_scaled, flatten_and_downsample_scaled
+from sourmash.sourmash_args import load_one_signature
 
 import sourmash_tst_utils as utils
 
@@ -33,9 +34,9 @@ def _load_three_sigs():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature(sig2, ksize=31)
+    ss47 = load_one_signature(sig47)
+    ss63 = load_one_signature(sig63)
 
     return [ss2, ss47, ss63]
 
@@ -102,9 +103,9 @@ def build_standalone_manifest_index(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature(sig2, ksize=31)
+    ss47 = load_one_signature(sig47)
+    ss63 = load_one_signature(sig63)
 
     siglist = [(ss2, sig2), (ss47, sig47), (ss63, sig63)]
 
@@ -1078,10 +1079,8 @@ def test_counter_gather_2(counter_gather_constructor):
     testdata_glob = utils.get_test_data("gather/GCF*.sig")
     testdata_sigs = glob.glob(testdata_glob)
 
-    query_ss = sourmash.load_one_signature(testdata_combined, ksize=21)
-    subject_sigs = [
-        (sourmash.load_one_signature(t, ksize=21), t) for t in testdata_sigs
-    ]
+    query_ss = load_one_signature(testdata_combined, ksize=21)
+    subject_sigs = [(load_one_signature(t, ksize=21), t) for t in testdata_sigs]
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
