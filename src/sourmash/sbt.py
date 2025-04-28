@@ -3,7 +3,6 @@
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 """
 
-
 from collections import namedtuple, Counter
 from collections.abc import Mapping
 
@@ -20,7 +19,12 @@ from io import StringIO
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index, IndexSearchResult, CollectionManifest
+from .index import (
+    Index,
+    IndexSearchResult,
+    CollectionManifest,
+    _check_select_parameters,
+)
 from .picklist import passes_all_picklists
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
@@ -103,7 +107,7 @@ class _NodesCache(Cache):
             # we just need to select the maximum key/node id
             (key, _) = max(c for c in common if c[1] == count)
         except IndexError:
-            msg = "%s is empty" % self.__class__.__name__
+            msg = f"{self.__class__.__name__} is empty"
             raise KeyError(msg) from None
         else:
             value = self.pop(key)
@@ -162,7 +166,7 @@ class SBT(Index):
         if self.manifest:
             # if manifest, use it & load using direct path to storage.
             # this will be faster when using picklists.
-            from .signature import load_one_signature
+            from .signature import load_one_signature_from_json
 
             manifest = self.manifest
 
@@ -175,7 +179,7 @@ class SBT(Index):
                 buf = self.storage.load(loc)
                 # if more than one signature can be in a file, we need
                 # to recheck picklists here.
-                ss = load_one_signature(buf)
+                ss = load_one_signature_from_json(buf)
                 yield ss
         else:
             # no manifest? iterate over all leaves.
@@ -202,6 +206,7 @@ class SBT(Index):
         containment=False,
         abund=None,
         picklist=None,
+        **kwargs,
     ):
         """Make sure this database matches the requested requirements.
 
@@ -220,6 +225,17 @@ class SBT(Index):
           implicitly downsample or necessarily estimate similarity if
           the scaled values differ.
         """
+        _check_select_parameters(
+            ksize=ksize,
+            num=num,
+            moltype=moltype,
+            scaled=scaled,
+            containment=containment,
+            abund=abund,
+            picklist=picklist,
+            **kwargs,
+        )
+
         # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))
         db_mh = first_sig.minhash
@@ -238,8 +254,6 @@ class SBT(Index):
 
         # containment requires 'scaled'.
         if containment:
-            if not scaled:
-                raise ValueError("'containment' requires 'scaled' in SBT.select'")
             if not db_mh.scaled:
                 raise ValueError(
                     "cannot search this SBT for containment; signatures are not calculated with scaled"
@@ -686,7 +700,7 @@ class SBT(Index):
                 storage = FSStorage(location, subdir)
                 index_filename = os.path.join(location, index_filename)
 
-            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            backend = [k for (k, v) in STORAGES.items() if v is type(storage)][0]
             storage_args = storage.init_args()
 
         info["storage"] = {"backend": backend, "args": storage_args}
@@ -749,7 +763,9 @@ class SBT(Index):
                     manifest_rows.append(row)
 
             if n % 100 == 0:
-                notify(f"{format(n+1)} of {format(total_nodes)} nodes saved", end="\r")
+                notify(
+                    f"{format(n + 1)} of {format(total_nodes)} nodes saved", end="\r"
+                )
 
         # now, save the index file and manifests.
         #
@@ -1404,11 +1420,7 @@ class Node:
         self.metadata = {}
 
     def __str__(self):
-        return "*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]".format(
-            name=self.name,
-            nb=self.data.n_occupied(),
-            fpr=calc_expected_collisions(self.data, True, 1.1),
-        )
+        return f"*Node:{self.name} [occupied: {self.data.n_occupied()}, fpr: {calc_expected_collisions(self.data, True, 1.1):.2}]"
 
     def save(self, path):
         buf = self.data.to_bytes(compression=1)
@@ -1468,12 +1480,7 @@ class Leaf:
         self._path = path
 
     def __str__(self):
-        return "**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}".format(
-            name=self.name,
-            metadata=self.metadata,
-            nb=self.data.n_occupied(),
-            fpr=calc_expected_collisions(self.data, True, 1.1),
-        )
+        return f"**Leaf:{self.name} [occupied: {self.data.n_occupied()}, fpr: {calc_expected_collisions(self.data, True, 1.1):.2}] -> {self.metadata}"
 
     def make_manifest_row(self, location):
         return None

@@ -1,12 +1,9 @@
-#[macro_use]
-extern crate criterion;
-
 use std::fs::File;
 use std::io::{BufWriter, Cursor, Read};
 
 use sourmash::sketch::nodegraph::Nodegraph;
 
-use criterion::Criterion;
+use codspeed_criterion_compat::{black_box, criterion_group, criterion_main, Criterion};
 
 fn save_load(c: &mut Criterion) {
     let mut data: Vec<u8> = vec![];

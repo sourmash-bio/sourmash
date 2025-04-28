@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate criterion;
+use codspeed_criterion_compat::{black_box, criterion_group, criterion_main, Criterion};
 
 use std::fs::File;
 use std::io::{Cursor, Read};
@@ -7,8 +6,6 @@ use std::io::{Cursor, Read};
 use needletail::parse_fastx_reader;
 use sourmash::cmd::ComputeParameters;
 use sourmash::signature::Signature;
-
-use criterion::Criterion;
 
 fn add_sequence(c: &mut Criterion) {
     let cp = ComputeParameters::default();

@@ -5,7 +5,7 @@ Tests for the 'SketchComparison' classes.
 import numpy as np
 import pytest
 
-from sourmash import load_one_signature
+from sourmash.sourmash_args import load_one_signature
 from sourmash.minhash import MinHash
 from sourmash.sketchcomparison import FracMinHashComparison, NumMinHashComparison
 

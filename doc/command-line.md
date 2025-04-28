@@ -82,7 +82,7 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 * `plot` plots similarity matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
-* `index` builds a fast index for many (thousands) of signatures.
+* `index` builds fast indexes for searching many (thousands to millions) of signatures.
 * `prefetch` selects signatures of interest from a very large collection of signatures, for later processing.
 
 There are also a number of commands that work with taxonomic
@@ -120,8 +120,7 @@ walkthrough of some of these commands.
 Finally, there are a number of utility and information commands:
 
 * `info` shows version and software information.
-* `index` indexes many signatures using a Sequence Bloom Tree (SBT).
-* `sbt_combine` combines multiple SBTs.
+* `sbt_combine` combines multiple SBT indexes.
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
 * `multigather` is an experimental command to run multiple gathers against the same collection of databases.
@@ -446,31 +445,31 @@ The results are the same whether `--prefetch` or `--no-prefetch` is
 used.  This option can be used with or without `--linear` (although
 `--no-prefetch --linear` will generally be MUCH slower).
 
-### `sourmash index` - build an SBT index of signatures
+### `sourmash index` - build an index of signatures
 
-The `sourmash index` command creates a Zipped SBT database
-(`.sbt.zip`) from a collection of signatures.  This can be used to
-create databases from private collections of genomes, and can also be
-used to create databases for e.g. subsets of GenBank.
+The `sourmash index` command creates indexed databases from a
+collection of signatures. This can be used to create databases from
+private collections of genomes or metagenomes, and can also be used to create
+databases for e.g. subsets of GenBank.
 
-These databases support fast search and gather on large collections
-of signatures in low memory.
+As of sourmash v4.9.0, there are two types of indexed databases
+supported by sourmash: RocksDB-based inverted indexes, and Sequence
+Bloom Trees (SBTs). RocksDB indexes are a newer form of fast and
+low-memory on-disk indexes that work at massive scale, while SBTs are older
+indexes that we support for legacy reasons.
 
-All signatures in
-an SBT must be of compatible types (i.e. the same k-mer size and
-molecule type). You can specify the usual command line selectors
-(`-k`, `--scaled`, `--dna`, `--protein`, etc.) to pick out the types
-of signatures to include when running `index`.
+All signatures in an index must be of compatible types (i.e. the same
+k-mer size, scaled, and molecule type). You can specify the usual
+command line selectors (`-k`, `--scaled`, `--dna`, `--protein`, etc.)
+to pick out the types of signatures to include when running `index`.
 
 Usage:
 ```
-sourmash index <database_name> <inputfile1> [ <inputfile2> ... ]
+sourmash index <database_name>.rocksdb <inputfile1> [ <inputfile2> ... ] -F rocksdb
 ```
 
-This will create a `database.sbt.zip` file containing the SBT of the
-input signatures. You can create an "unpacked" version by specifying
-`database.sbt.json` and it will create the JSON file as well as a
-subdirectory of files under `.sbt.database`.
+This will create a `database.rocksdb` file containing the
+sketches.
 
 Note that you can use `--from-file` to pass `index` a text file
 containing a list of file names to index; you can also provide individual
@@ -481,6 +480,14 @@ As of sourmash 4.2.0, `index` supports `--picklist`, to
 [select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to index a subset of a large collection, or to
 exclude a few signatures from an index being built from a large collection.
+
+Note: until sourmash v5, the default index type is "SBT"; this is to
+ensure backwards compatibility of the command line API for semantic
+versioning. We no longer recommend SBTs. Also note that a third index
+type, 'zip', is supported by the command line, but this should be used
+solely for testing purposes - it is identical in format to a zipped
+database output by e.g. `sig cat`, but restricted to the same
+ksize/moltype/scaled.
 
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
@@ -637,13 +644,16 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-The possible output formats are:
-- `human`
-- `csv_summary`
-- `lineage_summary`
-- `krona`
-- `kreport`
-- `lingroup_report`
+The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
+
+- `human`: ".human.txt",
+- `csv_summary`: ".summarized.csv",
+- `lineage_summary`: ".lineage_summary.tsv",
+- `krona`: ".krona.tsv",
+- `kreport`: ".kreport.txt",
+- `lingroup`: ".lingroup.tsv",
+- `bioboxes`: ".bioboxes.profile",
+
 
 #### `csv_summary` output format
 
@@ -671,6 +681,9 @@ HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
 o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
 ```
 The `query_md5` and `query_filename` columns are omitted here for brevity.
+
+Note: When using `--lins` with a `--lingroup` file, the `csv_summary` file will report
+summarization for each specified `lingroup`, rather than all possible `lin` ranks (v4.8.12+).
 
 #### `krona` output format
 
@@ -842,6 +855,8 @@ lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
 
 Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
+Note: this output format requires a single sample only. For a similar output with multiple query samples, provide the `lingroup` file and use the 'csv_summary' output format.
+
 #### `bioboxes` output format
 
 When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.
@@ -971,7 +986,12 @@ sourmash tax genome
 > This command uses the default classification strategy, which uses a
 containment threshold of 0.1 (10%).
 
-There are two possible output formats, `csv_summary` and `krona`.
+`sourmash tax genome` can produce the following output formats:
+
+- `human`: ".human.txt",
+- `csv_summary`: ".classifications.csv",
+- `krona`: ".krona.tsv",
+- `lineage_summary`: ".lineage_summary.tsv",
 
 #### `csv_summary` output format
 
@@ -1625,6 +1645,8 @@ k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
 moltype with `--dna/--protein/--hp/--dayhoff`.
 
+Use `--set-name <name>` to set the name of the output sketch.
+
 Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
@@ -1661,6 +1683,8 @@ k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
 moltype with `--dna/--protein/--hp/--dayhoff`.
 
+Use `--set-name <name>` to set the name of the output sketch.
+
 Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
@@ -1685,6 +1709,8 @@ to the intersection).
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
 moltype with `--dna/--protein/--hp/--dayhoff`.
+
+Use `--set-name <name>` to set the name of the output sketch(es).
 
 ### `sourmash signature inflate` - transfer abundances from one signature to others
 
@@ -2212,19 +2238,18 @@ databases!](databases-advanced.md)
 
 #### Indexed databases
 
-Indexed databases can make searching signatures much faster. SBT
-databases are low memory and disk-intensive databases that allow for
-fast searches using a tree structure, while LCA databases are higher
-memory and (after a potentially significant load time) are quite fast.
-SQLite databases (new in sourmash v4.4.0) are typically larger on disk
-than SBTs and LCAs, but in turn are fast to load and support very low
-memory search.
+Indexed databases can make searching signatures much, much faster.
+RocksDB databases produced by `sourmash index` are low memory and
+disk-intensive databases that allow for fast searches using an
+inverted index.  (We continue to support other indexed database types,
+including SBTs, LCA databases, and SQLite databases, but recommend
+using RocksDB over these other formats.)
 
 Commands that take multiple signatures or collections of signatures
-will also work with indexed databases.
+will also work with one or more indexed databases.
 
 One limitation of indexed databases is that they are all restricted in
-to certain kinds of signatures. Both SBT and LCA databases can only
+to certain kinds of signatures. RocksDB, SBT, and LCA databases can only
 contain one "type" of signature (one ksize/one moltype at one scaled
 value). SQLite databases can contain multiple ksizes and moltypes, but
 only at one scaled value. If the database signature type is
@@ -2235,18 +2260,12 @@ In contrast, signature files and zip collections can contain many
 different types of signatures, and compatible ones will be selected
 automatically.
 
-Use the `sourmash index` command to create an SBT.
-
-Use the `sourmash lca index` command to create an LCA database; the
-database can be saved in JSON or SQL format with `-F json` or `-F sql`.
-
-Use `sourmash sig cat <list of signatures> -o <output>.sqldb` to create
-a SQLite indexed database.
+Use the `sourmash index -F rocksdb` command to create a RocksDB index.
 
 #### Loading signatures within a directory hierarchy
 
 All of the `sourmash` commands support loading signatures (`.sig` or
-`.sig.gz` files) from within directory hierarchies; you can just
+`.sig.gz` files) from within directory hierarchies; you can
 provide the paths to the top-level directory on the command line.
 
 However, this is no longer recommended because it can be very
@@ -2268,10 +2287,10 @@ check`, which will include extra metadata that supports fast loading.
 
 ### Combining search databases on the command line
 
-All of the commands in sourmash operate in "online" mode, so you can
+All of the commands in sourmash operate in "online" mode, so **you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
-them.  The only caveat to this rule is that if you have multiple
+them**.  The only caveat to this rule is that if you have multiple
 identical matches present across the databases, the order in which
 they are used may depend on the order that the files are
 passed in on the command line.
@@ -2318,7 +2337,7 @@ fast selection and lazy loading of sketches in many situations.
 The `sig check` command can also be used to create standalone manifests
 from collections using a picklist, with the `-m/--save-manifest-matching`
 option. This is useful for commands that don't support picklists natively,
-e.g. plugins and extensions.
+such as commands in plugins.
 
 Note that `sig collect` and `sig check` will generate manifests containing the
 pathnames given to them - so if you use relative paths, the references
@@ -2339,7 +2358,7 @@ file.
 You can read more about the details of zip files and manifests in
 [the advanced usage information for databases](databases-advanced.md).
 
-### Using sourmash plugins
+## Using sourmash plugins
 
 As of sourmash v4.7.0, sourmash has an experimental plugins interface!
 The plugin interface supports extending sourmash to load and save
@@ -2353,4 +2372,28 @@ is installed in.
 In the future, we will include a list of available sourmash plugins in
 the documentation, and also provide a way to list available plugins.
 
-You can list all installed plugins with `sourmash info -v`.
+You can list all installed plugins and their versions with `sourmash info -v`.
+
+Below are some useful plugins that the sourmash team uses regularly
+and supports!
+
+### The `branchwater` plugin - multithreaded and optimized sourmash operations
+
+(Installable via conda and pip as `sourmash_plugin_branchwater`.)
+
+The
+[`branchwater` plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
+provides faster and lower memory versions of `search`, `gather`, and
+`sketch`, as well as large-scale metagenome search
+(used for [petabyte-scale sequence search](https://www.biorxiv.org/content/10.1101/2022.11.02.514947v1))
+and large-scale clustering.
+
+Read [the branchwater plugin docs](https://github.com/sourmash-bio/sourmash_plugin_branchwater/tree/main/doc/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues)
+
+### The `betterplot` plugin - improved plotting and visualization
+
+(Installable via pip as `sourmash_plugin_betterplot`.)
+
+The [`betterplot` plugin](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) provides a variety of new plotting outputs for sourmash, including improved distance matrices, MDS plots, tSNE plots, upset plots, and Venn diagrams. It also supports cluster-cutting and extraction, as well as improved labeling and coloring by category.
+
+Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues).

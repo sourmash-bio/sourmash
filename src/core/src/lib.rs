@@ -37,9 +37,6 @@ pub mod signature;
 pub mod sketch;
 pub mod storage;
 
-#[cfg(feature = "from-finch")]
-pub mod from;
-
 use cfg_if::cfg_if;
 use murmurhash3::murmurhash3_x64_128;
 
@@ -53,6 +50,7 @@ cfg_if! {
 }
 
 type HashIntoType = u64;
+pub type ScaledType = u32;
 
 pub fn _hash_murmur(kmer: &[u8], seed: u64) -> u64 {
     murmurhash3_x64_128(kmer, seed).0

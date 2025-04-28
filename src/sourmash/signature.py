@@ -2,6 +2,7 @@
 """
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
+
 import sys
 import os
 import weakref
@@ -367,7 +368,7 @@ def _detect_input_type(data):
         except TypeError:
             if data.find(b"sourmash_signature") > 0:
                 return SigInput.BUFFER
-            elif data.startswith(b"\x1F\x8B"):  # gzip compressed
+            elif data.startswith(b"\x1f\x8b"):  # gzip compressed
                 return SigInput.BUFFER
 
     try:
@@ -379,7 +380,7 @@ def _detect_input_type(data):
     return SigInput.UNKNOWN
 
 
-def load_signatures(
+def load_signatures_from_json(
     data,
     ksize=None,
     select_moltype=None,
@@ -469,8 +470,10 @@ def load_signatures(
             raise
 
 
-def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=False):
-    sigiter = load_signatures(
+def load_one_signature_from_json(
+    data, ksize=None, select_moltype=None, ignore_md5sum=False
+):
+    sigiter = load_signatures_from_json(
         data, ksize=ksize, select_moltype=select_moltype, ignore_md5sum=ignore_md5sum
     )
 
@@ -487,7 +490,7 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
     raise ValueError("expected to load exactly one signature")
 
 
-def save_signatures(siglist, fp=None, compression=0):
+def save_signatures_to_json(siglist, fp=None, compression=0):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
     attached_refs = weakref.WeakKeyDictionary()
 

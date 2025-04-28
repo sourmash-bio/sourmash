@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
+use std::io;
 use std::iter::Peekable;
 use std::str;
 use std::sync::Mutex;
@@ -12,24 +13,25 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::_hash_murmur;
 use crate::encodings::HashFunctions;
+use crate::prelude::ToWriter;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
+use crate::{ScaledType, _hash_murmur};
 
-pub fn max_hash_for_scaled(scaled: u64) -> u64 {
+pub fn max_hash_for_scaled(scaled: ScaledType) -> u64 {
     match scaled {
-        0 => 0,
-        1 => u64::max_value(),
-        _ => (u64::max_value() as f64 / scaled as f64) as u64,
+        0 => 0, // scaled == 0 indicates this is a num minhash
+        1 => u64::MAX,
+        _ => (u64::MAX as f64 / scaled as f64) as u64,
     }
 }
 
-pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
+pub fn scaled_for_max_hash(max_hash: u64) -> ScaledType {
     match max_hash {
-        0 => 0,
-        _ => (u64::max_value() as f64 / max_hash as f64) as u64,
+        0 => 0, // scaled == 0 indicates this is a num minhash
+        _ => (u64::MAX as f64 / max_hash as f64) as ScaledType,
     }
 }
 
@@ -48,7 +50,7 @@ pub struct KmerMinHash {
     #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default = u64::max_value())]
+    #[builder(default = u64::MAX)]
     max_hash: u64,
 
     #[builder(default)]
@@ -58,7 +60,6 @@ pub struct KmerMinHash {
     abunds: Option<Vec<u64>>,
 
     #[builder(default)]
-    //#[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
     #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
@@ -148,13 +149,11 @@ impl<'de> Deserialize<'de> for KmerMinHash {
         let tmpsig = TempSig::deserialize(deserializer)?;
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
-        let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
-            "protein" => HashFunctions::Murmur64Protein,
-            "dayhoff" => HashFunctions::Murmur64Dayhoff,
-            "hp" => HashFunctions::Murmur64Hp,
-            "dna" => HashFunctions::Murmur64Dna,
-            _ => unimplemented!(), // TODO: throw error here
-        };
+
+        // Set the hash function based on the molecule string. This will panic if
+        // the molecule string is not a valid.
+        let hash_function =
+            HashFunctions::try_from(tmpsig.molecule.as_str()).map_err(serde::de::Error::custom)?;
 
         // This shouldn't be necessary, but at some point we
         // created signatures with unordered mins =(
@@ -183,9 +182,19 @@ impl<'de> Deserialize<'de> for KmerMinHash {
     }
 }
 
+impl ToWriter for KmerMinHash {
+    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
+        serde_json::to_writer(writer, &self)?;
+        Ok(())
+    }
+}
+
 impl KmerMinHash {
     pub fn new(
-        scaled: u64,
+        scaled: ScaledType,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
@@ -230,7 +239,7 @@ impl KmerMinHash {
         self.max_hash
     }
 
-    pub fn scaled(&self) -> u64 {
+    pub fn scaled(&self) -> ScaledType {
         scaled_for_max_hash(self.max_hash)
     }
 
@@ -313,7 +322,7 @@ impl KmerMinHash {
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
         let current_max = match self.mins.last() {
             Some(&x) => x,
-            None => u64::max_value(),
+            None => u64::MAX,
         };
 
         if hash > self.max_hash && self.max_hash != 0 {
@@ -537,13 +546,13 @@ impl KmerMinHash {
     }
 
     pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
@@ -685,13 +694,14 @@ impl KmerMinHash {
         ignore_abundance: bool,
         downsample: bool,
     ) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to larger of two scaled
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(other)
@@ -708,6 +718,14 @@ impl KmerMinHash {
         self.hash_function == HashFunctions::Murmur64Hp
     }
 
+    pub fn skipm1n3(&self) -> bool {
+        self.hash_function == HashFunctions::Murmur64Skipm1n3
+    }
+
+    pub fn skipm2n3(&self) -> bool {
+        self.hash_function == HashFunctions::Murmur64Skipm2n3
+    }
+
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
     }
@@ -721,23 +739,14 @@ impl KmerMinHash {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHash::new(
-            scaled,
-            self.ksize,
-            self.hash_function.clone(),
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+    pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHash, Error> {
+        if self.max_hash == 0 {
+            // CTB: this is a num minhash. Should we just blithely return?
+            Ok(self)
         } else {
-            new_mh.add_many(&self.mins)?;
+            let scaled = scaled_for_max_hash(max_hash);
+            self.downsample_scaled(scaled)
         }
-        Ok(new_mh)
     }
 
     pub fn sum_abunds(&self) -> u64 {
@@ -778,13 +787,31 @@ impl KmerMinHash {
     // this could be improved by generating an HLL estimate while sketching instead
     // (for scaled minhashes)
     pub fn n_unique_kmers(&self) -> u64 {
-        self.size() as u64 * self.scaled() // + (self.ksize - 1) for bp estimation
+        self.size() as u64 * self.scaled() as u64 // + (self.ksize - 1) for bp estimation
     }
 
     // create a downsampled copy of self
-    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
+    pub fn downsample_scaled(self, scaled: ScaledType) -> Result<KmerMinHash, Error> {
+        if self.scaled() == scaled || self.scaled() == 0 {
+            Ok(self)
+        } else if self.scaled() > scaled {
+            Err(Error::CannotUpsampleScaled)
+        } else {
+            let mut new_mh = KmerMinHash::new(
+                scaled,
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+            if self.abunds.is_some() {
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+            } else {
+                new_mh.add_many(&self.mins)?;
+            }
+            Ok(new_mh)
+        }
     }
 
     pub fn inflate(&mut self, abunds_from: &KmerMinHash) -> Result<(), Error> {
@@ -845,6 +872,16 @@ impl KmerMinHash {
             });
 
         Ok((abundances, total_abundance))
+    }
+
+    pub fn from_reader<R>(rdr: R) -> Result<KmerMinHash, Error>
+    where
+        R: std::io::Read,
+    {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
+        let mh: KmerMinHash = serde_json::from_reader(rdr)?;
+        Ok(mh)
     }
 }
 
@@ -960,7 +997,7 @@ pub struct KmerMinHashBTree {
     #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default = u64::max_value())]
+    #[builder(default = u64::MAX)]
     max_hash: u64,
 
     #[builder(default)]
@@ -973,7 +1010,6 @@ pub struct KmerMinHashBTree {
     current_max: u64,
 
     #[builder(default)]
-    //#[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
     #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
@@ -996,7 +1032,7 @@ impl Clone for KmerMinHashBTree {
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
             current_max: self.current_max,
-            md5sum: Mutex::new(Some(self.md5sum())),
+            md5sum: Mutex::new(self.md5sum.lock().unwrap().clone()),
         }
     }
 }
@@ -1103,9 +1139,19 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
     }
 }
 
+impl ToWriter for KmerMinHashBTree {
+    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
+        serde_json::to_writer(writer, &self)?;
+        Ok(())
+    }
+}
+
 impl KmerMinHashBTree {
     pub fn new(
-        scaled: u64,
+        scaled: ScaledType,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
@@ -1147,7 +1193,7 @@ impl KmerMinHashBTree {
         self.max_hash
     }
 
-    pub fn scaled(&self) -> u64 {
+    pub fn scaled(&self) -> ScaledType {
         scaled_for_max_hash(self.max_hash)
     }
 
@@ -1309,7 +1355,7 @@ impl KmerMinHashBTree {
         let union = self.mins.union(&other.mins);
 
         let to_take = if self.num == 0 {
-            usize::max_value()
+            usize::MAX
         } else {
             self.num as usize
         };
@@ -1356,13 +1402,14 @@ impl KmerMinHashBTree {
     }
 
     pub fn count_common(&self, other: &KmerMinHashBTree, downsample: bool) -> Result<u64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to the larger of the two scaled values
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
@@ -1487,13 +1534,14 @@ impl KmerMinHashBTree {
         ignore_abundance: bool,
         downsample: bool,
     ) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to larger of two scaled
+            let (first, second) = if self.scaled() > other.scaled() {
                 (self, other)
             } else {
                 (other, self)
             };
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(other)
@@ -1529,29 +1577,38 @@ impl KmerMinHashBTree {
     }
 
     // create a downsampled copy of self
-    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHashBTree::new(
-            scaled,
-            self.ksize,
-            self.hash_function.clone(),
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+    pub fn downsample_max_hash(self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
+        if self.max_hash == 0 {
+            // CTB: this is a num minhash. Just blithely return.
+            Ok(self)
         } else {
-            new_mh.add_many(&self.mins())?;
+            let scaled = scaled_for_max_hash(max_hash);
+            self.downsample_scaled(scaled)
         }
-        Ok(new_mh)
     }
 
     // create a downsampled copy of self
-    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
+    pub fn downsample_scaled(self, scaled: ScaledType) -> Result<KmerMinHashBTree, Error> {
+        if self.scaled() == scaled || self.scaled() == 0 {
+            Ok(self)
+        } else if self.scaled() > scaled {
+            Err(Error::CannotUpsampleScaled)
+        } else {
+            let mut new_mh = KmerMinHashBTree::new(
+                scaled,
+                self.ksize,
+                self.hash_function.clone(),
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
+            if self.abunds.is_some() {
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+            } else {
+                new_mh.add_many(&self.mins())?;
+            }
+            Ok(new_mh)
+        }
     }
 
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
@@ -1572,6 +1629,16 @@ impl KmerMinHashBTree {
         } else {
             self.size() as u64
         }
+    }
+
+    pub fn from_reader<R>(rdr: R) -> Result<KmerMinHashBTree, Error>
+    where
+        R: std::io::Read,
+    {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
+        let mh: KmerMinHashBTree = serde_json::from_reader(rdr)?;
+        Ok(mh)
     }
 }
 
@@ -1646,6 +1713,8 @@ impl From<KmerMinHashBTree> for KmerMinHash {
         new_mh.mins = mins;
         new_mh.abunds = abunds;
 
+        new_mh.md5sum = other.md5sum;
+
         new_mh
     }
 }
@@ -1670,6 +1739,8 @@ impl From<&KmerMinHashBTree> for KmerMinHash {
         new_mh.mins = mins;
         new_mh.abunds = abunds;
 
+        new_mh.md5sum = Mutex::new(other.md5sum.lock().unwrap().clone());
+
         new_mh
     }
 }
@@ -1692,6 +1763,8 @@ impl From<KmerMinHash> for KmerMinHashBTree {
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
+
+        new_mh.md5sum = other.md5sum;
 
         new_mh
     }
@@ -1783,4 +1856,62 @@ fn intersection_size<'a>(
         };
     }
     (common as u64, union_size as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    /// Test that a valid KmerMinHash json can be deserialized correctly
+    fn test_deserialize_valid() {
+        let json_data = r#"
+        {
+            "num": 1000,
+            "ksize": 21,
+            "seed": 42,
+            "max_hash": 0,
+            "md5sum": "test_md5",
+            "mins": [1, 2, 3, 4, 5],
+            "abundances": [10, 20, 30, 40, 50],
+            "molecule": "dna"
+        }
+        "#;
+
+        let deserialized: KmerMinHash =
+            serde_json::from_str(json_data).expect("Failed to deserialize");
+
+        assert_eq!(deserialized.num, 1000);
+        assert_eq!(deserialized.ksize, 21);
+        assert_eq!(deserialized.seed, 42);
+        assert_eq!(deserialized.hash_function, HashFunctions::Murmur64Dna);
+        assert_eq!(deserialized.mins, vec![1, 2, 3, 4, 5]);
+        assert!(deserialized.abunds.is_some());
+    }
+
+    #[test]
+    /// Test that a invalid molecule type panics!
+    fn test_deserialize_invalid_molecule() {
+        let json_data = r#"
+        {
+            "num": 1000,
+            "ksize": 21,
+            "seed": 42,
+            "max_hash": 0,
+            "md5sum": "test_md5",
+            "mins": [1, 2, 3, 4, 5],
+            "molecule": "unknown_type"
+        }
+        "#;
+
+        let result: Result<KmerMinHash, _> = serde_json::from_str(json_data);
+
+        // Assert that the result is an error
+        assert!(result.is_err());
+
+        // Extract and check the error message
+        let error_message = format!("{}", result.unwrap_err());
+        assert!(error_message.contains("Invalid hash function"));
+    }
 }

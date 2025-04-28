@@ -17,6 +17,8 @@ updates:
     - dependency-name: "wasm-bindgen"
     - dependency-name: "once_cell"
     - dependency-name: "chrono"
+    - dependency-name: "js-sys"
+    - dependency-name: "web-sys"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:

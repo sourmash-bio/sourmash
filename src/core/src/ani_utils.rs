@@ -5,7 +5,7 @@
 use roots::{find_root_brent, SimpleConvergency};
 use statrs::distribution::{ContinuousCDF, Normal};
 
-use crate::Error;
+use crate::{Error, ScaledType};
 
 fn exp_n_mutated(l: f64, k: f64, r1: f64) -> f64 {
     let q = r1_to_q(k, r1);
@@ -93,7 +93,7 @@ pub fn ani_from_containment(containment: f64, ksize: f64) -> f64 {
 pub fn ani_ci_from_containment(
     containment: f64,
     ksize: f64,
-    scaled: u64,
+    scaled: ScaledType,
     n_unique_kmers: u64,
     confidence: Option<f64>,
 ) -> Result<(f64, f64), Error> {

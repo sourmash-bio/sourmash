@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<1.5.0",
+    "maturin>=1,<1.9.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -9,51 +9,55 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.8.8"
+version = "4.8.15-dev"
+license = "BSD-3-Clause"
 
 authors = [
-  { name="Luiz Irber", orcid="0000-0003-4371-9659" },
-  { name="N. Tessa Pierce-Ward", orcid="0000-0002-2942-5331" },
-  { name="Mohamed Abuelanin", orcid="0000-0002-3419-4785" },
-  { name="Harriet Alexander", orcid="0000-0003-1308-8008" },
-  { name="Abhishek Anant", orcid="0000-0002-5751-2010" },
-  { name="Keya Barve", orcid="0000-0003-3241-2117" },
-  { name="Colton Baumler", orcid="0000-0002-5926-7792" },
-  { name="Olga Botvinnik", orcid="0000-0003-4412-7970" },
-  { name="Phillip Brooks", orcid="0000-0003-3987-244X" },
-  { name="Peter Cock", orcid="0000-0001-9513-9993" },
-  { name="Daniel Dsouza", orcid="0000-0001-7843-8596" },
-  { name="Jade Gardner", orcid="0009-0005-0787-5752" },
-  { name="Laurent Gautier", orcid="0000-0003-0638-3391" },
-  { name="Tim Head", orcid="0000-0003-0931-3698" },
-  { name="Mahmudur Rahman Hera", orcid="0000-0002-5992-9012" },
-  { name="Hannah Eve Houts", orcid="0000-0002-7954-4793" },
-  { name="Lisa K. Johnson", orcid="0000-0002-3600-7218" },
-  { name="Fabian Klötzl", orcid="0000-0002-6930-0592" },
-  { name="David Koslicki", orcid="0000-0002-0640-954X" },
-  { name="Katrin Leinweber", orcid="0000-0001-5135-5758" },
-  { name="Marisa Lim", orcid="0000-0003-2097-8818" },
-  { name="Ricky Lim", orcid="0000-0003-1313-7076" },
-  { name="Bradley Nelson", orcid="0009-0001-1553-932X" },
-  { name="Ivan Ogasawara", orcid="0000-0001-5049-4289" },
-  { name="Taylor Reiter", orcid="0000-0002-7388-421X" },
-  { name="Camille Scott", orcid="0000-0001-8822-8779" },
-  { name="Andreas Sjödin", orcid="0000-0001-5350-4219" },
-  { name="Connor T. Skennerton", orcid="0000-0003-1320-4873" },
-  { name="Jason Stajich", orcid="0000-0002-7591-0020" },
-  { name="Daniel Standage", orcid="0000-0003-0342-8531" },
-  { name="S. Joshua Swamidass", orcid="0000-0003-2191-0778" },
-  { name="Connor Tiffany", orcid="0000-0001-8188-7720" },
-  { name="Pranathi Vemuri", orcid="0000-0002-5748-9594"},
-  { name="Erik Young", orcid="0000-0002-9195-9801" },
-  { name="Nick H", orcid="0000-0002-1685-302X" },
-  { name="C. Titus Brown", orcid="0000-0001-6001-2677" },
+  { name="Luiz Irber" },
+  { name="N. Tessa Pierce-Ward" },
+  { name="Mohamed Abuelanin" },
+  { name="Harriet Alexander" },
+  { name="Abhishek Anant" },
+  { name="Keya Barve" },
+  { name="Colton Baumler" },
+  { name="Olga Botvinnik" },
+  { name="Phillip Brooks" },
+  { name="Luca Cappelletti" },
+  { name="Peter Cock" },
+  { name="Daniel Dsouza" },
+  { name="Jade Gardner" },
+  { name="Laurent Gautier" },
+  { name="Tim Head" },
+  { name="Mahmudur Rahman Hera" },
+  { name="Hannah Eve Houts" },
+  { name="Lisa K. Johnson" },
+  { name="Fabian Klötzl" },
+  { name="David Koslicki" },
+  { name="Katrin Leinweber" },
+  { name="Marisa Lim" },
+  { name="Ricky Lim" },
+  { name="Chase Mateusiak" },
+  { name="Bradley Nelson" },
+  { name="Ivan Ogasawara" },
+  { name="Aiden Pike" },
+  { name="Taylor Reiter" },
+  { name="Camille Scott" },
+  { name="Andreas Sjödin" },
+  { name="Connor T. Skennerton" },
+  { name="Jason Stajich" },
+  { name="Daniel Standage" },
+  { name="S. Joshua Swamidass" },
+  { name="Connor Tiffany" },
+  { name="Pranathi Vemuri" },
+  { name="Erik Young" },
+  { name="Nick H" },
+  { name="C. Titus Brown" },
 ]
 
 maintainers = [
-  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio", orcid="0000-0003-4371-9659" },
-  { name="C. Titus Brown", email="titus@idyll.org", orcid="0000-0001-6001-2677" },
-  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu", orcid="0000-0002-2942-5331" },
+  { name="Luiz C. Irber, Jr", email="luiz@sourmash.bio" },
+  { name="C. Titus Brown", email="titus@idyll.org" },
+  { name="N. Tessa Pierce-Ward", email="ntpierce@ucdavis.edu" },
 ]
 
 classifiers = [
@@ -61,14 +65,13 @@ classifiers = [
   "Environment :: Console",
   "Environment :: MacOS X",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
   "Natural Language :: English",
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
   "Programming Language :: Rust",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -83,7 +86,51 @@ dependencies = [
   "bitstring>=3.1.9,<5",
 ]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+
+[tool.sourmash.metadata]
+authors = [
+  { name="Luiz Irber", orcid="0000-0003-4371-9659" },
+  { name="N. Tessa Pierce-Ward", orcid="0000-0002-2942-5331" },
+  { name="Mohamed Abuelanin", orcid="0000-0002-3419-4785" },
+  { name="Harriet Alexander", orcid="0000-0003-1308-8008" },
+  { name="Abhishek Anant", orcid="0000-0002-5751-2010" },
+  { name="Keya Barve", orcid="0000-0003-3241-2117" },
+  { name="Colton Baumler", orcid="0000-0002-5926-7792" },
+  { name="Olga Botvinnik", orcid="0000-0003-4412-7970" },
+  { name="Phillip Brooks", orcid="0000-0003-3987-244X" },
+  { name="Luca Cappelletti", orcid="0000-0002-1269-2038" },
+  { name="Peter Cock", orcid="0000-0001-9513-9993" },
+  { name="Daniel Dsouza", orcid="0000-0001-7843-8596" },
+  { name="Jade Gardner", orcid="0009-0005-0787-5752" },
+  { name="Laurent Gautier", orcid="0000-0003-0638-3391" },
+  { name="Tim Head", orcid="0000-0003-0931-3698" },
+  { name="Mahmudur Rahman Hera", orcid="0000-0002-5992-9012" },
+  { name="Hannah Eve Houts", orcid="0000-0002-7954-4793" },
+  { name="Lisa K. Johnson", orcid="0000-0002-3600-7218" },
+  { name="Fabian Klötzl", orcid="0000-0002-6930-0592" },
+  { name="David Koslicki", orcid="0000-0002-0640-954X" },
+  { name="Katrin Leinweber", orcid="0000-0001-5135-5758" },
+  { name="Marisa Lim", orcid="0000-0003-2097-8818" },
+  { name="Ricky Lim", orcid="0000-0003-1313-7076" },
+  { name="Chase Mateusiak", orcid="0000-0002-2890-4242" },
+  { name="Bradley Nelson", orcid="0009-0001-1553-932X" },
+  { name="Ivan Ogasawara", orcid="0000-0001-5049-4289" },
+  { name="Aiden Pike", orcid="0009-0002-1398-0207"},
+  { name="Taylor Reiter", orcid="0000-0002-7388-421X" },
+  { name="Camille Scott", orcid="0000-0001-8822-8779" },
+  { name="Andreas Sjödin", orcid="0000-0001-5350-4219" },
+  { name="Connor T. Skennerton", orcid="0000-0003-1320-4873" },
+  { name="Jason Stajich", orcid="0000-0002-7591-0020" },
+  { name="Daniel Standage", orcid="0000-0003-0342-8531" },
+  { name="S. Joshua Swamidass", orcid="0000-0003-2191-0778" },
+  { name="Connor Tiffany", orcid="0000-0001-8188-7720" },
+  { name="Pranathi Vemuri", orcid="0000-0002-5748-9594"},
+  { name="Erik Young", orcid="0000-0002-9195-9801" },
+  { name="Nick H", orcid="0000-0002-1685-302X" },
+  { name="C. Titus Brown", orcid="0000-0001-6001-2677" },
+]
+
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -100,8 +147,8 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<8.2.0",
-  "pytest-cov>=4,<6.0",
+  "pytest>=6.2.4,<8.4.0",
+  "pytest-cov>=4,<7.0",
   "pytest-xdist>=3.1",
   "pyyaml>=6,<7",
   "diff-cover>=7.3",
@@ -116,14 +163,15 @@ demo = [
   "ipython",
 ]
 doc = [
-  "sphinx>=4.4.0,<8",
-  "myst-parser==2.0.0",
-  "Jinja2==3.1.3",
+  "sphinx>=6,<9",
+  "myst-parser",
+  "Jinja2",
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
+  "sphinx-design==0.6.1",
   "ipython",
-  "docutils>=0.17.1,<0.21",
+  "docutils>=0.17.1,<0.22",
 ]
 storage = [
   "ipfshttpclient>=0.4.13",
@@ -158,6 +206,9 @@ macos-deployment-target = "10.14"
 [tool.maturin.target.aarch64-apple-darwin]
 macos-deployment-target = "11.0"
 
+[tool.ruff]
+extend-exclude = ["*.ipynb"]
+
 [tool.ruff.lint]
 extend-select = [
   "UP",  # pyupgrade
@@ -173,7 +224,7 @@ line_length = 88
 known_first_party = ["sourmash"]
 
 [tool.cibuildwheel]
-build = "cp310-*"
+build = "cp311-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_* *-ppc64le *-s390x"
 before-all = [
   "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
@@ -181,6 +232,7 @@ before-all = [
 ]
 macos.before-build = [
   "rustup target add aarch64-apple-darwin",
+  "rustup target add x86_64-apple-darwin",
 ]
 build-verbosity = 3
 
@@ -192,12 +244,20 @@ PATH="$HOME/.cargo/bin:$PATH"
 before-all = [
   "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=stable",
   "cargo update --dry-run",
-  "if [ -f /etc/system-release ]; then yum -y install centos-release-scl; fi",
   "if [ -f /etc/system-release ]; then yum -y install llvm-toolset-7.0; fi",
 ]
 before-build = [
   "if [ -f /etc/system-release ]; then source scl_source enable llvm-toolset-7.0; fi",
   "if [ -f /etc/system-release ]; then source scl_source enable devtoolset-10; fi",
+]
+
+[tool.cibuildwheel.pyodide.environment]
+# avoid needing a nightly compiler
+RUSTC_BOOTSTRAP=1
+
+[tool.cibuildwheel.pyodide]
+before-build = [
+  "rustup target add wasm32-unknown-emscripten"
 ]
 
 [tool.cibuildwheel.linux.environment]
@@ -238,3 +298,63 @@ paths.source = [
 report.fail_under = 88
 run.parallel = true
 run.plugins = ["covdefaults"]
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
+
+[tool.pixi.feature.build.dependencies]
+clangdev = ">=16.0.6,<16.1"
+cxx-compiler = ">=1.7.0,<1.8"
+libclang = ">=16.0.6,<16.1"
+
+[tool.pixi.feature.msrv.dependencies]
+rust = "~=1.74.0"
+
+[tool.pixi.feature.msrv.tasks]
+check-msrv = "cargo build --all-features"
+
+[tool.pixi.feature.dev.dependencies]
+cargo-llvm-cov = "~=0.6.15"
+cargo-nextest = "~=0.9.78"
+git = "2.41.0.*"
+rust = "~=1.84.0"
+
+pandoc = "3.1.3.*"
+python = "3.11.*"
+tox = ">=4.11.0,<5"
+
+# prefer conda deps over PyPI
+screed = ">=1.1.2,<2"
+cffi = ">=1.14.0"
+numpy = "*"
+matplotlib = "*"
+scipy = "*"
+deprecation = ">=2.0.6"
+cachetools = ">=4,<6"
+bitstring = ">=3.1.9,<5"
+make = ">=4.4.1,<5"
+
+[tool.pixi.feature.dev.tasks]
+install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
+semver-check = { cmd = "cargo semver-checks check-release --default-features --features branchwater" }
+
+[tool.pixi.feature.wasm.dependencies]
+rust-std-wasm32-unknown-unknown = "*"
+nodejs = "~=20.0"
+
+[tool.pixi.feature.wasm.tasks]
+build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
+test-wasm = { cmd = "wasm-pack test --node src/core -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
+
+[tool.pixi.environments]
+default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
+msrv = { features = ["build", "msrv"], solve-group = "msrv" }
+wasm = { features = ["dev", "build", "wasm"], solve-group = "default" }
+
+[tool.pixi.system-requirements]
+macos = "11.0"
+
+[tool.pixi.activation.env]
+CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
+PATH = "$PATH:$CARGO_HOME/bin"

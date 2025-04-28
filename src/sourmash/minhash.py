@@ -4,6 +4,7 @@ sourmash submodule that provides MinHash class and utility functions.
 class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
+
 from .distance_utils import (
     jaccard_to_distance,
     containment_to_distance,
@@ -195,6 +196,8 @@ class MinHash(RustObject):
         is_protein=False,
         dayhoff=False,
         hp=False,
+        skipm1n3=False,
+        skipm2n3=False,
         track_abundance=False,
         seed=MINHASH_DEFAULT_SEED,
         max_hash=0,
@@ -214,6 +217,8 @@ class MinHash(RustObject):
            * is_protein (default False) - aa k-mers
            * dayhoff (default False) - dayhoff encoding
            * hp (default False) - hydrophilic/hydrophobic aa
+           * skipm1n3 (default False) - skipmer (m1n3)
+           * skipm2n3 (default False) - skipmer (m2n3)
            * track_abundance (default False) - track hash multiplicity
            * mins (default None) - list of hashvals, or (hashval, abund) pairs
            * seed (default 42) - murmurhash seed
@@ -242,6 +247,10 @@ class MinHash(RustObject):
         elif is_protein:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
             ksize = ksize * 3
+        elif skipm1n3:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_SKIPM1N3
+        elif skipm2n3:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_SKIPM2N3
         else:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
 
@@ -263,6 +272,8 @@ class MinHash(RustObject):
             is_protein=self.is_protein,
             dayhoff=self.dayhoff,
             hp=self.hp,
+            skipm1n3=self.skipm1n3,
+            skipm2n3=self.skipm2n3,
             track_abundance=self.track_abundance,
             seed=self.seed,
             max_hash=self._max_hash,
@@ -278,12 +289,20 @@ class MinHash(RustObject):
         # note: we multiple ksize by 3 here so that
         # pickle protocols that bypass __setstate__ <coff numpy coff>
         # get a ksize that makes sense to the Rust layer. See #2262.
+        # CTB/NTP note: if you add things below, you might want to put
+        # them at the end, because we use internal indexes in a few places.
+        # see especially `_set_num_scaled()` in sig/__main__.my.
+        # My apologies.
         return (
             self.num,
-            self.ksize if self.is_dna else self.ksize * 3,
+            self.ksize
+            if self.is_dna or self.skipm1n3 or self.skipm2n3
+            else self.ksize * 3,
             self.is_protein,
             self.dayhoff,
             self.hp,
+            self.skipm1n3,
+            self.skipm2n3,
             self.hashes,
             None,
             self.track_abundance,
@@ -299,6 +318,8 @@ class MinHash(RustObject):
             is_protein,
             dayhoff,
             hp,
+            skipm1n3,
+            skipm2n3,
             mins,
             _,
             track_abundance,
@@ -315,6 +336,10 @@ class MinHash(RustObject):
             if hp
             else lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
             if is_protein
+            else lib.HASH_FUNCTIONS_MURMUR64_SKIPM1N3
+            if skipm1n3
+            else lib.HASH_FUNCTIONS_MURMUR64_SKIPM2N3
+            if skipm2n3
             else lib.HASH_FUNCTIONS_MURMUR64_DNA
         )
 
@@ -339,6 +364,8 @@ class MinHash(RustObject):
             is_protein=self.is_protein,
             dayhoff=self.dayhoff,
             hp=self.hp,
+            skipm1n3=self.skipm1n3,
+            skipm2n3=self.skipm2n3,
             track_abundance=self.track_abundance,
             seed=self.seed,
             max_hash=self._max_hash,
@@ -460,7 +487,7 @@ class MinHash(RustObject):
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
-        if self.is_dna:
+        if self.is_dna or self.skipm1n3 or self.skipm2n3:
             if len(kmer) != self.ksize:
                 raise ValueError(f"kmer to add is not {self.ksize} in length")
         else:
@@ -560,7 +587,9 @@ class MinHash(RustObject):
 
     @property
     def is_dna(self):
-        return not (self.is_protein or self.dayhoff or self.hp)
+        return not (
+            self.is_protein or self.dayhoff or self.hp or self.skipm1n3 or self.skipm2n3
+        )
 
     @property
     def is_protein(self):
@@ -575,9 +604,17 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_hp)
 
     @property
+    def skipm1n3(self):
+        return self._methodcall(lib.kmerminhash_skipm1n3)
+
+    @property
+    def skipm2n3(self):
+        return self._methodcall(lib.kmerminhash_skipm2n3)
+
+    @property
     def ksize(self):
         k = self._methodcall(lib.kmerminhash_ksize)
-        if not self.is_dna:
+        if not self.is_dna and not self.skipm1n3 and not self.skipm2n3:
             assert k % 3 == 0
             k = int(k / 3)
         return k
@@ -705,6 +742,8 @@ class MinHash(RustObject):
             is_protein=self.is_protein,
             dayhoff=self.dayhoff,
             hp=self.hp,
+            skipm1n3=self.skipm1n3,
+            skipm2n3=self.skipm2n3,
             track_abundance=self.track_abundance,
             seed=self.seed,
             max_hash=max_hash,
@@ -727,6 +766,8 @@ class MinHash(RustObject):
                 is_protein=self.is_protein,
                 dayhoff=self.dayhoff,
                 hp=self.hp,
+                skipm1n3=self.skipm1n3,
+                skipm2n3=self.skipm2n3,
                 track_abundance=False,
                 seed=self.seed,
                 max_hash=self._max_hash,
@@ -1050,6 +1091,10 @@ class MinHash(RustObject):
             return "dayhoff"
         elif self.hp:
             return "hp"
+        elif self.skipm1n3:
+            return "skipm1n3"
+        elif self.skipm2n3:
+            return "skipm2n3"
         else:
             return "DNA"
 
@@ -1223,6 +1268,8 @@ class FrozenMinHash(MinHash):
             is_protein,
             dayhoff,
             hp,
+            skipm1n3,
+            skipm2n3,
             mins,
             _,
             track_abundance,
@@ -1239,6 +1286,10 @@ class FrozenMinHash(MinHash):
             if hp
             else lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
             if is_protein
+            else lib.HASH_FUNCTIONS_MURMUR64_SKIPM1N3
+            if skipm1n3
+            else lib.HASH_FUNCTIONS_MURMUR64_SKIPM2N3
+            if skipm2n3
             else lib.HASH_FUNCTIONS_MURMUR64_DNA
         )
 

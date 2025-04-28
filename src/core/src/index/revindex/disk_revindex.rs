@@ -1,43 +1,54 @@
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
+use std::cmp::max;
+use std::collections::HashSet;
+use std::hash::{BuildHasher, BuildHasherDefault};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use log::{info, trace};
 use rayon::prelude::*;
-use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
+use rocksdb::MergeOperands;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, stats_for_cf, Datasets, DbStats, HashToColor, QueryColors, RevIndexOps, DB,
-    HASHES, MANIFEST, METADATA, STORAGE_SPEC, VERSION,
+    self as module, stats_for_cf, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors,
+    RevIndexOps,
 };
 use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::storage::{InnerStorage, Storage};
+use crate::storage::{
+    rocksdb::{cf_descriptors, db_options, ALL_CFS, DB, HASHES, METADATA},
+    InnerStorage, RocksDBStorage, Storage,
+};
 use crate::Result;
 
 const DB_VERSION: u8 = 1;
 
+// DB metadata saved in the METADATA column family
+const MANIFEST: &str = "manifest";
+const STORAGE_SPEC: &str = "storage_spec";
+const VERSION: &str = "version";
+const PROCESSED: &str = "processed";
+
 fn compute_color(idxs: &Datasets) -> Color {
     let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
-    let mut hasher = s.build_hasher();
-    idxs.hash(&mut hasher);
-    hasher.finish()
+    s.hash_one(idxs)
 }
 
 #[derive(Clone)]
-pub struct RevIndex {
+pub struct DiskRevIndex {
+    location: String,
     db: Arc<DB>,
     collection: Arc<CollectionSet>,
+    processed: Arc<RwLock<Datasets>>,
 }
 
-fn merge_datasets(
+pub(crate) fn merge_datasets(
     _: &[u8],
     existing_val: Option<&[u8]>,
     operands: &MergeOperands,
@@ -62,12 +73,11 @@ pub fn repair(path: &Path) {
 }
 */
 
-impl RevIndex {
+impl DiskRevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
-        let mut opts = module::RevIndex::db_options();
+        let mut opts = db_options();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
-        opts.prepare_for_bulk_load();
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -76,27 +86,48 @@ impl RevIndex {
 
         let processed_sigs = AtomicUsize::new(0);
 
+        let collection = Arc::new(collection);
+        let processed = Arc::new(RwLock::new(Self::load_processed(
+            db.clone(),
+            collection.clone(),
+            true,
+        )?));
+
         let index = Self {
+            location: String::from(path.to_str().expect("cannot extract path")),
             db,
-            collection: Arc::new(collection),
+            collection,
+            processed: processed.clone(),
         };
 
         index.collection.par_iter().for_each(|(dataset_id, _)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
+            // check if this dataset_id was processed already
+            // call map_hashes_colors only if not already processed
+            if !processed.read().unwrap().contains(&dataset_id) {
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 {
+                    info!("Processed {} reference sigs", i);
+                }
 
-            index.map_hashes_colors(dataset_id as Idx);
+                index.map_hashes_colors(dataset_id as Idx);
+
+                // if cached in a new field in the RevIndex,
+                // then update the cache too
+
+                processed.write().unwrap().extend([dataset_id]);
+            }
         });
 
         index.save_collection().expect("Error saving collection");
 
         info!("Compact SSTs");
         index.compact();
-        info!("Processed {} reference sigs", processed_sigs.into_inner());
+        info!(
+            "Done! Processed {} reference sigs",
+            processed_sigs.into_inner()
+        );
 
-        Ok(module::RevIndex::Plain(index))
+        Ok(module::RevIndex::Disk(index))
     }
 
     pub fn open<P: AsRef<Path>>(
@@ -104,10 +135,9 @@ impl RevIndex {
         read_only: bool,
         storage_spec: Option<&str>,
     ) -> Result<module::RevIndex> {
-        let mut opts = module::RevIndex::db_options();
-        if !read_only {
-            opts.prepare_for_bulk_load();
-        }
+        let mut opts = db_options();
+        opts.create_if_missing(true);
+        opts.create_missing_column_families(true);
 
         // prepare column family descriptors
         let cfs = cf_descriptors();
@@ -128,7 +158,36 @@ impl RevIndex {
             storage_spec,
         )?);
 
-        Ok(module::RevIndex::Plain(Self { db, collection }))
+        let processed = Arc::new(RwLock::new(Self::load_processed(
+            db.clone(),
+            collection.clone(),
+            false,
+        )?));
+
+        Ok(module::RevIndex::Disk(Self {
+            location: String::from(path.as_ref().to_str().expect("cannot extract path")),
+            db,
+            collection,
+            processed,
+        }))
+    }
+
+    fn load_processed(
+        db: Arc<DB>,
+        collection: Arc<CollectionSet>,
+        assume_empty: bool,
+    ) -> Result<Datasets> {
+        let cf_metadata = db.cf_handle(METADATA).unwrap();
+        if let Some(rdr) = db.get_pinned_cf(&cf_metadata, PROCESSED)? {
+            // convert rdr to Datasets
+            Datasets::from_slice(&rdr)
+                .ok_or_else(|| todo!("throw error from deserializing Datasets"))
+        } else if assume_empty {
+            Ok(Datasets::default())
+        } else {
+            let all_datasets: Vec<_> = (0..collection.manifest().len()).map(|v| v as Idx).collect();
+            Ok(Datasets::new(&all_datasets))
+        }
     }
 
     fn load_collection_from_rocksdb(
@@ -152,7 +211,7 @@ impl RevIndex {
         };
 
         let storage = if spec == "rocksdb://" {
-            todo!("init storage from db")
+            InnerStorage::new(RocksDBStorage::from_db(db.clone()))
         } else {
             InnerStorage::from_spec(spec)?
         };
@@ -212,11 +271,27 @@ impl RevIndex {
                 .merge_cf(&cf_hashes, &hash_bytes[..], colors.as_slice())
                 .expect("error merging");
         }
+
+        // finished processing this dataset,
+        // do a merge_cf in the PROCESSED key in metadata
+        // to account for that.
+        let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+        self.db
+            .merge_cf(&cf_metadata, PROCESSED, colors.as_slice())
+            .expect("error merging");
     }
 }
 
-impl RevIndexOps for RevIndex {
-    fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+impl RevIndexOps for DiskRevIndex {
+    fn location(&self) -> &str {
+        self.location.as_str()
+    }
+
+    fn counter_for_query(
+        &self,
+        query: &KmerMinHash,
+        picklist: Option<DatasetPicklist>,
+    ) -> SigCounter {
         info!("Collecting hashes");
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
@@ -234,7 +309,17 @@ impl RevIndexOps for RevIndex {
             .filter_map(|r| r.ok().unwrap_or(None))
             .flat_map(|raw_datasets| {
                 let new_vals = Datasets::from_slice(&raw_datasets).unwrap();
-                new_vals.into_iter()
+
+                // filter against picklist if need be.
+                if let Some(pl) = &picklist {
+                    let new_vals: HashSet<_> = new_vals
+                        .into_iter()
+                        .filter(|&i| pl.dataset_ids.contains(&i))
+                        .collect();
+                    Box::new(new_vals.into_iter())
+                } else {
+                    new_vals.into_iter()
+                }
             })
             .collect()
     }
@@ -242,7 +327,8 @@ impl RevIndexOps for RevIndex {
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
-    ) -> (SigCounter, QueryColors, HashToColor) {
+        picklist: Option<DatasetPicklist>,
+    ) -> CounterGather {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -260,61 +346,60 @@ impl RevIndexOps for RevIndex {
         let mut query_colors: QueryColors = Default::default();
         let mut counter: SigCounter = Default::default();
 
-        info!("Building hash_to_colors and query_colors");
-        let hash_to_colors = query
+        info!("Building hash_to_color and query_colors");
+        let hash_to_color = query
             .iter_mins()
             .zip(self.db.multi_get_cf(hashes_iter))
             .filter_map(|(k, r)| {
-                let raw = r.ok().unwrap_or(None);
-                raw.map(|raw| {
-                    let new_vals = Datasets::from_slice(&raw).unwrap();
-                    let color = compute_color(&new_vals);
-                    query_colors
-                        .entry(color)
-                        .or_insert_with(|| new_vals.clone());
-                    counter.update(new_vals);
-                    (*k, color)
-                })
-            })
-            .collect();
+                let raw: Option<Vec<u8>> = r.ok().unwrap_or(None);
 
-        (counter, query_colors, hash_to_colors)
-    }
+                if let Some(r) = raw {
+                    let mut new_vals = Datasets::from_slice(&r).unwrap();
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
-        info!("get matches from counter");
-        counter
-            .most_common()
-            .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = &self
-                        .collection
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
-                    Some((row.name().into(), size))
+                    // filter by picklist?
+                    if let Some(pl) = &picklist {
+                        let val_set: Vec<Idx> = new_vals
+                            .into_iter()
+                            .filter(|&i| pl.dataset_ids.contains(&i))
+                            .collect();
+                        new_vals = Datasets::new(&val_set[..]);
+                    }
+
+                    if new_vals.len() > 0 {
+                        let color = compute_color(&new_vals);
+                        query_colors
+                            .entry(color)
+                            .or_insert_with(|| new_vals.clone());
+                        counter.update(new_vals);
+                        Some((*k, color))
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             })
-            .collect()
+            .collect();
+
+        CounterGather {
+            counter,
+            query_colors,
+            hash_to_color,
+        }
     }
 
     fn gather(
         &self,
-        mut counter: SigCounter,
-        query_colors: QueryColors,
-        hash_to_color: HashToColor,
+        mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
         selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
-        let mut match_size = usize::max_value();
+        let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
         let _selection = selection.unwrap_or_else(|| self.collection.selection());
-        let mut orig_query_ds = orig_query.clone();
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
@@ -324,41 +409,57 @@ impl RevIndexOps for RevIndex {
         let calc_ani_ci = false;
         let ani_confidence_interval_fraction = None;
 
-        while match_size > threshold && !counter.is_empty() {
-            trace!("counter len: {}", counter.len());
+        while match_size > threshold && !cg.is_empty() {
+            trace!("counter len: {}", cg.len());
             trace!("match size: {}", match_size);
 
-            let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
-            match_size = if size >= threshold { size } else { break };
-            // handle special case where threshold was set to 0
-            if match_size == 0 {
+            let result = cg.peek(threshold);
+            if result.is_none() {
                 break;
             }
+            let (dataset_id, match_size) = result.unwrap();
 
-            // this should downsample mh for us
             let match_sig = self.collection.sig_for_dataset(dataset_id)?;
-
-            // get downsampled minhashes for comparison.
             let match_mh = match_sig.minhash().unwrap().clone();
-            query = query.downsample_scaled(match_mh.scaled())?;
-            orig_query_ds = orig_query_ds.downsample_scaled(match_mh.scaled())?;
+
+            // make downsampled minhashes
+            let max_scaled = max(match_mh.scaled(), query.scaled());
+
+            let match_mh = match_mh
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample match");
+
+            // repeatedly downsample query, then extract to KmerMinHash
+            // => calculate_gather_stats
+            query = query
+                .downsample_scaled(max_scaled)
+                .expect("cannot downsample query");
+            let query_mh = KmerMinHash::from(query.clone());
 
             // just calculate essentials here
-            let gather_result_rank = matches.len();
+            let gather_result_rank = matches.len() as u32;
 
+            // grab the specific intersection:
             // Calculate stats
-            let gather_result = calculate_gather_stats(
-                &orig_query_ds,
-                KmerMinHash::from(query.clone()),
+            let (gather_result, isect) = calculate_gather_stats(
+                orig_query,
+                query_mh,
                 match_sig,
                 match_size,
                 gather_result_rank,
                 sum_weighted_found,
-                total_weighted_hashes.try_into().unwrap(),
+                total_weighted_hashes,
                 calc_abund_stats,
                 calc_ani_ci,
                 ani_confidence_interval_fraction,
-            )?;
+            )
+            .expect("could not calculate gather stats");
+
+            // use intersection from calc_gather_stats to make a KmerMinHash.
+            let mut isect_mh = match_mh.clone();
+            isect_mh.clear();
+            isect_mh.add_many(&isect.0)?;
+
             // keep track of the sum weighted found
             sum_weighted_found = gather_result.sum_weighted_found();
             matches.push(gather_result);
@@ -367,28 +468,9 @@ impl RevIndexOps for RevIndex {
             // Prepare counter for finding the next match by decrementing
             // all hashes found in the current match in other datasets
             // TODO: not used at the moment, so just skip.
-            query.remove_many(match_mh.iter_mins().copied())?; // is there a better way?
+            query.remove_many(isect_mh.iter_mins().copied())?; // is there a better way?
 
-            // TODO: Use HashesToColors here instead. If not initialized,
-            //       build it.
-            match_mh
-                .iter_mins()
-                .filter_map(|hash| hash_to_color.get(hash))
-                .flat_map(|color| {
-                    // TODO: remove this clone
-                    query_colors.get(color).unwrap().clone().into_iter()
-                })
-                .for_each(|dataset| {
-                    // TODO: collect the flat_map into a Counter, and remove more
-                    //       than one at a time...
-                    counter.entry(dataset).and_modify(|e| {
-                        if *e > 0 {
-                            *e -= 1
-                        }
-                    });
-                });
-
-            counter.remove(&dataset_id);
+            cg.consume(&isect_mh);
         }
         Ok(matches)
     }
@@ -396,24 +478,41 @@ impl RevIndexOps for RevIndex {
     fn update(mut self, collection: CollectionSet) -> Result<module::RevIndex> {
         // TODO: verify new collection manifest is a superset of current one,
         //       and the initial chunk is the same
-        let to_skip = self.collection.check_superset(&collection)?;
+        self.collection.check_superset(&collection)?;
+        info!("sigs in the original index: {}", self.collection.len());
+
+        self.collection = Arc::new(collection);
+        info!(
+            "sigs in the new index once finished: {}",
+            self.collection.len()
+        );
+
+        let processed = self.processed.clone();
+        info!(
+            "sigs left to process: {}",
+            self.collection.len() - processed.read().unwrap().len()
+        );
 
         // process the remainder
         let processed_sigs = AtomicUsize::new(0);
 
-        self.collection = Arc::new(collection);
-
-        self.collection
-            .par_iter()
-            .skip(to_skip)
-            .for_each(|(dataset_id, _)| {
+        self.collection.par_iter().for_each(|(dataset_id, _)| {
+            // check if this dataset_id was processed already
+            // call map_hashes_colors only if not already processed
+            if !processed.read().unwrap().contains(&dataset_id) {
                 let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
                 if i % 1000 == 0 {
                     info!("Processed {} reference sigs", i);
                 }
 
                 self.map_hashes_colors(dataset_id as Idx);
-            });
+
+                // if cached in a new field in the RevIndex,
+                // then update the cache too
+
+                processed.write().unwrap().extend([dataset_id]);
+            }
+        });
 
         self.save_collection().expect("Error saving collection");
 
@@ -425,7 +524,7 @@ impl RevIndexOps for RevIndex {
             processed_sigs.into_inner()
         );
 
-        Ok(module::RevIndex::Plain(self))
+        Ok(module::RevIndex::Disk(self))
     }
 
     fn check(&self, quick: bool) -> DbStats {
@@ -433,7 +532,7 @@ impl RevIndexOps for RevIndex {
     }
 
     fn compact(&self) {
-        for cf_name in [HASHES, METADATA] {
+        for cf_name in ALL_CFS {
             let cf = self.db.cf_handle(cf_name).unwrap();
             self.db.compact_range_cf(&cf, None::<&[u8]>, None::<&[u8]>)
         }
@@ -446,6 +545,46 @@ impl RevIndexOps for RevIndex {
             let cf = self.db.cf_handle(cf_name).unwrap();
             self.db.flush_cf(&cf)?;
         }
+
+        Ok(())
+    }
+
+    fn collection(&self) -> &CollectionSet {
+        &self.collection
+    }
+
+    fn internalize_storage(&mut self) -> Result<()> {
+        // check if collection is already internal, if so return
+        if self.collection.storage().spec() == "rocksdb://" {
+            return Ok(());
+        }
+
+        // build new rocksdb storage from db
+        let new_storage = RocksDBStorage::from_db(self.db.clone());
+
+        // use manifest to copy from current storage to new one
+        self.collection()
+            .par_iter()
+            .try_for_each(|(_, record)| -> Result<()> {
+                let path = record.internal_location().as_str();
+                let sig_data = self.collection.storage().load(path).unwrap();
+                new_storage.save(path, &sig_data)?;
+                Ok(())
+            })?;
+
+        // Replace storage for collection.
+        // Using unchecked version because we just used the manifest
+        // above to make sure the storage is still consistent
+        unsafe {
+            if let Some(v) = Arc::get_mut(&mut self.collection) {
+                v.set_storage_unchecked(InnerStorage::new(new_storage))
+            }
+        }
+
+        // write storage spec
+        let cf_metadata = self.db.cf_handle(METADATA).unwrap();
+        let spec = "rocksdb://";
+        self.db.put_cf(&cf_metadata, STORAGE_SPEC, spec)?;
 
         Ok(())
     }
@@ -491,33 +630,53 @@ impl RevIndexOps for RevIndex {
         }
         */
     }
-}
+    fn find_signatures(
+        &self,
+        query_mh: &KmerMinHash,
+        threshold: f64,
+        picklist: Option<DatasetPicklist>,
+    ) -> Result<Vec<(f64, Signature, String)>> {
+        // do search
+        let counter = self.counter_for_query(query_mh, picklist);
 
-fn cf_descriptors() -> Vec<ColumnFamilyDescriptor> {
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    cfopts.set_merge_operator_associative("datasets operator", merge_datasets);
-    cfopts.set_min_write_buffer_number_to_merge(10);
+        // retrieve/convert matches. I don't think there's a simple way to
+        // truncate this without going through all the matches, so it's
+        // potentially (much) more expensive than prefetch.
+        let filename = self.location();
+        let results: Vec<(f64, Signature, String)> = counter
+            .most_common()
+            .into_iter()
+            .filter_map(|(dataset_id, _size)| {
+                let sig: Signature = self
+                    .collection()
+                    .sig_for_dataset(dataset_id)
+                    .expect("dataset not found")
+                    .into();
 
-    // Updated default from
-    // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
+                let match_mh = sig.minhash().expect("cannot retrieve match");
 
-    let cf_hashes = ColumnFamilyDescriptor::new(HASHES, cfopts);
+                let f_match = if match_mh.scaled() != query_mh.scaled() {
+                    let match_ds = match_mh
+                        .clone()
+                        .downsample_scaled(query_mh.scaled())
+                        .expect("cannot downsample");
+                    query_mh
+                        .jaccard(&match_ds)
+                        .expect("cannot calculate Jaccard")
+                } else {
+                    query_mh
+                        .jaccard(match_mh)
+                        .expect("cannot calculate Jaccard")
+                };
 
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
+                if f_match >= threshold {
+                    Some((f_match, sig, filename.to_owned()))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
-    let cf_metadata = ColumnFamilyDescriptor::new(METADATA, cfopts);
-
-    let mut cfopts = Options::default();
-    cfopts.set_max_write_buffer_number(16);
-    // Updated default
-    cfopts.set_level_compaction_dynamic_level_bytes(true);
-    //cfopts.set_merge_operator_associative("colors operator", merge_colors);
-
-    vec![cf_hashes, cf_metadata]
+        Ok(results)
+    }
 }

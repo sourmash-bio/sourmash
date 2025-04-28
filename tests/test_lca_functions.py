@@ -1,6 +1,7 @@
 """
 Tests for functions in lca submodule.
 """
+
 import pytest
 
 from sourmash.lca import lca_utils
