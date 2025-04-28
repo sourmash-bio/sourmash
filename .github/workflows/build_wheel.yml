@@ -22,7 +22,7 @@ jobs:
         ]
         include:
           - build: linux-x86_64
-            os: ubuntu-20.04
+            os: ubuntu-latest
             arch: x86_64
             macos_target: ''
           - build: macos-x86_64
@@ -58,7 +58,7 @@ jobs:
           path: './wheelhouse/sourmash*.whl'
 
   build_wasm:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -75,7 +75,7 @@ jobs:
 
   release:
     name: Publish wheels
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build_wheels, build_wasm]
 
