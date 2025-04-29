@@ -794,7 +794,6 @@ def _compute_individual(args, signatures_factory):
     # and we need to close here.
     if args.output and save_sigs is not None:
         save_sigs.close()
-        print('xXXX', save_sigs.location)
         notify(
             f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0."
         )
@@ -1059,6 +1058,23 @@ class ComputeParameters(RustObject):
 
     @dna.setter
     def dna(self, v):
+        return self._methodcall(lib.computeparams_set_dna, v)
+
+    @property
+    def skipm1n3(self):
+        return self._methodcall(lib.computeparams_dna)
+
+    @skipm1n3.setter
+    def skipm1n3(self, v):
+        print('fiz')
+        return self._methodcall(lib.computeparams_set_dna, v)
+
+    @property
+    def skipm2n3(self):
+        return self._methodcall(lib.computeparams_dna)
+
+    @skipm2n3.setter
+    def skipm2n3(self, v):
         return self._methodcall(lib.computeparams_set_dna, v)
 
     @property
