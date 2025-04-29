@@ -27,6 +27,7 @@ DEFAULTS = dict(
     protein="k=10,scaled=200,noabund",
     dayhoff="k=16,scaled=200,noabund",
     hp="k=42,scaled=200,noabund",
+    # @CTB add skipmers
 )
 
 
@@ -37,6 +38,7 @@ def _parse_params_str(params_str):
     params["ksize"] = []
     items = params_str.split(",")
     for item in items:
+        # @CTB use match?
         if item == "abund":
             params["track_abundance"] = True
         elif item == "noabund":
@@ -80,6 +82,8 @@ def _parse_params_str(params_str):
                 raise ValueError("seed takes a parameter, e.g. 'seed=42'")
             params["seed"] = int(item[5:])
         elif item in ("protein", "dayhoff", "hp", "dna"):
+            moltype = item
+        elif item in ("skipm1n3", "skipm2n3"):
             moltype = item
         else:
             raise ValueError(f"unknown component '{item}' in params string")
