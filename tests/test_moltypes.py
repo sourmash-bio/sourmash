@@ -1,6 +1,10 @@
 import pytest
-import sourmash_tst_utils as utils
 from collections import namedtuple
+
+import sourmash
+import sourmash_tst_utils as utils
+from sourmash.sourmash_args import load_one_signature
+
 
 MoltypeHolder = namedtuple(
     "MoltypeHolder",
@@ -20,43 +24,40 @@ def moltype_sketches(runtmp_session, moltype):
     genome = utils.get_test_data("genome-s10.fa.gz")
     metagenome = utils.get_test_data("genome-s10+s11.fa.gz")
 
+    outfile = runtmp_session.output(f"genome.{moltype}.sig.zip")
+    outfile2 = runtmp_session.output(f"metagenome.{moltype}.sig.zip")
+        
     # @CTB use match!
     if moltype == "dna":
-        outfile = "genome.dna.sig.zip"
         runtmp_session.sourmash("sketch", "dna", genome, "-o", outfile)
-        outfile2 = "metagenome.dna.sig.zip"
         runtmp_session.sourmash("sketch", "dna", metagenome, "-o", outfile2)
         mt = MoltypeHolder("dna", outfile, outfile2, "--dna", "DNA")
     elif moltype == "protein":
-        outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash("sketch", "translate", genome, "-o", outfile)
-        outfile2 = f"metagenome.{moltype}.sig.zip"
         runtmp_session.sourmash("sketch", "translate", metagenome, "-o", outfile2)
         mt = MoltypeHolder("dna", outfile, outfile2, "--protein", "protein")
     elif moltype == "hp":
-        outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "translate", genome, "-o", outfile, "-p", "hp"
         )
-        outfile2 = f"metagenome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "translate", metagenome, "-o", outfile2, "-p", "hp"
         )
         mt = MoltypeHolder("dna", outfile, outfile2, "--hp", "hp")
     elif moltype == "dayhoff":
-        outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "translate", genome, "-o", outfile, "-p", "dayhoff"
         )
-        outfile2 = f"metagenome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "translate", metagenome, "-o", outfile2, "-p", "dayhoff"
         )
         mt = MoltypeHolder("dna", outfile, outfile2, "--dayhoff", "dayhoff")
     elif moltype == "skipm1n3":
-        outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "dna", genome, "-o", outfile, "-p", "skipm1n3"
+        )
+        runtmp_session.sourmash(
+            "sketch", "translate", metagenome, "-o", outfile2, "-p", "skipm1n3"
         )
         mt = MoltypeHolder("dna", outfile, "", "--skipm1n3", "skipm1n3")
     else:
@@ -67,6 +68,33 @@ def moltype_sketches(runtmp_session, moltype):
     assert mt.genome_sketch != mt.metag_sketch
 
     yield (mt, runtmp_session)
+
+
+def test_api_load(moltype_sketches):
+    # can we load exactly one sketch? yay.
+    mt, rts = moltype_sketches
+
+    gsig = load_one_signature(mt.genome_sketch, select_moltype=mt.molecule)
+    msig = load_one_signature(mt.metag_sketch, select_moltype=mt.molecule)
+
+    assert gsig.minhash.moltype == mt.molecule
+    assert msig.minhash.moltype == mt.molecule
+
+
+def test_api_overlap(moltype_sketches):
+    # test basic overlap calculations
+    mt, rts = moltype_sketches
+
+    gsig = load_one_signature(mt.genome_sketch, select_moltype=mt.molecule)
+    msig = load_one_signature(mt.metag_sketch, select_moltype=mt.molecule)
+
+    mh1 = gsig.minhash
+    mh2 = msig.minhash
+
+    assert mh1.contained_by(mh2) == 1.0
+    assert mh2.contained_by(mh1) > 0
+    assert mh1.jaccard(mh2) > 0
+    assert mh1.jaccard(mh2) < 1
 
 
 def test_sig_cat(moltype_sketches):

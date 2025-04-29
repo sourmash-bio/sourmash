@@ -794,6 +794,7 @@ def _compute_individual(args, signatures_factory):
     # and we need to close here.
     if args.output and save_sigs is not None:
         save_sigs.close()
+        print('xXXX', save_sigs.location)
         notify(
             f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0."
         )
