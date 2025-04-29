@@ -27,7 +27,8 @@ DEFAULTS = dict(
     protein="k=10,scaled=200,noabund",
     dayhoff="k=16,scaled=200,noabund",
     hp="k=42,scaled=200,noabund",
-    # @CTB add skipmers
+    skipm1n3="k=21,scaled=1000,noabund",
+    skipm2n3="k=21,scaled=1000,noabund",
 )
 
 
@@ -112,11 +113,11 @@ class _signatures_for_sketch_factory:
             # provided.
             for params_str in params_str_list:
                 moltype, params = _parse_params_str(params_str)
-                if moltype and moltype != "dna" and default_moltype == "dna":
+                if moltype and moltype not in ("dna", "skipm1n3", "skipm2n3")  and default_moltype == "dna":
                     raise ValueError(
                         f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'; maybe use 'sketch translate'?"
                     )
-                elif moltype == "dna" and default_moltype and default_moltype != "dna":
+                elif moltype == "dna" and default_moltype and default_moltype not in ("dna", "skipm1n3", "skipm2n3"):
                     raise ValueError(
                         f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'"
                     )
@@ -148,6 +149,8 @@ class _signatures_for_sketch_factory:
             def_protein = default_params.get("is_protein", moltype == "protein")
             def_dayhoff = default_params.get("is_dayhoff", moltype == "dayhoff")
             def_hp = default_params.get("is_hp", moltype == "hp")
+            def_skipm1n3 = default_params.get("skipm1n3", moltype == "skipm1n3")
+            def_skipm2n3 = default_params.get("skipm2n3", moltype == "skipm2n3")
 
             # handle ksize specially, for now - multiply by three?
             def_ksizes = default_params["ksize"]
@@ -167,6 +170,8 @@ class _signatures_for_sketch_factory:
                     dayhoff=def_dayhoff,
                     hp=def_hp,
                     dna=def_dna,
+                    skipm1n3=def_skipm1n3,
+                    skipm2n3=def_skipm2n3,
                     num_hashes=params_d.get("num", def_num),
                     track_abundance=params_d.get("track_abundance", def_abund),
                     scaled=params_d.get("scaled", def_scaled),
@@ -655,6 +660,8 @@ class _signatures_for_compute_factory:
             dayhoff=args.dayhoff,
             hp=args.hp,
             dna=args.dna,
+            skipm1n3=args.skipm1n3,
+            skipm2n3=args.skipm2n3,
             num_hashes=args.num_hashes,
             track_abundance=args.track_abundance,
             scaled=args.scaled,
@@ -877,6 +884,8 @@ class ComputeParameters(RustObject):
         dayhoff=False,
         hp=False,
         dna=True,
+        skipm1n3=False,
+        skipm2n3=False,
         num_hashes=500,
         track_abundance=False,
         scaled=0,
@@ -889,6 +898,8 @@ class ComputeParameters(RustObject):
         self.dayhoff = dayhoff
         self.hp = hp
         self.dna = dna
+        self.skipm1n3 = skipm1n3
+        self.skipm2n3 = skipm2n3
         self.num_hashes = num_hashes
         self.track_abundance = track_abundance
         self.scaled = scaled
