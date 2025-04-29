@@ -2402,6 +2402,6 @@ Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_bette
 
 (Installable via conda and pip as `sourmash_plugin_directsketch`.)
 
-The [`directsketch` plugin](https://github.com/sourmash-bio/sourmash_plugin_directsketch/) provides two parallelized methods for streaming download and sketch from online sources. It provides two utilities: `gbsketch` is a for sketching NCBI Assembly Datasets, and `urlsketch` for sketching from generic URLs.
+The [`directsketch` plugin](https://github.com/sourmash-bio/sourmash_plugin_directsketch/) provides two parallelized methods for streaming download and sketch from online sources. It provides two utilities: `gbsketch` for sketching NCBI Assembly Datasets, and `urlsketch` for sketching from generic URLs.
 
 Read [the directsketch docs](https://github.com/sourmash-bio/sourmash_plugin_directsketch/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues)
