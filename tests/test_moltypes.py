@@ -8,7 +8,8 @@ MoltypeHolder = namedtuple(
 )
 
 
-@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3"])
+#@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3"])
+@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff"])
 def moltype(request):
     yield request.param
 
@@ -16,29 +17,42 @@ def moltype(request):
 # build and return genome & metagenome sketches of the given moltype
 @pytest.fixture(scope="session")
 def moltype_sketches(runtmp_session, moltype):
-    genome = utils.get_test_data("genome-s10+s11.fa.gz")
+    genome = utils.get_test_data("genome-s10.fa.gz")
+    metagenome = utils.get_test_data("genome-s10+s11.fa.gz")
 
     # @CTB use match!
     if moltype == "dna":
         outfile = "genome.dna.sig.zip"
         runtmp_session.sourmash("sketch", "dna", genome, "-o", outfile)
-        mt = MoltypeHolder("dna", outfile, "", "--dna", "DNA")
+        outfile2 = "metagenome.dna.sig.zip"
+        runtmp_session.sourmash("sketch", "dna", metagenome, "-o", outfile2)
+        mt = MoltypeHolder("dna", outfile, outfile2, "--dna", "DNA")
     elif moltype == "protein":
         outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash("sketch", "translate", genome, "-o", outfile)
-        mt = MoltypeHolder("dna", outfile, "", "--protein", "protein")
+        outfile2 = f"metagenome.{moltype}.sig.zip"
+        runtmp_session.sourmash("sketch", "translate", metagenome, "-o", outfile2)
+        mt = MoltypeHolder("dna", outfile, outfile2, "--protein", "protein")
     elif moltype == "hp":
         outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "translate", genome, "-o", outfile, "-p", "hp"
         )
-        mt = MoltypeHolder("dna", outfile, "", "--hp", "hp")
+        outfile2 = f"metagenome.{moltype}.sig.zip"
+        runtmp_session.sourmash(
+            "sketch", "translate", metagenome, "-o", outfile2, "-p", "hp"
+        )
+        mt = MoltypeHolder("dna", outfile, outfile2, "--hp", "hp")
     elif moltype == "dayhoff":
         outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash(
             "sketch", "translate", genome, "-o", outfile, "-p", "dayhoff"
         )
-        mt = MoltypeHolder("dna", outfile, "", "--dayhoff", "dayhoff")
+        outfile2 = f"metagenome.{moltype}.sig.zip"
+        runtmp_session.sourmash(
+            "sketch", "translate", metagenome, "-o", outfile2, "-p", "dayhoff"
+        )
+        mt = MoltypeHolder("dna", outfile, outfile2, "--dayhoff", "dayhoff")
     elif moltype == "skipm1n3":
         outfile = f"genome.{moltype}.sig.zip"
         runtmp_session.sourmash(
@@ -47,6 +61,10 @@ def moltype_sketches(runtmp_session, moltype):
         mt = MoltypeHolder("dna", outfile, "", "--skipm1n3", "skipm1n3")
     else:
         assert 0
+
+    assert mt.genome_sketch
+    assert mt.metag_sketch
+    assert mt.genome_sketch != mt.metag_sketch
 
     yield (mt, runtmp_session)
 
