@@ -908,6 +908,8 @@ class ComputeParameters(RustObject):
     def from_manifest_row(cls, row):
         "convert a CollectionManifest row into a ComputeParameters object"
         is_dna = is_protein = is_dayhoff = is_hp = False
+        is_skipm1n3 = is_skipm2n3 = False
+
         if row["moltype"] == "DNA":
             is_dna = True
         elif row["moltype"] == "protein":
@@ -916,8 +918,12 @@ class ComputeParameters(RustObject):
             is_hp = True
         elif row["moltype"] == "dayhoff":
             is_dayhoff = True
+        elif row["moltype"] == "skipm1n3":
+            is_skipm1n3 = True
+        elif row["moltype"] == "skipm2n3":
+            is_skipm2n3 = True
         else:
-            assert 0
+            assert 0, row["moltype"]
 
         if is_dna:
             ksize = row["ksize"]
@@ -931,6 +937,8 @@ class ComputeParameters(RustObject):
             dayhoff=is_dayhoff,
             hp=is_hp,
             dna=is_dna,
+            skipm1n3=is_skipm1n3,
+            skipm2n3=is_skipm2n3,
             num_hashes=row["num"],
             track_abundance=row["with_abundance"],
             scaled=row["scaled"],
@@ -950,6 +958,10 @@ class ComputeParameters(RustObject):
             pi.append("hp")
         elif self.dayhoff:
             pi.append("dayhoff")
+        elif self.skipm1n3:
+            pi.append("skipm1n3")
+        elif self.skipm2n3:
+            pi.append("skipm2n3")
         else:
             assert 0  # must be one of the previous
 
@@ -979,7 +991,7 @@ class ComputeParameters(RustObject):
         return ",".join(pi)
 
     def __repr__(self):
-        return f"ComputeParameters(ksizes={self.ksizes}, seed={self.seed}, protein={self.protein}, dayhoff={self.dayhoff}, hp={self.hp}, dna={self.dna}, num_hashes={self.num_hashes}, track_abundance={self.track_abundance}, scaled={self.scaled})"
+        return f"ComputeParameters(ksizes={self.ksizes}, seed={self.seed}, protein={self.protein}, dayhoff={self.dayhoff}, hp={self.hp}, dna={self.dna}, skipm1n3={self.skipm1n3}, skipm2n3={self.skipm2n3}, num_hashes={self.num_hashes}, track_abundance={self.track_abundance}, scaled={self.scaled})"
 
     def __eq__(self, other):
         return (
@@ -989,6 +1001,8 @@ class ComputeParameters(RustObject):
             and self.dayhoff == other.dayhoff
             and self.hp == other.hp
             and self.dna == other.dna
+            and self.skipm1n3 == other.skipm1n3
+            and self.skipm2n3 == other.skipm2n3
             and self.num_hashes == other.num_hashes
             and self.track_abundance == other.track_abundance
             and self.scaled == other.scaled
@@ -1078,6 +1092,7 @@ class ComputeParameters(RustObject):
 
     @property
     def moltype(self):
+        # @CTB use match?
         if self.dna:
             moltype = "DNA"
         elif self.protein:
@@ -1086,8 +1101,12 @@ class ComputeParameters(RustObject):
             moltype = "hp"
         elif self.dayhoff:
             moltype = "dayhoff"
+        elif self.skipm1n3:
+            moltype = "skipm1n3"
+        elif self.skipm2n3:
+            moltype = "skipm2n3"
         else:
-            assert 0            # @CTB test
+            assert 0
 
         return moltype
 

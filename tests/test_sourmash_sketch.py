@@ -472,6 +472,8 @@ def test_multiple_moltypes():
         ("dna,num=500", "dna,k=31,num=500"),
         ("scaled=1100,dna", "dna,k=31,scaled=1100"),
         ("dna,abund", "dna,k=31,scaled=1000,abund"),
+        ("skipm1n3", "skipm1n3,k=21,scaled=1000"),
+        ("skipm2n3", "skipm2n3,k=21,scaled=1000"),
     ],
 )
 def test_compute_parameters_to_param_str(input_param_str, expected_output):
