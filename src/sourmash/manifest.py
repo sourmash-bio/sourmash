@@ -13,8 +13,7 @@ from sourmash import picklist, index
 
 
 class BaseCollectionManifest:
-    """
-    Signature metadata for a collection of signatures.
+    """Signature metadata for a collection of signatures.
 
     Manifests support selection and rapid lookup of signatures.
 
@@ -23,6 +22,9 @@ class BaseCollectionManifest:
        contents.
     * 'locations()' returns all distinct locations for e.g. lazy loading
     * supports container protocol for signatures, e.g. 'if ss in manifest: ...'
+
+    See 'required_keys' and 'make_manifest_row' for the current
+    minimal definition of what actually needs to be in a row...
     """
 
     # each manifest row must have the following, although they may be empty.
