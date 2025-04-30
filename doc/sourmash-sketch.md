@@ -194,7 +194,7 @@ and skips 1 base. The ksize specified is the sum of the bases kept,
 that is, the final size of the k-mer that is sketched. So, for ksize
 3, the sequence ACTAG would produce two skip-mers for m2n3: ACA, CTG.
 
-Skip-mer References:
+Skip-mer references:
 - [Skip-mers: increasing entropy and sensitivity to detect conserved genic regions with simple cyclic q-grams](https://www.biorxiv.org/content/10.1101/179960.abstract)
 - [Extracting and Evaluating Features from RNA Virus Sequences to Predict Host Species Susceptibility Using Deep Learning](https://dl.acm.org/doi/abs/10.1145/3473258.3473271)
 
