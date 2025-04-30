@@ -6,8 +6,7 @@ import numpy
 import sourmash
 import sourmash_tst_utils as utils
 from sourmash.sourmash_args import load_one_signature
-from sourmash.command_sketch import (_signatures_for_sketch_factory,
-                                     ComputeParameters)
+from sourmash.command_sketch import _signatures_for_sketch_factory, ComputeParameters
 
 # @CTB test: sketch fromfile
 
@@ -18,12 +17,16 @@ MoltypeHolder = namedtuple(
 )
 
 
-@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3", "skipm2n3"])
+@pytest.fixture(
+    scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3", "skipm2n3"]
+)
 def moltype(request):
     yield request.param
 
 
-@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3", "skipm2n3"])
+@pytest.fixture(
+    scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3", "skipm2n3"]
+)
 def moltype2(request):
     yield request.param
 
@@ -39,7 +42,7 @@ def moltype_sketches(runtmp_session, moltype):
     outfile2 = runtmp_session.output(f"metagenome.{moltype}.sig.zip")
     assert not os.path.exists(outfile)
     assert not os.path.exists(outfile2)
-        
+
     # @CTB use match!
     if moltype == "dna":
         runtmp_session.sourmash("sketch", "dna", genome, "-o", outfile)
@@ -153,8 +156,7 @@ def test_manifest_row_to_compute_parameters(moltype, moltype2):
     else:
         moltype_str = moltype
 
-    row = dict(moltype=moltype_str,
-               ksize=21, num=0, scaled=1000, with_abundance=1)
+    row = dict(moltype=moltype_str, ksize=21, num=0, scaled=1000, with_abundance=1)
     p = ComputeParameters.from_manifest_row(row)
     assert getattr(p, moltype)
     assert not getattr(p, moltype2)
@@ -220,8 +222,9 @@ def test_search(moltype_sketches):
     output = rts.output(f"search.{mt.moltype}.csv")
     assert not os.path.exists(output)
 
-    rts.sourmash("search", mt.cli_moltype_arg, mt.genome_sketch,
-                 mt.metag_sketch, "-o", output)
+    rts.sourmash(
+        "search", mt.cli_moltype_arg, mt.genome_sketch, mt.metag_sketch, "-o", output
+    )
 
     with open(output, newline="") as fp:
         x = fp.readlines()
@@ -236,13 +239,14 @@ def test_compare(moltype_sketches):
     output = rts.output(f"compare.{mt.moltype}.cmp")
     assert not os.path.exists(output)
 
-    rts.sourmash("compare", mt.cli_moltype_arg, mt.genome_sketch,
-                 mt.metag_sketch, "-o", output)
+    rts.sourmash(
+        "compare", mt.cli_moltype_arg, mt.genome_sketch, mt.metag_sketch, "-o", output
+    )
 
     with open(output, "rb") as fp:
         arr = numpy.load(fp)
     print(arr)
-    assert arr[0,1] > 0
+    assert arr[0, 1] > 0
 
 
 def test_index(moltype_sketches, disk_index_type):
@@ -252,8 +256,9 @@ def test_index(moltype_sketches, disk_index_type):
     outfile = rts.output(f"index.{mt.moltype}.{disk_index_type}")
     assert not os.path.exists(outfile)
 
-    rts.sourmash("index", mt.cli_moltype_arg, "-F", disk_index_type,
-                 outfile, mt.genome_sketch)
+    rts.sourmash(
+        "index", mt.cli_moltype_arg, "-F", disk_index_type, outfile, mt.genome_sketch
+    )
     print(rts.last_result.err)
     assert "loaded 1 sigs; saving" in rts.last_result.err
 
@@ -265,8 +270,9 @@ def test_gather(moltype_sketches):
     output = rts.output(f"gather.{mt.moltype}.csv")
     assert not os.path.exists(output)
 
-    rts.sourmash("gather", mt.cli_moltype_arg, mt.metag_sketch,
-                 mt.genome_sketch, "-o", output)
+    rts.sourmash(
+        "gather", mt.cli_moltype_arg, mt.metag_sketch, mt.genome_sketch, "-o", output
+    )
 
     with open(output, newline="") as fp:
         x = fp.readlines()
@@ -281,8 +287,9 @@ def test_prefetch(moltype_sketches):
     output = rts.output(f"prefetch.{mt.moltype}.csv")
     assert not os.path.exists(output)
 
-    rts.sourmash("prefetch", mt.cli_moltype_arg, mt.metag_sketch,
-                 mt.genome_sketch, "-o", output)
+    rts.sourmash(
+        "prefetch", mt.cli_moltype_arg, mt.metag_sketch, mt.genome_sketch, "-o", output
+    )
 
     with open(output, newline="") as fp:
         x = fp.readlines()

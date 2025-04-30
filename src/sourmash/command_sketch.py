@@ -113,11 +113,19 @@ class _signatures_for_sketch_factory:
             # provided.
             for params_str in params_str_list:
                 moltype, params = _parse_params_str(params_str)
-                if moltype and moltype not in ("dna", "skipm1n3", "skipm2n3")  and default_moltype == "dna":
+                if (
+                    moltype
+                    and moltype not in ("dna", "skipm1n3", "skipm2n3")
+                    and default_moltype == "dna"
+                ):
                     raise ValueError(
                         f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'; maybe use 'sketch translate'?"
                     )
-                elif moltype == "dna" and default_moltype and default_moltype not in ("dna", "skipm1n3", "skipm2n3"):
+                elif (
+                    moltype == "dna"
+                    and default_moltype
+                    and default_moltype not in ("dna", "skipm1n3", "skipm2n3")
+                ):
                     raise ValueError(
                         f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'"
                     )
