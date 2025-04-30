@@ -1062,20 +1062,19 @@ class ComputeParameters(RustObject):
 
     @property
     def skipm1n3(self):
-        return self._methodcall(lib.computeparams_dna)
+        return self._methodcall(lib.computeparams_skipm1n3)
 
     @skipm1n3.setter
     def skipm1n3(self, v):
-        print('fiz')
-        return self._methodcall(lib.computeparams_set_dna, v)
+        return self._methodcall(lib.computeparams_set_skipm1n3, v)
 
     @property
     def skipm2n3(self):
-        return self._methodcall(lib.computeparams_dna)
+        return self._methodcall(lib.computeparams_skipm2n3)
 
     @skipm2n3.setter
     def skipm2n3(self, v):
-        return self._methodcall(lib.computeparams_set_dna, v)
+        return self._methodcall(lib.computeparams_set_skipm2n3, v)
 
     @property
     def moltype(self):
@@ -1088,7 +1087,7 @@ class ComputeParameters(RustObject):
         elif self.dayhoff:
             moltype = "dayhoff"
         else:
-            assert 0
+            assert 0            # @CTB test
 
         return moltype
 

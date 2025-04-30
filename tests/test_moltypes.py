@@ -12,8 +12,7 @@ MoltypeHolder = namedtuple(
 )
 
 
-#@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3"])
-@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff"])
+@pytest.fixture(scope="session", params=["dna", "protein", "hp", "dayhoff", "skipm1n3", "skipm2n3"])
 def moltype(request):
     yield request.param
 
@@ -35,7 +34,7 @@ def moltype_sketches(runtmp_session, moltype):
     elif moltype == "protein":
         runtmp_session.sourmash("sketch", "translate", genome, "-o", outfile)
         runtmp_session.sourmash("sketch", "translate", metagenome, "-o", outfile2)
-        mt = MoltypeHolder("dna", outfile, outfile2, "--protein", "protein")
+        mt = MoltypeHolder("protein", outfile, outfile2, "--protein", "protein")
     elif moltype == "hp":
         runtmp_session.sourmash(
             "sketch", "translate", genome, "-o", outfile, "-p", "hp"
@@ -43,7 +42,7 @@ def moltype_sketches(runtmp_session, moltype):
         runtmp_session.sourmash(
             "sketch", "translate", metagenome, "-o", outfile2, "-p", "hp"
         )
-        mt = MoltypeHolder("dna", outfile, outfile2, "--hp", "hp")
+        mt = MoltypeHolder("hp", outfile, outfile2, "--hp", "hp")
     elif moltype == "dayhoff":
         runtmp_session.sourmash(
             "sketch", "translate", genome, "-o", outfile, "-p", "dayhoff"
@@ -51,15 +50,23 @@ def moltype_sketches(runtmp_session, moltype):
         runtmp_session.sourmash(
             "sketch", "translate", metagenome, "-o", outfile2, "-p", "dayhoff"
         )
-        mt = MoltypeHolder("dna", outfile, outfile2, "--dayhoff", "dayhoff")
+        mt = MoltypeHolder("dayhoff", outfile, outfile2, "--dayhoff", "dayhoff")
     elif moltype == "skipm1n3":
         runtmp_session.sourmash(
             "sketch", "dna", genome, "-o", outfile, "-p", "skipm1n3"
         )
         runtmp_session.sourmash(
-            "sketch", "translate", metagenome, "-o", outfile2, "-p", "skipm1n3"
+            "sketch", "dna", metagenome, "-o", outfile2, "-p", "skipm1n3"
         )
-        mt = MoltypeHolder("dna", outfile, "", "--skipm1n3", "skipm1n3")
+        mt = MoltypeHolder("skipm1n3", outfile, outfile2, "--skipm1n3", "skipm1n3")
+    elif moltype == "skipm2n3":
+        runtmp_session.sourmash(
+            "sketch", "dna", genome, "-o", outfile, "-p", "skipm2n3"
+        )
+        runtmp_session.sourmash(
+            "sketch", "dna", metagenome, "-o", outfile2, "-p", "skipm2n3"
+        )
+        mt = MoltypeHolder("skipm2n3", outfile, outfile2, "--skipm2n3", "skipm2n3")
     else:
         assert 0
 
