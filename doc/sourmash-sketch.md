@@ -15,9 +15,9 @@ sourmash sketch translate
 sourmash sketch fromfile
 ```
 
-The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
+The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches** (including skip-mer sketches).
 
-The `sketch protein` command reads in **protein sequences** and outputs **protein sketches**.
+The `sketch protein` command reads in **protein sequences** and outputs **protein sketches** (including hp and dayhoff sketches - see ).
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
@@ -139,7 +139,7 @@ the signatures requested by the parameter strings.  Other columns in
 this file will be ignored.
 
 If no protein, hp, or dayhoff sketches are requested, `protein_filename`
-can be empty for a given row; likewise, if no DNA sketches are requested,
+can be empty for a given row; likewise, if no DNA, skipm1n3, or skipm2n3 sketches are requested,
 `genome_filename` can be empty for a given row.
 
 Some of the key command-line options supported by `fromfile` are:
@@ -182,6 +182,22 @@ If you specify `--merge <name>`, sourmash sketch will produce signatures for all
 
 The output signature(s) will be saved in locations that depend on your input parameters. By default, `sourmash sketch` will put the signatures in the current directory, in a file named for the input file with a `.sig` suffix. If you specify `-o`, all of the signatures will be placed in that file.
 
+### DNA encodings
+
+`sourmash sketch dna` outputs DNA sketches (by default) or,
+optionally, skip-mer sketches of types `skipm1n3` and
+`skipm2n3`. Skip-mers allow more mismatches and hence are more
+sensitive across evolutionary distances.
+
+`skipm1n3` keeps 1 base, and skips 2 bases; `skipm2n3` keeps 2 bases,
+and skips 1 base. The ksize specified is the sum of the bases kept,
+that is, the final size of the k-mer that is sketched. So, for ksize
+3, the sequence ACTAG would produce two skip-mers for m2n3: ACA, CTG.
+
+Skip-mer References:
+- [Skip-mers: increasing entropy and sensitivity to detect conserved genic regions with simple cyclic q-grams](https://www.biorxiv.org/content/10.1101/179960.abstract)
+- [Extracting and Evaluating Features from RNA Virus Sequences to Predict Host Species Susceptibility Using Deep Learning](https://dl.acm.org/doi/abs/10.1145/3473258.3473271)
+
 ### Protein encodings
 
 `sourmash sketch protein` and `sourmash sketch translate` output protein sketches by default, but can also use the `dayhoff` and `hp` encodings.  The [Dayhoff encoding](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-367/tables/1) collapses multiple amino acids into a smaller alphabet so that amino acids that share biochemical properties map to the same character. The hp encoding divides amino acids into hydrophobic and polar (hydrophilic) amino acids, collapsing amino acids with hydrophobic side chains together and doing the same for polar amino acids.
@@ -203,7 +219,7 @@ A parameter string is a space-delimited collection that can contain one or more 
 * `scaled=<int>` - create a scaled MinHash with k-mers sampled deterministically at 1 per `<scaled>` value. This controls sketch compression rates and resolution; for example, a 5 Mbp genome sketched with a scaled of 1000 would yield approximately 5,000 k-mers. `scaled` is incompatible with `num`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-and-how-should-i-create-them) for more information.
 * `num=<int>` - create a standard MinHash with no more than `<num>` k-mers kept. This will produce sketches identical to [mash sketches](https://mash.readthedocs.io/en/latest/). `num` is incompatible with `scaled`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-and-how-should-i-create-them) for more information.
 * `abund` / `noabund` - create abundance-weighted (or not) sketches. See [Classify signatures: Abundance Weighting](classifying-signatures.md#abundance-weighting) for details of how this works.
-* `dna`, `protein`, `dayhoff`, `hp` - create this kind of sketch. Note that `sourmash sketch dna -p protein` and `sourmash sketch protein -p dna` are invalid; please use `sourmash sketch translate` for the former.
+* `dna`, `protein`, `dayhoff`, `hp`, `skipm1n3`, `skipm2n3` - create this kind of sketch. Note that `sourmash sketch dna -p protein` and `sourmash sketch protein -p dna` are invalid; please use `sourmash sketch translate` for the former.
 * `seed=<int>` - set the random number seed used for k-mer hashing. This is for advanced users who want to choose a completely different set of k-mers for sketches! The default is 42.
 
 For all field names but `k`, if multiple fields in a parameter string are provided, the last one encountered overrides the previous values. For `k`, if multiple ksizes are specified in a single parameter string, sketches for all ksizes specified are created.
@@ -218,12 +234,14 @@ The default parameters for sketches are as follows:
 * protein: `k=10,scaled=200,noabund`
 * dayhoff: `k=16,scaled=200,noabund`
 * hp: `k=42,scaled=200,noabund`
+* skipm1n3: `k=21,scaled=1000,noabund`
+* skipm2n3: `k=21,scaled=1000,noabund`
 
 These were chosen by a committee of PhDs as being good defaults for an initial analysis, so, beware :).
 
 More seriously, the DNA parameters were chosen based on the analyses done by Koslicki and Falush in [MetaPalette: a k-mer Painting Approach for Metagenomic Taxonomic Profiling and Quantification of Novel Strain Variation](https://msystems.asm.org/content/1/3/e00020-16).
 
-The protein, dayhoff, and hp parameters were selected based on unpublished research results and/or magic formulas. We are working on publishing the results! Please ask on the [issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are curious.
+The protein, dayhoff, hp, skipm1n3, and skipm2n3 parameters were selected based on unpublished research results and/or magic formulas. We are working on publishing the results! Please ask on the [issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are curious.
 
 ### More complex parameter string examples
 
