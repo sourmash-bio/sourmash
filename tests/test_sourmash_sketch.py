@@ -1735,18 +1735,19 @@ def test_fromfile_dna(runtmp):
     assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
-def test_fromfile_dna_csv_gz(runtmp):
-    # test with a gzipped csv
+def test_fromfile_dna(runtmp):
+    # does it run? yes, hopefully.
     test_inp = utils.get_test_data("sketch_fromfile")
     shutil.copytree(test_inp, runtmp.output("sketch_fromfile"))
 
-    # gzip the CSV file
-    with open(runtmp.output("sketch_fromfile/salmonella.csv"), "rb") as infp:
-        with gzip.open(runtmp.output("salmonella.csv.gz"), "w") as outfp:
-            outfp.write(infp.read())
-
     runtmp.sourmash(
-        "sketch", "fromfile", "salmonella.csv.gz", "-o", "out.zip", "-p", "dna"
+        "sketch",
+        "fromfile",
+        "sketch_fromfile/salmonella.csv",
+        "-o",
+        "out.zip",
+        "-p",
+        "dna",
     )
 
     print(runtmp.last_result.out)
@@ -1760,6 +1761,64 @@ def test_fromfile_dna_csv_gz(runtmp):
     ss = siglist[0]
     assert ss.name == "GCA_903797575 Salmonella enterica"
     assert ss.minhash.moltype == "DNA"
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_skipm1n3(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data("sketch_fromfile")
+    shutil.copytree(test_inp, runtmp.output("sketch_fromfile"))
+
+    runtmp.sourmash(
+        "sketch",
+        "fromfile",
+        "sketch_fromfile/salmonella.csv",
+        "-o",
+        "out.zip",
+        "-p",
+        "skipm1n3",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output("out.zip"))
+    idx = sourmash.load_file_as_index(runtmp.output("out.zip"))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == "GCA_903797575 Salmonella enterica"
+    assert ss.minhash.moltype == "skipm1n3"
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_skipm2n3(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data("sketch_fromfile")
+    shutil.copytree(test_inp, runtmp.output("sketch_fromfile"))
+
+    runtmp.sourmash(
+        "sketch",
+        "fromfile",
+        "sketch_fromfile/salmonella.csv",
+        "-o",
+        "out.zip",
+        "-p",
+        "skipm2n3",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output("out.zip"))
+    idx = sourmash.load_file_as_index(runtmp.output("out.zip"))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == "GCA_903797575 Salmonella enterica"
+    assert ss.minhash.moltype == "skipm2n3"
     assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 

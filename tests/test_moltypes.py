@@ -8,8 +8,6 @@ import sourmash_tst_utils as utils
 from sourmash.sourmash_args import load_one_signature
 from sourmash.command_sketch import _signatures_for_sketch_factory, ComputeParameters
 
-# @CTB test: sketch fromfile
-
 
 MoltypeHolder = namedtuple(
     "MoltypeHolder",
