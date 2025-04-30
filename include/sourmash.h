@@ -66,6 +66,10 @@ typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
+typedef struct SourmashManifest SourmashManifest;
+
+typedef struct SourmashManifestRowIter SourmashManifestRowIter;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
@@ -97,6 +101,15 @@ typedef struct {
    */
   bool owned;
 } SourmashStr;
+
+typedef struct {
+  uint32_t ksize;
+  bool with_abundance;
+  SourmashStr md5;
+  SourmashStr internal_location;
+  SourmashStr name;
+  SourmashStr moltype;
+} SourmashManifestRow;
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
@@ -293,6 +306,10 @@ void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
+SourmashManifestRowIter *manifest_rows(const SourmashManifest *ptr);
+
+const SourmashManifestRow *manifest_rows_iter_next(SourmashManifestRowIter *ptr);
+
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
 bool nodegraph_count(SourmashNodegraph *ptr, uint64_t h);
@@ -369,6 +386,8 @@ void revindex_free(SourmashRevIndex *ptr);
 uint32_t revindex_ksize(const SourmashRevIndex *ptr);
 
 uint64_t revindex_len(const SourmashRevIndex *ptr);
+
+SourmashManifest *revindex_manifest(const SourmashRevIndex *ptr);
 
 SourmashRevIndex *revindex_mem_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
                                              uintptr_t insigs,

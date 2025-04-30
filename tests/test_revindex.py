@@ -68,6 +68,19 @@ def test_mem_revindex_basic():
     assert db.location is None
 
 
+def test_mem_revindex_manifest():
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+
+    db = MemRevIndex(template=ss2.minhash)
+    db.insert(ss2)
+    db = db.select(ksize=31, scaled=1000, moltype="DNA")
+
+    mf = db.manifest
+    print(mf, mf._objptr)
+    assert 0
+
+
 def test_mem_revindex_index_search():
     # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")

@@ -10,6 +10,7 @@ pub mod cmd;
 pub mod hyperloglog;
 pub mod index;
 pub mod minhash;
+pub mod manifest;
 pub mod nodegraph;
 pub mod signature;
 pub mod storage;

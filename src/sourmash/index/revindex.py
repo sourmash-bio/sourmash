@@ -15,6 +15,12 @@ from sourmash.minhash import flatten_and_intersect_scaled
 from sourmash.manifest import CollectionManifest
 
 
+class RevIndexManifest(RustObject):
+    #__dealloc_func__ = lib.revindex_free # @CTB
+    def __init__(self, _objptr):
+        self._objptr = _objptr;
+
+
 class RevIndex(RustObject, Index):
     """
     Base class for both MemRevIndex and DiskRevIndex.
@@ -37,6 +43,14 @@ class RevIndex(RustObject, Index):
         if self._idx_picklist is None:
             return ffi.NULL
         return self._idx_picklist._objptr
+
+    @property
+    def manifest(self):
+        mf_objptr = rustcall(
+            lib.revindex_manifest,
+            self._objptr
+        )
+        return RevIndexManifest(mf_objptr)
 
     def _generate_idx_picklist_from_manifest(self, mf):
         # grab internal indices
