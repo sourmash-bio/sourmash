@@ -39,7 +39,6 @@ def _parse_params_str(params_str):
     params["ksize"] = []
     items = params_str.split(",")
     for item in items:
-        # @CTB use match?
         if item == "abund":
             params["track_abundance"] = True
         elif item == "noabund":
@@ -1092,7 +1091,6 @@ class ComputeParameters(RustObject):
 
     @property
     def moltype(self):
-        # @CTB use match?
         if self.dna:
             moltype = "DNA"
         elif self.protein:
