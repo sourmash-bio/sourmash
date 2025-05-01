@@ -19,6 +19,12 @@ def runtmp():
         yield RunnerContext(location)
 
 
+@pytest.fixture(scope="session")
+def runtmp_session():
+    with TempDirectory() as location:
+        yield RunnerContext(location)
+
+
 @pytest.fixture
 def run():
     yield RunnerContext(os.getcwd())

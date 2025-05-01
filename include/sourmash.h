@@ -138,7 +138,15 @@ void computeparams_set_scaled(SourmashComputeParameters *ptr, uint32_t scaled);
 
 void computeparams_set_seed(SourmashComputeParameters *ptr, uint64_t new_seed);
 
+void computeparams_set_skipm1n3(SourmashComputeParameters *ptr, bool v);
+
+void computeparams_set_skipm2n3(SourmashComputeParameters *ptr, bool v);
+
 void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
+
+bool computeparams_skipm1n3(const SourmashComputeParameters *ptr);
+
+bool computeparams_skipm2n3(const SourmashComputeParameters *ptr);
 
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
