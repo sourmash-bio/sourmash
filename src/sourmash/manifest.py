@@ -285,7 +285,7 @@ class CollectionManifest(BaseCollectionManifest):
             row["internal_location"] = idx
             rows.append(row)
 
-            idx += 1            # @CTB
+            idx += 1  # @CTB
 
             next_row = rustcall(lib.manifest_rows_iter_next, iterator)
         return CollectionManifest(rows)
