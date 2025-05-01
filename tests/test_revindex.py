@@ -77,7 +77,6 @@ def test_mem_revindex_manifest():
     db = db.select(ksize=31, scaled=1000, moltype="DNA")
 
     mf = db.manifest
-    print(mf, mf._objptr)
     assert 0
 
 

@@ -258,6 +258,37 @@ class CollectionManifest(BaseCollectionManifest):
         "Load this manifest from another manifest object."
         return cls(manifest.rows)
 
+    @staticmethod
+    def _from_rust(value):
+        from ._lowlevel import ffi, lib
+        from .utils import rustcall, decode_str
+
+        iterator = rustcall(lib.manifest_rows, value)
+
+        rows = []
+        next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+        while next_row != ffi.NULL:
+
+            # TODO: extract row data from next_row
+            # FIXME: free mem from strings?
+            row = {}
+            row['md5'] = decode_str(next_row.md5)
+            row['md5short'] = row['md5'][:8]
+            row['ksize'] = next_row.ksize
+            row['moltype'] = decode_str(next_row.moltype)
+            row['num'] = next_row.num
+            row['scaled'] = next_row.scaled
+            row['n_hashes'] = next_row.n_hashes
+            row['with_abundance'] = next_row.with_abundance
+            row['name'] = decode_str(next_row.name)
+            row['filename'] = decode_str(next_row.filename)
+            row['internal_location'] = decode_str(next_row.internal_location)
+            print(row)
+            rows.append(row)
+
+            next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+        return CollectionManifest(rows)
+
     def add_row(self, row):
         self._add_rows([row])
 

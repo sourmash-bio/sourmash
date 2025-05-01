@@ -48,6 +48,10 @@ pub struct SourmashManifestRow {
     pub internal_location: SourmashStr,
     pub name: SourmashStr,
     pub moltype: SourmashStr,
+    pub n_hashes: usize,
+    pub num: u32,
+    pub scaled: u32,
+    pub filename: SourmashStr,
 }
 
 impl ForeignObject for SourmashManifestRow {
@@ -63,6 +67,10 @@ impl From<&Record> for SourmashManifestRow {
             name: record.name().clone().into(),
             moltype: record.moltype().to_string().into(),
             internal_location: record.internal_location().to_string().into(),
+            n_hashes: *record.n_hashes(),
+            num: *record.num(),
+            scaled: *record.scaled(),
+            filename: record.filename().to_string().into(),
         }
     }
 }

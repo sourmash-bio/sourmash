@@ -109,6 +109,10 @@ typedef struct {
   SourmashStr internal_location;
   SourmashStr name;
   SourmashStr moltype;
+  uintptr_t n_hashes;
+  uint32_t num;
+  uint32_t scaled;
+  SourmashStr filename;
 } SourmashManifestRow;
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
