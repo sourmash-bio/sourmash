@@ -15,9 +15,9 @@ sourmash sketch translate
 sourmash sketch fromfile
 ```
 
-The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches** (including skip-mer sketches).
+The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches** (including skip-mer sketches - see [DNA encodings](#dna-encodings)).
 
-The `sketch protein` command reads in **protein sequences** and outputs **protein sketches** (including hp and dayhoff sketches - see ).
+The `sketch protein` command reads in **protein sequences** and outputs **protein sketches** (including hp and dayhoff sketches - see [protein encodings](#protein-encodings)).
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
