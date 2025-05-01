@@ -234,7 +234,7 @@ impl RevIndexOps for MemRevIndex {
             .flat_map(|color| self.colors.indices(color))
             .filter_map(|idx| {
                 if let Some(pl) = &picklist {
-                    if pl.dataset_ids.contains(&idx) {
+                    if pl.dataset_ids.contains(idx) {
                         Some(idx)
                     } else {
                         None
