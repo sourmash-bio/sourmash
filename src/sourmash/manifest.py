@@ -267,6 +267,7 @@ class CollectionManifest(BaseCollectionManifest):
 
         rows = []
         next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+        idx = 0
         while next_row != ffi.NULL:
             # TODO: extract row data from next_row
             # FIXME: free mem from strings?
@@ -281,9 +282,10 @@ class CollectionManifest(BaseCollectionManifest):
             row["with_abundance"] = next_row.with_abundance
             row["name"] = decode_str(next_row.name)
             row["filename"] = decode_str(next_row.filename)
-            row["internal_location"] = decode_str(next_row.internal_location)
-            print(row)
+            row["internal_location"] = idx
             rows.append(row)
+
+            idx += 1            # @CTB
 
             next_row = rustcall(lib.manifest_rows_iter_next, iterator)
         return CollectionManifest(rows)
