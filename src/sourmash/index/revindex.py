@@ -16,9 +16,9 @@ from sourmash.manifest import CollectionManifest
 
 
 class RevIndexManifest(RustObject):
-    #__dealloc_func__ = lib.revindex_free # @CTB
+    # __dealloc_func__ = lib.revindex_free # @CTB
     def __init__(self, _objptr):
-        self._objptr = _objptr;
+        self._objptr = _objptr
 
 
 class RevIndex(RustObject, Index):
@@ -45,12 +45,10 @@ class RevIndex(RustObject, Index):
 
     @property
     def manifest(self):
-        print('retrieving manifest')
+        print("retrieving manifest")
         from sourmash.manifest import CollectionManifest
-        mf_objptr = rustcall(
-            lib.revindex_manifest,
-            self._objptr
-        )
+
+        mf_objptr = rustcall(lib.revindex_manifest, self._objptr)
         return CollectionManifest._from_rust(mf_objptr)
 
     def _generate_idx_picklist_from_manifest(self, mf):
@@ -325,9 +323,9 @@ class RevIndex(RustObject, Index):
             # build a manifest, with internal Idx that we can use to pick
             # out a subset of sketches.
             m = self.manifest
-#            m = CollectionManifest.create_manifest(
-#                self._signatures_with_internal(), include_signature=False
-#            )
+            #            m = CollectionManifest.create_manifest(
+            #                self._signatures_with_internal(), include_signature=False
+            #            )
             m = m.select_to_manifest(picklist=picklist)
 
             # build the internal picklist sing the internal Idx identifiers.
