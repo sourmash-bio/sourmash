@@ -280,10 +280,16 @@ class CollectionManifest(BaseCollectionManifest):
             row["with_abundance"] = next_row.with_abundance
             row["name"] = decode_str(next_row.name)
             row["filename"] = decode_str(next_row.filename)
+
+            # don't use the true internal location, use the Idx for RevIndex.
+            # Ideally this would be done in Rust by the RevIndex itself,
+            # but that seems surprisingly difficult to do. So, for now,
+            # track Idx in Python.
+            #row["internal_location"] = decode_str(next_row.internal_location)
             row["internal_location"] = idx
             rows.append(row)
 
-            idx += 1  # @CTB
+            idx += 1
 
             rustcall(lib.manifestrow_free, next_row)
             next_row = rustcall(lib.manifest_rows_iter_next, iterator)
