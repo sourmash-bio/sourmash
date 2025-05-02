@@ -425,7 +425,7 @@ impl Datasets {
         }
     }
 
-    pub fn from_slice(slice: &[u8]) -> Option<Self> {
+    pub fn from_slice(slice: &[u8]) -> Result<Self> {
         use byteorder::ReadBytesExt;
 
         if slice.len() == 8 {
