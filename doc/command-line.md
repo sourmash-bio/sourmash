@@ -460,7 +460,7 @@ indexes that we support for legacy reasons.
 
 All signatures in an index must be of compatible types (i.e. the same
 k-mer size, scaled, and molecule type). You can specify the usual
-command line selectors (`-k`, `--scaled`, `--dna`, `--protein`, etc.)
+command line selectors (`-k`, `--scaled`, `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`, etc.)
 to pick out the types of signatures to include when running `index`.
 
 Usage:
@@ -513,7 +513,7 @@ or together:
 * `--save-unmatched-hashes` saves a single signature containing the complement of `--save-matching-hashes`.
 
 Other options include:
-* the usual `-k/--ksize` and `--dna`/`--protein`/`--dayhoff`/`--hp` signature selectors;
+* the usual `-k/--ksize` and `--dna/--protein/--dayhoff/--hp/--skipm1n3/--skipm2n3` signature selectors;
 * `--threshold-bp` to require a minimum estimated bp overlap for output;
 * `--scaled` for downsampling;
 * `--force` to continue past survivable errors;
@@ -1462,7 +1462,7 @@ the same scaled value.
 
 If there are multiple signatures in a file with different ksizes and/or
 from nucleotide and protein sequences, you can choose amongst them with
-`-k/--ksize` and `--dna` or `--protein`, as with other sourmash commands
+`-k/--ksize` and `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`, as with other sourmash commands
 such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
@@ -1615,7 +1615,7 @@ with fields:
 * `md5sum` - a unique hash value based on the contents of the signature.
 * `k=<ksize>` - k-mer size.
 * `scaled=<scaled>` or `num=<num>` - scaled or num value for MinHash.
-* `<moltype>` - the molecule type (DNA, protein, dayhoff, or hp)
+* `<moltype>` - the molecule type (DNA, protein, dayhoff, hp, skipm1n3, or skipm2n3)
 * `dup=<n>` - a non-negative integer that prevents duplicate signatures from colliding.
 * `basename` - basename of first input file used to create signature; if none provided, or stdin, this is `none`.
 
@@ -1643,7 +1643,7 @@ behavior and allow merging of mixtures by removing all abundances.
 `sig merge` can only merge compatible sketches - if there are multiple
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
-moltype with `--dna/--protein/--hp/--dayhoff`.
+moltype with `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`.
 
 Use `--set-name <name>` to set the name of the output sketch.
 
@@ -1681,7 +1681,7 @@ To use `subtract` on signatures calculated with
 `sig subtract` can only work with compatible sketches - if there are multiple
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
-moltype with `--dna/--protein/--hp/--dayhoff`.
+moltype with `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`.
 
 Use `--set-name <name>` to set the name of the output sketch.
 
@@ -1708,7 +1708,7 @@ to the intersection).
 `sig intersect` can only work with compatible sketches - if there are multiple
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
-moltype with `--dna/--protein/--hp/--dayhoff`.
+moltype with `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`.
 
 Use `--set-name <name>` to set the name of the output sketch(es).
 
@@ -1729,7 +1729,7 @@ Any hashes that are not present in `file1.sig` will be removed from
 `sig inflate` can only work with compatible sketches - if there are multiple
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
-moltype with `--dna/--protein/--hp/--dayhoff`.
+moltype with `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -1892,7 +1892,7 @@ total (union):               7886
 `sig overlap` can only work with compatible sketches - if there are multiple
 k-mer sizes or molecule types present in any of the signature files,
 you will need to choose one k-mer size with `-k/--ksize`, and/or one
-moltype with `--dna/--protein/--hp/--dayhoff`.
+moltype with `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3`.
 
 ### `sourmash signature kmers` - extract k-mers and/or sequences that match to signatures
 
@@ -2060,7 +2060,7 @@ Briefly,
   multiple signatures or databases. In this case, there has to be a
   single identifiable query for sourmash to use, and if you're using a
   database or list of signatures as the source of a query, you'll
-  need to provide a selector (ksize with `-k`, moltype with `--dna` etc,
+  need to provide a selector (ksize with `-k`, moltype with `--dna/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3` etc,
   or md5sum with `--query-md5`) that picks out a single signature.
 
 * `compare` takes multiple signatures and can load them from any
