@@ -318,9 +318,13 @@ void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
+void manifest_free(SourmashManifest *ptr);
+
 SourmashManifestRowIter *manifest_rows(const SourmashManifest *ptr);
 
 const SourmashManifestRow *manifest_rows_iter_next(SourmashManifestRowIter *ptr);
+
+void manifestrow_free(SourmashManifestRow *ptr);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 

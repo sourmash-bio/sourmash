@@ -8,6 +8,11 @@ impl ForeignObject for SourmashManifest {
     type RustObject = Manifest;
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn manifest_free(ptr: *mut SourmashManifest) {
+    SourmashManifest::drop(ptr);
+}
+
 pub struct ManifestRowIterator {
     iter: Box<dyn Iterator<Item = &'static Record>>,
 }
@@ -56,6 +61,11 @@ pub struct SourmashManifestRow {
 
 impl ForeignObject for SourmashManifestRow {
     type RustObject = SourmashManifestRow;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn manifestrow_free(ptr: *mut SourmashManifestRow) {
+    SourmashManifestRow::drop(ptr);
 }
 
 impl From<&Record> for SourmashManifestRow {

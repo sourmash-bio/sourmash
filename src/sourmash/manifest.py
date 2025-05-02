@@ -287,7 +287,11 @@ class CollectionManifest(BaseCollectionManifest):
 
             idx += 1  # @CTB
 
+            rustcall(lib.manifestrow_free, next_row)
             next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+
+        # free manifest
+        rustcall(lib.manifest_free, value)
         return CollectionManifest(rows)
 
     def add_row(self, row):
