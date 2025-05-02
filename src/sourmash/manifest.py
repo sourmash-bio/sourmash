@@ -285,7 +285,7 @@ class CollectionManifest(BaseCollectionManifest):
             # Ideally this would be done in Rust by the RevIndex itself,
             # but that seems surprisingly difficult to do. So, for now,
             # track Idx in Python.
-            #row["internal_location"] = decode_str(next_row.internal_location)
+            # row["internal_location"] = decode_str(next_row.internal_location)
             row["internal_location"] = idx
             rows.append(row)
 
