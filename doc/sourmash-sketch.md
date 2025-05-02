@@ -31,6 +31,20 @@ input data can be uncompressed, compressed with gzip, or compressed
 with bzip2. The output will be one or more signature files that
 can be used by other sourmash commands.
 
+Faster, multithreaded implementations of many commands are now available in sourmash plugins.
+
+[`branchwater` plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater):
+- `sourmash scripts manysketch` - multithreaded sketching of many files
+- `sourmash scripts singlesketch` - faster sketching of a single file or a set of PE files
+
+[`directsketch` plugin](https://github.com/sourmash-bio/sourmash_plugin_directsketch):
+- `sourmash scripts gbsketch` - multithreaded streaming download and sketch of GenBank Assembly datasets
+- `sourmash scripts urlsketch` - multithreaded streaming download and sketch of any URL
+
+See the [`branchwater` documentation](https://github.com/sourmash-bio/sourmash_plugin_branchwater/tree/main/doc/) and the [`directsketch` README](https://github.com/sourmash-bio/sourmash_plugin_directsketch) for more information.
+
+Note: translated sketches are not yet supported in the `branchwater` and `directsketch` plugins.
+
 ## Quickstart
 
 ### DNA sketches for genomes and reads
