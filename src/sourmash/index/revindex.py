@@ -15,12 +15,6 @@ from sourmash.minhash import flatten_and_intersect_scaled
 from sourmash.manifest import CollectionManifest
 
 
-class RevIndexManifest(RustObject):
-    # __dealloc_func__ = lib.revindex_free # @CTB
-    def __init__(self, _objptr):
-        self._objptr = _objptr
-
-
 class RevIndex(RustObject, Index):
     """
     Base class for both MemRevIndex and DiskRevIndex.

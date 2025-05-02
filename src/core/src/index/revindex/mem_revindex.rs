@@ -230,7 +230,7 @@ impl RevIndexOps for MemRevIndex {
     ) -> SigCounter {
         query
             .iter_mins()
-            .filter_map(|hash| self.hash_to_color.get(hash)) // @CTB change to filter?
+            .filter_map(|hash| self.hash_to_color.get(hash))
             .flat_map(|color| self.colors.indices(color))
             .filter_map(|idx| {
                 if let Some(pl) = &picklist {

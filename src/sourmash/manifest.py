@@ -269,8 +269,6 @@ class CollectionManifest(BaseCollectionManifest):
         next_row = rustcall(lib.manifest_rows_iter_next, iterator)
         idx = 0
         while next_row != ffi.NULL:
-            # TODO: extract row data from next_row
-            # FIXME: free mem from strings?
             row = {}
             row["md5"] = decode_str(next_row.md5)
             row["md5short"] = row["md5"][:8]
