@@ -18,7 +18,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@v16
+      uses: DeterminateSystems/nix-installer-action@v17
 
     - run: nix run .# -- --version
 
@@ -35,15 +35,15 @@ jobs:
         fetch-depth: 0
 
     - name: set up pixi
-      uses: prefix-dev/setup-pixi@v0.8.1
+      uses: prefix-dev/setup-pixi@v0.8.8
       with:
-        pixi-version: v0.40.3
+        pixi-version: v0.44.0
         cache: true
         frozen: true
 
-    - name: run tests for 3.10
+    - name: run tests for 3.12
       shell: pixi run bash {0}
-      run: tox -e py310
+      run: tox -e py312
 
   mamba:
     runs-on: ${{ matrix.os }}
@@ -67,12 +67,12 @@ jobs:
     - name: setup conda
       uses: conda-incubator/setup-miniconda@505e6394dae86d6a5c7fbb6e3fb8938e3e863830
       with:
-        python-version: "3.10"
+        python-version: "3.12"
         miniforge-version: latest
         environment-file: dev.yml
         activate-environment: sourmash_dev
         auto-activate-base: false
 
-    - name: run tests for 3.10
+    - name: run tests for 3.12
       shell: bash -l {0}
-      run: tox -e py310
+      run: tox -e py312

@@ -203,6 +203,7 @@ def add_scaled_arg(parser, default=None):
         "--scaled",
         metavar="FLOAT",
         type=check_scaled_bounds,
+        default=default,
         help="downsample to this scaled; value should be between 100 and 1e6",
     )
 

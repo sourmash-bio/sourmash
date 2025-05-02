@@ -7,7 +7,8 @@ import os
 import pytest
 
 import sourmash
-from sourmash import load_one_signature, SourmashSignature, load_file_as_signatures
+from sourmash import SourmashSignature, load_file_as_signatures
+from sourmash.sourmash_args import load_one_signature
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import SigLeaf, load_sbt_index
@@ -1006,8 +1007,8 @@ def test_sbt_protein_command_index(runtmp):
 
     db2 = load_sbt_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature(sigfile1)
+    sig2 = load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -1049,7 +1050,7 @@ def test_sbt_protein_search_no_threshold(c):
 
     db2 = load_sbt_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
+    sig1 = load_one_signature(sigfile1)
 
     # and search, gather
     with pytest.raises(TypeError) as exc:
@@ -1091,8 +1092,8 @@ def test_sbt_hp_command_index(c):
 
     db2 = load_sbt_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature(sigfile1)
+    sig2 = load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]
@@ -1150,8 +1151,8 @@ def test_sbt_dayhoff_command_index(c):
 
     db2 = load_sbt_index(db_out)
 
-    sig1 = sourmash.load_one_signature(sigfile1)
-    sig2 = sourmash.load_one_signature(sigfile2)
+    sig1 = load_one_signature(sigfile1)
+    sig2 = load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [x.minhash for x in db2.signatures()]

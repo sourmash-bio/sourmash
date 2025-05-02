@@ -1,5 +1,4 @@
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(feature = "branchwater")]
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub mod revindex;
 
 use crate::signature::Signature;

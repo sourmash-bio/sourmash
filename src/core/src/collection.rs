@@ -572,7 +572,7 @@ mod test {
         let output: PathBuf = outdir.path().join("index").try_into().unwrap();
 
         // Step 1: create an index
-        let index = RevIndex::create(output.as_path(), collection.clone().try_into()?, false)?;
+        let index = RevIndex::create(output.as_path(), collection.clone().try_into()?)?;
 
         // Step 2: internalize the storage for the index
         {

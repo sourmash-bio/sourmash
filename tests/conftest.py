@@ -19,6 +19,12 @@ def runtmp():
         yield RunnerContext(location)
 
 
+@pytest.fixture(scope="session")
+def runtmp_session():
+    with TempDirectory() as location:
+        yield RunnerContext(location)
+
+
 @pytest.fixture
 def run():
     yield RunnerContext(os.getcwd())
@@ -61,6 +67,11 @@ def linear_gather(request):
 
 @pytest.fixture(params=["--prefetch", "--no-prefetch"])
 def prefetch_gather(request):
+    return request.param
+
+
+@pytest.fixture(params=["SBT", "rocksdb", "zip"])
+def disk_index_type(request):
     return request.param
 
 
