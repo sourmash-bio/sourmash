@@ -45,9 +45,7 @@ class RevIndex(RustObject, Index):
 
     @property
     def manifest(self):
-        print("retrieving manifest")
-        from sourmash.manifest import CollectionManifest
-
+        self._init_inner()
         mf_objptr = rustcall(lib.revindex_manifest, self._objptr)
         return CollectionManifest._from_rust(mf_objptr)
 
@@ -317,16 +315,8 @@ class RevIndex(RustObject, Index):
             if self._idx_picklist is not None:
                 raise Exception("cannot use picklists multiple times, sorry")
 
-            # CTB note: building a manifest this way is expensive!!
-            # FIXME: see https://github.com/sourmash-bio/sourmash/issues/3593
-
-            # build a manifest, with internal Idx that we can use to pick
-            # out a subset of sketches.
-            m = self.manifest
-            #            m = CollectionManifest.create_manifest(
-            #                self._signatures_with_internal(), include_signature=False
-            #            )
-            m = m.select_to_manifest(picklist=picklist)
+            # select matching entries from our manifest:
+            m = self.manifest.select_to_manifest(picklist=picklist)
 
             # build the internal picklist sing the internal Idx identifiers.
             self._idx_picklist = RevIndex_DatasetPicklist.from_manifest(m)
