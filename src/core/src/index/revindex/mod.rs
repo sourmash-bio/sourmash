@@ -425,20 +425,20 @@ impl Datasets {
         }
     }
 
-    pub fn from_slice(slice: &[u8]) -> Option<Self> { // @CTB Result
+    pub fn from_slice(slice: &[u8]) -> Result<Self> {
         use byteorder::ReadBytesExt;
 
         if slice.len() == 8 {
             // Unique
-            Some(Self::Unique(
+            Ok(Self::Unique(
                 (&slice[..]).read_u32::<LittleEndian>().unwrap(),
             ))
         } else if slice.len() == 1 {
             // Empty
-            Some(Self::Empty)
+            Ok(Self::Empty)
         } else {
             // Many
-            Some(Self::Many(RoaringBitmap::deserialize_from(slice).unwrap()))
+            Ok(Self::Many(RoaringBitmap::deserialize_from(slice).unwrap()))
         }
     }
 
