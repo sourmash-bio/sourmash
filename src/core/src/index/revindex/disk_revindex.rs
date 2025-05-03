@@ -53,17 +53,11 @@ pub(crate) fn merge_datasets(
     existing_val: Option<&[u8]>,
     operands: &MergeOperands,
 ) -> Option<Vec<u8>> {
-    // @CTB
-    let mut datasets: Datasets = Default::default();
+    let mut datasets = match existing_val {
+        Some(val) => Datasets::from_slice(val).expect("cannot unpack slice"),
+        None => Default::default()
+    };
 
-    if let Some(val) = existing_val {
-        datasets = Datasets::from_slice(val).expect("cannot unpack slice");
-    }
-
-/*    let mut datasets = existing_val
-        .and_then(Datasets::from_slice)
-        .unwrap_or_default();
-*/
     for op in operands {
         let new_vals = Datasets::from_slice(op).unwrap();
         datasets.union(new_vals);
