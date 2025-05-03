@@ -55,7 +55,7 @@ pub(crate) fn merge_datasets(
 ) -> Option<Vec<u8>> {
     let mut datasets = match existing_val {
         Some(val) => Datasets::from_slice(val).expect("cannot unpack slice"),
-        None => Default::default()
+        None => Default::default(),
     };
 
     for op in operands {
