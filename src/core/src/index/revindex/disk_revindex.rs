@@ -43,7 +43,7 @@ fn compute_color(idxs: &Datasets) -> Color {
 #[derive(Clone)]
 pub struct DiskRevIndex {
     location: String,
-    pub db: Arc<DB>,
+    db: Arc<DB>,
     collection: Arc<CollectionSet>,
     processed: Arc<RwLock<Datasets>>,
 }
@@ -170,6 +170,12 @@ impl DiskRevIndex {
             collection,
             processed,
         }))
+    }
+
+    /// Access to the DB is unsafe because RocksDB allows writing with
+    /// a regular Arc<DB> handle; it doesn't have to be mut.
+    pub unsafe fn db(&self) -> &Arc<DB> {
+        &self.db
     }
 
     fn load_processed(
