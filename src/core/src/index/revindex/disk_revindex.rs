@@ -175,8 +175,8 @@ impl DiskRevIndex {
 
     /// Access to the DB is unsafe because RocksDB allows writing with
     /// a regular Arc<DB> handle; it doesn't have to be mut.
-    pub unsafe fn db(&self) -> &Arc<DB> {
-        &self.db
+    pub unsafe fn db(&self) -> Arc<DB> {
+        self.db.clone()
     }
 
     fn load_processed(
