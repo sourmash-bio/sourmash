@@ -6,6 +6,7 @@ use crate::collection::{Collection, CollectionSet};
 use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::index::SourmashStr;
+use crate::ffi::manifest::SourmashManifest;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
@@ -188,6 +189,15 @@ pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> Sourm
         .moltype();
     let moltype_str = moltype.to_string();
     moltype_str.into()
+}
+
+ffi_fn! {
+unsafe fn revindex_manifest(ptr: *const SourmashRevIndex) -> Result<*mut SourmashManifest> {
+    let revindex = SourmashRevIndex::as_rust(ptr);
+    let mf = revindex.collection().manifest().clone();
+
+    Ok(SourmashManifest::from_rust(mf))
+}
 }
 
 ffi_fn! {

@@ -13,8 +13,7 @@ from sourmash import picklist, index
 
 
 class BaseCollectionManifest:
-    """
-    Signature metadata for a collection of signatures.
+    """Signature metadata for a collection of signatures.
 
     Manifests support selection and rapid lookup of signatures.
 
@@ -23,6 +22,9 @@ class BaseCollectionManifest:
        contents.
     * 'locations()' returns all distinct locations for e.g. lazy loading
     * supports container protocol for signatures, e.g. 'if ss in manifest: ...'
+
+    See 'required_keys' and 'make_manifest_row' for the current
+    minimal definition of what actually needs to be in a row...
     """
 
     # each manifest row must have the following, although they may be empty.
@@ -255,6 +257,46 @@ class CollectionManifest(BaseCollectionManifest):
     def load_from_manifest(cls, manifest, **kwargs):
         "Load this manifest from another manifest object."
         return cls(manifest.rows)
+
+    @staticmethod
+    def _from_rust(value):
+        from ._lowlevel import ffi, lib
+        from .utils import rustcall, decode_str
+
+        iterator = rustcall(lib.manifest_rows, value)
+
+        rows = []
+        next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+        idx = 0
+        while next_row != ffi.NULL:
+            row = {}
+            row["md5"] = decode_str(next_row.md5)
+            row["md5short"] = row["md5"][:8]
+            row["ksize"] = next_row.ksize
+            row["moltype"] = decode_str(next_row.moltype)
+            row["num"] = next_row.num
+            row["scaled"] = next_row.scaled
+            row["n_hashes"] = next_row.n_hashes
+            row["with_abundance"] = next_row.with_abundance
+            row["name"] = decode_str(next_row.name)
+            row["filename"] = decode_str(next_row.filename)
+
+            # don't use the true internal location, use the Idx for RevIndex.
+            # Ideally this would be done in Rust by the RevIndex itself,
+            # but that seems surprisingly difficult to do. So, for now,
+            # track Idx in Python.
+            # row["internal_location"] = decode_str(next_row.internal_location)
+            row["internal_location"] = idx
+            rows.append(row)
+
+            idx += 1
+
+            rustcall(lib.manifestrow_free, next_row)
+            next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+
+        # free manifest
+        rustcall(lib.manifest_free, value)
+        return CollectionManifest(rows)
 
     def add_row(self, row):
         self._add_rows([row])
