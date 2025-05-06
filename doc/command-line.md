@@ -2396,4 +2396,12 @@ Read [the branchwater plugin docs](https://github.com/sourmash-bio/sourmash_plug
 
 The [`betterplot` plugin](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) provides a variety of new plotting outputs for sourmash, including improved distance matrices, MDS plots, tSNE plots, upset plots, and Venn diagrams. It also supports cluster-cutting and extraction, as well as improved labeling and coloring by category.
 
-Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues).
+Read [the betterplot docs](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues)
+
+### The `directsketch` plugin - streaming download and sketch
+
+(Installable via conda and pip as `sourmash_plugin_directsketch`.)
+
+The [`directsketch` plugin](https://github.com/sourmash-bio/sourmash_plugin_directsketch/) provides two parallelized methods for streaming download and sketch from online sources. It provides two utilities: `gbsketch` for sketching NCBI Assembly Datasets, and `urlsketch` for sketching from generic URLs.
+
+Read [the directsketch docs](https://github.com/sourmash-bio/sourmash_plugin_directsketch/) for more information, and ask questions on [the sourmash issue tracker!](https://github.com/sourmash-bio/sourmash/issues)
