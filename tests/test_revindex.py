@@ -68,6 +68,19 @@ def test_mem_revindex_basic():
     assert db.location is None
 
 
+def test_mem_revindex_manifest():
+    sig2 = utils.get_test_data("2.fa.sig")
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+
+    db = MemRevIndex(template=ss2.minhash)
+    db.insert(ss2)
+    db = db.select(ksize=31, scaled=1000, moltype="DNA")
+
+    manifest = db.manifest
+
+    assert len(db) == len(manifest)
+
+
 def test_mem_revindex_index_search():
     # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")
@@ -370,6 +383,20 @@ def test_disk_revindex_basic():
     db = db.select(ksize=31, scaled=1000, moltype="DNA")
     assert len(db) == 3
     assert db.location == rocksdb_path
+
+
+def test_disk_revindex_manifest():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    db = db.select(ksize=31, scaled=1000, moltype="DNA")
+    assert len(db) == 3
+    assert db.location == rocksdb_path
+
+    mf = db.manifest
+
+    assert len(db) == len(mf)
+    print(list(mf.rows))
 
 
 def test_disk_revindex_prefetch_to_revindex():

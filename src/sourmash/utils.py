@@ -12,7 +12,7 @@ class RustObject:
     _shared = False
 
     def __init__(self):
-        raise TypeError(f"Cannot instanciate {self.__class__.__name__!r} objects")
+        raise TypeError(f"Cannot instantiate {self.__class__.__name__!r} objects")
 
     @classmethod
     def _from_objptr(cls, ptr, shared=False):

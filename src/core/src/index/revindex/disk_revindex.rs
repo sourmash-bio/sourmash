@@ -53,9 +53,10 @@ pub(crate) fn merge_datasets(
     existing_val: Option<&[u8]>,
     operands: &MergeOperands,
 ) -> Option<Vec<u8>> {
-    let mut datasets = existing_val
-        .and_then(Datasets::from_slice)
-        .unwrap_or_default();
+    let mut datasets = match existing_val {
+        Some(val) => Datasets::from_slice(val).expect("cannot unpack slice"),
+        None => Default::default(),
+    };
 
     for op in operands {
         let new_vals = Datasets::from_slice(op).unwrap();
@@ -172,6 +173,12 @@ impl DiskRevIndex {
         }))
     }
 
+    /// Access to the DB is unsafe because RocksDB allows writing with
+    /// a regular Arc<DB> handle; it doesn't have to be mut.
+    pub unsafe fn db(&self) -> Arc<DB> {
+        self.db.clone()
+    }
+
     fn load_processed(
         db: Arc<DB>,
         collection: Arc<CollectionSet>,
@@ -181,7 +188,6 @@ impl DiskRevIndex {
         if let Some(rdr) = db.get_pinned_cf(&cf_metadata, PROCESSED)? {
             // convert rdr to Datasets
             Datasets::from_slice(&rdr)
-                .ok_or_else(|| todo!("throw error from deserializing Datasets"))
         } else if assume_empty {
             Ok(Datasets::default())
         } else {
