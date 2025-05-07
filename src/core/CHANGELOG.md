@@ -13,6 +13,8 @@ MSRV: 1.74
 
 Changes/additions:
 
+* make the RocksDB handle directly accessible to external code (#3468)
+* implement manifest retrieval from Rust via FFI for `RevIndex` (#3630)
 * fully support skip-mers at the Python level; provide documentation (#3627)
 * remove support for python 3.10 (#3606)
 * fix linear gather in Rust (#3605)
