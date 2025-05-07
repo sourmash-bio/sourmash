@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.20.0] - 2025-05-06
+
+MSRV: 1.74
+
+Changes/additions:
+
+* make the RocksDB handle directly accessible to external code (#3468)
+* implement manifest retrieval from Rust via FFI for `RevIndex` (#3630)
+* fully support skip-mers at the Python level; provide documentation (#3627)
+* remove support for python 3.10 (#3606)
+* fix linear gather in Rust (#3605)
+* impl full mem-based `RevIndex` in Rust, and add Python support for mem- and disk-based `RevIndex` (#3545)
+* Minhash deserialize hashfunction errorhandling (#3560)
+* fix beta clippy errors (#3548)
+
+Updates:
+
+* Bump rand from 0.9.0 to 0.9.1 (#3620)
+* Bump roaring from 0.10.10 to 0.10.12 (#3608)
+* Bump log from 0.4.26 to 0.4.27 (#3587)
+* Bump tempfile from 3.19.0 to 3.19.1 (#3588)
+* Bump tempfile from 3.18.0 to 3.19.0 (#3582)
+* Bump serde from 1.0.218 to 1.0.219 (#3576)
+* Bump tempfile from 3.17.1 to 3.18.0 (#3575)
+* Bump histogram from 0.11.2 to 0.11.3 (#3574)
+* Bump serde_json from 1.0.139 to 1.0.140 (#3566)
+* Bump getset from 0.1.4 to 0.1.5 (#3567)
+* Bump needletail from 0.6.1 to 0.6.3 (#3553)
+* Bump serde_json from 1.0.138 to 1.0.139 (#3552)
+* Bump serde from 1.0.217 to 1.0.218 (#3550)
+* Bump log from 0.4.25 to 0.4.26 (#3549)
+* Bump tempfile from 3.16.0 to 3.17.1 (#3539)
+
 ## [0.19.0] - 2025-02-12
 
 MSRV: 1.74
