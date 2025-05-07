@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.20.0] - 2025-05-@CTB
+## [0.20.0] - 2025-05-06
 
 MSRV: 1.74
 
