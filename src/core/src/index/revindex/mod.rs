@@ -582,7 +582,7 @@ mod test {
         let siglist: Vec<_> = (10..=12)
             .map(|i| {
                 let mut filename = basedir.clone();
-                filename.push(format!("genome-s{}.fa.gz.sig", i));
+                filename.push(format!("genome-s{i}.fa.gz.sig"));
                 filename
             })
             .collect();
@@ -622,7 +622,7 @@ mod test {
         let siglist: Vec<_> = (10..=11)
             .map(|i| {
                 let mut filename = basedir.clone();
-                filename.push(format!("genome-s{}.fa.gz.sig", i));
+                filename.push(format!("genome-s{i}.fa.gz.sig"));
                 filename
             })
             .collect();
@@ -670,7 +670,7 @@ mod test {
         let siglist: Vec<_> = (10..=12)
             .map(|i| {
                 let mut filename = basedir.clone();
-                filename.push(format!("genome-s{}.fa.gz.sig", i));
+                filename.push(format!("genome-s{i}.fa.gz.sig"));
                 filename
             })
             .collect();
@@ -1124,7 +1124,7 @@ mod test {
         // RevIndex can't know where the new sigs are
         assert!(RevIndex::open(output.as_path(), false, None).is_err());
 
-        let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
+        let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{new_zip}")))?;
 
         let counter = index.counter_for_query(&query, None);
         let matches = index.matches_from_counter(counter, 0);

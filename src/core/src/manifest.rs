@@ -322,7 +322,7 @@ impl From<&[PathBuf]> for Manifest {
         let records: Vec<Record> = iter
             .flat_map(|p| {
                 let recs: Vec<Record> = Signature::from_path(p)
-                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
+                    .unwrap_or_else(|_| panic!("Error processing {p:?}"))
                     .into_iter()
                     .flat_map(|v| Record::from_sig(&v, p.as_str()))
                     .collect();
@@ -336,12 +336,12 @@ impl From<&[PathBuf]> for Manifest {
 
 impl From<&PathBuf> for Manifest {
     fn from(pathlist: &PathBuf) -> Self {
-        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {pathlist:?}"));
         let reader = BufReader::new(file);
 
         let paths: Vec<PathBuf> = reader
             .lines()
-            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {pathlist:?}")))
             .map(PathBuf::from)
             .collect();
 
@@ -392,7 +392,7 @@ mod test {
         // write a file in test directory with a filename on each line
         let mut pathfile = File::create(&filename).unwrap();
         for sigfile in &full_paths {
-            writeln!(pathfile, "{}", sigfile).unwrap();
+            writeln!(pathfile, "{sigfile}").unwrap();
         }
 
         // load into manifest
@@ -579,7 +579,7 @@ mod test {
         // write a file in test directory with a filename on each line
         let mut pathfile = File::create(&filename).unwrap();
         for sigfile in &full_paths {
-            writeln!(pathfile, "{}", sigfile).unwrap();
+            writeln!(pathfile, "{sigfile}").unwrap();
         }
 
         // load into manifest
@@ -598,7 +598,7 @@ mod test {
 
         let mut pathfile2 = File::create(&filename2).unwrap();
         for sigfile in &full_paths {
-            writeln!(pathfile2, "{}", sigfile).unwrap();
+            writeln!(pathfile2, "{sigfile}").unwrap();
         }
 
         // load into another manifest

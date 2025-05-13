@@ -186,13 +186,12 @@ impl std::fmt::Display for ReadingFrame {
                 let rc_str = String::from_utf8_lossy(rc).to_string();
                 write!(
                     f,
-                    "Type: DNA ({}bp), Forward: {}, Reverse Complement: {}",
-                    len, fw_str, rc_str
+                    "Type: DNA ({len}bp), Forward: {fw_str}, Reverse Complement: {rc_str}"
                 )
             }
             ReadingFrame::Protein { fw, len } => {
                 let fw_str = String::from_utf8_lossy(fw).to_string();
-                write!(f, "Type: Protein ({}aa), Forward: {}", len, fw_str)
+                write!(f, "Type: Protein ({len}aa), Forward: {fw_str}")
             }
         }
     }
@@ -347,7 +346,7 @@ impl SeqToHashes {
             Self::skipmer_frames(seq, &hash_function, ksize)?
         } else {
             return Err(SourmashError::InvalidHashFunction {
-                function: format!("{:?}", hash_function),
+                function: format!("{hash_function:?}"),
             });
         };
 
@@ -1211,7 +1210,7 @@ mod test {
         match result {
             Err(error) => {
                 // Convert the error to a string and check the message
-                let error_message = format!("{}", error);
+                let error_message = format!("{error}");
                 assert_eq!(
                     error_message,
                     "Skipmer ksize must be >= n (3), but got ksize: 2"
@@ -1236,7 +1235,7 @@ mod test {
         match result {
             Err(error) => {
                 // Convert the error to a string and check the message
-                let error_message = format!("{}", error);
+                let error_message = format!("{error}");
                 assert_eq!(
                     error_message,
                     "Skipmer ksize must be >= n (3), but got ksize: 2"
@@ -1579,7 +1578,7 @@ mod test {
             len: 5,
         };
 
-        let output = format!("{}", protein_frame);
+        let output = format!("{protein_frame}");
         // Assert the output matches the expected format
         assert_eq!(output, "Type: Protein (5aa), Forward: MVHLK");
     }
@@ -1715,7 +1714,7 @@ mod test {
         match result {
             Err(error) => {
                 // Convert the error to a string and check the message
-                let error_message = format!("{}", error);
+                let error_message = format!("{error}");
                 assert_eq!(error_message, "Frame number must be 0, 1, or 2, but got 3");
             }
             _ => panic!("Expected SourmashError::InvalidTranslateFrame"),
@@ -1734,7 +1733,7 @@ mod test {
         match result {
             Err(error) => {
                 // Convert the error to a string and check the message
-                let error_message = format!("{}", error);
+                let error_message = format!("{error}");
                 assert_eq!(
                     error_message,
                     "Skipmer frame number must be < n (3), but got start: 4"
@@ -1757,7 +1756,7 @@ mod test {
             SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
 
-        eprintln!("Frames: {:?}", frames);
+        eprintln!("Frames: {frames:?}");
 
         assert_eq!(frames.len(), 3); // Three skipmer frames
 
@@ -1784,7 +1783,7 @@ mod test {
         let sth =
             SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames;
-        eprintln!("Frames: {:?}", frames);
+        eprintln!("Frames: {frames:?}");
 
         assert_eq!(frames.len(), 3); // Three skipmer frames
 
@@ -1827,7 +1826,7 @@ mod test {
 
         // Collect hashes from SeqToHashes
         let sth_hashes: Vec<u64> = sth.map(|result| result.unwrap()).collect();
-        eprintln!("SeqToHashes hashes: {:?}", sth_hashes);
+        eprintln!("SeqToHashes hashes: {sth_hashes:?}");
 
         // Check that SeqToHashes matches expected hashes in order
         assert_eq!(
@@ -1912,7 +1911,7 @@ mod test {
 
         // Collect hashes from SeqToHashes
         let sth_hashes: Vec<u64> = sth.map(|result| result.unwrap()).collect();
-        eprintln!("SeqToHashes hashes: {:?}", sth_hashes);
+        eprintln!("SeqToHashes hashes: {sth_hashes:?}");
 
         // Check that SeqToHashes matches expected hashes in order
         assert_eq!(sth_hashes, expected_hashes, "Hashes do not match in order");
@@ -1949,7 +1948,7 @@ mod test {
 
         // Collect hashes from SeqToHashes
         let sth_hashes: Vec<u64> = sth.map(|result| result.unwrap()).collect();
-        eprintln!("SeqToHashes hashes: {:?}", sth_hashes);
+        eprintln!("SeqToHashes hashes: {sth_hashes:?}");
 
         // Check that SeqToHashes matches expected hashes in order
         assert_eq!(
@@ -1987,7 +1986,7 @@ mod test {
 
         // Collect hashes from SeqToHashes
         let sth_hashes: Vec<u64> = sth.map(|result| result.unwrap()).collect();
-        eprintln!("SeqToHashes hashes: {:?}", sth_hashes);
+        eprintln!("SeqToHashes hashes: {sth_hashes:?}");
 
         // Check that SeqToHashes matches expected hashes in order
         assert_eq!(
@@ -2025,7 +2024,7 @@ mod test {
 
         // Collect hashes from SeqToHashes
         let sth_hashes: Vec<u64> = sth.map(|result| result.unwrap()).collect();
-        eprintln!("SeqToHashes hashes: {:?}", sth_hashes);
+        eprintln!("SeqToHashes hashes: {sth_hashes:?}");
 
         // Check that SeqToHashes matches expected hashes in order
         assert_eq!(
@@ -2047,7 +2046,7 @@ mod test {
             SeqToHashes::new(sequence, k_size, force, is_protein, hash_function, seed).unwrap();
         let frames = sth.frames.clone();
         for fr in frames {
-            eprintln!("{}", fr);
+            eprintln!("{fr}");
         }
 
         let expected_kmers = vec![
@@ -2064,7 +2063,7 @@ mod test {
 
         // Collect hashes from SeqToHashes
         let sth_hashes: Vec<u64> = sth.map(|result| result.unwrap()).collect();
-        eprintln!("SeqToHashes hashes: {:?}", sth_hashes);
+        eprintln!("SeqToHashes hashes: {sth_hashes:?}");
 
         // Check that SeqToHashes matches expected hashes in order
         assert_eq!(

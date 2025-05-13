@@ -354,19 +354,19 @@ mod test {
 
         let similarity = hll1.similarity(&hll2);
         let abs_error = (1. - (similarity / SIMILARITY)).abs();
-        assert!(abs_error < ERR_RATE, "{} {}", similarity, SIMILARITY);
+        assert!(abs_error < ERR_RATE, "{similarity} {SIMILARITY}");
 
         let containment = hll1.containment(&hll2);
         let abs_error = (1. - (containment / CONTAINMENT_H1)).abs();
-        assert!(abs_error < ERR_RATE, "{} {}", containment, CONTAINMENT_H1);
+        assert!(abs_error < ERR_RATE, "{containment} {CONTAINMENT_H1}");
 
         let containment = hll2.containment(&hll1);
         let abs_error = (1. - (containment / CONTAINMENT_H2)).abs();
-        assert!(abs_error < ERR_RATE, "{} {}", containment, CONTAINMENT_H2);
+        assert!(abs_error < ERR_RATE, "{containment} {CONTAINMENT_H2}");
 
         let intersection = hll1.intersection(&hll2) as f64;
         let abs_error = (1. - (intersection / INTERSECTION as f64)).abs();
-        assert!(abs_error < ERR_RATE, "{} {}", intersection, INTERSECTION);
+        assert!(abs_error < ERR_RATE, "{intersection} {INTERSECTION}");
 
         hll1.merge(&hll2).unwrap();
 
@@ -381,7 +381,7 @@ mod test {
 
         let intersection = hll1.intersection(&hllu) as f64;
         let abs_error = (1. - (intersection / N_UNIQUE_U as f64)).abs();
-        assert!(abs_error < ERR_RATE, "{} {}", intersection, N_UNIQUE_U);
+        assert!(abs_error < ERR_RATE, "{intersection} {N_UNIQUE_U}");
     }
 
     #[test]
@@ -444,9 +444,7 @@ mod test {
 
             assert!(
                 cardinality_union > 9500 && cardinality_union < 10500,
-                "precision: {}, cardinality_union: {}",
-                precision,
-                cardinality_union
+                "precision: {precision}, cardinality_union: {cardinality_union}"
             );
 
             let intersection = hll.intersection(&hll2);

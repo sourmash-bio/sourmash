@@ -467,7 +467,7 @@ mod test {
 
         for i in 0..=5 {
             let mut filename = datadir.clone();
-            filename.push(format!("internal.{}", i));
+            filename.push(format!("internal.{i}"));
             let data = std::fs::read(filename).unwrap();
 
             let mut reader = BufReader::new(&data[..]);

@@ -162,8 +162,8 @@ mod tests {
             ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, confidence)
                 .unwrap();
 
-        eprintln!("{}", ci_low);
-        eprintln!("{}", ci_high);
+        eprintln!("{ci_low}");
+        eprintln!("{ci_high}");
         assert_eq!(ci_low, 0.0);
         assert_eq!(ci_high, 0.0);
     }
@@ -278,11 +278,7 @@ mod tests {
 
         assert!(
             (result - expected).abs() < EPSILON,
-            "The result of r1_to_q({}, {}) was {}, but {} was expected",
-            k,
-            r1,
-            result,
-            expected
+            "The result of r1_to_q({k}, {r1}) was {result}, but {expected} was expected"
         );
     }
 
@@ -300,12 +296,7 @@ mod tests {
 
         assert!(
             (result - expected_result).abs() < EPSILON,
-            "The result of exp_n_mutated({}, {}, {}) was {}, but {} was expected",
-            l,
-            k,
-            r1,
-            result,
-            expected_result
+            "The result of exp_n_mutated({l}, {k}, {r1}) was {result}, but {expected_result} was expected"
         );
     }
 
