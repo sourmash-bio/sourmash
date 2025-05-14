@@ -65,13 +65,13 @@ impl LinearIndex {
 
             let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
             if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
+                info!("Processed {i} reference sigs");
             }
 
             let search_sig = self
                 .collection
                 .sig_for_dataset(dataset_id)
-                .unwrap_or_else(|_| panic!("error loading {:?}", filename));
+                .unwrap_or_else(|_| panic!("error loading {filename:?}"));
 
             let mut search_mh = None;
             if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(template) {
@@ -87,7 +87,7 @@ impl LinearIndex {
 
             let (size, _) = small_mh
                 .intersection_size(large_mh)
-                .unwrap_or_else(|_| panic!("error computing intersection for {:?}", filename));
+                .unwrap_or_else(|_| panic!("error computing intersection for {filename:?}"));
 
             if size == 0 {
                 None

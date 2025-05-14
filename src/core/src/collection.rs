@@ -163,7 +163,7 @@ impl Collection {
         let records: Vec<_> = iter
             .enumerate()
             .flat_map(|(i, sig)| {
-                let path = format!("{}", i);
+                let path = format!("{i}");
                 let mut record = Record::from_sig(&sig, &path);
                 let path = storage.save_sig(&path, sig).expect("Error saving sig");
                 record.iter_mut().for_each(|rec| {
