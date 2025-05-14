@@ -238,7 +238,7 @@ pub fn calculate_gather_stats(
         .intersection(&remaining_query)
         .expect("could not do intersection");
     let isect_size = isect.0.len();
-    trace!("isect_size: {}", isect_size);
+    trace!("isect_size: {isect_size}");
     trace!("query.size: {}", remaining_query.size());
 
     //bp remaining in subtracted query

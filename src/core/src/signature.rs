@@ -186,13 +186,12 @@ impl std::fmt::Display for ReadingFrame {
                 let rc_str = String::from_utf8_lossy(rc).to_string();
                 write!(
                     f,
-                    "Type: DNA ({}bp), Forward: {}, Reverse Complement: {}",
-                    len, fw_str, rc_str
+                    "Type: DNA ({len}bp), Forward: {fw_str}, Reverse Complement: {rc_str}"
                 )
             }
             ReadingFrame::Protein { fw, len } => {
                 let fw_str = String::from_utf8_lossy(fw).to_string();
-                write!(f, "Type: Protein ({}aa), Forward: {}", len, fw_str)
+                write!(f, "Type: Protein ({len}aa), Forward: {fw_str}")
             }
         }
     }
@@ -347,7 +346,7 @@ impl SeqToHashes {
             Self::skipmer_frames(seq, &hash_function, ksize)?
         } else {
             return Err(SourmashError::InvalidHashFunction {
-                function: format!("{:?}", hash_function),
+                function: format!("{hash_function:?}"),
             });
         };
 

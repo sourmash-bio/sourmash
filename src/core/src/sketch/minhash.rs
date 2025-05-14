@@ -306,7 +306,7 @@ impl KmerMinHash {
             md5_ctx.consume(&buffer);
             buffer.clear();
             for x in &self.mins {
-                write!(&mut buffer, "{}", x).unwrap();
+                write!(&mut buffer, "{x}").unwrap();
                 md5_ctx.consume(&buffer);
                 buffer.clear();
             }
@@ -1261,7 +1261,7 @@ impl KmerMinHashBTree {
             md5_ctx.consume(&buffer);
             buffer.clear();
             for x in &self.mins {
-                write!(&mut buffer, "{}", x).unwrap();
+                write!(&mut buffer, "{x}").unwrap();
                 md5_ctx.consume(&buffer);
                 buffer.clear();
             }
