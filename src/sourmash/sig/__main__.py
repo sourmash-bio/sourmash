@@ -401,6 +401,10 @@ def overlap(args):
     cont1 = sig1.contained_by(sig2)
     cont2 = sig2.contained_by(sig1)
 
+    cANI1 = sig1.containment_ani(sig2).ani
+    cANI2 = sig2.containment_ani(sig1).ani
+    avg_cANI = (cANI1 + cANI2) / 2
+
     sig1_file = args.signature1
     sig2_file = args.signature2
 
@@ -442,8 +446,9 @@ second signature:
   k={ksize} molecule={moltype} num={num} scaled={scaled}
 
 similarity:                  {similarity:.5f}
-first contained in second:   {cont1:.5f}
-second contained in first:   {cont2:.5f}
+first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
+second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
+average containment ANI:     {avg_cANI:.5f}
 
 number of hashes in first:   {size1}
 number of hashes in second:  {size2}
@@ -452,7 +457,9 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
-""".format(**locals())
+""".format(
+            **locals()
+        )
     )
 
 
