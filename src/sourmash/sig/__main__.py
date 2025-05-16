@@ -457,9 +457,7 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
-""".format(
-            **locals()
-        )
+""".format(**locals())
     )
 
 
