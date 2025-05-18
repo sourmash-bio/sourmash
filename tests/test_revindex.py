@@ -130,7 +130,7 @@ def test_mem_revindex_index_search():
 
 
 def test_mem_revindex_index_search_picklist(runtmp):
-    # confirm that RevIndex works w/picklists
+    # confirm that MemRevIndex works w/picklists
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -147,6 +147,9 @@ def test_mem_revindex_index_search_picklist(runtmp):
     pl = SignaturePicklist("ident")
     pl.init(values=["CP001071.1"])
     lidx = lidx.select(picklist=pl)
+
+    assert len(lidx) == 1
+    assert len(list(lidx.signatures())) == 1
 
     # now, search for sig2
     sr = lidx.search(ss2, threshold=1.0)
@@ -369,6 +372,9 @@ def test_mem_revindex_index_check_nomatches():
     pl = SignaturePicklist("ident")
     pl.init(values=["CP001071.1"])
     lidx = lidx.select(picklist=pl)
+
+    assert len(lidx) == 1
+    assert len(list(lidx.signatures())) == 1
 
     assert lidx.peek(ss47.minhash) == []
 
@@ -857,7 +863,7 @@ def test_disk_revindex_union_found():
 
 
 def test_disk_revindex_index_search_picklist(runtmp):
-    # confirm that disk-based RevIndex works w/picklists
+    # confirm that disk-based RevIndex search works w/picklists
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -872,6 +878,9 @@ def test_disk_revindex_index_search_picklist(runtmp):
     pl = SignaturePicklist("ident")
     pl.init(values=["CP001071.1"])
     db = db.select(picklist=pl)
+
+    assert len(db) == 1
+    assert len(list(db.signatures())) == 1
 
     # now, search for sig2
     sr = db.search(ss2, threshold=1.0)

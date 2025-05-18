@@ -49,8 +49,6 @@ class RevIndex(RustObject, Index):
         self._idx_picklist = RevIndex_DatasetPicklist(idx_list)
 
     def signatures(self, *, use_picklist=True):
-        # CTB fix: adjust signatures() to pay attention to picklists,
-        # vs internal signatures.
         self._init_inner()
 
         size = ffi.new("uintptr_t *")
