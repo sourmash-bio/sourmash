@@ -496,7 +496,7 @@ def test_disk_revindex_signatures_with_internal_with_picklist():
 
     dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
     db._idx_picklist = dataset_picks
-    assert len(db) == 2, len(db) # len pays attention to picklist...
+    assert len(db) == 2, len(db)  # len pays attention to picklist...
 
     # BUT: picklist is ignored by signatures_with_internal.
     xx = list(db._signatures_with_internal())

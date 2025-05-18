@@ -59,9 +59,8 @@ class RevIndex(RustObject, Index):
         else:
             picklist_objptr = ffi.NULL
 
-        sigs_ptr = self._methodcall(lib.revindex_signatures, size,
-                                    picklist_objptr)
-            
+        sigs_ptr = self._methodcall(lib.revindex_signatures, size, picklist_objptr)
+
         size = size[0]
 
         for i in range(size):
