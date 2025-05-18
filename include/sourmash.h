@@ -401,7 +401,8 @@ void revindex_free(SourmashRevIndex *ptr);
 
 uint32_t revindex_ksize(const SourmashRevIndex *ptr);
 
-uint64_t revindex_len(const SourmashRevIndex *ptr);
+uint64_t revindex_len(const SourmashRevIndex *ptr,
+                      const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 SourmashManifest *revindex_manifest(const SourmashRevIndex *ptr);
 
@@ -431,7 +432,9 @@ const SourmashSearchResult *const *revindex_search_jaccard(const SourmashRevInde
                                                            uintptr_t *size,
                                                            const SourmashDatasetPicklist *dataset_picklist_ptr);
 
-SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr, uintptr_t *size);
+SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr,
+                                        uintptr_t *size,
+                                        const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
 

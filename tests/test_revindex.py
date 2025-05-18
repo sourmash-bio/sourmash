@@ -468,6 +468,45 @@ def test_disk_revindex_signatures_with_internal():
     # victory!
 
 
+def test_disk_revindex_signatures_with_picklist():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
+    db._idx_picklist = dataset_picks
+    assert len(db) == 2, len(db)
+
+    xx = list(db.signatures())
+    assert len(xx) == 2
+    for ss in xx:
+        print(ss.name)
+    # victory!
+
+
+def test_disk_revindex_signatures_with_internal_with_picklist():
+    # check that 'internal' matches enumeration order, and ignores
+    # picklists.
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
+    db._idx_picklist = dataset_picks
+    assert len(db) == 2, len(db) # len pays attention to picklist...
+
+    # BUT: picklist is ignored by signatures_with_internal.
+    xx = list(db._signatures_with_internal())
+    assert len(xx) == 3
+    for n, (ss, internal) in enumerate(xx):
+        assert n == int(internal)
+        print(ss.name)
+    # victory!
+
+
 def test_disk_revindex_best_containment():
     sig47 = utils.get_test_data("47.fa.sig")
     ss47 = load_one_signature_from_json(sig47, ksize=31)

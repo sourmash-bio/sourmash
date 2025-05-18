@@ -48,13 +48,20 @@ class RevIndex(RustObject, Index):
         idx_list = [int(row["internal_location"]) for row in mf.rows]
         self._idx_picklist = RevIndex_DatasetPicklist(idx_list)
 
-    def signatures(self):
+    def signatures(self, *, use_picklist=True):
         # CTB fix: adjust signatures() to pay attention to picklists,
         # vs internal signatures.
         self._init_inner()
 
         size = ffi.new("uintptr_t *")
-        sigs_ptr = self._methodcall(lib.revindex_signatures, size)
+        if use_picklist:
+            picklist_objptr = self._ffi_idx_picklist
+        else:
+            picklist_objptr = ffi.NULL
+
+        sigs_ptr = self._methodcall(lib.revindex_signatures, size,
+                                    picklist_objptr)
+            
         size = size[0]
 
         for i in range(size):
@@ -68,12 +75,12 @@ class RevIndex(RustObject, Index):
     def _signatures_with_internal(self):
         # CTB note: this should return _all_ signatures, independent of
         # picklist.
-        for n, ss in enumerate(self.signatures()):
+        for n, ss in enumerate(self.signatures(use_picklist=False)):
             yield ss, n
 
     def __len__(self):
         self._init_inner()
-        return self._methodcall(lib.revindex_len)
+        return self._methodcall(lib.revindex_len, self._ffi_idx_picklist)
 
     @property
     def scaled(self):
