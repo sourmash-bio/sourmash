@@ -157,7 +157,8 @@ pub unsafe extern "C" fn revindex_len(
     let coll = revindex.collection();
 
     // filter by picklist
-    let records: Vec<(Idx, &Record)> = coll.iter()
+    let records: Vec<(Idx, &Record)> = coll
+        .iter()
         .filter_map(|(idx, record)| {
             if let Some(pl) = &dataset_picklist {
                 if pl.dataset_ids.contains(&idx) {
