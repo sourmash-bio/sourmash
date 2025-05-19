@@ -394,7 +394,7 @@ def overlap(args):
     notify(f"loaded one signature each from {args.signature1} and {args.signature2}")
 
     try:
-        similarity = sig1.similarity(sig2)
+        jaccard = sig1.jaccard(sig2)
     except ValueError:
         raise
 
@@ -432,7 +432,7 @@ def overlap(args):
     num_union = len(hashes_1.union(hashes_2))
 
     print(
-        """\
+        f"""\
 first signature:
   signature filename: {sig1_file}
   signature: {name1}
@@ -445,7 +445,7 @@ second signature:
   md5: {md5_2}
   k={ksize} molecule={moltype} num={num} scaled={scaled}
 
-similarity:                  {similarity:.5f}
+jaccard similarity:          {jaccard:.5f}
 first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
 second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
 average containment ANI:     {avg_cANI:.5f}
@@ -457,10 +457,18 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
-""".format(
-            **locals()
-        )
+"""
     )
+
+    # if we have abundance for both sketches, calculate abundance-weighted measures
+    if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
+        angular_similarity = sig1.similarity(sig2)
+        print(
+            f"""\
+Measurements with abundance:
+angular similarity:          {angular_similarity:.5f}
+"""
+        )
 
 
 def merge(args):
