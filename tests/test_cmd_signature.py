@@ -4023,7 +4023,7 @@ def test_sig_overlap_num(runtmp):
     # get overlap details
     sig47 = utils.get_test_data("num/47.fa.sig")
     sig63 = utils.get_test_data("num/63.fa.sig")
-    c.run_sourmash("sig", "overlap", sig47, sig63, '-k', '31')
+    c.run_sourmash("sig", "overlap", sig47, sig63, "-k", "31")
     out = c.last_result.out
     print(out)
     # md5s

@@ -137,7 +137,7 @@ class SourmashSignature(RustObject):
         print(
             f"""\
 signature: {self.name}
-  filename: {self.filename or 'N/A'}
+  filename: {self.filename or "N/A"}
   md5: {self.md5sum()}
   k={mh.ksize} molecule={mh.moltype} num={mh.num} scaled={mh.scaled}
   track_abundance={mh.track_abundance}
@@ -178,9 +178,7 @@ signature: {self.name}
     def angular_similarity(self, other, downsample=False):
         "Compute angular similarity with the other signature."
         # check that both have abunds
-        return self.minhash.angular_similarity(
-            other.minhash, downsample=downsample
-        )
+        return self.minhash.angular_similarity(other.minhash, downsample=downsample)
 
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
