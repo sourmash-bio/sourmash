@@ -92,6 +92,8 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [Classifying genome and metagenome sketches](classifying-signatures.md)
 
+* [A quickstart guide to using RocksDB indexing](howto-rocksdb.md)
+
 * [Working with private collections of genome sketches](sourmash-collections.ipynb)
 
 * [Using the `LCA_Database` API](using-LCA-database-API.ipynb)
