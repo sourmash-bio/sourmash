@@ -450,7 +450,7 @@ total (union):               {num_union}
     abundance_info = ""
     if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
         angular_similarity = sig1.angular_similarity(sig2)
-        sum_hashes1 =  sum(sig1.minhash.hashes.values())
+        sum_hashes1 = sum(sig1.minhash.hashes.values())
         sum_hashes2 = sum(sig2.minhash.hashes.values())
         weighted_containment1 = sig1.contained_by_weighted(sig2)
         weighted_containment2 = sig2.contained_by_weighted(sig1)
