@@ -398,58 +398,55 @@ def overlap(args):
     except ValueError:
         raise
 
-    cont1 = sig1.contained_by(sig2)
-    cont2 = sig2.contained_by(sig1)
+    # --- conditional containment info ---
+    if sig1.minhash.scaled > 0 and sig2.minhash.scaled > 0:
+        cont1 = sig1.contained_by(sig2)
+        cont2 = sig2.contained_by(sig1)
 
-    cANI1 = sig1.containment_ani(sig2).ani
-    cANI2 = sig2.containment_ani(sig1).ani
-    avg_cANI = (cANI1 + cANI2) / 2
+        cANI1 = sig1.containment_ani(sig2).ani
+        cANI2 = sig2.containment_ani(sig1).ani
+        avg_cANI = (cANI1 + cANI2) / 2
 
-    sig1_file = args.signature1
-    sig2_file = args.signature2
+        similarity_info = f"""\
+jaccard similarity:          {jaccard:.5f}
+first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
+second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
+average containment ANI:     {avg_cANI:.5f}
+"""
+    else:
+        similarity_info = f"""\
+jaccard similarity:          {jaccard:.5f}
+containment and ANI not available (one or both signatures are not scaled)
+"""
 
-    name1 = sig1.name
-    name2 = sig2.name
-
-    md5_1 = sig1.md5sum()
-    md5_2 = sig2.md5sum()
-
-    ksize = sig1.minhash.ksize
-    moltype = sig1.minhash.moltype
-
-    num = sig1.minhash.num
-    size1 = len(sig1.minhash)
-    size2 = len(sig2.minhash)
-
-    scaled = sig1.minhash.scaled
-
+    # --- hash counts and overlaps ---
     hashes_1 = set(sig1.minhash.hashes)
     hashes_2 = set(sig2.minhash.hashes)
 
+    size1 = len(hashes_1)
+    size2 = len(hashes_2)
     num_common = len(hashes_1 & hashes_2)
     disjoint_1 = len(hashes_1 - hashes_2)
     disjoint_2 = len(hashes_2 - hashes_1)
     num_union = len(hashes_1.union(hashes_2))
 
+    # --- conditional abundance info ---
+    abundance_info = ""
+    if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
+        angular_similarity = sig1.angular_similarity(sig2)
+        abundance_info = f"""\
+Measurements with abundance:
+angular similarity:          {angular_similarity:.5f}
+    """
+    # --- output ---
+    print("first signature:")
+    sig1.display()
+    print("second signature:")
+    sig2.display()
+
     print(
         f"""\
-first signature:
-  signature filename: {sig1_file}
-  signature: {name1}
-  md5: {md5_1}
-  k={ksize} molecule={moltype} num={num} scaled={scaled}
-
-second signature:
-  signature filename: {sig2_file}
-  signature: {name2}
-  md5: {md5_2}
-  k={ksize} molecule={moltype} num={num} scaled={scaled}
-
-jaccard similarity:          {jaccard:.5f}
-first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
-second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
-average containment ANI:     {avg_cANI:.5f}
-
+{similarity_info}
 number of hashes in first:   {size1}
 number of hashes in second:  {size2}
 
@@ -457,18 +454,10 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
+
+{abundance_info}
 """
     )
-
-    # if we have abundance for both sketches, calculate abundance-weighted measures
-    if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
-        angular_similarity = sig1.angular_similarity(sig2)
-        print(
-            f"""\
-Measurements with abundance:
-angular similarity:          {angular_similarity:.5f}
-"""
-        )
 
 
 def merge(args):
