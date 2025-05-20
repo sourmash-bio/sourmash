@@ -3993,6 +3993,23 @@ def test_sig_overlap_2(runtmp):
     assert "number of hashes in common:  2529" in out
 
 
+def test_sig_overlap_abund(runtmp):
+    c = runtmp
+    # get overlap details
+    sig47 = utils.get_test_data("track_abund/47.fa.sig")
+    sig63 = utils.get_test_data("track_abund/63.fa.sig")
+    c.run_sourmash("sig", "overlap", sig47, sig63)
+    out = c.last_result.out
+    print(out)
+    # md5s
+    assert "09a08691ce52952152f0e866a59f6261" in out
+    assert "38729c6374925585db28916b82a6f513" in out
+
+    assert "jaccard similarity:          0.32069" in out
+    assert "number of hashes in common:  2529" in out
+    assert "angular similarity:          0.32983" in out
+
+
 @utils.in_tempdir
 def test_import_export_1(c):
     # check to make sure we can import what we've exported!

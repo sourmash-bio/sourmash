@@ -163,12 +163,8 @@ class SourmashSignature(RustObject):
     def angular_similarity(self, other, downsample=False):
         "Compute angular similarity with the other signature."
         # check that both have abunds
-        if not (self.track_abundance and other.track_abundance):
-            raise TypeError(
-                "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
-            )
-        return self.minhash.similarity(
-            other.minhash, ignore_abundance=False, downsample=downsample
+        return self.minhash.angular_similarity(
+            other.minhash, downsample=downsample
         )
 
     def contained_by(self, other, downsample=False):

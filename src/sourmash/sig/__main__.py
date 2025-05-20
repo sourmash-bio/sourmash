@@ -462,7 +462,7 @@ total (union):               {num_union}
 
     # if we have abundance for both sketches, calculate abundance-weighted measures
     if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
-        angular_similarity = sig1.similarity(sig2)
+        angular_similarity = sig1.angular_similarity(sig2)
         print(
             f"""\
 Measurements with abundance:
