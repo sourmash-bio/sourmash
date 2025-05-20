@@ -136,8 +136,8 @@ class SourmashSignature(RustObject):
 
         print(
             f"""\
-signature: {self.name}
-  filename: {self.filename or 'N/A'}
+  signature filename: {self.filename or 'N/A'}
+  signature name: {self.name}
   md5: {self.md5sum()}
   k={mh.ksize} molecule={mh.moltype} num={mh.num} scaled={mh.scaled}
   track_abundance={mh.track_abundance}
