@@ -180,7 +180,6 @@ class SourmashSignature(RustObject):
 
     def angular_similarity(self, other, downsample=False):
         "Compute angular similarity with the other signature."
-        # check that both have abunds
         return self.minhash.angular_similarity(other.minhash, downsample=downsample)
 
     def contained_by(self, other, downsample=False):
