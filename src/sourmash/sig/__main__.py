@@ -413,12 +413,14 @@ jaccard similarity:          {jaccard:.5f}
 first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
 second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
 average containment ANI:     {avg_cANI:.5f}
+
 """
     else:
         similarity_info = f"""\
 --- Similarity measures ---
 jaccard similarity:          {jaccard:.5f}
 containment and ANI not available (one or both signatures are not scaled)
+
 """
 
     # --- hash counts and overlaps ---
@@ -441,6 +443,7 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
+
 """
 
     # --- conditional abundance info ---
@@ -459,7 +462,6 @@ second contained in first (weighted): {weighted_containment2:.5f}
 
 number of hashes in first (weighted): {sum_hashes1}
 number of hashes in second (weighted): {sum_hashes2}
-
     """
     # --- output ---
     print("first signature:")
@@ -469,10 +471,9 @@ number of hashes in second (weighted): {sum_hashes2}
 
     print(
         f"""\
+
 {similarity_info}
-
 {hash_counts_info}
-
 {abundance_info}
 """
     )

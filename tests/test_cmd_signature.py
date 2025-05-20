@@ -4015,6 +4015,11 @@ def test_sig_overlap_abund(runtmp):
 
     assert "number of hashes in common:  2529" in out
     assert "angular similarity:          0.32983" in out
+    assert "first contained in second (weighted): 0.49169" in out
+    assert "second contained in first (weighted): 0.49126" in out
+
+    assert "number of hashes in first (weighted): 5292" in out
+    assert "number of hashes in second (weighted): 5433" in out
 
 
 def test_sig_overlap_num(runtmp):
