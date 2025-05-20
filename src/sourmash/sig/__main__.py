@@ -440,9 +440,9 @@ angular similarity:          {angular_similarity:.5f}
     """
     # --- output ---
     print("first signature:")
-    sig1.display()
+    sig1.display(args.signature1)
     print("second signature:")
-    sig2.display()
+    sig2.display(args.signature2)
 
     print(
         f"""\

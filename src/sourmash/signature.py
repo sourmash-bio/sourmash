@@ -130,17 +130,21 @@ class SourmashSignature(RustObject):
         assert not max_length or len(name) <= max_length
         return name
 
-    def display(self):
+    def display(self, location=None):
         "Print a summary of this signature."
         mh = self.minhash
+        sum_hashes = sum(mh.hashes.values())
 
         print(
             f"""\
-  signature filename: {self.filename or "N/A"}
+  signature filename: {location or "N/A"}
   signature name: {self.name}
+  source filename: {self.filename or "N/A"}
   md5: {self.md5sum()}
   k={mh.ksize} molecule={mh.moltype} num={mh.num} scaled={mh.scaled} track_abundance={mh.track_abundance}
-  hash count: {len(mh)}
+  size: {len(mh)}
+  sum hashes: {sum_hashes}
+  signature license: {self.license}
 """
         )
 
