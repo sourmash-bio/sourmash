@@ -408,6 +408,7 @@ def overlap(args):
         avg_cANI = (cANI1 + cANI2) / 2
 
         similarity_info = f"""\
+--- Similarity measures ---
 jaccard similarity:          {jaccard:.5f}
 first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
 second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
@@ -415,6 +416,7 @@ average containment ANI:     {avg_cANI:.5f}
 """
     else:
         similarity_info = f"""\
+--- Similarity measures ---
 jaccard similarity:          {jaccard:.5f}
 containment and ANI not available (one or both signatures are not scaled)
 """
@@ -430,13 +432,34 @@ containment and ANI not available (one or both signatures are not scaled)
     disjoint_2 = len(hashes_2 - hashes_1)
     num_union = len(hashes_1.union(hashes_2))
 
+    hash_counts_info = f"""\
+--- Hash overlap summary ---
+number of hashes in first:   {size1}
+number of hashes in second:  {size2}
+
+number of hashes in common:  {num_common}
+only in first:               {disjoint_1}
+only in second:              {disjoint_2}
+total (union):               {num_union}
+"""
+
     # --- conditional abundance info ---
     abundance_info = ""
     if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
         angular_similarity = sig1.angular_similarity(sig2)
+        sum_hashes1 =  sum(sig1.minhash.hashes.values())
+        sum_hashes2 = sum(sig2.minhash.hashes.values())
+        weighted_containment1 = sig1.contained_by_weighted(sig2)
+        weighted_containment2 = sig2.contained_by_weighted(sig1)
         abundance_info = f"""\
-Measurements with abundance:
+--- Abundance-weighted similarity: ---
 angular similarity:          {angular_similarity:.5f}
+first contained in second (weighted): {weighted_containment1:.5f}
+second contained in first (weighted): {weighted_containment2:.5f}
+
+number of hashes in first (weighted): {sum_hashes1}
+number of hashes in second (weighted): {sum_hashes2}
+
     """
     # --- output ---
     print("first signature:")
@@ -447,13 +470,8 @@ angular similarity:          {angular_similarity:.5f}
     print(
         f"""\
 {similarity_info}
-number of hashes in first:   {size1}
-number of hashes in second:  {size2}
 
-number of hashes in common:  {num_common}
-only in first:               {disjoint_1}
-only in second:              {disjoint_2}
-total (union):               {num_union}
+{hash_counts_info}
 
 {abundance_info}
 """

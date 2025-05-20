@@ -187,6 +187,10 @@ class SourmashSignature(RustObject):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample=downsample)
 
+    def contained_by_weighted(self, other):
+        "Compuite containment by the other signature. Weight by abundance in self."
+        return self.minhash.contained_by_weighted(other.minhash)
+
     def containment_ani(
         self,
         other,
