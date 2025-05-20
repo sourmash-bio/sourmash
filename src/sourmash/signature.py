@@ -136,10 +136,10 @@ class SourmashSignature(RustObject):
             other.minhash, ignore_abundance=ignore_abundance, downsample=downsample
         )
 
-    def jaccard(self, other):
+    def jaccard(self, other, downsample=False):
         "Compute Jaccard similarity with the other MinHash signature."
         return self.minhash.similarity(
-            other.minhash, ignore_abundance=True, downsample=False
+            other.minhash, ignore_abundance=True, downsample=downsample
         )
 
     def jaccard_ani(
@@ -158,6 +158,17 @@ class SourmashSignature(RustObject):
             jaccard=jaccard,
             prob_threshold=prob_threshold,
             err_threshold=err_threshold,
+        )
+
+    def angular_similarity(self, other, downsample=False):
+        "Compute angular similarity with the other signature."
+        # check that both have abunds
+        if not (self.track_abundance and other.track_abundance):
+            raise TypeError(
+                "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
+            )
+        return self.minhash.similarity(
+            other.minhash, ignore_abundance=False, downsample=downsample
         )
 
     def contained_by(self, other, downsample=False):

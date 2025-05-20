@@ -3971,7 +3971,7 @@ def test_sig_overlap(runtmp):
     assert "09a08691ce52952152f0e866a59f6261" in out
     assert "38729c6374925585db28916b82a6f513" in out
 
-    assert "similarity:                  0.32069" in out
+    assert "jaccard similarity:          0.32069" in out
     assert "number of hashes in common:  2529" in out
 
 
@@ -3989,7 +3989,7 @@ def test_sig_overlap_2(runtmp):
     assert "09a08691ce52952152f0e866a59f6261" in out
     assert "38729c6374925585db28916b82a6f513" in out
 
-    assert "similarity:                  0.32069" in out
+    assert "jaccard similarity:          0.32069" in out
     assert "number of hashes in common:  2529" in out
 
 
