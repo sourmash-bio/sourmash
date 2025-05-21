@@ -403,11 +403,24 @@ def overlap(args):
         cont1 = sig1.contained_by(sig2)
         cont2 = sig2.contained_by(sig1)
 
-        cANI1 = sig1.containment_ani(sig2).ani
-        cANI2 = sig2.containment_ani(sig1).ani
-        avg_cANI = (cANI1 + cANI2) / 2
+        cANI_result = sig1.containment_ani(sig2)
+        size_estimate_inaccurate = cANI_result.size_is_inaccurate
+        print("size_estimate_inaccurate:", size_estimate_inaccurate)
+        if size_estimate_inaccurate:
+            similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+first contained in second:   {cont1:.5f}
+second contained in first:   {cont2:.5f}
 
-        similarity_info = f"""\
+Note: cANI values not reported. One or more sketches contains too few hashes for accurate size estimation.
+"""
+        else:
+            cANI1 = cANI_result.ani
+            cANI2 = sig2.containment_ani(sig1).ani
+            avg_cANI = (cANI1 + cANI2) / 2
+
+            similarity_info = f"""\
 --- Similarity measures ---
 jaccard similarity:          {jaccard:.5f}
 first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
