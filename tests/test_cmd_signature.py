@@ -3997,7 +3997,7 @@ def test_sig_overlap_2(runtmp):
 
 
 def test_sig_overlap_inaccurate_size_estimate(runtmp):
-    c= runtmp
+    c = runtmp
     # make tiny sigs to test containment ANI with inaccurate size estimate
     # (i.e. not enough hashes to estimate size)
     mh1 = sourmash.MinHash(0, 31, scaled=100, track_abundance=False)
@@ -4015,10 +4015,13 @@ def test_sig_overlap_inaccurate_size_estimate(runtmp):
     with open(sig2_file, "w") as fp:
         save_signatures_to_json([sig2], fp)
 
-    c.run_sourmash("sig", "overlap", sig1_file, sig2_file, '-k', '31')
+    c.run_sourmash("sig", "overlap", sig1_file, sig2_file, "-k", "31")
     out = c.last_result.out
     print(out)
-    assert "cANI values not reported. One or more sketches contains too few hashes for accurate size estimation." in out
+    assert (
+        "cANI values not reported. One or more sketches contains too few hashes for accurate size estimation."
+        in out
+    )
 
 
 def test_sig_overlap_abund(runtmp):
