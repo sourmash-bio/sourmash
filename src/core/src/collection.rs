@@ -73,7 +73,8 @@ impl CollectionSet {
     }
 
     pub fn selection(&self) -> Selection {
-        todo!("Extract selection from first sig")
+        let (_, r) = self.iter().next().expect("foo"); // @CTB handle
+        Selection::from_record(r).expect("fiz")
     }
 
     /// Replace the storage with a new one.
