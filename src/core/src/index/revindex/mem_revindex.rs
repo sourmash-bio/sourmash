@@ -23,6 +23,7 @@ use crate::sketch::Sketch;
 use crate::Result;
 use crate::ScaledType;
 
+#[derive(Clone)]
 pub struct MemRevIndex {
     linear: LinearIndex,
     hash_to_color: HashToColor,

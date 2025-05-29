@@ -18,6 +18,7 @@ use crate::storage::SigStore;
 use crate::Result;
 
 /// Supports parallel search without a particular index.
+#[derive(Clone)]
 pub struct LinearIndex {
     collection: CollectionSet,
     template: Sketch,

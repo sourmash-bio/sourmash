@@ -392,7 +392,7 @@ pub const VALID: [bool; 256] = {
     lookup
 };
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Colors {
     colors: ColorToIdx,
 }
