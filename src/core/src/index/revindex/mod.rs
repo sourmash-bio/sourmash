@@ -35,7 +35,7 @@ pub struct HashToColor(HashToColorT);
 
 /// Struct to hold interim results of a containment analysis, supporting
 /// iterative peek/consume.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CounterGather {
     counter: SigCounter,
     query_colors: QueryColors,
@@ -43,6 +43,7 @@ pub struct CounterGather {
 }
 
 #[enum_dispatch(RevIndexOps)]
+#[derive(Clone)]
 pub enum RevIndex {
     Disk(disk_revindex::DiskRevIndex),
     Mem(mem_revindex::MemRevIndex),
