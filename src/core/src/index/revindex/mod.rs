@@ -187,6 +187,10 @@ impl CounterGather {
         found_mh
     }
 
+    pub fn counter(&self) -> &SigCounter {          // @CTB turn into iterator?
+        &self.counter
+    }
+
     pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
         if self.counter.is_empty() {
             return None;
