@@ -845,13 +845,17 @@ class MinHash(RustObject):
             downsample,
         )
 
-    def angular_similarity(self, other):
+    def angular_similarity(self, other, downsample=False):
         "Calculate the angular similarity."
         if not (self.track_abundance and other.track_abundance):
             raise TypeError(
                 "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
             )
-        return self._methodcall(lib.kmerminhash_angular_similarity, other._get_objptr())
+        # return self._methodcall(lib.kmerminhash_angular_similarity, other._get_objptr())
+        # use similarity so we can downsample
+        return self._methodcall(
+            lib.kmerminhash_similarity, other._get_objptr(), False, downsample
+        )
 
     def is_compatible(self, other):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
@@ -879,6 +883,26 @@ class MinHash(RustObject):
             return 0.0
         else:
             return containment
+
+    def contained_by_weighted(self, other):
+        """
+        Calculate how much of self is contained by other; weight by self.
+        Note: automatically downsamples as needed -- is this ok?
+        """
+        # should we debias this like standard containment?
+        if not (self.scaled and other.scaled):
+            raise TypeError(
+                "Error: can only calculate containment for scaled MinHashes"
+            )
+        self_mh = self.copy()
+        self_ds = self_mh.downsample(scaled=other.scaled)
+        self_mh = self_ds.flatten()
+        other_mh = flatten_and_downsample_scaled(other, self.scaled)
+
+        intersect_mh = other_mh.inflate(self)
+        weighted_common = intersect_mh.sum_abundances
+        weighted_total = self_ds.sum_abundances
+        return weighted_common / weighted_total
 
     def containment_ani(
         self,

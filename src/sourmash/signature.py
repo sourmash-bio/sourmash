@@ -130,16 +130,34 @@ class SourmashSignature(RustObject):
         assert not max_length or len(name) <= max_length
         return name
 
+    def display(self, location=None):
+        "Print a summary of this signature."
+        mh = self.minhash
+        sum_hashes = sum(mh.hashes.values())
+
+        print(
+            f"""\
+  signature filename: {location or "N/A"}
+  signature name: {self.name}
+  source filename: {self.filename or "N/A"}
+  md5: {self.md5sum()}
+  k={mh.ksize} molecule={mh.moltype} num={mh.num} scaled={mh.scaled} track_abundance={mh.track_abundance}
+  size: {len(mh)}
+  sum hashes: {sum_hashes}
+  signature license: {self.license}
+"""
+        )
+
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other signature."
         return self.minhash.similarity(
             other.minhash, ignore_abundance=ignore_abundance, downsample=downsample
         )
 
-    def jaccard(self, other):
+    def jaccard(self, other, downsample=False):
         "Compute Jaccard similarity with the other MinHash signature."
         return self.minhash.similarity(
-            other.minhash, ignore_abundance=True, downsample=False
+            other.minhash, ignore_abundance=True, downsample=downsample
         )
 
     def jaccard_ani(
@@ -160,9 +178,17 @@ class SourmashSignature(RustObject):
             err_threshold=err_threshold,
         )
 
+    def angular_similarity(self, other, downsample=False):
+        "Compute angular similarity with the other signature."
+        return self.minhash.angular_similarity(other.minhash, downsample=downsample)
+
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample=downsample)
+
+    def contained_by_weighted(self, other):
+        "Compute containment by the other signature. Weight by abundance in self."
+        return self.minhash.contained_by_weighted(other.minhash)
 
     def containment_ani(
         self,

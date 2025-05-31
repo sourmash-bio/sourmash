@@ -3971,7 +3971,7 @@ def test_sig_overlap(runtmp):
     assert "09a08691ce52952152f0e866a59f6261" in out
     assert "38729c6374925585db28916b82a6f513" in out
 
-    assert "similarity:                  0.32069" in out
+    assert "jaccard similarity:          0.32069" in out
     assert "number of hashes in common:  2529" in out
 
 
@@ -3989,8 +3989,83 @@ def test_sig_overlap_2(runtmp):
     assert "09a08691ce52952152f0e866a59f6261" in out
     assert "38729c6374925585db28916b82a6f513" in out
 
-    assert "similarity:                  0.32069" in out
+    assert "jaccard similarity:          0.32069" in out
+    assert "first contained in second:   0.48851 (cANI: 0.97716)" in out
+    assert "second contained in first:   0.48282 (cANI: 0.97679)" in out
+    assert "average containment ANI:     0.97697" in out
     assert "number of hashes in common:  2529" in out
+
+
+def test_sig_overlap_inaccurate_size_estimate(runtmp):
+    c = runtmp
+    # make tiny sigs to test containment ANI with inaccurate size estimate
+    # (i.e. not enough hashes to estimate size)
+    mh1 = sourmash.MinHash(0, 31, scaled=100, track_abundance=False)
+    mh2 = sourmash.MinHash(0, 31, scaled=100, track_abundance=False)
+
+    mh1.add_many((1, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+    sig1 = sourmash.SourmashSignature(mh1, name="sig1")
+    sig2 = sourmash.SourmashSignature(mh2, name="sig2")
+    # save signatures
+    sig1_file = runtmp.output("sig1.sig")
+    sig2_file = runtmp.output("sig2.sig")
+    with open(sig1_file, "w") as fp:
+        save_signatures_to_json([sig1], fp)
+    with open(sig2_file, "w") as fp:
+        save_signatures_to_json([sig2], fp)
+
+    c.run_sourmash("sig", "overlap", sig1_file, sig2_file, "-k", "31")
+    out = c.last_result.out
+    print(out)
+    assert (
+        "cANI values not reported. One or more sketches contains too few hashes for accurate size estimation."
+        in out
+    )
+
+
+def test_sig_overlap_abund(runtmp):
+    c = runtmp
+    # get overlap details
+    sig47 = utils.get_test_data("track_abund/47.fa.sig")
+    sig63 = utils.get_test_data("track_abund/63.fa.sig")
+    c.run_sourmash("sig", "overlap", sig47, sig63)
+    out = c.last_result.out
+    print(out)
+    # md5s
+    assert "09a08691ce52952152f0e866a59f6261" in out
+    assert "38729c6374925585db28916b82a6f513" in out
+
+    assert "jaccard similarity:          0.32069" in out
+    assert "first contained in second:   0.48851 (cANI: 0.97716)" in out
+    assert "second contained in first:   0.48282 (cANI: 0.97679)" in out
+    assert "average containment ANI:     0.97697" in out
+
+    assert "number of hashes in common:  2529" in out
+    assert "angular similarity:          0.32983" in out
+    assert "first contained in second (weighted): 0.49169" in out
+    assert "second contained in first (weighted): 0.49126" in out
+
+    assert "number of hashes in first (weighted): 5292" in out
+    assert "number of hashes in second (weighted): 5433" in out
+
+
+def test_sig_overlap_num(runtmp):
+    # test sig overlap with num signatures
+    c = runtmp
+    # get overlap details
+    sig47 = utils.get_test_data("num/47.fa.sig")
+    sig63 = utils.get_test_data("num/63.fa.sig")
+    c.run_sourmash("sig", "overlap", sig47, sig63, "-k", "31")
+    out = c.last_result.out
+    print(out)
+    # md5s
+    assert "091475b51432957736461bed0a02937f" in out
+    assert "89dc40f63698afbf06e3db9d3c9c3dd8" in out
+
+    assert "jaccard similarity:          0.35000" in out
+    assert "containment and ANI not available (signatures are not scaled)"
+    assert "number of hashes in common:  247"
 
 
 @utils.in_tempdir
