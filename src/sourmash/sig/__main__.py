@@ -394,57 +394,61 @@ def overlap(args):
     notify(f"loaded one signature each from {args.signature1} and {args.signature2}")
 
     try:
-        similarity = sig1.similarity(sig2)
+        jaccard = sig1.jaccard(sig2)
     except ValueError:
         raise
 
-    cont1 = sig1.contained_by(sig2)
-    cont2 = sig2.contained_by(sig1)
+    # --- conditional containment info ---
+    if sig1.minhash.scaled > 0 and sig2.minhash.scaled > 0:
+        cont1 = sig1.contained_by(sig2)
+        cont2 = sig2.contained_by(sig1)
 
-    sig1_file = args.signature1
-    sig2_file = args.signature2
+        cANI_result = sig1.containment_ani(sig2)
+        size_estimate_inaccurate = cANI_result.size_is_inaccurate
+        print("size_estimate_inaccurate:", size_estimate_inaccurate)
+        if size_estimate_inaccurate:
+            similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+first contained in second:   {cont1:.5f}
+second contained in first:   {cont2:.5f}
 
-    name1 = sig1.name
-    name2 = sig2.name
+Note: cANI values not reported. One or more sketches contains too few hashes for accurate size estimation.
+"""
+        else:
+            cANI1 = cANI_result.ani
+            cANI2 = sig2.containment_ani(sig1).ani
+            avg_cANI = (cANI1 + cANI2) / 2
 
-    md5_1 = sig1.md5sum()
-    md5_2 = sig2.md5sum()
+            similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
+second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
+average containment ANI:     {avg_cANI:.5f}
 
-    ksize = sig1.minhash.ksize
-    moltype = sig1.minhash.moltype
+"""
+    else:
+        similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+containment and ANI not available (one or both signatures are not scaled)
 
-    num = sig1.minhash.num
-    size1 = len(sig1.minhash)
-    size2 = len(sig2.minhash)
+"""
 
-    scaled = sig1.minhash.scaled
-
+    # --- hash counts and overlaps ---
     hashes_1 = set(sig1.minhash.hashes)
     hashes_2 = set(sig2.minhash.hashes)
 
+    size1 = len(hashes_1)
+    size2 = len(hashes_2)
     num_common = len(hashes_1 & hashes_2)
     disjoint_1 = len(hashes_1 - hashes_2)
     disjoint_2 = len(hashes_2 - hashes_1)
     num_union = len(hashes_1.union(hashes_2))
 
-    print(
-        """\
-first signature:
-  signature filename: {sig1_file}
-  signature: {name1}
-  md5: {md5_1}
-  k={ksize} molecule={moltype} num={num} scaled={scaled}
-
-second signature:
-  signature filename: {sig2_file}
-  signature: {name2}
-  md5: {md5_2}
-  k={ksize} molecule={moltype} num={num} scaled={scaled}
-
-similarity:                  {similarity:.5f}
-first contained in second:   {cont1:.5f}
-second contained in first:   {cont2:.5f}
-
+    hash_counts_info = f"""\
+--- Hash overlap summary ---
 number of hashes in first:   {size1}
 number of hashes in second:  {size2}
 
@@ -452,7 +456,39 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
-""".format(**locals())
+
+"""
+
+    # --- conditional abundance info ---
+    abundance_info = ""
+    if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
+        angular_similarity = sig1.angular_similarity(sig2)
+        sum_hashes1 = sum(sig1.minhash.hashes.values())
+        sum_hashes2 = sum(sig2.minhash.hashes.values())
+        weighted_containment1 = sig1.contained_by_weighted(sig2)
+        weighted_containment2 = sig2.contained_by_weighted(sig1)
+        abundance_info = f"""\
+--- Abundance-weighted similarity: ---
+angular similarity:          {angular_similarity:.5f}
+first contained in second (weighted): {weighted_containment1:.5f}
+second contained in first (weighted): {weighted_containment2:.5f}
+
+number of hashes in first (weighted): {sum_hashes1}
+number of hashes in second (weighted): {sum_hashes2}
+    """
+    # --- output ---
+    print("first signature:")
+    sig1.display(args.signature1)
+    print("second signature:")
+    sig2.display(args.signature2)
+
+    print(
+        f"""\
+
+{similarity_info}
+{hash_counts_info}
+{abundance_info}
+"""
     )
 
 
