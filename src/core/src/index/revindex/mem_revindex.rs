@@ -99,7 +99,7 @@ impl MemRevIndex {
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let collection = Collection::from_paths(search_sigs)?.select(selection)?;
-        let linear = LinearIndex::from_collection(collection.try_into()?);
+        let linear = LinearIndex::from_collection(collection.try_into()?)?;
 
         let idx = linear.index(threshold, merged_query, queries);
 
@@ -116,7 +116,7 @@ impl MemRevIndex {
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let collection = Collection::from_zipfile(zipfile)?.select(selection)?;
-        let linear = LinearIndex::from_collection(collection.try_into()?);
+        let linear = LinearIndex::from_collection(collection.try_into()?)?;
 
         let idx = linear.index(threshold, merged_query, queries);
         Ok(module::RevIndex::Mem(idx))
@@ -144,7 +144,7 @@ impl MemRevIndex {
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let collection = Collection::from_sigs(search_sigs)?.select(selection)?;
-        let linear = LinearIndex::from_collection(collection.try_into()?);
+        let linear = LinearIndex::from_collection(collection.try_into()?)?;
 
         let idx = linear.index(threshold, merged_query, queries);
 
