@@ -130,7 +130,7 @@ def test_mem_revindex_index_search():
 
 
 def test_mem_revindex_index_search_picklist(runtmp):
-    # confirm that RevIndex works w/picklists
+    # confirm that MemRevIndex works w/picklists
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -147,6 +147,9 @@ def test_mem_revindex_index_search_picklist(runtmp):
     pl = SignaturePicklist("ident")
     pl.init(values=["CP001071.1"])
     lidx = lidx.select(picklist=pl)
+
+    assert len(lidx) == 1
+    assert len(list(lidx.signatures())) == 1
 
     # now, search for sig2
     sr = lidx.search(ss2, threshold=1.0)
@@ -370,6 +373,9 @@ def test_mem_revindex_index_check_nomatches():
     pl.init(values=["CP001071.1"])
     lidx = lidx.select(picklist=pl)
 
+    assert len(lidx) == 1
+    assert len(list(lidx.signatures())) == 1
+
     assert lidx.peek(ss47.minhash) == []
 
     with pytest.raises(ValueError):
@@ -460,6 +466,45 @@ def test_disk_revindex_signatures_with_internal():
     print(db)
     assert len(db) == 3, len(db)
 
+    xx = list(db._signatures_with_internal())
+    assert len(xx) == 3
+    for n, (ss, internal) in enumerate(xx):
+        assert n == int(internal)
+        print(ss.name)
+    # victory!
+
+
+def test_disk_revindex_signatures_with_picklist():
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
+    db._idx_picklist = dataset_picks
+    assert len(db) == 2, len(db)
+
+    xx = list(db.signatures())
+    assert len(xx) == 2
+    for ss in xx:
+        print(ss.name)
+    # victory!
+
+
+def test_disk_revindex_signatures_with_internal_with_picklist():
+    # check that 'internal' matches enumeration order, and ignores
+    # picklists.
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+    print(db)
+    assert len(db) == 3, len(db)
+
+    dataset_picks = revindex.RevIndex_DatasetPicklist([0, 1])
+    db._idx_picklist = dataset_picks
+    assert len(db) == 2, len(db)  # len pays attention to picklist...
+
+    # BUT: picklist is ignored by signatures_with_internal.
     xx = list(db._signatures_with_internal())
     assert len(xx) == 3
     for n, (ss, internal) in enumerate(xx):
@@ -818,7 +863,7 @@ def test_disk_revindex_union_found():
 
 
 def test_disk_revindex_index_search_picklist(runtmp):
-    # confirm that disk-based RevIndex works w/picklists
+    # confirm that disk-based RevIndex search works w/picklists
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -833,6 +878,9 @@ def test_disk_revindex_index_search_picklist(runtmp):
     pl = SignaturePicklist("ident")
     pl.init(values=["CP001071.1"])
     db = db.select(picklist=pl)
+
+    assert len(db) == 1
+    assert len(list(db.signatures())) == 1
 
     # now, search for sig2
     sr = db.search(ss2, threshold=1.0)

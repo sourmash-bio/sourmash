@@ -13,6 +13,7 @@ use crate::ffi::utils::ForeignObject;
 use crate::index::revindex::disk_revindex;
 use crate::index::revindex::mem_revindex;
 use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, RevIndexOps};
+use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
@@ -146,9 +147,32 @@ pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn revindex_len(ptr: *const SourmashRevIndex) -> u64 {
+pub unsafe extern "C" fn revindex_len(
+    ptr: *const SourmashRevIndex,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
+) -> u64 {
     let revindex = SourmashRevIndex::as_rust(ptr);
-    revindex.len() as u64
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
+    let coll = revindex.collection();
+
+    // filter by picklist
+    let records: Vec<(Idx, &Record)> = coll
+        .iter()
+        .filter_map(|(idx, record)| {
+            if let Some(pl) = &dataset_picklist {
+                if pl.dataset_ids.contains(&idx) {
+                    Some((idx, record))
+                } else {
+                    None
+                }
+            } else {
+                Some((idx, record))
+            }
+        })
+        .collect();
+
+    records.len() as u64
 }
 
 #[no_mangle]
@@ -204,10 +228,35 @@ ffi_fn! {
 unsafe fn revindex_signatures(
     ptr: *const SourmashRevIndex,
     size: *mut usize,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> Result<*mut *mut SourmashSignature> {
     let revindex = &SourmashRevIndex::as_rust(ptr);
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
-    let sigs = revindex.signatures();
+    let coll = revindex.collection();
+
+    // filter by picklist
+    let records: Vec<(Idx, &Record)> = coll.iter()
+        .filter_map(|(idx, record)| {
+            if let Some(pl) = &dataset_picklist {
+                if pl.dataset_ids.contains(&idx) {
+                    Some((idx, record))
+                } else {
+                    None
+                }
+            } else {
+                Some((idx, record))
+            }
+        })
+        .collect();
+
+    // load sigs
+    let sigs: Vec<Signature> = records.iter()
+        .filter_map(|(idx, record)| match coll.sig_from_record(record) {
+            Ok(sig) => Some(sig.into()),
+            Err(_) => None,
+        })
+        .collect();
 
     // FIXME: use the ForeignObject trait, maybe define new method there...
     let ptr_sigs: Vec<*mut SourmashSignature> = sigs
