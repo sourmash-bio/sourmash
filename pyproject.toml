@@ -9,7 +9,7 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.9.1-dev"
+version = "4.9.1"
 license = "BSD-3-Clause"
 
 authors = [
