@@ -63,7 +63,7 @@
 
           sourmash = python.buildPythonPackage ( commonArgs // rec {
             pname = "sourmash";
-            version = "4.9.0";
+            version = "4.9.1";
             format = "pyproject";
 
             cargoDeps = rustPlatform.importCargoLock {
