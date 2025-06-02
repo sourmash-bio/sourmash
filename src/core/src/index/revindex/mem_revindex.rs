@@ -31,7 +31,7 @@ pub struct MemRevIndex {
 }
 
 impl LinearIndex {
-    fn index(
+    pub fn index(
         self,
         threshold: usize,
         merged_query: Option<KmerMinHash>,
