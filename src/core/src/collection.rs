@@ -180,6 +180,37 @@ impl Collection {
         })
     }
 
+    pub fn load_into_memory(self) -> Result<Self> {
+        let new_storage = MemStorage::new();
+/*
+        #[cfg(feature = "parallel")]
+        let iter = self.manifest.into_par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+*/
+        let iter = self.manifest.iter();
+
+        let records: Vec<_> = iter
+            .enumerate()
+            .map(|(i, record)| {
+                let path = format!("{i}");
+                //let match_path = record.internal_location().as_str();
+                //let selection = Selection::from_record(record)?;
+                let sig: Signature = self.sig_from_record(&record).unwrap().into();
+                let path = new_storage.save_sig(&path, sig).expect("Error saving sig");
+
+                let mut record = record.clone();
+                record.set_internal_location(path.clone().into());
+                record
+            })
+            .collect();
+
+        Ok(Self {
+            manifest: records.into(),
+            storage: InnerStorage::new(new_storage),
+        })
+    }
+
     pub fn from_paths(paths: &[PathBuf]) -> Result<Self> {
         // TODO:
         // - figure out if there is a common path between sigs for FSStorage?
