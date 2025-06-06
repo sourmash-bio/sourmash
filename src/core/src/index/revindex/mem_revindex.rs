@@ -20,6 +20,7 @@ use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
+use crate::Error;
 use crate::Result;
 use crate::ScaledType;
 
@@ -140,6 +141,11 @@ impl MemRevIndex {
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
     ) -> Result<module::RevIndex> {
+        // @CTB do we want to error if search_sigs is empty?
+        if search_sigs.len() == 0 {
+            return Err(Error::NoMinHashFound);
+        }
+
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
