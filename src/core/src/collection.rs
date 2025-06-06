@@ -196,7 +196,7 @@ impl Collection {
                 let path = format!("{i}");
                 //let match_path = record.internal_location().as_str();
                 //let selection = Selection::from_record(record)?;
-                let sig: Signature = self.sig_from_record(&record).unwrap().into();
+                let sig: Signature = self.sig_from_record(&record).expect("cannot load sketch").into();
                 let path = new_storage.save_sig(&path, sig).expect("Error saving sig");
 
                 let mut record = record.clone();

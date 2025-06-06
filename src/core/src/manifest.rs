@@ -266,6 +266,7 @@ impl Select for Manifest {
     // select only records that satisfy selection conditions; also update
     // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
+        // @CTB note this never returns Err?
         let Manifest { mut records } = self;
 
         // TODO: with num as well?
