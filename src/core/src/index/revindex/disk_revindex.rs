@@ -399,13 +399,11 @@ impl RevIndexOps for DiskRevIndex {
         mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
-        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
-        let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?

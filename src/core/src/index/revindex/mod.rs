@@ -151,7 +151,6 @@ pub trait RevIndexOps {
         cg: CounterGather,
         threshold: usize,
         query: &KmerMinHash,
-        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>>;
 
     fn collection(&self) -> &CollectionSet;
@@ -703,7 +702,7 @@ mod test {
         assert_eq!(cg.len(), 1);
         assert_eq!(cg.is_empty(), false);
 
-        let matches = index.gather(cg, 0, &query, Some(selection))?;
+        let matches = index.gather(cg, 0, &query)?;
 
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].name(), ""); // signature name is empty
@@ -767,7 +766,6 @@ mod test {
             cg,
             5, // 50kb threshold
             &query,
-            Some(selection),
         )?;
 
         // should be 11, based on test_gather_metagenome_num_results
@@ -911,7 +909,7 @@ mod test {
 
         let cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(cg, 0, &query, Some(selection))?;
+        let matches = index.gather(cg, 0, &query)?;
 
         // should be 3.
         // see sourmash#3193.
@@ -1012,7 +1010,6 @@ mod test {
             cg,
             5, // 50kb threshold
             &query,
-            Some(selection),
         )?;
 
         // should be 1, b/c of picklist.
@@ -1170,7 +1167,7 @@ mod test {
         let cg = index.prepare_gather_counters(&query, None);
 
         let matches_external = index
-            .gather(cg, 0, &query, Some(selection.clone()))
+            .gather(cg, 0, &query)
             .expect("failed to gather!");
 
         {
@@ -1181,7 +1178,7 @@ mod test {
 
             let cg = index.prepare_gather_counters(&query, None);
 
-            let matches_internal = index.gather(cg, 0, &query, Some(selection.clone()))?;
+            let matches_internal = index.gather(cg, 0, &query)?;
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
@@ -1191,7 +1188,7 @@ mod test {
 
         let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_moved = index.gather(cg, 0, &query, Some(selection.clone()))?;
+        let matches_moved = index.gather(cg, 0, &query)?;
         assert_eq!(matches_external, matches_moved);
 
         Ok(())

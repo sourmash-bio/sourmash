@@ -296,7 +296,6 @@ impl RevIndexOps for MemRevIndex {
         mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
-        _selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
@@ -593,7 +592,7 @@ mod test {
         let counter_rev = index.prepare_gather_counters(&query_mh, None);
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
-        let results_rev = index.gather(counter_rev, 0, &query_mh, None).unwrap();
+        let results_rev = index.gather(counter_rev, 0, &query_mh).unwrap();
         let results_linear = index.linear.gather(counter_lin, 0, &query_mh).unwrap();
         assert_eq!(results_rev.len(), 1);
         assert_eq!(results_rev, results_linear);
@@ -629,7 +628,7 @@ mod test {
 
         let gather_cg = index.prepare_gather_counters(&query_mh, None);
         // eprintln!("gather_cg: {:?}", gather_cg);
-        let results = index.gather(gather_cg, 0, &query_mh, None).unwrap();
+        let results = index.gather(gather_cg, 0, &query_mh).unwrap();
 
         assert_eq!(results.len(), 1);
 
@@ -666,7 +665,7 @@ mod test {
         // run the CounterGather-style gather:
         let gather_cg = index.prepare_gather_counters(&query_mh, None);
         // eprintln!("gather_cg: {:?}", gather_cg);
-        let results = index.gather(gather_cg, 0, &query_mh, None).unwrap();
+        let results = index.gather(gather_cg, 0, &query_mh).unwrap();
         assert_eq!(results.len(), 3);
 
         // compare to linear gather.
@@ -729,7 +728,6 @@ mod test {
             cg,
             5, // 50kb threshold
             &query,
-            Some(selection),
         )?;
 
         // should be 11, based on test_gather_metagenome_num_results
@@ -941,7 +939,6 @@ mod test {
             cg,
             5, // 50kb threshold
             &query,
-            Some(selection),
         )?;
 
         // should be 1, b/c of picklist.
