@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use std::cmp::max;
 use std::collections::HashSet;
 use std::hash::{BuildHasher, BuildHasherDefault};
@@ -555,6 +556,12 @@ impl RevIndexOps for DiskRevIndex {
 
     fn collection(&self) -> &CollectionSet {
         &self.collection
+    }
+
+    fn select(&mut self, selection: &Selection) -> Result<()> {
+        let cs = self.collection().clone();
+        self.collection = Arc::new(cs.select(selection)?);
+        Ok(())
     }
 
     fn internalize_storage(&mut self) -> Result<()> {

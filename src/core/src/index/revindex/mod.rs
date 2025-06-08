@@ -155,6 +155,9 @@ pub trait RevIndexOps {
 
     fn collection(&self) -> &CollectionSet;
 
+    // selection trait? @CTB
+    fn select(&mut self, selection: &Selection) -> Result<()>;
+
     fn internalize_storage(&mut self) -> Result<()>;
 
     fn find_signatures(

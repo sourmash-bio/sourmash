@@ -354,6 +354,13 @@ impl RevIndexOps for MemRevIndex {
         self.linear.collection()
     }
 
+    fn select(&mut self, selection: &Selection) -> Result<()> {
+        // @CTB clone
+        let l = self.linear.clone();
+        self.linear = l.select(selection)?;
+        Ok(())
+    }
+
     fn internalize_storage(&mut self) -> Result<()> {
         Ok(())
     }

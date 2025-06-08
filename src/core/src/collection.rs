@@ -276,6 +276,13 @@ impl Select for Collection {
     }
 }
 
+impl Select for CollectionSet {
+    fn select(mut self, selection: &Selection) -> Result<Self> {
+        self.collection = self.collection.select(selection)?;
+        Ok(self)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use camino::Utf8PathBuf as PathBuf;
