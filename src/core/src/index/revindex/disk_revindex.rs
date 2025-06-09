@@ -372,7 +372,7 @@ impl RevIndexOps for DiskRevIndex {
                         new_vals = Datasets::new(&val_set[..]);
                     }
 
-                    if new_vals.is_empty() {
+                    if !new_vals.is_empty() {
                         let color = compute_color(&new_vals);
                         query_colors
                             .entry(color)
