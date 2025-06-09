@@ -80,7 +80,7 @@ impl CollectionSet {
     pub fn intersect_manifest(&mut self, mf: &Manifest) {
         self.manifest = self.manifest.intersect_manifest(mf);
     }
-                    
+
     /// Replace the storage with a new one.
     ///
     /// # Safety
@@ -186,12 +186,12 @@ impl Collection {
 
     pub fn load_into_memory(self) -> Result<Self> {
         let new_storage = MemStorage::new();
-/*
-        #[cfg(feature = "parallel")]
-        let iter = self.manifest.into_par_iter();
+        /*
+                #[cfg(feature = "parallel")]
+                let iter = self.manifest.into_par_iter();
 
-        #[cfg(not(feature = "parallel"))]
-*/
+                #[cfg(not(feature = "parallel"))]
+        */
         let iter = self.manifest.iter();
 
         let records: Vec<_> = iter
@@ -200,7 +200,10 @@ impl Collection {
                 let path = format!("{i}");
                 //let match_path = record.internal_location().as_str();
                 //let selection = Selection::from_record(record)?;
-                let sig: Signature = self.sig_from_record(&record).expect("cannot load sketch").into();
+                let sig: Signature = self
+                    .sig_from_record(&record)
+                    .expect("cannot load sketch")
+                    .into();
                 let path = new_storage.save_sig(&path, sig).expect("Error saving sig");
 
                 let mut record = record.clone();

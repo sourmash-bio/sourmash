@@ -190,7 +190,8 @@ impl CounterGather {
         found_mh
     }
 
-    pub fn counter(&self) -> &SigCounter {          // @CTB turn into iterator?
+    pub fn counter(&self) -> &SigCounter {
+        // @CTB turn into iterator?
         &self.counter
     }
 
@@ -767,8 +768,7 @@ mod test {
         let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            cg,
-            5, // 50kb threshold
+            cg, 5, // 50kb threshold
             &query,
         )?;
 
@@ -1011,8 +1011,7 @@ mod test {
         let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
 
         let matches = index.gather(
-            cg,
-            5, // 50kb threshold
+            cg, 5, // 50kb threshold
             &query,
         )?;
 
@@ -1170,9 +1169,7 @@ mod test {
 
         let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_external = index
-            .gather(cg, 0, &query)
-            .expect("failed to gather!");
+        let matches_external = index.gather(cg, 0, &query).expect("failed to gather!");
 
         {
             let mut index = index;

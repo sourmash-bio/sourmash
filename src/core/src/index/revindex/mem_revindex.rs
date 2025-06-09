@@ -740,8 +740,7 @@ mod test {
         let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            cg,
-            5, // 50kb threshold
+            cg, 5, // 50kb threshold
             &query,
         )?;
 
@@ -951,8 +950,7 @@ mod test {
         let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
 
         let matches = index.gather(
-            cg,
-            5, // 50kb threshold
+            cg, 5, // 50kb threshold
             &query,
         )?;
 

@@ -564,7 +564,7 @@ impl RevIndexOps for DiskRevIndex {
         Ok(())
     }
 
-    fn  intersect_manifest(&mut self, manifest: &Manifest) {
+    fn intersect_manifest(&mut self, manifest: &Manifest) {
         let mut cs = self.collection().clone();
         cs.intersect_manifest(manifest);
         self.collection = Arc::new(cs);

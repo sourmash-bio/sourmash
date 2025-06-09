@@ -11,7 +11,7 @@ use rayon::prelude::*;
 use serde::de;
 use serde::{Deserialize, Serialize};
 
-use crate::encodings::{ HashFunctions, Idx };
+use crate::encodings::{HashFunctions, Idx};
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
@@ -213,7 +213,7 @@ impl Manifest {
     pub fn get_record(&self, idx: Idx) -> Option<&Record> {
         self.records.get(idx as usize)
     }
-    
+
     pub fn from_reader<R: Read>(rdr: R) -> Result<Self> {
         let mut records = vec![];
 
