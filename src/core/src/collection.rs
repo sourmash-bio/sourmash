@@ -77,6 +77,10 @@ impl CollectionSet {
         Selection::from_record(r).expect("fiz")
     }
 
+    pub fn intersect_manifest(&mut self, mf: &Manifest) {
+        self.manifest = self.manifest.intersect_manifest(mf);
+    }
+                    
     /// Replace the storage with a new one.
     ///
     /// # Safety
