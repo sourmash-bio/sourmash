@@ -564,6 +564,12 @@ impl RevIndexOps for DiskRevIndex {
         Ok(())
     }
 
+    fn  intersect_manifest(&mut self, manifest: &Manifest) {
+        let mut cs = self.collection().clone();
+        cs.intersect_manifest(manifest);
+        self.collection = Arc::new(cs);
+    }
+
     fn internalize_storage(&mut self) -> Result<()> {
         // check if collection is already internal, if so return
         if self.collection.storage().spec() == "rocksdb://" {

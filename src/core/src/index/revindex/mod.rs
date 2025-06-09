@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
-use crate::manifest::Record;
+use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
@@ -155,8 +155,9 @@ pub trait RevIndexOps {
 
     fn collection(&self) -> &CollectionSet;
 
-    // selection trait? @CTB
     fn select(&mut self, selection: &Selection) -> Result<()>;
+
+    fn intersect_manifest(&mut self, manifest: &Manifest);
 
     fn internalize_storage(&mut self) -> Result<()>;
 

@@ -16,6 +16,7 @@ use crate::index::revindex::{
     RevIndexOps,
 };
 use crate::index::{GatherResult, Index, SigCounter};
+use crate::manifest::Manifest;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
@@ -359,6 +360,13 @@ impl RevIndexOps for MemRevIndex {
         let l = self.linear.clone();
         self.linear = l.select(selection)?;
         Ok(())
+    }
+
+    fn intersect_manifest(&mut self, manifest: &Manifest) {
+        // @CTB clone
+        // let l = self.linear.clone();
+        // l.intersect_manifest();
+        // self.linear = l.select(selection)?;
     }
 
     fn internalize_storage(&mut self) -> Result<()> {
