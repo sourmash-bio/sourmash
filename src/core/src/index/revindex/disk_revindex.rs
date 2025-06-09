@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::cmp::max;
 use std::collections::HashSet;
 use std::hash::{BuildHasher, BuildHasherDefault};
@@ -174,6 +173,7 @@ impl DiskRevIndex {
         }))
     }
 
+    /// # Safety
     /// Access to the DB is unsafe because RocksDB allows writing with
     /// a regular Arc<DB> handle; it doesn't have to be mut.
     pub unsafe fn db(&self) -> Arc<DB> {
@@ -372,7 +372,7 @@ impl RevIndexOps for DiskRevIndex {
                         new_vals = Datasets::new(&val_set[..]);
                     }
 
-                    if new_vals.len() > 0 {
+                    if new_vals.is_empty() {
                         let color = compute_color(&new_vals);
                         query_colors
                             .entry(color)

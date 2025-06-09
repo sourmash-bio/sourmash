@@ -143,8 +143,8 @@ impl MemRevIndex {
         queries: Option<&[KmerMinHash]>,
     ) -> Result<module::RevIndex> {
         // @CTB do we want to error if search_sigs is empty?
-        if search_sigs.len() == 0 {
-            return Err(Error::NoMinHashFound);
+        if search_sigs.is_empty() {
+            return Err(Error::NoMinHashFound); // @CTB use new error? or return None?
         }
 
         // If threshold is zero, let's merge all queries and save time later
@@ -240,15 +240,11 @@ impl RevIndexOps for MemRevIndex {
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
             .flat_map(|color| self.colors.indices(color))
-            .filter_map(|idx| {
+            .filter(|idx| {
                 if let Some(pl) = &picklist {
-                    if pl.dataset_ids.contains(idx) {
-                        Some(idx)
-                    } else {
-                        None
-                    }
+                    pl.dataset_ids.contains(idx)
                 } else {
-                    Some(idx)
+                    true
                 }
             })
             .cloned()
@@ -362,7 +358,8 @@ impl RevIndexOps for MemRevIndex {
         Ok(())
     }
 
-    fn intersect_manifest(&mut self, manifest: &Manifest) {
+    fn intersect_manifest(&mut self, _manifest: &Manifest) {
+        // @CTB implement!!
         // @CTB clone
         // let l = self.linear.clone();
         // l.intersect_manifest();

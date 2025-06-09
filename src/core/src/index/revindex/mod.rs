@@ -499,6 +499,10 @@ impl Datasets {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn contains(&self, value: &Idx) -> bool {
         match self {
             Self::Empty => false,
