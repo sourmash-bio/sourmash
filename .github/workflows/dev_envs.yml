@@ -65,7 +65,7 @@ jobs:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
 
     - name: setup conda
-      uses: conda-incubator/setup-miniconda@505e6394dae86d6a5c7fbb6e3fb8938e3e863830
+      uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f
       with:
         python-version: "3.12"
         miniforge-version: latest
