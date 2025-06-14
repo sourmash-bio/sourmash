@@ -351,7 +351,7 @@ Related commands:
 
 The `gather` subcommand selects the best reference genomes to use for
 a metagenome analysis, by finding the smallest set of non-overlapping
-matches to the query in a database.  This is specifically meant for
+matches to the query metagenome in a database of genomes.  This is specifically meant for
 metagenome and genome bin analysis.  (See
 [Classifying Signatures](classifying-signatures.md) for more
 information on the different approaches that can be used here.)
@@ -503,14 +503,19 @@ ksize/moltype/scaled.
 
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
-The `prefetch` subcommand searches a collection of scaled signatures
-for matches in a large database, using containment. It is similar to
+The `prefetch` subcommand searches a scaled signature (usually a genome or a metagenome)
+for matches in a large database of genomes, using containment. It is similar to
 `search --containment`, while taking a `--threshold-bp` argument like
 `gather` does for thresholding matches (instead of using Jaccard
 similarity or containment). Note that `prefetch` uses the composite
 sketch (e.g. a metagenome) as the query, and finds all matching
 subjects (e.g. genomes) from the database - the arguments are in the
 opposite order from `search --containment`.
+
+Note that the `manysearch` command in
+[the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
+is a fast, multithreaded vresion of `prefetch` that will search for
+multiple genomes in multiple metagenomes.
 
 `sourmash prefetch` is intended to select a subset of a large database
 for further processing. As such, it can search very large collections
