@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
+use cfg_if::cfg_if;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -15,6 +16,7 @@ use typed_builder::TypedBuilder;
 use crate::errors::ReadDataError;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
+use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
 use crate::{Error, Result};
 
@@ -30,7 +32,16 @@ pub trait Storage {
     fn args(&self) -> StorageArgs;
 
     /// Load signature from internal path
-    fn load_sig(&self, path: &str) -> Result<SigStore>;
+    fn load_sig(&self, path: &str) -> Result<SigStore> {
+        let raw = self.load(path)?;
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
+
+        Ok(sig.into())
+    }
 
     /// Return a spec for creating/opening a storage
     fn spec(&self) -> String;
@@ -45,6 +56,7 @@ pub trait Storage {
     }
 }
 
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum StorageError {
     #[error("Path can't be empty")]
@@ -55,7 +67,20 @@ pub enum StorageError {
 
     #[error("Error reading data from {0}")]
     DataReadError(String),
+
+    #[error("Storage for path {1} requires the '{0}' feature to be enabled")]
+    MissingFeature(String, String),
 }
+
+/// InnerStorage: a catch-all type that allows using any Storage in
+/// parallel contexts.
+///
+/// Arc allows ref counting to share it between threads;
+/// RwLock makes sure there is only one writer possible (and a lot of readers);
+/// dyn Storage so we can init with anything that implements the Storage trait.
+
+// Send + Sync + 'static is kind of a cheat to avoid lifetimes issues: we
+//    should get rid of that 'static if possible... -- Luiz.
 
 #[derive(Clone)]
 pub struct InnerStorage(Arc<RwLock<dyn Storage + Send + Sync + 'static>>);
@@ -86,12 +111,6 @@ impl PartialEq for SigStore {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct StorageInfo {
-    pub backend: String,
-    pub args: StorageArgs,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum StorageArgs {
@@ -106,6 +125,7 @@ pub struct FSStorage {
     subdir: String,
 }
 
+/// Store files in a zip file.
 #[ouroboros::self_referencing]
 pub struct ZipStorage {
     mapping: Option<memmap2::Mmap>,
@@ -129,6 +149,12 @@ pub struct MemStorage {
     sigs: Arc<RwLock<HashMap<String, SigStore>>>,
 }
 
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+pub mod rocksdb;
+
+#[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+pub use self::rocksdb::RocksDBStorage;
+
 pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
 // =========================================
@@ -145,6 +171,17 @@ impl InnerStorage {
                 InnerStorage::new(FSStorage::new("", path))
             }
             x if x.starts_with("memory") => InnerStorage::new(MemStorage::new()),
+            x if x.starts_with("rocksdb") => {
+                let path = x.split("://").last().expect("not a valid path");
+
+                cfg_if! {
+                    if #[cfg(all( feature = "branchwater", not(target_arch = "wasm32")))] {
+                        InnerStorage::new(RocksDBStorage::from_path(path))
+                    } else {
+                        return Err(StorageError::MissingFeature("branchwater".into(), path.into()).into())
+                    }
+                }
+            }
             x if x.starts_with("zip") => {
                 let path = x.split("://").last().expect("not a valid path");
                 InnerStorage::new(ZipStorage::from_file(path)?)
@@ -274,9 +311,12 @@ impl Storage for FSStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed when using 'load_sig'");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -344,9 +384,11 @@ impl Storage for ZipStorage {
 
     fn load_sig(&self, path: &str) -> Result<SigStore> {
         let raw = self.load(path)?;
-        let sig = Signature::from_reader(&mut &raw[..])?
-            // TODO: select the right sig?
-            .swap_remove(0);
+        let mut vs = Signature::from_reader(&mut &raw[..])?;
+        if vs.len() > 1 {
+            unimplemented!("only one Signature currently allowed");
+        }
+        let sig = vs.swap_remove(0);
 
         Ok(sig.into())
     }
@@ -361,22 +403,22 @@ impl ZipStorage {
         let zip_file = File::open(location.as_ref())?;
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
-        let mut storage = ZipStorageBuilder {
+        let mut storage = ZipStorageTryBuilder {
             mapping: Some(mapping),
             archive_builder: |mapping: &Option<memmap2::Mmap>| {
-                piz::ZipArchive::new(mapping.as_ref().unwrap()).unwrap()
+                piz::ZipArchive::new(mapping.as_ref().unwrap())
             },
             metadata_builder: |archive: &piz::ZipArchive| {
-                archive
+                Ok(archive
                     .entries()
                     .iter()
                     .map(|entry| (entry.path.as_os_str(), entry))
-                    .collect()
+                    .collect())
             },
             subdir: None,
             path: Some(location.as_ref().into()),
         }
-        .build();
+        .try_build()?;
 
         let subdir = find_subdirs(storage.borrow_archive())?;
         storage.with_mut(|fields| *fields.subdir = subdir);
@@ -424,7 +466,7 @@ impl ZipStorage {
 
 impl SigStore {
     pub fn new_with_storage(sig: Signature, storage: InnerStorage) -> Self {
-        let name = sig.name();
+        let name = sig.name_str();
         let filename = sig.filename();
 
         SigStore::builder()
@@ -513,7 +555,7 @@ impl Deref for SigStore {
 
 impl From<Signature> for SigStore {
     fn from(other: Signature) -> SigStore {
-        let name = other.name();
+        let name = other.name_str();
         let filename = other.filename();
 
         SigStore::builder()
@@ -523,6 +565,15 @@ impl From<Signature> for SigStore {
             .metadata("")
             .storage(None)
             .build()
+    }
+}
+
+impl TryInto<KmerMinHash> for SigStore {
+    type Error = crate::Error;
+
+    fn try_into(self) -> std::result::Result<KmerMinHash, Self::Error> {
+        let sig: Signature = self.into();
+        sig.try_into()
     }
 }
 
@@ -616,8 +667,16 @@ impl Storage for MemStorage {
         unimplemented!()
     }
 
-    fn load(&self, _path: &str) -> Result<Vec<u8>> {
-        unimplemented!()
+    fn load(&self, path: &str) -> Result<Vec<u8>> {
+        let store = self.sigs.read().unwrap();
+        let sig = store.get(path).unwrap();
+
+        let mut buffer = vec![];
+        {
+            sig.to_writer(&mut buffer).unwrap();
+        }
+
+        Ok(buffer)
     }
 
     fn args(&self) -> StorageArgs {

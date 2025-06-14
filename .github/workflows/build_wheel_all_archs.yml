@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [aarch64, ppc64le]
+        target: [aarch64]
+        #target: [aarch64, ppc64le]
         #target: [aarch64, s390x, ppc64le]
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +26,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
@@ -49,7 +50,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
           architecture: ${{ matrix.target }}
 
       - name: Build wheels
@@ -79,9 +80,8 @@ jobs:
           path: 'wheels/'
 
       # if it matches a Python release tag, upload to github releases
-      # TODO: In the future, use the create-release and upload-release-assets actions
       - name: Release
-        uses: fnkr/github-action-ghr@v1
-        env:
-          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{steps.fetch_artifacts.outputs.download-path}}/wheel-*/*

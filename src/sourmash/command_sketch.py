@@ -1,6 +1,7 @@
 """
 Functions implementing the 'sketch' subcommands and related functions.
 """
+
 import sys
 import os
 from collections import defaultdict, Counter
@@ -26,6 +27,8 @@ DEFAULTS = dict(
     protein="k=10,scaled=200,noabund",
     dayhoff="k=16,scaled=200,noabund",
     hp="k=42,scaled=200,noabund",
+    skipm1n3="k=21,scaled=1000,noabund",
+    skipm2n3="k=21,scaled=1000,noabund",
 )
 
 
@@ -80,6 +83,8 @@ def _parse_params_str(params_str):
             params["seed"] = int(item[5:])
         elif item in ("protein", "dayhoff", "hp", "dna"):
             moltype = item
+        elif item in ("skipm1n3", "skipm2n3"):
+            moltype = item
         else:
             raise ValueError(f"unknown component '{item}' in params string")
 
@@ -107,11 +112,19 @@ class _signatures_for_sketch_factory:
             # provided.
             for params_str in params_str_list:
                 moltype, params = _parse_params_str(params_str)
-                if moltype and moltype != "dna" and default_moltype == "dna":
+                if (
+                    moltype
+                    and moltype not in ("dna", "skipm1n3", "skipm2n3")
+                    and default_moltype == "dna"
+                ):
                     raise ValueError(
                         f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'; maybe use 'sketch translate'?"
                     )
-                elif moltype == "dna" and default_moltype and default_moltype != "dna":
+                elif (
+                    moltype == "dna"
+                    and default_moltype
+                    and default_moltype not in ("dna", "skipm1n3", "skipm2n3")
+                ):
                     raise ValueError(
                         f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'"
                     )
@@ -143,6 +156,8 @@ class _signatures_for_sketch_factory:
             def_protein = default_params.get("is_protein", moltype == "protein")
             def_dayhoff = default_params.get("is_dayhoff", moltype == "dayhoff")
             def_hp = default_params.get("is_hp", moltype == "hp")
+            def_skipm1n3 = default_params.get("skipm1n3", moltype == "skipm1n3")
+            def_skipm2n3 = default_params.get("skipm2n3", moltype == "skipm2n3")
 
             # handle ksize specially, for now - multiply by three?
             def_ksizes = default_params["ksize"]
@@ -162,6 +177,8 @@ class _signatures_for_sketch_factory:
                     dayhoff=def_dayhoff,
                     hp=def_hp,
                     dna=def_dna,
+                    skipm1n3=def_skipm1n3,
+                    skipm2n3=def_skipm2n3,
                     num_hashes=params_d.get("num", def_num),
                     track_abundance=params_d.get("track_abundance", def_abund),
                     scaled=params_d.get("scaled", def_scaled),
@@ -206,7 +223,7 @@ def _execute_sketch(args, signatures_factory):
         error("error: sourmash only supports CC0-licensed signatures. sorry!")
         sys.exit(-1)
 
-    notify(f'computing signatures for files: {", ".join(args.filenames)}')
+    notify(f"computing signatures for files: {', '.join(args.filenames)}")
 
     if args.merge and not args.output:
         error("ERROR: must specify -o with --merge")
@@ -352,7 +369,7 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
                 save_sigs.add(sig)
 
             notify(
-                f"calculated {len(sigs)} signatures for {n+1} sequences in {filename}"
+                f"calculated {len(sigs)} signatures for {n + 1} sequences in {filename}"
             )
 
     save_sigs.close()
@@ -650,6 +667,8 @@ class _signatures_for_compute_factory:
             dayhoff=args.dayhoff,
             hp=args.hp,
             dna=args.dna,
+            skipm1n3=args.skipm1n3,
+            skipm2n3=args.skipm2n3,
             num_hashes=args.num_hashes,
             track_abundance=args.track_abundance,
             scaled=args.scaled,
@@ -767,7 +786,7 @@ def _compute_individual(args, signatures_factory):
                 save_sigs_to_location(sigs, save_sigs)
 
                 notify(
-                    f"calculated {len(sigs)} signatures for {n+1} sequences in {filename}"
+                    f"calculated {len(sigs)} signatures for {n + 1} sequences in {filename}"
                 )
 
         # if not args.output, close output for every input filename.
@@ -872,6 +891,8 @@ class ComputeParameters(RustObject):
         dayhoff=False,
         hp=False,
         dna=True,
+        skipm1n3=False,
+        skipm2n3=False,
         num_hashes=500,
         track_abundance=False,
         scaled=0,
@@ -884,6 +905,8 @@ class ComputeParameters(RustObject):
         self.dayhoff = dayhoff
         self.hp = hp
         self.dna = dna
+        self.skipm1n3 = skipm1n3
+        self.skipm2n3 = skipm2n3
         self.num_hashes = num_hashes
         self.track_abundance = track_abundance
         self.scaled = scaled
@@ -892,6 +915,8 @@ class ComputeParameters(RustObject):
     def from_manifest_row(cls, row):
         "convert a CollectionManifest row into a ComputeParameters object"
         is_dna = is_protein = is_dayhoff = is_hp = False
+        is_skipm1n3 = is_skipm2n3 = False
+
         if row["moltype"] == "DNA":
             is_dna = True
         elif row["moltype"] == "protein":
@@ -900,8 +925,12 @@ class ComputeParameters(RustObject):
             is_hp = True
         elif row["moltype"] == "dayhoff":
             is_dayhoff = True
+        elif row["moltype"] == "skipm1n3":
+            is_skipm1n3 = True
+        elif row["moltype"] == "skipm2n3":
+            is_skipm2n3 = True
         else:
-            assert 0
+            assert 0, row["moltype"]
 
         if is_dna:
             ksize = row["ksize"]
@@ -915,6 +944,8 @@ class ComputeParameters(RustObject):
             dayhoff=is_dayhoff,
             hp=is_hp,
             dna=is_dna,
+            skipm1n3=is_skipm1n3,
+            skipm2n3=is_skipm2n3,
             num_hashes=row["num"],
             track_abundance=row["with_abundance"],
             scaled=row["scaled"],
@@ -934,6 +965,10 @@ class ComputeParameters(RustObject):
             pi.append("hp")
         elif self.dayhoff:
             pi.append("dayhoff")
+        elif self.skipm1n3:
+            pi.append("skipm1n3")
+        elif self.skipm2n3:
+            pi.append("skipm2n3")
         else:
             assert 0  # must be one of the previous
 
@@ -941,7 +976,7 @@ class ComputeParameters(RustObject):
             kstr = [f"k={k}" for k in self.ksizes]
         else:
             # for protein, divide ksize by three.
-            kstr = [f"k={k//3}" for k in self.ksizes]
+            kstr = [f"k={k // 3}" for k in self.ksizes]
         assert kstr
         pi.extend(kstr)
 
@@ -963,7 +998,7 @@ class ComputeParameters(RustObject):
         return ",".join(pi)
 
     def __repr__(self):
-        return f"ComputeParameters(ksizes={self.ksizes}, seed={self.seed}, protein={self.protein}, dayhoff={self.dayhoff}, hp={self.hp}, dna={self.dna}, num_hashes={self.num_hashes}, track_abundance={self.track_abundance}, scaled={self.scaled})"
+        return f"ComputeParameters(ksizes={self.ksizes}, seed={self.seed}, protein={self.protein}, dayhoff={self.dayhoff}, hp={self.hp}, dna={self.dna}, skipm1n3={self.skipm1n3}, skipm2n3={self.skipm2n3}, num_hashes={self.num_hashes}, track_abundance={self.track_abundance}, scaled={self.scaled})"
 
     def __eq__(self, other):
         return (
@@ -973,6 +1008,8 @@ class ComputeParameters(RustObject):
             and self.dayhoff == other.dayhoff
             and self.hp == other.hp
             and self.dna == other.dna
+            and self.skipm1n3 == other.skipm1n3
+            and self.skipm2n3 == other.skipm2n3
             and self.num_hashes == other.num_hashes
             and self.track_abundance == other.track_abundance
             and self.scaled == other.scaled
@@ -1045,6 +1082,22 @@ class ComputeParameters(RustObject):
         return self._methodcall(lib.computeparams_set_dna, v)
 
     @property
+    def skipm1n3(self):
+        return self._methodcall(lib.computeparams_skipm1n3)
+
+    @skipm1n3.setter
+    def skipm1n3(self, v):
+        return self._methodcall(lib.computeparams_set_skipm1n3, v)
+
+    @property
+    def skipm2n3(self):
+        return self._methodcall(lib.computeparams_skipm2n3)
+
+    @skipm2n3.setter
+    def skipm2n3(self, v):
+        return self._methodcall(lib.computeparams_set_skipm2n3, v)
+
+    @property
     def moltype(self):
         if self.dna:
             moltype = "DNA"
@@ -1054,6 +1107,10 @@ class ComputeParameters(RustObject):
             moltype = "hp"
         elif self.dayhoff:
             moltype = "dayhoff"
+        elif self.skipm1n3:
+            moltype = "skipm1n3"
+        elif self.skipm2n3:
+            moltype = "skipm2n3"
         else:
             assert 0
 

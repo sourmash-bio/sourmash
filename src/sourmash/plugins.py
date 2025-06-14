@@ -198,7 +198,7 @@ def list_all_plugins():
     notify(
         f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}"
     )
-    notify(f"{'-'*20} {'-'*30} {'-'*5} {'-'*20}")
+    notify(f"{'-' * 20} {'-' * 30} {'-' * 5} {'-' * 20}")
 
     for plugin in plugins:
         name = plugin.name

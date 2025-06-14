@@ -3,7 +3,7 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::HashFunctions;
 use crate::manifest::Record;
-use crate::Result;
+use crate::{Result, ScaledType};
 
 #[derive(Default, Debug, TypedBuilder, Clone)]
 pub struct Selection {
@@ -17,7 +17,7 @@ pub struct Selection {
     num: Option<u32>,
 
     #[builder(default, setter(strip_option))]
-    scaled: Option<u32>,
+    scaled: Option<ScaledType>,
 
     #[builder(default, setter(strip_option))]
     containment: Option<bool>,
@@ -87,11 +87,11 @@ impl Selection {
         self.num = Some(num);
     }
 
-    pub fn scaled(&self) -> Option<u32> {
+    pub fn scaled(&self) -> Option<ScaledType> {
         self.scaled
     }
 
-    pub fn set_scaled(&mut self, scaled: u32) {
+    pub fn set_scaled(&mut self, scaled: ScaledType) {
         self.scaled = Some(scaled);
     }
 
@@ -125,7 +125,7 @@ impl Selection {
             abund: Some(row.with_abundance()),
             moltype: Some(row.moltype()),
             num: None,
-            scaled: None,
+            scaled: Some(*row.scaled()),
             containment: None,
             picklist: None,
         })

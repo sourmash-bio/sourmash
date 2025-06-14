@@ -13,6 +13,8 @@ enum HashFunctions {
   HASH_FUNCTIONS_MURMUR64_PROTEIN = 2,
   HASH_FUNCTIONS_MURMUR64_DAYHOFF = 3,
   HASH_FUNCTIONS_MURMUR64_HP = 4,
+  HASH_FUNCTIONS_MURMUR64_SKIPM1N3 = 5,
+  HASH_FUNCTIONS_MURMUR64_SKIPM2N3 = 6,
 };
 typedef uint32_t HashFunctions;
 
@@ -30,10 +32,17 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NON_EMPTY_MIN_HASH = 106,
   SOURMASH_ERROR_CODE_MISMATCH_NUM = 107,
   SOURMASH_ERROR_CODE_NEEDS_ABUNDANCE_TRACKING = 108,
+  SOURMASH_ERROR_CODE_CANNOT_UPSAMPLE_SCALED = 109,
+  SOURMASH_ERROR_CODE_NO_MIN_HASH_FOUND = 110,
+  SOURMASH_ERROR_CODE_EMPTY_SIGNATURE = 111,
+  SOURMASH_ERROR_CODE_MULTIPLE_SKETCHES_FOUND = 112,
   SOURMASH_ERROR_CODE_INVALID_DNA = 1101,
   SOURMASH_ERROR_CODE_INVALID_PROT = 1102,
   SOURMASH_ERROR_CODE_INVALID_CODON_LENGTH = 1103,
   SOURMASH_ERROR_CODE_INVALID_HASH_FUNCTION = 1104,
+  SOURMASH_ERROR_CODE_INVALID_SKIPMER_FRAME = 1105,
+  SOURMASH_ERROR_CODE_INVALID_SKIPMER_SIZE = 1106,
+  SOURMASH_ERROR_CODE_INVALID_TRANSLATE_FRAME = 1107,
   SOURMASH_ERROR_CODE_READ_DATA = 1201,
   SOURMASH_ERROR_CODE_STORAGE = 1202,
   SOURMASH_ERROR_CODE_HLL_PRECISION_BOUNDS = 1301,
@@ -45,24 +54,35 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NIFFLER_ERROR = 100005,
   SOURMASH_ERROR_CODE_CSV_ERROR = 100006,
   SOURMASH_ERROR_CODE_ROCKS_DB_ERROR = 100007,
+  SOURMASH_ERROR_CODE_ZIP_ERROR = 100008,
 };
 typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
+typedef struct SourmashDatasetPicklist SourmashDatasetPicklist;
+
 typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
+typedef struct SourmashManifest SourmashManifest;
+
+typedef struct SourmashManifestRowIter SourmashManifestRowIter;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
+
+typedef struct SourmashRevIndex_CounterGather SourmashRevIndex_CounterGather;
 
 typedef struct SourmashSearchResult SourmashSearchResult;
 
 typedef struct SourmashSignature SourmashSignature;
 
 typedef struct SourmashZipStorage SourmashZipStorage;
+
+typedef uint32_t ScaledType;
 
 /**
  * Represents a string.
@@ -82,6 +102,19 @@ typedef struct {
   bool owned;
 } SourmashStr;
 
+typedef struct {
+  uint32_t ksize;
+  bool with_abundance;
+  SourmashStr md5;
+  SourmashStr internal_location;
+  SourmashStr name;
+  SourmashStr moltype;
+  uintptr_t n_hashes;
+  uint32_t num;
+  uint32_t scaled;
+  SourmashStr filename;
+} SourmashManifestRow;
+
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
 bool computeparams_dna(const SourmashComputeParameters *ptr);
@@ -100,7 +133,7 @@ uint32_t computeparams_num_hashes(const SourmashComputeParameters *ptr);
 
 bool computeparams_protein(const SourmashComputeParameters *ptr);
 
-uint64_t computeparams_scaled(const SourmashComputeParameters *ptr);
+ScaledType computeparams_scaled(const SourmashComputeParameters *ptr);
 
 uint64_t computeparams_seed(const SourmashComputeParameters *ptr);
 
@@ -118,13 +151,26 @@ void computeparams_set_num_hashes(SourmashComputeParameters *ptr, uint32_t num);
 
 void computeparams_set_protein(SourmashComputeParameters *ptr, bool v);
 
-void computeparams_set_scaled(SourmashComputeParameters *ptr, uint64_t scaled);
+void computeparams_set_scaled(SourmashComputeParameters *ptr, uint32_t scaled);
 
 void computeparams_set_seed(SourmashComputeParameters *ptr, uint64_t new_seed);
 
+void computeparams_set_skipm1n3(SourmashComputeParameters *ptr, bool v);
+
+void computeparams_set_skipm2n3(SourmashComputeParameters *ptr, bool v);
+
 void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 
+bool computeparams_skipm1n3(const SourmashComputeParameters *ptr);
+
+bool computeparams_skipm2n3(const SourmashComputeParameters *ptr);
+
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
+
+void dataset_picklist_free(SourmashDatasetPicklist *ptr);
+
+const SourmashDatasetPicklist *dataset_picklist_new_from_list(const uint32_t *dataset_idxs_ptr,
+                                                              uintptr_t insize);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
@@ -226,7 +272,7 @@ SourmashStr kmerminhash_md5sum(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_merge(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
-SourmashKmerMinHash *kmerminhash_new(uint64_t scaled,
+SourmashKmerMinHash *kmerminhash_new(uint32_t scaled,
                                      uint32_t k,
                                      HashFunctions hash_function,
                                      uint64_t seed,
@@ -264,9 +310,21 @@ double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
                               bool ignore_abundance,
                               bool downsample);
 
+bool kmerminhash_skipm1n3(const SourmashKmerMinHash *ptr);
+
+bool kmerminhash_skipm2n3(const SourmashKmerMinHash *ptr);
+
 void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
+
+void manifest_free(SourmashManifest *ptr);
+
+SourmashManifestRowIter *manifest_rows(const SourmashManifest *ptr);
+
+const SourmashManifestRow *manifest_rows_iter_next(SourmashManifestRowIter *ptr);
+
+void manifestrow_free(SourmashManifestRow *ptr);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
@@ -312,42 +370,71 @@ SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
 
+SourmashSignature *revindex_best_containment(const SourmashRevIndex *db_ptr,
+                                             const SourmashKmerMinHash *query_ptr,
+                                             uint64_t threshold_bp,
+                                             const SourmashDatasetPicklist *dataset_picklist_ptr);
+
+void revindex_countergather_consume(SourmashRevIndex_CounterGather *cg_ptr,
+                                    const SourmashKmerMinHash *isect_ptr);
+
+const SourmashKmerMinHash *revindex_countergather_found_hashes(SourmashRevIndex_CounterGather *cg_ptr,
+                                                               const SourmashKmerMinHash *template_ptr);
+
+void revindex_countergather_free(SourmashRevIndex_CounterGather *ptr);
+
+uint64_t revindex_countergather_len(SourmashRevIndex_CounterGather *cg_ptr);
+
+SourmashSignature *revindex_countergather_peek(const SourmashRevIndex_CounterGather *cg_ptr,
+                                               const SourmashRevIndex *db_ptr,
+                                               uint64_t threshold_bp);
+
+SourmashSignature **revindex_countergather_signatures(const SourmashRevIndex_CounterGather *cg_ptr,
+                                                      const SourmashRevIndex *db_ptr,
+                                                      uintptr_t *size);
+
+void revindex_disk_create(const SourmashSignature *const *sigs_ptr,
+                          uintptr_t insigs,
+                          const char *path_ptr);
+
 void revindex_free(SourmashRevIndex *ptr);
 
-const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
-                                                   const SourmashSignature *sig_ptr,
-                                                   double threshold,
-                                                   bool _do_containment,
-                                                   bool _ignore_abundance,
-                                                   uintptr_t *size);
+uint32_t revindex_ksize(const SourmashRevIndex *ptr);
 
-uint64_t revindex_len(const SourmashRevIndex *ptr);
+uint64_t revindex_len(const SourmashRevIndex *ptr,
+                      const SourmashDatasetPicklist *dataset_picklist_ptr);
 
-SourmashRevIndex *revindex_new_with_paths(const SourmashStr *const *search_sigs_ptr,
-                                          uintptr_t insigs,
-                                          const SourmashKmerMinHash *template_ptr,
-                                          uintptr_t threshold,
-                                          const SourmashKmerMinHash *const *queries_ptr,
-                                          uintptr_t inqueries,
-                                          bool keep_sigs);
+SourmashManifest *revindex_manifest(const SourmashRevIndex *ptr);
 
-SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
-                                         uintptr_t insigs,
-                                         const SourmashKmerMinHash *template_ptr,
-                                         uintptr_t threshold,
-                                         const SourmashKmerMinHash *const *queries_ptr,
-                                         uintptr_t inqueries);
+SourmashRevIndex *revindex_mem_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
+                                             uintptr_t insigs,
+                                             const SourmashKmerMinHash *template_ptr);
 
-uint64_t revindex_scaled(const SourmashRevIndex *ptr);
+SourmashStr revindex_moltype(const SourmashRevIndex *ptr);
 
-const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
-                                                   const SourmashSignature *sig_ptr,
-                                                   double threshold,
-                                                   bool do_containment,
-                                                   bool _ignore_abundance,
-                                                   uintptr_t *size);
+SourmashRevIndex *revindex_new_from_rocksdb(const char *path_ptr);
 
-SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr, uintptr_t *size);
+const SourmashSearchResult *const *revindex_prefetch(const SourmashRevIndex *db_ptr,
+                                                     const SourmashSignature *query_ptr,
+                                                     uint64_t threshold_bp,
+                                                     uintptr_t *return_size,
+                                                     const SourmashDatasetPicklist *dataset_picklist_ptr);
+
+SourmashRevIndex_CounterGather *revindex_prefetch_to_countergather(const SourmashRevIndex *db_ptr,
+                                                                   const SourmashSignature *query_ptr,
+                                                                   const SourmashDatasetPicklist *dataset_picklist_ptr);
+
+uint32_t revindex_scaled(const SourmashRevIndex *ptr);
+
+const SourmashSearchResult *const *revindex_search_jaccard(const SourmashRevIndex *ptr,
+                                                           const SourmashSignature *sig_ptr,
+                                                           double threshold,
+                                                           uintptr_t *size,
+                                                           const SourmashDatasetPicklist *dataset_picklist_ptr);
+
+SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr,
+                                        uintptr_t *size,
+                                        const SourmashDatasetPicklist *dataset_picklist_ptr);
 
 SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
 

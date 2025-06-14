@@ -4,7 +4,8 @@ import pytest
 import numpy as np
 import sourmash_tst_utils as utils
 
-from sourmash import search, SourmashSignature, MinHash, load_one_signature
+from sourmash import search, SourmashSignature, MinHash
+from sourmash.sourmash_args import load_one_signature
 from sourmash.search import (
     make_jaccard_search_query,
     make_containment_query,
@@ -44,7 +45,7 @@ def test_make_jaccard_search_query_best_only():
 
     assert search_obj.score_fn == search_obj.score_jaccard
     assert not search_obj.require_scaled
-    assert type(search_obj) == search.JaccardSearchBestOnly
+    assert type(search_obj) is search.JaccardSearchBestOnly
 
 
 def test_make_jaccard_search_query_no_threshold_none():
@@ -258,8 +259,8 @@ def test_scaledSearchResult():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
@@ -300,8 +301,8 @@ def test_numSearchResult():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data("num/47.fa.sig")
     ss63_file = utils.get_test_data("num/63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss63 = load_one_signature(ss63_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss63 = load_one_signature(ss63_file, ksize=31, select_moltype="DNA")
     ss63 = ss63.to_mutable()
     ss63.filename = ss63_file
 
@@ -342,8 +343,8 @@ def test_numSearchResult():
 def test_SearchResult_incompatible_sigs():
     ss47_file = utils.get_test_data("num/47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     with pytest.raises(TypeError) as exc:
         SearchResult(ss47, ss4763, similarity=10)
@@ -365,8 +366,8 @@ def test_SearchResult_no_similarity():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     with pytest.raises(ValueError) as exc:
         SearchResult(ss47, ss4763)
@@ -378,8 +379,8 @@ def test_PrefetchResult():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
@@ -435,8 +436,8 @@ def test_PrefetchResult():
 def test_PrefetchResult_incompatible_sigs():
     ss47_file = utils.get_test_data("num/47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     with pytest.raises(TypeError) as exc:
         PrefetchResult(ss47, ss4763)
@@ -451,8 +452,8 @@ def test_GatherResult():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data("track_abund/47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
@@ -532,8 +533,8 @@ def test_GatherResult_ci():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data("track_abund/47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
 
     ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
@@ -588,8 +589,8 @@ def test_GatherResult_ci():
 def test_GatherResult_incompatible_sigs():
     ss47_file = utils.get_test_data("num/47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
     orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(TypeError) as exc:
@@ -613,8 +614,8 @@ def test_GatherResult_incompatible_sigs():
 def test_GatherResult_incomplete_input_cmpscaled():
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
     orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
@@ -638,8 +639,8 @@ def test_GatherResult_incomplete_input_cmpscaled():
 def test_GatherResult_incomplete_input_gathermh():
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
     orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
@@ -663,8 +664,8 @@ def test_GatherResult_incomplete_input_gathermh():
 def test_GatherResult_incomplete_input_gather_result_rank():
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
     orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
@@ -685,8 +686,8 @@ def test_GatherResult_incomplete_input_gather_result_rank():
 def test_GatherResult_incomplete_input_total_weighted_hashes():
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
     orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
@@ -727,8 +728,8 @@ def test_GatherResult_incomplete_input_total_weighted_hashes():
 def test_GatherResult_incomplete_input_orig_query_abunds():
     ss47_file = utils.get_test_data("47.fa.sig")
     ss4763_file = utils.get_test_data("47+63.fa.sig")
-    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="dna")
-    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="dna")
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype="DNA")
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype="DNA")
     orig_query_abunds = None
 
     with pytest.raises(ValueError) as exc:

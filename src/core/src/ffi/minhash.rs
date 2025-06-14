@@ -17,7 +17,7 @@ impl ForeignObject for SourmashKmerMinHash {
 
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
-    scaled: u64,
+    scaled: u32,
     k: u32,
     hash_function: HashFunctions,
     seed: u64,
@@ -73,15 +73,26 @@ Result<*const u64> {
 
     let mut output: Vec<u64> = Vec::with_capacity(insize);
 
+    // Call SeqToHashes::new and handle errors
+    let ready_hashes = SeqToHashes::new(
+        buf,
+        mh.ksize(),
+        force,
+        is_protein,
+        mh.hash_function(),
+        mh.seed(),
+    )?;
+
+
     if force && bad_kmers_as_zeroes{
-        for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+        for hash_value in ready_hashes{
             match hash_value{
                 Ok(x) => output.push(x),
                 Err(err) => return Err(err),
             }
         }
     }else{
-        for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+        for hash_value in ready_hashes {
             match hash_value{
                 Ok(0) => continue,
                 Ok(x) => output.push(x),
@@ -318,6 +329,18 @@ pub unsafe extern "C" fn kmerminhash_dayhoff(ptr: *const SourmashKmerMinHash) ->
 pub unsafe extern "C" fn kmerminhash_hp(ptr: *const SourmashKmerMinHash) -> bool {
     let mh = SourmashKmerMinHash::as_rust(ptr);
     mh.hp()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_skipm1n3(ptr: *const SourmashKmerMinHash) -> bool {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    mh.skipm1n3()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_skipm2n3(ptr: *const SourmashKmerMinHash) -> bool {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    mh.skipm2n3()
 }
 
 #[no_mangle]

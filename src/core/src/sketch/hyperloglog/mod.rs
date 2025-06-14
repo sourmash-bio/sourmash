@@ -81,9 +81,36 @@ impl HyperLogLog {
     }
 
     pub fn cardinality(&self) -> usize {
-        let counts = estimators::counts(&self.registers, self.q);
+        if self.p < 8 {
+            estimators::mle(
+                &estimators::counts::<u8>(&self.registers, self.q),
+                self.p,
+                self.q,
+                0.01,
+            ) as usize
+        } else if self.p < 16 {
+            estimators::mle(
+                &estimators::counts::<u16>(&self.registers, self.q),
+                self.p,
+                self.q,
+                0.05,
+            ) as usize
+        } else {
+            assert!(self.p == 16 || self.p == 17 || self.p == 18);
+            estimators::mle(
+                &estimators::counts::<u32>(&self.registers, self.q),
+                self.p,
+                self.q,
+                0.1,
+            ) as usize
+        }
+    }
 
-        estimators::mle(&counts, self.p, self.q, 0.01) as usize
+    pub fn union(&self, other: &HyperLogLog) -> usize {
+        let (only_a, only_b, intersection) =
+            estimators::joint_mle(&self.registers, &other.registers, self.p, self.q);
+
+        only_a + only_b + intersection
     }
 
     pub fn similarity(&self, other: &HyperLogLog) -> f64 {
@@ -224,6 +251,8 @@ impl Update<HyperLogLog> for KmerMinHash {
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;
+    use std::hash::Hasher;
+    use std::hash::{DefaultHasher, Hash};
     use std::io::{BufReader, BufWriter, Read};
     use std::path::PathBuf;
 
@@ -272,12 +301,11 @@ mod test {
         const N_UNIQUE_H1: usize = 500741;
         const N_UNIQUE_H2: usize = 995845;
         const N_UNIQUE_U: usize = 995845;
+        const INTERSECTION: usize = 500838;
 
         const SIMILARITY: f64 = 0.502783;
         const CONTAINMENT_H1: f64 = 1.;
         const CONTAINMENT_H2: f64 = 0.502783;
-
-        const INTERSECTION: usize = 500838;
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/genome-s10.fa.gz");
@@ -319,6 +347,9 @@ mod test {
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
         let abs_error = (1. - (hll2.cardinality() as f64 / N_UNIQUE_H2 as f64)).abs();
+        assert!(abs_error < ERR_RATE, "{}", abs_error);
+
+        let abs_error = (1. - (hll1.union(&hll2) as f64 / N_UNIQUE_U as f64)).abs();
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
         let similarity = hll1.similarity(&hll2);
@@ -373,5 +404,54 @@ mod test {
         assert_eq!(hll_new.q, hll.q);
         assert_eq!(hll_new.registers, hll.registers);
         assert_eq!(hll_new.ksize, hll.ksize);
+    }
+
+    #[test]
+    /// Test to cover corner cases in the MLE calculation
+    /// that may happen at resolutions 16, 17 or 18, i.e.
+    /// cases with 2^16 == 65536, 2^17 == 131072, 2^18 == 262144.
+    ///
+    /// In such cases, the MLE multiplicities which were earlier
+    /// implemented always using a u16 type, may overflow.
+    fn test_mle_corner_cases() {
+        for precision in [16, 17, 18] {
+            let mut hll = HyperLogLog::new(precision, 21).unwrap();
+            for i in 1..5000 {
+                let mut hasher = DefaultHasher::new();
+                i.hash(&mut hasher);
+                let hash = hasher.finish();
+                hll.add_hash(hash)
+            }
+
+            let cardinality = hll.cardinality();
+
+            assert!(cardinality > 4500 && cardinality < 5500);
+
+            // We build a second hll to check whether the union of the two
+            // hlls is consistent with the cardinality of the union.
+            let mut hll2 = HyperLogLog::new(precision, 21).unwrap();
+
+            for i in 5000..10000 {
+                let mut hasher = DefaultHasher::new();
+                i.hash(&mut hasher);
+                let hash = hasher.finish();
+                hll2.add_hash(hash)
+            }
+
+            let mut hll_union = hll.clone();
+            hll_union.merge(&hll2).unwrap();
+            let cardinality_union = hll_union.cardinality();
+
+            assert!(
+                cardinality_union > 9500 && cardinality_union < 10500,
+                "precision: {}, cardinality_union: {}",
+                precision,
+                cardinality_union
+            );
+
+            let intersection = hll.intersection(&hll2);
+
+            assert!(intersection < 500);
+        }
     }
 }

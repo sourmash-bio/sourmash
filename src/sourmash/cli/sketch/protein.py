@@ -61,12 +61,15 @@ def subparser(subparsers):
         "--from-file", help="a text file containing a list of sequence files to load"
     )
     file_args.add_argument(
-        "--merge",
+        "--set-name",
         "--name",
+        "--merge",
+        dest="merge",
         type=str,
         default="",
         metavar="FILE",
-        help="merge all input files into one signature file with the " "specified name",
+        help="name the output sketch as specified; note, merges all input "
+        "files while sketching",
     )
     file_args.add_argument(
         "--output-dir",

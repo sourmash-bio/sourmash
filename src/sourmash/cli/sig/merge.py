@@ -43,7 +43,7 @@ def subparser(subparsers):
     subparser.add_argument(
         "--flatten", action="store_true", help="remove abundances from all signatures"
     )
-    subparser.add_argument("--name", help="rename merged signature")
+    subparser.add_argument("--set-name", "--name", help="rename merged signature")
     subparser.add_argument(
         "-f", "--force", action="store_true", help="try to load all files as signatures"
     )

@@ -6,12 +6,14 @@ use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
 use sourmash::encodings::HashFunctions;
+use sourmash::prelude::ToWriter;
 use sourmash::signature::SeqToHashes;
 use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{
     max_hash_for_scaled, scaled_for_max_hash, KmerMinHash, KmerMinHashBTree,
 };
 use sourmash::sketch::Sketch;
+use sourmash::ScaledType;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
@@ -281,6 +283,7 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     let mut e = a.downsample_max_hash(100).unwrap();
     let scaled = scaled_for_max_hash(100);
     let mut f = b.downsample_scaled(scaled).unwrap();
+    assert_eq!(f.scaled(), scaled);
 
     // Can't compare different scaled without explicit downsample
     assert!(c.similarity(&e, false, false).is_err());
@@ -327,7 +330,7 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
 proptest! {
 #[test]
 fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
-    let scaled: u64 = 10;
+    let scaled: ScaledType = 10;
     let mut a = KmerMinHash::new(scaled, 6, HashFunctions::Murmur64Dna, 42, true, 0);
     let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::Murmur64Dna, 42, true, 0);
 
@@ -383,7 +386,7 @@ fn load_save_minhash_sketches() {
 
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let sigs = Signature::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
     let sketches = sig.sketches();
@@ -392,11 +395,11 @@ fn load_save_minhash_sketches() {
     if let Sketch::MinHash(mh) = &sketches[0] {
         let bmh: KmerMinHashBTree = mh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
+            bmh.to_writer(&mut buffer).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh = KmerMinHash::from_reader(&buffer[..]).unwrap();
+        let new_bmh = KmerMinHashBTree::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -430,11 +433,11 @@ fn load_save_minhash_sketches() {
         buffer.clear();
         let imh: KmerMinHash = bmh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
+            imh.to_writer(&mut buffer).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh = KmerMinHash::from_reader(&buffer[..]).unwrap();
+        let new_bmh = KmerMinHashBTree::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -484,7 +487,7 @@ fn load_save_minhash_sketches_abund() {
 
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let sigs = Signature::from_reader(reader).expect("Loading error");
 
     let sig = sigs.get(0).unwrap();
     let sketches = sig.sketches();
@@ -493,11 +496,11 @@ fn load_save_minhash_sketches_abund() {
     if let Sketch::MinHash(mh) = &sketches[0] {
         let bmh: KmerMinHashBTree = mh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &bmh).unwrap();
+            bmh.to_writer(&mut buffer).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh = KmerMinHash::from_reader(&buffer[..]).unwrap();
+        let new_bmh = KmerMinHashBTree::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -541,11 +544,11 @@ fn load_save_minhash_sketches_abund() {
         buffer.clear();
         let imh: KmerMinHash = bmh.clone().into();
         {
-            serde_json::to_writer(&mut buffer, &imh).unwrap();
+            imh.to_writer(&mut buffer).unwrap();
         }
 
-        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
-        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_mh = KmerMinHash::from_reader(&buffer[..]).unwrap();
+        let new_bmh = KmerMinHashBTree::from_reader(&buffer[..]).unwrap();
 
         assert_eq!(mh.md5sum(), new_mh.md5sum());
         assert_eq!(bmh.md5sum(), new_bmh.md5sum());
@@ -671,14 +674,14 @@ fn load_save_minhash_dayhoff(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
     let mut buffer_b = vec![];
 
     {
-        serde_json::to_writer(&mut buffer_a, &a).unwrap();
-        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+        a.to_writer(&mut buffer_a).unwrap();
+        b.to_writer(&mut buffer_b).unwrap();
     }
 
     assert_eq!(buffer_a, buffer_b);
 
-    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
-    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+    let c = KmerMinHash::from_reader(&buffer_b[..]).unwrap();
+    let d = KmerMinHashBTree::from_reader(&buffer_a[..]).unwrap();
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
@@ -699,14 +702,14 @@ fn load_save_minhash_hp(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
     let mut buffer_b = vec![];
 
     {
-        serde_json::to_writer(&mut buffer_a, &a).unwrap();
-        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+        a.to_writer(&mut buffer_a).unwrap();
+        b.to_writer(&mut buffer_b).unwrap();
     }
 
     assert_eq!(buffer_a, buffer_b);
 
-    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
-    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+    let c = KmerMinHash::from_reader(&buffer_b[..]).unwrap();
+    let d = KmerMinHashBTree::from_reader(&buffer_a[..]).unwrap();
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
@@ -727,14 +730,14 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
     let mut buffer_b = vec![];
 
     {
-        serde_json::to_writer(&mut buffer_a, &a).unwrap();
-        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+        a.to_writer(&mut buffer_a).unwrap();
+        b.to_writer(&mut buffer_b).unwrap();
     }
 
     assert_eq!(buffer_a, buffer_b);
 
-    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
-    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+    let c = KmerMinHash::from_reader(&buffer_b[..]).unwrap();
+    let d = KmerMinHashBTree::from_reader(&buffer_a[..]).unwrap();
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
@@ -751,7 +754,9 @@ fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
 
     let mut hashes: Vec<u64> = Vec::new();
 
-    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed()){
+    let ready_hashes = SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed())?;
+
+    for hash_value in ready_hashes{
         match hash_value{
             Ok(0) => continue,
             Ok(x) => hashes.push(x),
@@ -774,7 +779,9 @@ fn seq_to_hashes_2(seq in "QRMTHINK") {
 
     let mut hashes: Vec<u64> = Vec::new();
 
-    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed()){
+    let ready_hashes = SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed())?;
+
+    for hash_value in ready_hashes {
         match hash_value{
             Ok(0) => continue,
             Ok(x) => hashes.push(x),
@@ -888,4 +895,38 @@ fn test_n_unique_kmers() {
     mh.add_hash(20);
     mh.add_hash(30);
     assert_eq!(mh.n_unique_kmers(), 30)
+}
+
+#[test]
+fn test_scaled_downsampling_kmerminhash() {
+    let mh = KmerMinHash::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+
+    // downsampling to same scaled is OK:
+    let new_mh = mh.clone().downsample_scaled(10).unwrap();
+    assert_eq!(new_mh.scaled(), 10);
+
+    // downsampling is OK:
+    let new_mh = mh.clone().downsample_scaled(100).unwrap();
+    assert_eq!(new_mh.scaled(), 100);
+
+    // upsampling not ok
+    let e = mh.clone().downsample_scaled(1).unwrap_err();
+    assert!(matches!(e, sourmash::Error::CannotUpsampleScaled));
+}
+
+#[test]
+fn test_scaled_downsampling_kmerminhashbtree() {
+    let mh = KmerMinHashBTree::new(10, 21, HashFunctions::Murmur64Dna, 42, true, 0);
+
+    // downsampling to same scaled is OK:
+    let new_mh = mh.clone().downsample_scaled(10).unwrap();
+    assert_eq!(new_mh.scaled(), 10);
+
+    // downsampling is OK:
+    let new_mh = mh.clone().downsample_scaled(100).unwrap();
+    assert_eq!(new_mh.scaled(), 100);
+
+    // upsampling not ok
+    let e = mh.clone().downsample_scaled(1).unwrap_err();
+    assert!(matches!(e, sourmash::Error::CannotUpsampleScaled));
 }

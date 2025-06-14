@@ -1,5 +1,5 @@
 ---
-title: 'sourmash: a tool to quickly search, compare, and analyze genomic
+title: 'sourmash v4: A multitool to quickly search, compare, and analyze genomic
 and metagenomic data sets'
 tags:
   - FracMinHash
@@ -64,6 +64,9 @@ authors:
  - name: Ricky Lim
    orcid: 0000-0003-1313-7076
    affiliation: 9
+ - name: Bradley Nelson
+   orcid: 0009-0001-1553-932X
+   affiliation: 9
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
    affiliation: 9
@@ -96,21 +99,21 @@ authors:
    corresponding: true
    affiliation: 1
 affiliations:
- - name: University of California, Davis
+ - name: University of California Davis, Davis, CA, United States of America
    index: 1
- - name: Woods Hole Oceanographic Institution
+ - name: Woods Hole Oceanic Institution, Woods Hole, MA, Unites States of America
    index: 2
- - name: Chan-Zuckerberg Biohub
+ - name: Chan-Zuckerberg Biohub, San Francisco, CA, United States of America
    index: 3
- - name:  Pennsylvania State University
+ - name:  Pennsylvania State University, University Park, PA, United States of America
    index: 4
- - name:  MPI for Evolutionary Biology
+ - name:  Max Planck Institute for Evolutionary Biology, Plön, Germany
    index: 5
- - name: Swedish Defence Research Agency (FOI)
+ - name: Swedish Defence Research Agency (FOI), Stockholm, Sweden
    index: 6
- - name: National Bioforensic Analysis Center
+ - name: National Bioforensic Analysis Center, Fort Detrick, MD, United States of America
    index: 7
- - name: Washington University in St Louis
+ - name: Washington University in St Louis, St Louis, MO, United States of America
    index: 8
  - name: No affiliation
    index: 9
@@ -126,7 +129,7 @@ of DNA, RNA, and amino acid k-mers for biological sequence search, comparison,
 and analysis [@Pierce:2019]. sourmash's FracMinHash sketching supports fast and
 accurate sequence comparisons between datasets of different sizes [@gather],
 including taxonomic profiling [@portik2022evaluation], functional profiling
-[@liu2023fast], and petabase-scale sequence search [@branchwater]. From
+[@hera2023fast], and petabase-scale sequence search [@branchwater]. From
 release 4.x, sourmash is built on top of Rust and provides an experimental
 Rust interface.
 
@@ -147,22 +150,26 @@ and Containment calculations, which enables analysis and comparison of data
 sets of different sizes, including large metagenomic samples. As of v4.4,
 sourmash can convert these to estimated Average Nucleotide Identity (ANI)
 values, which can provide improved biological context to sketch comparisons
-[@hera2022debiasing].
+[@hera2023deriving].
 
 # Statement of Need
 
 Large collections of genomes, transcriptomes, and raw sequencing data sets are
 readily available in biology, and the field needs lightweight computational
 methods for searching and summarizing the content of both public and private
-collections. sourmash provides a flexible set of programmatic functionality
+collections. sourmash provides a flexible set of programmatic tools
 for this purpose, together with a robust and well-tested command-line
 interface. It has been used in over 350 publications (based on citations of
 @Brown:2016 and @Pierce:2019) and it continues to expand in functionality.
 
 # Acknowledgements
 
-This work is funded in part by the Gordon and Betty Moore Foundation’s
-Data-Driven Discovery Initiative [GBMF4551 to CTB].
+This work was funded in part by the Gordon and Betty Moore Foundation’s
+Data-Driven Discovery Initiative [GBMF4551 to CTB]. It is also funded in
+part by the National Science Foundation [#2018522 to CTB] and PIG-PARADIGM
+(Preventing Infection in the Gut of developing Piglets–and thus Antimicrobial
+Resistance – by disentAngling the interface of DIet, the host and the
+Gastrointestinal Microbiome) from the Novo Nordisk Foundation to CTB.
 
 Notice: This manuscript has been authored by BNBI under Contract
 No. HSHQDC-15-C-00064 with the DHS. The US Government retains and the

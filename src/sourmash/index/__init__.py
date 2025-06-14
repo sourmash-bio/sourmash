@@ -46,7 +46,8 @@ from sourmash.search import (
 )
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
-from sourmash.signature import load_signatures, save_signatures
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
+
 from sourmash.minhash import (
     flatten_and_downsample_scaled,
     flatten_and_downsample_num,
@@ -425,12 +426,12 @@ class LinearIndex(Index):
 
     def save(self, path):
         with open(path, "w") as fp:
-            save_signatures(self.signatures(), fp)
+            save_signatures_to_json(self.signatures(), fp)
 
     @classmethod
     def load(cls, location, filename=None):
         "Load signatures from a JSON signature file."
-        si = load_signatures(location, do_raise=True)
+        si = load_signatures_from_json(location, do_raise=True)
 
         if filename is None:
             filename = location
@@ -442,6 +443,8 @@ class LinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
+        _check_select_parameters(**kwargs)
+
         siglist = []
         for ss in self._signatures:
             if select_signature(ss, **kwargs):
@@ -511,6 +514,8 @@ class LazyLinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
+        _check_select_parameters(**kwargs)
+
         selection_dict = dict(self.selection_dict)
         for k, v in kwargs.items():
             if k in selection_dict:
@@ -639,7 +644,7 @@ class ZipFileLinearIndex(Index):
                 or self.traverse_yield_all
             ):
                 sig_data = self.storage.load(filename)
-                for ss in load_signatures(sig_data):
+                for ss in load_signatures_from_json(sig_data):
                     yield ss, filename
 
     def signatures(self):
@@ -653,7 +658,7 @@ class ZipFileLinearIndex(Index):
             # yield all signatures found in manifest
             for filename in manifest.locations():
                 data = self.storage.load(filename)
-                for ss in load_signatures(data):
+                for ss in load_signatures_from_json(data):
                     # in case multiple signatures are in the file, check
                     # to make sure we want to return each one.
                     if ss in manifest:
@@ -682,12 +687,13 @@ class ZipFileLinearIndex(Index):
                             return True
 
                     data = self.storage.load(filename)
-                    for ss in load_signatures(data):
+                    for ss in load_signatures_from_json(data):
                         if select(ss):
                             yield ss
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
+        _check_select_parameters(**kwargs)
 
         # if we have a manifest, run 'select' on the manifest.
         manifest = self.manifest
@@ -792,6 +798,9 @@ class CounterGather:
         if scaled > self.scaled:
             self.scaled = scaled
         return self.scaled
+
+    def __len__(self):
+        return len(self.siglist)
 
     def signatures(self):
         "Return all signatures."
@@ -1100,6 +1109,7 @@ class MultiIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
+        _check_select_parameters(**kwargs)
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(
             new_manifest, self.parent, prepend_location=self.prepend_location
@@ -1214,5 +1224,50 @@ class StandaloneManifestIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
+        _check_select_parameters(**kwargs)
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return StandaloneManifestIndex(new_manifest, self._location, prefix=self.prefix)
+
+
+def _check_select_parameters(**kw):
+    "Check 'select' parameters for types/conversion."
+    params = set(kw)
+    params -= {"ksize", "num", "moltype", "scaled", "abund", "picklist", "containment"}
+    if params:
+        raise ValueError(f"unknown 'select' parameters: {params}")
+
+    ksize = kw.get("ksize")
+    if ksize is not None:
+        if not isinstance(ksize, int):
+            raise ValueError(
+                f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
+            )
+
+    moltype = kw.get("moltype")
+    if moltype is not None:
+        if moltype not in ["DNA", "protein", "dayhoff", "hp", "skipm1n3", "skipm2n3"]:
+            raise ValueError(f"unknown moltype: {moltype}")
+
+    scaled = kw.get("scaled")
+    if scaled is not None:
+        if not isinstance(scaled, int):
+            raise ValueError(
+                f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
+            )
+
+    containment = kw.get("containment")
+    if containment is not None:
+        if not isinstance(containment, bool):
+            raise ValueError(
+                f"containment value '{containment}' must be a bool, is: {type(containment)}"
+            )
+
+    abund = kw.get("abund")
+    if abund is not None:
+        if not isinstance(abund, bool):
+            raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
+
+    num = kw.get("num")
+    if num is not None:
+        if not isinstance(num, int):
+            raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")

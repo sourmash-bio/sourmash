@@ -58,12 +58,12 @@ def subparser(subparsers):
     subparser.add_argument(
         "--save-unmatched-hashes",
         metavar="FILE",
-        help="output unmatched query hashes as a signature to the " "specified file",
+        help="output unmatched query hashes as a signature to the specified file",
     )
     subparser.add_argument(
         "--save-matching-hashes",
         metavar="FILE",
-        help="output matching query hashes as a signature to the " "specified file",
+        help="output matching query hashes as a signature to the specified file",
     )
     subparser.add_argument(
         "--md5", default=None, help="select the signature with this md5 as query"

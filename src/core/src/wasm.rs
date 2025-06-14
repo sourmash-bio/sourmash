@@ -1,17 +1,13 @@
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 use needletail::parse_fastx_reader;
 use wasm_bindgen::prelude::*;
 
 use crate::cmd::ComputeParameters as _ComputeParameters;
 use crate::encodings::HashFunctions;
+use crate::prelude::ToWriter;
 use crate::signature::Signature as _Signature;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash as _KmerMinHash;
+use crate::ScaledType;
 
 #[wasm_bindgen]
 pub struct KmerMinHash(_KmerMinHash);
@@ -32,7 +28,7 @@ impl KmerMinHash {
         dayhoff: bool,
         hp: bool,
         seed: u32,
-        scaled: u32,
+        scaled: ScaledType,
         track_abundance: bool,
     ) -> KmerMinHash {
         // TODO: at most one of (prot, dayhoff, hp) should be true
@@ -48,7 +44,7 @@ impl KmerMinHash {
         };
 
         KmerMinHash(_KmerMinHash::new(
-            scaled as u64,
+            scaled,
             ksize,
             hash_function,
             seed as u64,
@@ -65,8 +61,9 @@ impl KmerMinHash {
 
     #[wasm_bindgen]
     pub fn to_json(&mut self) -> Result<String, JsErrors> {
-        let json = serde_json::to_string(&self.0)?;
-        Ok(json)
+        let mut st: Vec<u8> = vec![];
+        self.0.to_writer(&mut st)?;
+        Ok(unsafe { String::from_utf8_unchecked(st) })
     }
 }
 
@@ -84,8 +81,8 @@ impl ComputeParameters {
     }
 
     #[wasm_bindgen]
-    pub fn set_scaled(&mut self, scaled: u32) {
-        self.0.set_scaled(scaled as u64);
+    pub fn set_scaled(&mut self, scaled: ScaledType) {
+        self.0.set_scaled(scaled);
     }
 
     #[wasm_bindgen]
@@ -159,8 +156,9 @@ impl Signature {
 
     #[wasm_bindgen]
     pub fn to_json(&mut self) -> Result<String, JsErrors> {
-        let json = serde_json::to_string(&self.0)?;
-        Ok(json)
+        let mut st: Vec<u8> = vec![];
+        self.0.to_writer(&mut st)?;
+        Ok(unsafe { String::from_utf8_unchecked(st) })
     }
 
     pub fn size(&self) -> usize {

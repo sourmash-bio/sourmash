@@ -185,7 +185,7 @@ pub unsafe fn set_panic_hook() {
                 location.file(),
                 location.line()
             ),
-            None => format!("thread '{}' panicked with '{}'", thread, message),
+            None => format!("thread '{thread}' panicked with '{message}'"),
         };
 
         set_last_error(Panic(description).into())
@@ -273,7 +273,7 @@ impl From<String> for SourmashStr {
     }
 }
 
-impl<'a> From<&'a str> for SourmashStr {
+impl From<&str> for SourmashStr {
     fn from(string: &str) -> SourmashStr {
         SourmashStr::new(string)
     }

@@ -547,7 +547,7 @@ Note that order of columns is not guaranteed and may change between versions.
 | `f_orig_query`                 | float         | The fraction of the original query represented by this match. Approximates the fraction of metagenomic reads that will map to this genome. |
 | `f_match`                      | float         | The containment of the match in the query. |
 | `f_unique_to_query`            | float         | The fraction of matching hashes (unweighted) that are unique to this query; rank dependent. Will sum to the fraction of total k-mers (unweighted) that were identified. |
-| `f_unique_weighted`            | float         | The fraction of matching hashes (weighted by multiplicity) that are unique to this query. This will sum to the fraction of total _weighted_ k-mers that were identified. Approximates the fraction of metagenomic reads that will map to this genome _after_ all previous matches at lower (earlier) ranks are mapped. |
+| `f_unique_weighted`            | float         | The fraction of matching hashes (weighted by multiplicity) that are unique to this match. This will sum (across the rows) to the fraction of total _weighted_ k-mers that were identified. Approximates the fraction of metagenomic reads that will map to this genome _after_ all previous matches at lower (earlier) ranks are mapped. |
 | `average_abund`                | float         | Mean abundance of the weighted hashes unique to the intersection. Empty if query does not have abundance. Rank dependent, does not double count. |
 | `median_abund`                 | integer       | Median abundance of the weighted hashes unique to the intersection. Empty if query has no abundance. Rank dependent, does not double count. |
 | `std_abund`                    | float         | Std deviation of the abundance of the hashes unique to the intersection. Empty if query has no abundance. Rank dependent, does not double count. |
@@ -556,7 +556,7 @@ Note that order of columns is not guaranteed and may change between versions.
 | `md5`                          | string        | Full md5sum of the match sketch. |
 | `f_match_orig`                 | float         | The fraction of the match in the full query. Rank independent. |
 | `gather_result_rank`           | float         | Rank of this match in the results. |
-| `remaining_bp`                 | integer       | How many bp remain in the query after subtracting this match, estimated by multiplying remaining hashes by scaled. |
+| `remaining_bp`                 | integer       | How many bp remain in the query after subtracting this match, estimated by multiplying remaining hashes by scaled. Starts at `query_n_hashes`. Unweighted. See `sum_weighted_found` for the related weighted value. |
 | `query_filename`               | string        | The filename from which the query was loaded. |
 | `query_name`                   | string        | The query sketch name. |
 | `query_md5`                    | string        | Truncated md5sum of the query sketch. |
@@ -564,7 +564,7 @@ Note that order of columns is not guaranteed and may change between versions.
 | `ksize`                        | integer       | K-mer size for the sketches used in the comparison. |
 | `moltype`                      | string        | Molecule type of the comparison. |
 | `scaled`                       | integer       | Scaled value of the comparison. |
-| `query_n_hashes`               | integer       | Number of hashes in the query sketch. |
+| `query_n_hashes`               | integer       | Number of hashes in the query sketch. Unweighted. See `total_weighted_hashes` for weighted value. |
 | `query_abundance`              | boolean       | True if the query has abundance information; False otherwise. |
 | `query_containment_ani`        | float         | ANI estimated from the query containment in the match. |
 | `match_containment_ani`        | float         | ANI estimated from the match containment in the query. |

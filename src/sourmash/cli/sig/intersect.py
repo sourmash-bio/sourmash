@@ -44,6 +44,7 @@ def subparser(subparsers):
         metavar="FILE",
         help="intersect with & take abundances from this signature",
     )
+    subparser.add_argument("--set-name", help="set name for output signature")
     subparser.add_argument(
         "-f", "--force", action="store_true", help="try to load all files as signatures"
     )

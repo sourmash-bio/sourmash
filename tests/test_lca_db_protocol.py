@@ -2,10 +2,12 @@
 Test the behavior of LCA databases. New LCA database classes should support
 all of this functionality.
 """
+
 import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
+from sourmash.sourmash_args import load_one_signature
 from sourmash.tax.tax_utils import MultiLineageDB
 from sourmash.lca.lca_db import LCA_Database, load_single_database
 
@@ -19,8 +21,8 @@ def build_inmem_lca_db(runtmp):
         "prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig"
     )
 
-    ss1 = sourmash.load_one_signature(sigfile1)
-    ss2 = sourmash.load_one_signature(sigfile2)
+    ss1 = load_one_signature(sigfile1)
+    ss2 = load_one_signature(sigfile2)
 
     lineages_file = utils.get_test_data("prot/gtdb-subset-lineages.csv")
     lineages = MultiLineageDB.load([lineages_file])

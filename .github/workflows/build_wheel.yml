@@ -22,7 +22,7 @@ jobs:
         ]
         include:
           - build: linux-x86_64
-            os: ubuntu-20.04
+            os: ubuntu-latest
             arch: x86_64
             macos_target: ''
           - build: macos-x86_64
@@ -43,10 +43,10 @@ jobs:
       - uses: actions/setup-python@v5
         name: Install Python
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
+        uses: pypa/cibuildwheel@v2.23.3
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
@@ -58,38 +58,24 @@ jobs:
           path: './wheelhouse/sourmash*.whl'
 
   build_wasm:
-    runs-on: ubuntu-20.04
-    env:
-        PYODIDE_VERSION: "0.23.0"
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-           python-version: "3.11.2"
-      - run: |
-          pip install pyodide-build==${PYODIDE_VERSION} "pydantic<2"
-          pyodide config get emscripten_version  # trigger setup
-          echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
-      - uses: mymindstorm/setup-emsdk@v14
-        with:
-           version: ${{ env.EMSCRIPTEN_VERSION }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: wasm32-unknown-emscripten
-      - run: |
-          export RUSTC_BOOTSTRAP=1
-          pyodide build
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.23.3
+        env:
+          CIBW_PLATFORM: pyodide 
+          CIBW_BUILD: 'cp312-pyodide_wasm32'
 
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-wasm
-          path: './dist/sourmash*.whl'
-
+          path: './wheelhouse/sourmash*.whl'
 
   release:
     name: Publish wheels
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build_wheels, build_wasm]
 
@@ -101,9 +87,8 @@ jobs:
           path: 'wheels/'
 
       # if it matches a Python release tag, upload to github releases
-      # TODO: In the future, use the create-release and upload-release-assets actions
       - name: Release
-        uses: fnkr/github-action-ghr@v1
-        env:
-          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{steps.fetch_artifacts.outputs.download-path}}/wheel-*/*

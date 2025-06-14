@@ -1,6 +1,7 @@
 """
 Tests for 'sourmash sig collect'
 """
+
 import pytest
 import shutil
 import os.path

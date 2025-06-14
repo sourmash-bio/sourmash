@@ -69,7 +69,7 @@ Some (early stage) plugins are also available as examples:
 
 ## Debugging plugins
 
-`sourmash info -v` will list all installed plugins.
+`sourmash info -v` will list all installed plugins and their versions.
 
 `sourmash sig cat <input sig> -o <output sig>` is a simple way to
 invoke a `save_to` plugin. Use `-d` to turn on debugging output.
