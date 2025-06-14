@@ -197,6 +197,7 @@ Optional arguments:
 ```
 ### `sourmash compare` - compare many signatures
 
+**Note:** As of 2025, we have a much faster implementation of `compare` called `multisearch` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and should be (at worst) equivalent in memory usage, although it does accept a slightly more restricted set of inputs than `compare`.
 
 The `compare` subcommand compares one or more signatures
 (created with `sketch`) using estimated [Jaccard index][3] or
