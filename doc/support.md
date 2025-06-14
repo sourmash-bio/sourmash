@@ -81,6 +81,13 @@ you upgrade within a major sourmash release (barring bug fixes!). Moreover,
 if you rely on a feature introduced in v3.3.0, that feature will not break
 in v3.4.0, but will also not be backported to version 3.2.0.
 
+### Output file formats
+
+In particular, the CSV output file formats are guaranteed to be stable
+within major versions, with one caveat: we may add or rearrange
+columns between releases.  You should use column headers/column names
+to parse CSV files, and not depend on column order.
+
 ### Python API
 
 We intend to guarantee the Python API at the top level, i.e.
@@ -98,7 +105,7 @@ sourmash v3.x supports Python 2.7 as well as Python 3.x, through Python 3.8.
 
 sourmash v4.0 dropped support for versions of Python before Python 3.7,
 and our intent is that it will support as-yet unreleased versions of Python 3.x
-(e.g. 3.10) moving forward.
+(e.g. 3.14) moving forward.
 
 For future versions of sourmash, we plan to follow the
 [Scientific Python SPEC 0](https://scientific-python.org/specs/spec-0000/)
@@ -148,7 +155,7 @@ If you use sourmash from the command line, there are a few major changes in 4.0 
 
 First, **`sourmash compute` is deprecated in favor of [`sourmash sketch`](sourmash-sketch.md)**, which provides quite a bit more flexibility in creating signatures.
 
-Second, **`sourmash index` will now save databases in the Zip format (`.sbt.zip`) instead of the old JSON+subdirectory format** (see [updated docs](command-line.md#sourmash-index---build-an-sbt-index-of-signatures)). You can revert to the old behavior by explicitly specifying the `.sbt.json` filename for output when running `sourmash index`.
+Second, **`sourmash index` will now save databases in the Zip format (`.sbt.zip`) instead of the old JSON+subdirectory format** (see [updated docs](command-line.md#sourmash-index---build-an-index-of-signatures)). You can revert to the old behavior by explicitly specifying the `.sbt.json` filename for output when running `sourmash index`.
 
 Third, all sourmash commands that operate on signatures should now be able to directly read from lists of signatures in signature files, SBT databases, LCA databases, directories, and files containing lists of filenames (see [updated docs](command-line.md#advanced-command-line-usage)).
 

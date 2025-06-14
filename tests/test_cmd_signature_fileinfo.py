@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash signature fileinfo' command line.
 """
+
 import shutil
 import os
 import glob

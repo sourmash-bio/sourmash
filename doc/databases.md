@@ -30,11 +30,42 @@ The databases do not need to be unpacked or prepared in any way after download.
 
 You can verify that they've been successfully downloaded (and view database properties such as `ksize` and `scaled`) with `sourmash sig summarize <output>`.
 
+## Sketches for human and animal genomes
+
+These sketches are of the latest releases of a number of animal
+genomes. Among other uses, they can be used to detect host
+contamination in microbial metagenomes.
+
+Each file includes sketches at k=21, k=31, and k=51, at a scaled of
+1000, and is under 50 MB.
+
+* Human (hg38) - [hg38.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/hg38.sig.zip)
+* Cow (bosTau9) - [bosTau9.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/bosTau9.sig.zip)
+* Dog (canFam6) - [canFam6.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/canFam6.sig.zip)
+* Horse (equCab3) - [equCab3.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/equCab3.sig.zip)
+* Cat (felCat9) - [felCat9.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/felCat9.sig.zip)
+* Chicken (galGAl6) - [galGal6.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/galGal6.sig.zip)
+* Mouse (mm39) - [mm39.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/mm39.sig.zip)
+* Goat (oviAri4) - [oviAri4.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/oviAri4.sig.zip)
+* Pig (susCr11) - [susScr11.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/host/susScr11.sig.zip)
+
+## Sketches for plant genomes
+
+These sketches are for the plant genomes available in GenBank as of 2024-07.
+
+| K-mer size | Zipfile collection |
+| -------- | -------- |
+| k21 | [download (7G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k21.zip) |
+| k31 | [download (8.8G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k31.zip) |
+| k51 | [download (11G)](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.k51.zip) |
+
+Lineage spreadsheet for sourmash `tax` commands: [download](https://farm.cse.ucdavis.edu/\~ctbrown/sourmash-db/genbank-plant-2024-07/genbank-plants-2024-07.lineages.csv.gz)
+
 ## GTDB R08-RS214 - DNA databases
 
 [GTDB R08-RS214](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r08-rs214/456) consists of 402,709 genomes organized into 85,205 species clusters.
 
-The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214.lineages.csv.gz).
+The lineage spreadsheet (for `sourmash tax` commands) is available [for the genome database (402k)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214.lineages.csv.gz).
 
 ### GTDB R08-RS214 genomic representatives (85k)
 
@@ -139,7 +170,7 @@ Taxonomic spreadsheets for each domain are provided below as well.
 
 [GTDB R07-RS207](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r07-rs207/264) consists of 317,542 genomes organized into 65,703 species clusters.
 
-The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.species-taxonomy.csv.gz) and [at the genome level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.with-strain.csv.gz).
+The lineage spreadsheet (for `sourmash tax` commands) is available [for the species database (65k)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.reps.csv.gz) and [for the genome database (317k)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.with-strain.csv.gz).
 
 ### GTDB R07-RS207 genomic representatives (66k)
 

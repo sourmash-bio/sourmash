@@ -1,6 +1,7 @@
 use std::slice;
 
 use crate::cmd::ComputeParameters;
+use crate::ScaledType;
 
 use crate::ffi::utils::ForeignObject;
 
@@ -123,6 +124,30 @@ pub unsafe extern "C" fn computeparams_set_dna(ptr: *mut SourmashComputeParamete
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn computeparams_skipm1n3(ptr: *const SourmashComputeParameters) -> bool {
+    let cp = SourmashComputeParameters::as_rust(ptr);
+    cp.skipm1n3()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn computeparams_set_skipm1n3(ptr: *mut SourmashComputeParameters, v: bool) {
+    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    cp.set_skipm1n3(v);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn computeparams_skipm2n3(ptr: *const SourmashComputeParameters) -> bool {
+    let cp = SourmashComputeParameters::as_rust(ptr);
+    cp.skipm2n3()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn computeparams_set_skipm2n3(ptr: *mut SourmashComputeParameters, v: bool) {
+    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    cp.set_skipm2n3(v);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn computeparams_track_abundance(
     ptr: *const SourmashComputeParameters,
 ) -> bool {
@@ -155,7 +180,7 @@ pub unsafe extern "C" fn computeparams_set_num_hashes(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> u64 {
+pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> ScaledType {
     let cp = SourmashComputeParameters::as_rust(ptr);
     cp.scaled()
 }
@@ -163,7 +188,7 @@ pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParamet
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_set_scaled(
     ptr: *mut SourmashComputeParameters,
-    scaled: u64,
+    scaled: u32,
 ) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
     cp.set_scaled(scaled);

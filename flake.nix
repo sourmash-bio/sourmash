@@ -8,7 +8,6 @@
       url = "github:oxalica/rust-overlay";
       inputs = {
         nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "utils";
       };
     };
   };
@@ -22,8 +21,9 @@
         };
         rustVersion = pkgs.rust-bin.stable.latest.default.override {
           #extensions = [ "rust-src" ];
+          extensions = [ "llvm-tools-preview" ];
           #targets = [ "x86_64-unknown-linux-musl" ];
-          targets = [ "wasm32-wasi" "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
+          targets = [ "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
         };
         rustPlatform = pkgs.makeRustPlatform {
           cargo = rustVersion;
@@ -42,11 +42,6 @@
           preConfigure = lib.optionalString stdenv.isDarwin ''
             export MACOSX_DEPLOYMENT_TARGET=10.14
           '';
-
-          # Work around https://github.com/NixOS/nixpkgs/issues/166205.
-          env = lib.optionalAttrs stdenv.cc.isClang {
-            NIX_LDFLAGS = "-l${stdenv.cc.libcxx.cxxabi.libName}";
-          };
 
           buildInputs = lib.optionals stdenv.isDarwin [ pkgs.libiconv pkgs.darwin.apple_sdk.frameworks.Security ];
 
@@ -68,7 +63,7 @@
 
           sourmash = python.buildPythonPackage ( commonArgs // rec {
             pname = "sourmash";
-            version = "4.8.8";
+            version = "4.9.2";
             format = "pyproject";
 
             cargoDeps = rustPlatform.importCargoLock {
@@ -108,11 +103,11 @@
 
             git
             stdenv.cc.cc.lib
-            (python312.withPackages (ps: with ps; [ virtualenv ]))
-            (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
-            (python310.withPackages (ps: with ps; [ virtualenv ]))
+            #(python313.withPackages (ps: with ps; [ virtualenv ]))
+            (python312.withPackages (ps: with ps; [ virtualenv tox cffi ]))
+            (python311.withPackages (ps: with ps; [ virtualenv ]))
 
-            rust-cbindgen
+            #rust-cbindgen
             maturin
 
             wasmtime
@@ -128,7 +123,10 @@
             cargo-outdated
             cargo-udeps
             cargo-deny
-            cargo-wasi
+            cargo-nextest
+            #cargo-llvm-cov
+            cargo-component
+            cargo-codspeed
             #cargo-semver-checks
             nixpkgs-fmt
           ];

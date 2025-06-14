@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::ops::Deref;
 
@@ -13,9 +15,11 @@ use crate::encodings::HashFunctions;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
-use crate::Result;
+use crate::{Result, ScaledType};
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, PartialEq, Eq)]
+/// Individual manifest record, containing information about sketches.
+
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -30,8 +34,13 @@ pub struct Record {
 
     moltype: String,
 
+    #[getset(get = "pub")]
     num: u32,
-    scaled: u64,
+
+    #[getset(get = "pub")]
+    scaled: ScaledType,
+
+    #[getset(get = "pub")]
     n_hashes: usize,
 
     #[getset(get_copy = "pub", set = "pub")]
@@ -41,6 +50,7 @@ pub struct Record {
     #[getset(get = "pub", set = "pub")]
     name: String,
 
+    #[getset(get = "pub", set = "pub")]
     filename: String,
 }
 
@@ -72,12 +82,15 @@ where
     }
 }
 
+/// A description of a collection of sketches.
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Manifest {
     records: Vec<Record>,
 }
 
 impl Record {
+    /// Build a Record from a Signature
     pub fn from_sig(sig: &Signature, path: &str) -> Vec<Self> {
         sig.iter()
             .map(|sketch| {
@@ -116,7 +129,7 @@ impl Record {
                 Self {
                     internal_location: path.into(),
                     moltype: moltype.to_string(),
-                    name: sig.name(),
+                    name: sig.name_str(),
                     ksize,
                     md5,
                     md5short,
@@ -165,6 +178,37 @@ impl Record {
     }
 }
 
+impl PartialEq for Record {
+    // match everything but internal_location
+    fn eq(&self, other: &Self) -> bool {
+        self.md5 == other.md5
+            && self.ksize == other.ksize
+            && self.moltype == other.moltype
+            && self.scaled == other.scaled
+            && self.num == other.num
+            && self.n_hashes == other.n_hashes
+            && self.with_abundance == other.with_abundance
+            && self.name == other.name
+            && self.filename == other.filename
+    }
+}
+
+impl Eq for Record {}
+
+impl Hash for Record {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.md5.hash(state);
+        self.ksize.hash(state);
+        self.moltype.hash(state);
+        self.scaled.hash(state);
+        self.num.hash(state);
+        self.n_hashes.hash(state);
+        self.with_abundance.hash(state);
+        self.name.hash(state);
+        self.filename.hash(state);
+    }
+}
+
 impl Manifest {
     pub fn from_reader<R: Read>(rdr: R) -> Result<Self> {
         let mut records = vec![];
@@ -198,11 +242,30 @@ impl Manifest {
     pub fn iter(&self) -> impl Iterator<Item = &Record> {
         self.records.iter()
     }
+
+    pub fn intersect_manifest(&self, other: &Manifest) -> Self {
+        // extract tuples from other mf:
+        let pairs: HashSet<_> = other.iter().collect();
+
+        let records = self
+            .records
+            .iter()
+            .filter(|row| pairs.contains(row))
+            .cloned()
+            .collect();
+
+        Self { records }
+    }
 }
 
 impl Select for Manifest {
+    // select only records that satisfy selection conditions; also update
+    // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
-        let rows = self.records.iter().filter(|row| {
+        let Manifest { mut records } = self;
+
+        // TODO: with num as well?
+        records.retain_mut(|row| {
             let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
                 row.ksize == ksize
@@ -221,7 +284,12 @@ impl Select for Manifest {
             };
             valid = if let Some(scaled) = selection.scaled() {
                 // num sigs have row.scaled = 0, don't include them
-                valid && row.scaled != 0 && row.scaled <= scaled as u64
+                let v = valid && row.scaled != 0 && row.scaled <= scaled;
+                // if scaled is set, update!
+                if v {
+                    row.scaled = scaled
+                };
+                v
             } else {
                 valid
             };
@@ -233,41 +301,7 @@ impl Select for Manifest {
             valid
         });
 
-        Ok(Manifest {
-            records: rows.cloned().collect(),
-        })
-
-        /*
-        matching_rows = self.rows
-        if ksize:
-            matching_rows = ( row for row in matching_rows
-                              if row['ksize'] == ksize )
-        if moltype:
-            matching_rows = ( row for row in matching_rows
-                              if row['moltype'] == moltype )
-        if scaled or containment:
-            if containment and not scaled:
-                raise ValueError("'containment' requires 'scaled' in Index.select'")
-
-            matching_rows = ( row for row in matching_rows
-                              if row['scaled'] and not row['num'] )
-        if num:
-            matching_rows = ( row for row in matching_rows
-                              if row['num'] and not row['scaled'] )
-
-        if abund:
-            # only need to concern ourselves if abundance is _required_
-            matching_rows = ( row for row in matching_rows
-                              if row['with_abundance'] )
-
-        if picklist:
-            matching_rows = ( row for row in matching_rows
-                              if picklist.matches_manifest_row(row) )
-
-        # return only the internal filenames!
-        for row in matching_rows:
-            yield row
-        */
+        Ok(Manifest { records })
     }
 }
 
@@ -288,7 +322,7 @@ impl From<&[PathBuf]> for Manifest {
         let records: Vec<Record> = iter
             .flat_map(|p| {
                 let recs: Vec<Record> = Signature::from_path(p)
-                    .unwrap_or_else(|_| panic!("Error processing {:?}", p))
+                    .unwrap_or_else(|_| panic!("Error processing {p:?}"))
                     .into_iter()
                     .flat_map(|v| Record::from_sig(&v, p.as_str()))
                     .collect();
@@ -302,12 +336,12 @@ impl From<&[PathBuf]> for Manifest {
 
 impl From<&PathBuf> for Manifest {
     fn from(pathlist: &PathBuf) -> Self {
-        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {:?}", pathlist));
+        let file = File::open(pathlist).unwrap_or_else(|_| panic!("Failed to open {pathlist:?}"));
         let reader = BufReader::new(file);
 
         let paths: Vec<PathBuf> = reader
             .lines()
-            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {:?}", pathlist)))
+            .map(|line| line.unwrap_or_else(|_| panic!("Failed to read line from {pathlist:?}")))
             .map(PathBuf::from)
             .collect();
 
@@ -448,6 +482,37 @@ mod test {
     }
 
     #[test]
+    fn manifest_to_writer_moltype_dna() {
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/47.fa.sig")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let manifest = Manifest::from(&full_paths[..]); // pass full_paths as a slice
+
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+
+        let filename = utf8_output.join("sigs.manifest.csv");
+        let mut wtr = File::create(&filename).expect("Failed to create file");
+
+        manifest.to_writer(&mut wtr).unwrap();
+
+        // check that we can reopen the file as a manifest + properly check abund
+        let infile = File::open(&filename).expect("Failed to open file");
+        let m2 = Manifest::from_reader(&infile).unwrap();
+        for record in m2.iter() {
+            eprintln!("{:?} {}", record.name(), record.moltype());
+            assert_eq!(record.moltype().to_string(), "DNA");
+        }
+    }
+
+    #[test]
     fn manifest_selection() {
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
@@ -478,5 +543,74 @@ mod test {
         selection.set_scaled(100);
         let scaled100 = manifest.select(&selection).unwrap();
         assert_eq!(scaled100.len(), 6);
+
+        // check that 'scaled' is updated
+        let manifest = collection.manifest().clone();
+        selection = Selection::default();
+        selection.set_scaled(400);
+        let scaled400 = manifest.select(&selection).unwrap();
+        assert_eq!(scaled400.len(), 6);
+        let max_scaled = scaled400
+            .iter()
+            .map(|r| r.scaled())
+            .max()
+            .expect("no records?!");
+        assert_eq!(*max_scaled, 400);
+    }
+
+    #[test]
+    fn manifest_intersect() {
+        let temp_dir = TempDir::new().unwrap();
+        let utf8_output = PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+            .expect("Path should be valid UTF-8");
+        let filename = utf8_output.join("sig-pathlist.txt");
+        // build sig filenames
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let test_sigs = vec![
+            "../../tests/test-data/47.fa.sig",
+            "../../tests/test-data/63.fa.sig",
+        ];
+
+        let full_paths: Vec<_> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        // write a file in test directory with a filename on each line
+        let mut pathfile = File::create(&filename).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile, "{}", sigfile).unwrap();
+        }
+
+        // load into manifest
+        let manifest = Manifest::from(&filename);
+        assert_eq!(manifest.len(), 2);
+
+        // now do just one sketch -
+        let test_sigs2 = vec!["../../tests/test-data/63.fa.sig"];
+
+        let filename2 = utf8_output.join("sig-pathlist-single.txt");
+
+        let full_paths: Vec<_> = test_sigs2
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let mut pathfile2 = File::create(&filename2).unwrap();
+        for sigfile in &full_paths {
+            writeln!(pathfile2, "{}", sigfile).unwrap();
+        }
+
+        // load into another manifest
+        let manifest2 = Manifest::from(&filename2);
+        assert_eq!(manifest2.len(), 1);
+
+        // intersect with itself => same.
+        let new_mf = manifest2.intersect_manifest(&manifest);
+        assert_eq!(new_mf.len(), 1);
+
+        // intersect with other => single.
+        let new_mf = manifest.intersect_manifest(&manifest2);
+        assert_eq!(new_mf.len(), 1);
     }
 }

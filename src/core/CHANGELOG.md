@@ -7,6 +7,248 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.20.0] - 2025-05-06
+
+MSRV: 1.74
+
+Changes/additions:
+
+* make the RocksDB handle directly accessible to external code (#3468)
+* implement manifest retrieval from Rust via FFI for `RevIndex` (#3630)
+* fully support skip-mers at the Python level; provide documentation (#3627)
+* remove support for python 3.10 (#3606)
+* fix linear gather in Rust (#3605)
+* impl full mem-based `RevIndex` in Rust, and add Python support for mem- and disk-based `RevIndex` (#3545)
+* Minhash deserialize hashfunction errorhandling (#3560)
+* fix beta clippy errors (#3548)
+
+Updates:
+
+* Bump rand from 0.9.0 to 0.9.1 (#3620)
+* Bump roaring from 0.10.10 to 0.10.12 (#3608)
+* Bump log from 0.4.26 to 0.4.27 (#3587)
+* Bump tempfile from 3.19.0 to 3.19.1 (#3588)
+* Bump tempfile from 3.18.0 to 3.19.0 (#3582)
+* Bump serde from 1.0.218 to 1.0.219 (#3576)
+* Bump tempfile from 3.17.1 to 3.18.0 (#3575)
+* Bump histogram from 0.11.2 to 0.11.3 (#3574)
+* Bump serde_json from 1.0.139 to 1.0.140 (#3566)
+* Bump getset from 0.1.4 to 0.1.5 (#3567)
+* Bump needletail from 0.6.1 to 0.6.3 (#3553)
+* Bump serde_json from 1.0.138 to 1.0.139 (#3552)
+* Bump serde from 1.0.217 to 1.0.218 (#3550)
+* Bump log from 0.4.25 to 0.4.26 (#3549)
+* Bump tempfile from 3.16.0 to 3.17.1 (#3539)
+
+## [0.19.0] - 2025-02-12
+
+MSRV: 1.74
+
+Changes/additions:
+
+* update MSRV to 1.74, niffler to 3.0.0 (#3530)
+* update to rocksdb 0.23 (#3456)
+* remove finch conversion, support zstd and lzma in wasm (#3521)
+
+Updates:
+
+* Bump serde_json from 1.0.133 to 1.0.138 (#3453) (#3490) (#3500) (#3518)
+* Bump tempfile from 3.14.0 to 3.16.0 (#3472) (#3519)
+* Bump liblzma from 0.3.5 to 0.3.6 (#3526)
+* Bump rand from 0.8.5 to 0.9.0 (#3512)
+* Bump log from 0.4.22 to 0.4.25 (#3501)
+* Bump histogram from 0.11.1 to 0.11.2 (#3498)
+* Bump getset from 0.1.3 to 0.1.4 (#3499)
+* Bump roaring from 0.10.9 to 0.10.10 (#3489)
+* Bump ouroboros from 0.18.4 to 0.18.5 (#3491)
+* Bump itertools from 0.13.0 to 0.14.0 (#3471)
+* Bump serde from 1.0.216 to 1.0.217 (#3464)
+
+
+## [0.18.0] - 2024-12-20
+
+MSRV: 1.66
+
+Changes/additions:
+
+* add skipmer capacity to sourmash python layer via ffi (#3446)
+* add skipmers; switch to reading frame approach for translation, skipmers (#3395)
+* Refactor: Use to_writer/from_reader across the codebase (#3443)
+* adjust `Signature::name()` to return `Option<String>` instead of `filename()` and `md5sum()` (#3434)
+* propagate zipfile errors (#3431)
+
+Updates:
+
+* Bump proptest from 1.5.0 to 1.6.0 (#3437)
+* Bump roaring from 0.10.8 to 0.10.9 (#3438)
+* Bump serde from 1.0.215 to 1.0.216 (#3436)
+* Bump statrs from 0.17.1 to 0.18.0 (#3426)
+* Bump roaring from 0.10.7 to 0.10.8 (#3423)
+* Bump needletail from 0.6.0 to 0.6.1 (#3427)
+* Bump web-sys from 0.3.72 to 0.3.74 (#3411)
+* Bump js-sys from 0.3.72 to 0.3.74 (#3412)
+* Bump roaring from 0.10.6 to 0.10.7 (#3413)
+* Bump serde_json from 1.0.132 to 1.0.133 (#3402)
+* Bump serde from 1.0.214 to 1.0.215 (#3403)
+
+## [0.17.2] - 2024-11-15
+
+MSRV: 1.66
+
+Changes/additions:
+
+* enforce a single scaled on a `CollectionSet` (#3397)
+* change `sig_from_record` to use scaled from `Record` to downsample (#3387)
+
+Updates:
+
+* Upgrade rocksdb to 0.22.0, bump MSRV to 1.66  (#3383)
+* Bump thiserror from 1.0.68 to 2.0.3 (#3389)
+* Bump csv from 1.3.0 to 1.3.1 (#3390)
+* Bump tempfile from 3.13.0 to 3.14.0 (#3391)
+
+## [0.17.1] - 2024-11-11
+
+Changes/additions:
+* fix: Avoid re-calculating md5sum on clone and conversion to KmerMinHashBTree (#3385)
+* build: simplify Rust release (#3392)
+
+## [0.17.0] - 2024-11-05
+
+Changes/additions:
+* standardize on u32 for scaled, and introduce `ScaledType` (#3364)
+* panic when `FSStorage::load_sig` encounters more than one `Signature` in a JSON record (#3333)
+
+Updates:
+
+* Bump needletail from 0.5.1 to 0.6.0 (#3376)
+* Bump histogram from 0.11.0 to 0.11.1 (#3377)
+* Bump serde from 1.0.210 to 1.0.214 (#3368)
+* Bump serde_json from 1.0.128 to 1.0.132 (#3358)
+* Fix clippy lints from 1.83 beta (#3357)
+
+## [0.16.0] - 2024-10-15
+
+MSRV: 1.65
+
+Changes/additions:
+
+* refactor `calculate_gather_stats` to disallow repeated downsampling (#3352)
+* improve downsampling behavior on `KmerMinHash`; fix `RevIndex::gather` bug around `scaled`. (#3342)
+* derive Hash for `HashFunctions` (#3344)
+
+Updates:
+
+* Bump web-sys from 0.3.70 to 0.3.72 (#3354)
+* Bump tempfile from 3.12.0 to 3.13.0 (#3340)
+
+
+## [0.15.2] - 2024-09-25
+
+MSRV: 1.65
+
+Changes/additions:
+* add `Manifest::intersect_manifest` to Rust core (#3305)
+* propagate error from `RocksDB::open` on bad directory (#3306, #3307)
+
+Updates:
+
+* Bump getset from 0.1.2 to 0.1.3 (#3328)
+* Bump memmap2 from 0.9.4 to 0.9.5 (#3326)
+* Bump codspeed-criterion-compat from 2.6.0 to 2.7.2 (#3324)
+* Bump serde_json from 1.0.127 to 1.0.128 (#3316)
+* Bump serde from 1.0.209 to 1.0.210 (#3318)
+* Bump serde from 1.0.208 to 1.0.209 (#3310)
+* Bump serde_json from 1.0.125 to 1.0.127 (#3309)
+
+## [0.15.1] - 2024-08-20
+
+MSRV: 1.65
+
+Changes/additions:
+
+* Misc Rust updates to core (#3297)
+* Implement resumability for revindex (#3275)
+* Resolve issue for high precision MLE estimation (#3296)
+* Added union method to HLL (#3293)
+
+Updates:
+
+* Bump camino from 1.1.7 to 1.1.9 (#3301)
+* Bump web-sys from 0.3.69 to 0.3.70 (#3299)
+* Bump serde_json from 1.0.120 to 1.0.125 (#3288) (#3280) (#3267) (#3302)
+* Bump serde from 1.0.204 to 1.0.208 (#3289) (#3298)
+* Bump tempfile from 3.10.1 to 3.12.0 (#3279) (#3287)
+
+## [0.15.0] - 2024-07-27
+
+MSRV: 1.65
+
+Changes/additions:
+
+* RocksDB storage and self-contained RevIndex with internal storage #3250
+* Enable codspeed for Rust perf tracking (#3231)
+
+Updates
+
+* Bump roaring from 0.10.5 to 0.10.6 (#3245)
+* Bump serde from 1.0.203 to 1.0.204 (#3244)
+* Bump counter from 0.5.7 to 0.6.0 (#3235)
+* Bump log from 0.4.21 to 0.4.22 (#3236)
+* Bump serde_json from 1.0.117 to 1.0.120 (#3234)
+* Bump proptest from 1.4.0 to 1.5.0 (#3222)
+
+## [0.14.1] - 2024-06-19
+
+MSRV: 1.65
+
+Changes/additions:
+
+* adjust how ANI is calculated in the revindex code. (#3218)
+
+Updates:
+
+* Bump histogram from 0.10.2 to 0.11.0 (#3216)
+* Bump histogram from 0.10.1 to 0.10.2 (#3207)
+* Bump statrs from 0.16.1 to 0.17.1 (#3205)
+* Bump roaring from 0.10.4 to 0.10.5 (#3206)
+* Bump primal-check from 0.3.3 to 0.3.4 (#3208)
+* Bump niffler from 2.5.0 to 2.6.0 (#3204)
+
+## [0.14.0] - 2024-06-10
+
+MSRV: 1.65
+
+Changes/additions:
+
+* fix cargo fmt for updated `disk_revindex.rs` code (#3197)
+* fix RocksDB-based gather & other rust-based infelicities revealed by plugins (#3193)
+* use correct denominator in f_unique_to_query (#3138)
+* fix clippy warnings about max_value (#3146)
+* allow get/set record.filename (#3121)
+
+Updates:
+
+* Bump statrs from 0.16.0 to 0.16.1 (#3186)
+* Bump serde from 1.0.202 to 1.0.203 (#3175)
+* Bump ouroboros from 0.18.3 to 0.18.4 (#3176)
+* Bump itertools from 0.12.1 to 0.13.0 (#3166)
+* Bump camino from 1.1.6 to 1.1.7 (#3169)
+* Bump serde from 1.0.201 to 1.0.202 (#3168)
+* Bump serde_json from 1.0.116 to 1.0.117 (#3159)
+* Bump serde from 1.0.200 to 1.0.201 (#3160)
+* Bump roaring from 0.10.3 to 0.10.4 (#3142)
+* Bump histogram from 0.10.0 to 0.10.1 (#3141)
+* Bump num-iter from 0.1.44 to 0.1.45 (#3140)
+* Bump serde from 1.0.199 to 1.0.200 (#3144)
+* Bump serde from 1.0.198 to 1.0.199 (#3130)
+* Bump serde_json from 1.0.115 to 1.0.116 (#3124)
+* Bump serde from 1.0.197 to 1.0.198 (#3122)
+* Bump histogram from 0.9.1 to 0.10.0 (#3109)
+* Bump enum_dispatch from 0.3.12 to 0.3.13 (#3102)
+* Bump serde_json from 1.0.114 to 1.0.115 (#3101)
+* Bump rayon from 1.9.0 to 1.10.0 (#3098)
+
 ## [0.13.1] - 2024-03-23
 
 MSRV: 1.65
@@ -311,7 +553,17 @@ Fixed:
 - Fix mem leak in get_mins (#807)
 - Fixes for WASI and WASM compilation (#771) (#723)
 
-[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...HEAD
+[unreleased]: https://github.com/sourmash-bio/sourmash/compare/r0.19.0...HEAD
+[0.19.0]: https://github.com/sourmash-bio/sourmash/compare/r0.18.0...r0.19.0
+[0.18.0]: https://github.com/sourmash-bio/sourmash/compare/r0.17.2...r0.18.0
+[0.17.2]: https://github.com/sourmash-bio/sourmash/compare/r0.17.1...r0.17.2
+[0.17.1]: https://github.com/sourmash-bio/sourmash/compare/r0.17.0...r0.17.1
+[0.17.0]: https://github.com/sourmash-bio/sourmash/compare/r0.16.0...r0.17.0
+[0.16.0]: https://github.com/sourmash-bio/sourmash/compare/r0.15.1...r0.16.0
+[0.15.1]: https://github.com/sourmash-bio/sourmash/compare/r0.15.0...r0.15.1
+[0.15.0]: https://github.com/sourmash-bio/sourmash/compare/r0.14.1...r0.15.0
+[0.14.1]: https://github.com/sourmash-bio/sourmash/compare/r0.14.0...r0.14.1
+[0.14.0]: https://github.com/sourmash-bio/sourmash/compare/r0.13.1...r0.14.0
 [0.13.1]: https://github.com/sourmash-bio/sourmash/compare/r0.13.0...r0.13.1
 [0.13.0]: https://github.com/sourmash-bio/sourmash/compare/r0.12.1...r0.13.0
 [0.12.1]: https://github.com/sourmash-bio/sourmash/compare/r0.12.0...r0.12.1

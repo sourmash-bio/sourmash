@@ -3,6 +3,7 @@
 Check SBT search by taking every leaf node in a tree and checking to make
 sure we can find it.
 """
+
 import argparse
 import sourmash
 from sourmash.sbtmh import search_minhashes

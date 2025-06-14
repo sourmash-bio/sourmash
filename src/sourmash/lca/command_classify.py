@@ -2,6 +2,7 @@
 """
 Classify individual signature files down to deepest possible node.
 """
+
 import sys
 import csv
 

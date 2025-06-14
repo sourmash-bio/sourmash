@@ -7,16 +7,22 @@ use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
-use crate::{Error, Result};
+use crate::{Error, Result, ScaledType};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+/// a Manifest and Storage, combined. Can contain any collection of signatures.
+
+#[derive(Clone)]
 pub struct Collection {
     manifest: Manifest,
     storage: InnerStorage,
 }
 
+/// A consistent collection of signatures. Can be created using `select`.
+
+#[derive(Clone)]
 pub struct CollectionSet {
     collection: Collection,
 }
@@ -46,6 +52,11 @@ impl TryFrom<Collection> for CollectionSet {
             return Ok(Self { collection });
         };
 
+        let (min_scaled, max_scaled) = collection.min_max_scaled().expect("empty collection!?");
+        if min_scaled != max_scaled {
+            return Err(Error::MismatchScaled);
+        }
+
         collection
             .manifest
             .iter()
@@ -63,6 +74,17 @@ impl CollectionSet {
 
     pub fn selection(&self) -> Selection {
         todo!("Extract selection from first sig")
+    }
+
+    /// Replace the storage with a new one.
+    ///
+    /// # Safety
+    ///
+    /// This method doesn't check if the manifest matches what is in the
+    /// storage (which can be expensive). It is up to the caller to
+    /// guarantee the manifest and storage are in sync.
+    pub unsafe fn set_storage_unchecked(&mut self, storage: InnerStorage) {
+        self.storage = storage;
     }
 }
 
@@ -118,6 +140,17 @@ impl Collection {
         })
     }
 
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    pub fn from_rocksdb<P: AsRef<Path>>(dirname: P) -> Result<Self> {
+        use crate::index::revindex::{RevIndex, RevIndexOps};
+
+        let path = dirname.as_ref().as_str().to_string();
+        let index = RevIndex::open(path, true, None)?;
+        let collection: Collection = index.collection().clone().into_inner();
+
+        Ok(collection)
+    }
+
     pub fn from_sigs(sigs: Vec<Signature>) -> Result<Self> {
         let storage = MemStorage::new();
 
@@ -130,7 +163,7 @@ impl Collection {
         let records: Vec<_> = iter
             .enumerate()
             .flat_map(|(i, sig)| {
-                let path = format!("{}", i);
+                let path = format!("{i}");
                 let mut record = Record::from_sig(&sig, &path);
                 let path = storage.save_sig(&path, sig).expect("Error saving sig");
                 record.iter_mut().for_each(|rec| {
@@ -187,6 +220,21 @@ impl Collection {
         assert_eq!(sig.signatures.len(), 1);
         Ok(sig)
     }
+
+    pub fn intersect_manifest(&mut self, mf: &Manifest) {
+        self.manifest = self.manifest.intersect_manifest(mf);
+    }
+
+    // CTB: question, should we do something about num here?
+    pub fn min_max_scaled(&self) -> Option<(&ScaledType, &ScaledType)> {
+        self.manifest.first().map(|first| {
+            self.manifest
+                .iter()
+                .fold((first.scaled(), first.scaled()), |f, r| {
+                    (f.0.min(r.scaled()), f.1.max(r.scaled()))
+                })
+        })
+    }
 }
 
 impl Select for Collection {
@@ -205,9 +253,12 @@ mod test {
     use super::Collection;
 
     use crate::encodings::HashFunctions;
+    use crate::manifest::Manifest;
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    use crate::Result;
 
     #[test]
     fn sigstore_selection_with_downsample() {
@@ -216,7 +267,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_scaled(2000);
@@ -242,7 +293,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_scaled(500);
@@ -263,7 +314,7 @@ mod test {
         filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         assert_eq!(sigs.len(), 4);
         // create Selection object
         let mut selection = Selection::default();
@@ -285,7 +336,7 @@ mod test {
         filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         let sigs_copy = sigs.clone();
         assert_eq!(sigs.len(), 4);
         // create Selection object
@@ -315,7 +366,7 @@ mod test {
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         assert_eq!(sigs.len(), 6);
         // create Selection object
         let mut selection = Selection::default();
@@ -330,13 +381,39 @@ mod test {
     }
 
     #[test]
+    fn collection_intersect_manifest() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // four num=500 sigs
+        filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs = Signature::from_reader(reader).expect("Loading error");
+        assert_eq!(sigs.len(), 4);
+        // load sigs into collection + select compatible signatures
+        let mut cl = Collection::from_sigs(sigs).unwrap();
+        // all sigs should remain
+        assert_eq!(cl.len(), 4);
+
+        // grab first record
+        let manifest = cl.manifest();
+        let record = manifest.iter().next().unwrap().clone();
+        let vr = vec![record];
+
+        // now intersect:
+        let manifest2 = Manifest::from(vr);
+        cl.intersect_manifest(&manifest2);
+        assert_eq!(cl.len(), 1);
+    }
+
+    #[test]
     fn sigstore_sig_from_record() {
         // load test sigs
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/47+63-multisig.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_scaled(2000);
@@ -348,11 +425,28 @@ mod test {
         // no sigs should remain
         assert_eq!(cl.len(), 6);
         for (_idx, rec) in cl.iter() {
-            // need to pass select again here so we actually downsample
-            let this_sig = cl.sig_from_record(rec).unwrap().select(&selection).unwrap();
+            dbg!("record scaled is: {}", rec.scaled());
+            let this_sig = cl.sig_from_record(rec).unwrap();
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 2000);
         }
+    }
+
+    #[test]
+    #[should_panic] // for now...
+    fn sigstore_sig_from_record_2() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/short.sig.gz");
+        let v = [filename];
+        let collection = Collection::from_paths(&v).expect("no sigs!?");
+
+        // pull off first record
+        let v: Vec<_> = collection.iter().collect();
+        let (_idx, rec) = v.first().expect("no records in collection?!");
+
+        // this will panic with "unimplemented" because there are two
+        // sketches and that is not supported.
+        let _first_sig = collection.sig_from_record(rec).expect("no sig!?");
     }
 
     #[test]
@@ -362,7 +456,7 @@ mod test {
         filename.push("../../tests/test-data/prot/hp.zip");
         // create Selection object
         let mut selection = Selection::default();
-        selection.set_scaled(100);
+        selection.set_scaled(200);
         selection.set_moltype(HashFunctions::Murmur64Hp);
         // load sigs into collection + select compatible signatures
         let cl = Collection::from_zipfile(&filename)
@@ -372,10 +466,9 @@ mod test {
         // count collection length
         assert_eq!(cl.len(), 2);
         for (idx, _rec) in cl.iter() {
-            // need to pass select again here so we actually downsample
-            let this_sig = cl.sig_for_dataset(idx).unwrap().select(&selection).unwrap();
+            let this_sig = cl.sig_for_dataset(idx).unwrap();
             let this_mh = this_sig.minhash().unwrap();
-            assert_eq!(this_mh.scaled(), 100);
+            assert_eq!(this_mh.scaled(), 200);
         }
     }
 
@@ -387,7 +480,7 @@ mod test {
             .push("../../tests/test-data/prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig");
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs = Signature::from_reader(reader).expect("Loading error");
         // create Selection object
         let mut selection = Selection::default();
         selection.set_moltype(HashFunctions::Murmur64Hp);
@@ -404,5 +497,99 @@ mod test {
             let this_mh = this_sig.minhash().unwrap();
             assert_eq!(this_mh.scaled(), 100);
         }
+    }
+
+    #[test]
+    fn collection_from_collectionset() -> () {
+        use crate::collection::CollectionSet;
+
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let collection = Collection::from_zipfile(&full_paths[0]).unwrap();
+
+        let mut selection = Selection::default();
+        selection.set_moltype(HashFunctions::Murmur64Protein);
+        selection.set_scaled(200);
+
+        let collection = collection.select(&selection).expect("should pass");
+        let (min_scaled, max_scaled) = collection.min_max_scaled().expect("not empty");
+        assert_eq!(*min_scaled, *max_scaled);
+        assert_eq!(*min_scaled, 200);
+        let _cs: CollectionSet = collection.try_into().expect("should pass");
+    }
+
+    #[test]
+    #[should_panic]
+    fn collection_from_collectionset_fail() -> () {
+        use crate::collection::CollectionSet;
+
+        let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_sigs = vec![PathBuf::from("../../tests/test-data/prot/all.zip")];
+
+        let full_paths: Vec<PathBuf> = test_sigs
+            .into_iter()
+            .map(|sig| base_path.join(sig))
+            .collect();
+
+        let collection = Collection::from_zipfile(&full_paths[0]).unwrap();
+        let _cs: CollectionSet = collection.try_into().expect("should fail");
+    }
+
+    #[test]
+    #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
+    fn collection_from_rocksdb_storage() -> Result<()> {
+        use crate::index::revindex::{RevIndex, RevIndexOps};
+        use camino::Utf8PathBuf as PathBuf;
+        use tempfile::TempDir;
+
+        let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let mut zip_collection = basedir.clone();
+        zip_collection.push("../../tests/test-data/track_abund/track_abund.zip");
+
+        let outdir = TempDir::new()?;
+
+        let zip_copy = PathBuf::from(
+            outdir
+                .path()
+                .join("sigs.zip")
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        );
+        std::fs::copy(zip_collection, zip_copy.as_path())?;
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let collection = Collection::from_zipfile(zip_copy.as_path())?.select(&selection)?;
+        let output: PathBuf = outdir.path().join("index").try_into().unwrap();
+
+        // Step 1: create an index
+        let index = RevIndex::create(output.as_path(), collection.clone().try_into()?)?;
+
+        // Step 2: internalize the storage for the index
+        {
+            let mut index = index;
+            index
+                .internalize_storage()
+                .expect("Error internalizing storage");
+        }
+
+        // Step 3: Create a new collection from rocksdb
+        let new_collection = Collection::from_rocksdb(output.as_path())?;
+
+        // Step 4: assert all content is the same
+        for (a, b) in collection.iter().zip(new_collection.iter()) {
+            assert_eq!(a, b);
+        }
+
+        Ok(())
     }
 }

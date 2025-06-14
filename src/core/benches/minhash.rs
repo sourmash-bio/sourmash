@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate criterion;
-
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -9,14 +6,14 @@ use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use sourmash::sketch::Sketch;
 
-use criterion::Criterion;
+use codspeed_criterion_compat::{black_box, criterion_group, criterion_main, Criterion};
 
 fn intersection(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     filename.push("../../tests/test-data/gather-abund/genome-s10.fa.gz.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mut sigs = Signature::from_reader(reader).expect("Loading error");
     let mh = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
         mh.clone()
     } else {
@@ -27,7 +24,7 @@ fn intersection(c: &mut Criterion) {
     filename.push("../../tests/test-data/gather-abund/genome-s11.fa.gz.sig");
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let mut sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+    let mut sigs = Signature::from_reader(reader).expect("Loading error");
     let mh2 = if let Sketch::MinHash(mh) = &sigs.swap_remove(0).sketches()[0] {
         mh.clone()
     } else {

@@ -36,6 +36,7 @@ signature and file output functionality:
 misc support:
 * FileInputCSV - context manager for reading CSVs
 """
+
 import sys
 import os
 import csv
@@ -83,7 +84,7 @@ def check_num_bounds(arg):
 
 def get_moltype(sig, require=False):
     mh = sig.minhash
-    if mh.moltype in ("DNA", "dayhoff", "hp", "protein"):
+    if mh.moltype in ("DNA", "dayhoff", "hp", "protein", "skipm1n3", "skipm2n3"):
         moltype = mh.moltype
     else:
         raise ValueError(f"unknown molecule type for sig {sig}")
@@ -108,9 +109,15 @@ def calculate_moltype(args, default=None):
         moltype = "protein"
         n += 1
 
+    if args.skipm1n3:
+        moltype = "skipm1n3"
+
+    if args.skipm2n3:
+        moltype = "skipm2n3"
+
     if n > 1:
         error(
-            "cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff"
+            "cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff/--skipm1n3/--skipm2n3"
         )
         sys.exit(-1)
 
@@ -184,11 +191,13 @@ def load_include_exclude_db_patterns(args):
 
         def search_pattern(vals):
             return any(pattern.search(val) for val in vals)
+
     elif args.exclude_db_pattern:
         pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
 
         def search_pattern(vals):
             return all(not pattern.search(val) for val in vals)
+
     else:
         search_pattern = None
 
@@ -810,3 +819,40 @@ def load_file_as_signatures(
         return progress.start_file(filename, loader)
     else:
         return loader
+
+
+def load_one_signature(
+    filename,
+    *,
+    select_moltype=None,
+    ksize=None,
+    picklist=None,
+    yield_all_files=False,
+    pattern=None,
+):
+    db = _load_database(filename, yield_all_files)
+
+    db = db.select(moltype=select_moltype, ksize=ksize)
+
+    # apply pattern search & picklist
+    db = apply_picklist_and_pattern(db, picklist, pattern)
+
+    loader = db.signatures()
+
+    # load exactly one!
+    try:
+        ss = next(iter(loader))
+    except StopIteration:
+        raise ValueError(f"no signatures in '{filename}'? expected exactly one.")
+
+    # make sure there's not a second one...
+    try:
+        _ = next(iter(loader))
+
+        raise ValueError(
+            f"more than one signature in '{filename}'; expected exactly one"
+        )
+    except StopIteration:
+        pass
+
+    return ss

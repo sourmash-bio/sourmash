@@ -1,4 +1,5 @@
 "LCA database class and utilities."
+
 import os
 import json
 import gzip
@@ -8,7 +9,7 @@ import functools
 import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
-from sourmash.index import Index, IndexSearchResult
+from sourmash.index import Index, IndexSearchResult, _check_select_parameters
 from sourmash.picklist import passes_all_picklists
 
 
@@ -157,16 +158,12 @@ class LCA_Database(Index):
 
         if minhash.ksize != self.ksize:
             raise ValueError(
-                "cannot insert signature with ksize {} into DB (ksize {})".format(
-                    minhash.ksize, self.ksize
-                )
+                f"cannot insert signature with ksize {minhash.ksize} into DB (ksize {self.ksize})"
             )
 
         if minhash.moltype != self.moltype:
             raise ValueError(
-                "cannot insert signature with moltype {} into DB (moltype {})".format(
-                    minhash.moltype, self.moltype
-                )
+                f"cannot insert signature with moltype {minhash.moltype} into DB (moltype {self.moltype})"
             )
 
         # downsample to specified scaled; this has the side effect of
@@ -244,6 +241,7 @@ class LCA_Database(Index):
         abund=None,
         containment=False,
         picklist=None,
+        **kwargs,
     ):
         """Select a subset of signatures to search.
 
@@ -254,6 +252,17 @@ class LCA_Database(Index):
 
         Will always raise ValueError if a requirement cannot be met.
         """
+        _check_select_parameters(
+            ksize=ksize,
+            num=num,
+            moltype=moltype,
+            scaled=scaled,
+            containment=containment,
+            abund=abund,
+            picklist=picklist,
+            **kwargs,
+        )
+
         if num:
             raise ValueError("cannot use 'num' MinHashes to search LCA database")
 

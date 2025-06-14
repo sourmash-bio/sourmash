@@ -1,6 +1,7 @@
 """
 Tests for Index classes and subclasses.
 """
+
 import pytest
 import glob
 import os
@@ -8,7 +9,8 @@ import zipfile
 import shutil
 
 import sourmash
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import SourmashSignature
+from sourmash.sourmash_args import load_one_signature
 from sourmash.index import (
     LinearIndex,
     ZipFileLinearIndex,
@@ -18,7 +20,7 @@ from sourmash.index import (
     MultiIndex,
     StandaloneManifestIndex,
 )
-from sourmash.index.revindex import RevIndex
+from sourmash.signature import load_one_signature_from_json, save_signatures_to_json
 from sourmash.sbt import SBT, GraphFactory
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
@@ -96,7 +98,7 @@ def test_simple_index(n_children):
 def test_linear_index_prefetch_empty():
     # check that an exception is raised upon for an empty LinearIndex
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
 
     lidx = LinearIndex()
 
@@ -119,8 +121,8 @@ def test_linear_index_prefetch_lazy():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
     fake = FakeSignature()
 
     lidx = LinearIndex()
@@ -150,8 +152,8 @@ def test_linear_index_search_subj_has_abundance():
     queryfile = utils.get_test_data("47.fa.sig")
     subjfile = utils.get_test_data("track_abund/47.fa.sig")
 
-    qs = sourmash.load_one_signature(queryfile)
-    ss = sourmash.load_one_signature(subjfile)
+    qs = load_one_signature_from_json(queryfile)
+    ss = load_one_signature_from_json(subjfile)
 
     linear = LinearIndex()
     linear.insert(ss)
@@ -167,8 +169,8 @@ def test_linear_index_gather_subj_has_abundance():
     queryfile = utils.get_test_data("47.fa.sig")
     subjfile = utils.get_test_data("track_abund/47.fa.sig")
 
-    qs = sourmash.load_one_signature(queryfile)
-    ss = sourmash.load_one_signature(subjfile)
+    qs = load_one_signature_from_json(queryfile)
+    ss = load_one_signature_from_json(subjfile)
 
     linear = LinearIndex()
     linear.insert(ss)
@@ -186,7 +188,7 @@ def test_index_search_subj_scaled_is_lower():
     sigfile = utils.get_test_data(
         "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     )
-    ss = sourmash.load_one_signature(sigfile)
+    ss = load_one_signature_from_json(sigfile)
 
     # double check :)
     assert ss.minhash.scaled == 100
@@ -209,7 +211,7 @@ def test_index_search_subj_num_is_lower():
     # check that subject sketches are appropriately downsampled for num
     # sketches
     sigfile = utils.get_test_data("num/47.fa.sig")
-    ss = sourmash.load_one_signature(sigfile, ksize=31)
+    ss = load_one_signature_from_json(sigfile, ksize=31)
 
     # double check :)
     assert ss.minhash.num == 500
@@ -231,7 +233,7 @@ def test_index_search_subj_num_is_lower():
 def test_index_search_query_num_is_lower():
     # check that query sketches are appropriately downsampled for num.
     sigfile = utils.get_test_data("num/47.fa.sig")
-    qs = sourmash.load_one_signature(sigfile, ksize=31)
+    qs = load_one_signature_from_json(sigfile, ksize=31)
 
     # double check :)
     assert qs.minhash.num == 500
@@ -254,8 +256,8 @@ def test_linear_index_search_abund():
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
     sig63 = utils.get_test_data("track_abund/63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx = LinearIndex()
     lidx.insert(ss47)
@@ -272,8 +274,8 @@ def test_linear_index_search_abund_downsample_query():
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
     sig63 = utils.get_test_data("track_abund/63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     # forcibly downsample ss47 for the purpose of this test :)
     ss47 = ss47.to_mutable()
@@ -295,8 +297,8 @@ def test_linear_index_search_abund_downsample_subj():
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
     sig63 = utils.get_test_data("track_abund/63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     # forcibly downsample ss63 for the purpose of this test :)
     ss63 = ss63.to_mutable()
@@ -318,8 +320,8 @@ def test_linear_index_search_abund_requires_threshold():
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
     sig63 = utils.get_test_data("track_abund/63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx = LinearIndex()
     lidx.insert(ss47)
@@ -336,8 +338,8 @@ def test_linear_index_search_abund_query_flat():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("track_abund/63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx = LinearIndex()
     lidx.insert(ss47)
@@ -356,8 +358,8 @@ def test_linear_index_search_abund_subj_flat():
     sig47 = utils.get_test_data("track_abund/47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx = LinearIndex()
     lidx.insert(ss47)
@@ -378,9 +380,9 @@ def test_linear_index_save(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     linear = LinearIndex()
     linear.insert(ss2)
@@ -409,13 +411,13 @@ def test_linear_index_load(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     filename = runtmp.output("foo")
     with open(filename, "w") as fp:
-        sourmash.save_signatures([ss2, ss47, ss63], fp)
+        save_signatures_to_json([ss2, ss47, ss63], fp)
 
     linear = LinearIndex.load(filename)
 
@@ -430,9 +432,9 @@ def test_linear_index_save_load(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     linear = LinearIndex()
     linear.insert(ss2)
@@ -1081,9 +1083,9 @@ def test_multi_index_search():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx1 = LinearIndex.load(sig2)
     lidx2 = LinearIndex.load(sig47)
@@ -1135,9 +1137,9 @@ def test_multi_index_gather():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    load_one_signature_from_json(sig63)
 
     lidx1 = LinearIndex.load(sig2)
     lidx2 = LinearIndex.load(sig47)
@@ -1165,9 +1167,9 @@ def test_multi_index_signatures():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx1 = LinearIndex.load(sig2)
     lidx2 = LinearIndex.load(sig47)
@@ -1354,7 +1356,7 @@ def test_multi_index_load_from_directory_3_check_traverse_fn(runtmp):
     assert len(files) == 7, files
 
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files  # if this fails, check for extra files!
+    assert len(files) == 44, files  # if this fails, check for extra files!
 
 
 def test_multi_index_load_from_directory_no_exist():
@@ -1416,7 +1418,7 @@ def test_multi_index_load_from_pathlist_2(runtmp):
     c = runtmp
     dirname = utils.get_test_data("prot")
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files  # check there aren't extra files in here!
+    assert len(files) == 44, files  # check there aren't extra files in here!
 
     file_list = c.output("filelist.txt")
 
@@ -1478,9 +1480,9 @@ def test_linear_index_gather_ignore():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     # construct an index...
     lidx = LinearIndex([ss2, ss47, ss63])
@@ -1511,9 +1513,9 @@ def test_lca_index_gather_ignore():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     # construct an index...
     db = LCA_Database(ksize=31, scaled=1000)
@@ -1545,9 +1547,9 @@ def test_sbt_index_gather_ignore():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47, ksize=31)
+    ss63 = load_one_signature_from_json(sig63, ksize=31)
 
     # construct an index...
     factory = GraphFactory(5, 100, 3)
@@ -1715,9 +1717,9 @@ def test_lazy_index_1():
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx = LinearIndex()
     lidx.insert(ss2)
@@ -1776,7 +1778,7 @@ def test_lazy_index_3():
 def test_lazy_index_4_bool():
     # test some basic features of LazyLinearIndex
     sig2 = utils.get_test_data("2.fa.sig")
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss2 = load_one_signature_from_json(sig2, ksize=31)
 
     # test bool false/true
     lidx = LinearIndex()
@@ -1810,108 +1812,6 @@ def test_lazy_index_wraps_multi_index_location():
         assert ss_tup == ss_lazy_tup
 
 
-def test_revindex_index_search():
-    # confirm that RevIndex works
-    sig2 = utils.get_test_data("2.fa.sig")
-    sig47 = utils.get_test_data("47.fa.sig")
-    sig63 = utils.get_test_data("63.fa.sig")
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = RevIndex(template=ss2.minhash)
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    # now, search for sig2
-    sr = lidx.search(ss2, threshold=1.0)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    assert sr[0][1] == ss2
-
-    # search for sig47 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss47, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss47
-    assert sr[1][1] == ss63
-
-    # search for sig63 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss63, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-    assert sr[1][1] == ss47
-
-    # search for sig63 with high threshold => 1 match
-    sr = lidx.search(ss63, threshold=0.8)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-
-
-def test_revindex_gather():
-    # check that RevIndex.best_containment works.
-    sig2 = utils.get_test_data("2.fa.sig")
-    sig47 = utils.get_test_data("47.fa.sig")
-    sig63 = utils.get_test_data("63.fa.sig")
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = RevIndex(template=ss2.minhash)
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    match = lidx.best_containment(ss2)
-    assert match
-    assert match.score == 1.0
-    assert match.signature == ss2
-
-    match = lidx.best_containment(ss47)
-    assert match
-    assert match.score == 1.0
-    assert match.signature == ss47
-
-
-def test_revindex_gather_ignore():
-    # check that RevIndex gather ignores things properly.
-    sig2 = utils.get_test_data("2.fa.sig")
-    sig47 = utils.get_test_data("47.fa.sig")
-    sig63 = utils.get_test_data("63.fa.sig")
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63, ksize=31)
-
-    # construct an index...
-    lidx = RevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
-
-    # ...now search with something that should ignore sig47, the exact match.
-    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
-
-    results = list(lidx.find(search_fn, ss47))
-    results = [ss.signature for ss in results]
-
-    def is_found(ss, xx):
-        for q in xx:
-            print(ss, ss.similarity(q))
-            if ss.similarity(q) == 1.0:
-                return True
-        return False
-
-    assert not is_found(ss47, results)
-    assert not is_found(ss2, results)
-    assert is_found(ss63, results)
-
-
 def test_standalone_manifest_signatures(runtmp):
     # build a StandaloneManifestIndex and test 'signatures' method.
 
@@ -1919,8 +1819,8 @@ def test_standalone_manifest_signatures(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = load_one_signature_from_json(sig47)
+    ss63 = load_one_signature_from_json(sig63)
 
     lidx1 = LinearIndex.load(sig47)
     lidx2 = LinearIndex.load(sig63)
@@ -1943,8 +1843,8 @@ def test_standalone_manifest_signatures_prefix(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    sourmash.load_one_signature(sig47)
-    sourmash.load_one_signature(sig63)
+    load_one_signature_from_json(sig47)
+    load_one_signature_from_json(sig63)
 
     lidx1 = LinearIndex.load(sig47)
     lidx2 = LinearIndex.load(sig63)
@@ -1967,8 +1867,8 @@ def test_standalone_manifest_signatures_prefix_fail(runtmp):
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
 
-    sourmash.load_one_signature(sig47)
-    sourmash.load_one_signature(sig63)
+    load_one_signature_from_json(sig47)
+    load_one_signature_from_json(sig63)
 
     lidx1 = LinearIndex.load(sig47)
     lidx2 = LinearIndex.load(sig63)
@@ -2147,7 +2047,7 @@ def test_standalone_manifest_prefetch_lazy(runtmp):
     # ok! now test prefetch... should get one match legit, to 47,
     # and then no matches to 2, and then error.
 
-    ss47 = sourmash.load_one_signature(sig47)
+    ss47 = load_one_signature_from_json(sig47)
     idx = idx.select(ksize=31)
     g = idx.prefetch(ss47, threshold_bp=0)
 

@@ -152,11 +152,11 @@ def calc_expected_collisions(graph, force=False, max_false_pos=0.2):
         print("** Do not use these results!!", file=sys.stderr)
         print("**", file=sys.stderr)
         print(
-            "** (estimated false positive rate of %.3f;" % fp_all,
+            f"** (estimated false positive rate of {fp_all:.3f};",
             file=sys.stderr,
             end=" ",
         )
-        print("max recommended %.3f)" % max_false_pos, file=sys.stderr)
+        print(f"max recommended {max_false_pos:.3f})", file=sys.stderr)
         print("**", file=sys.stderr)
 
         if not force:

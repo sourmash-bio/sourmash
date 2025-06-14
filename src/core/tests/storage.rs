@@ -69,7 +69,7 @@ fn zipstorage_parallel_access() -> Result<(), Box<dyn std::error::Error>> {
     .par_iter()
     .map(|path| {
         let data = zs.load(path).unwrap();
-        let sigs: Vec<Signature> = serde_json::from_reader(&data[..]).expect("Loading error");
+        let sigs = Signature::from_reader(&data[..]).expect("Loading error");
         sigs.iter()
             .map(|v| v.sketches().iter().map(|mh| mh.size()).sum::<usize>())
             .sum::<usize>()
@@ -98,7 +98,7 @@ fn innerstorage_save_sig() -> Result<(), Box<dyn std::error::Error>> {
 
     let loaded_sig = instorage.load_sig("test")?;
 
-    assert_eq!(sig.name(), loaded_sig.name());
+    assert_eq!(sig.name_str(), loaded_sig.name());
     assert_eq!(sig.md5sum(), loaded_sig.md5sum());
 
     Ok(())

@@ -1,6 +1,7 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+
 __all__ = [
     "cat",
     "split",
@@ -81,9 +82,7 @@ sourmash signature merge -h
 def _check_abundance_compatibility(sig1, sig2):
     if sig1.minhash.track_abundance != sig2.minhash.track_abundance:
         raise ValueError(
-            "incompatible signatures: track_abundance is {} in first sig, {} in second".format(
-                sig1.minhash.track_abundance, sig2.minhash.track_abundance
-            )
+            f"incompatible signatures: track_abundance is {sig1.minhash.track_abundance} in first sig, {sig2.minhash.track_abundance} in second"
         )
 
 
@@ -102,8 +101,8 @@ def _set_num_scaled(mh, num, scaled):
     mh_params = list(mh.__getstate__())
     # Number of hashes is 0th parameter
     mh_params[0] = num
-    # Scale is 8th parameter
-    mh_params[8] = _get_max_hash_for_scaled(scaled)
+    # Scale is 10th parameter
+    mh_params[10] = _get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
@@ -368,6 +367,7 @@ def manifest(args):
         debug("sig manifest: forcing rebuild.")
 
     manifest = sourmash_args.get_manifest(loader, require=True, rebuild=rebuild)
+    manifest._check_row_values()
 
     manifest.write_to_filename(
         args.output, database_format=args.manifest_format, ok_if_exists=args.force
@@ -384,67 +384,71 @@ def overlap(args):
 
     moltype = sourmash_args.calculate_moltype(args)
 
-    sig1 = sourmash.load_one_signature(
+    sig1 = sourmash_args.load_one_signature(
         args.signature1, ksize=args.ksize, select_moltype=moltype
     )
-    sig2 = sourmash.load_one_signature(
+    sig2 = sourmash_args.load_one_signature(
         args.signature2, ksize=args.ksize, select_moltype=moltype
     )
 
     notify(f"loaded one signature each from {args.signature1} and {args.signature2}")
 
     try:
-        similarity = sig1.similarity(sig2)
+        jaccard = sig1.jaccard(sig2)
     except ValueError:
         raise
 
-    cont1 = sig1.contained_by(sig2)
-    cont2 = sig2.contained_by(sig1)
+    # --- conditional containment info ---
+    if sig1.minhash.scaled > 0 and sig2.minhash.scaled > 0:
+        cont1 = sig1.contained_by(sig2)
+        cont2 = sig2.contained_by(sig1)
 
-    sig1_file = args.signature1
-    sig2_file = args.signature2
+        cANI_result = sig1.containment_ani(sig2)
+        size_estimate_inaccurate = cANI_result.size_is_inaccurate
+        print("size_estimate_inaccurate:", size_estimate_inaccurate)
+        if size_estimate_inaccurate:
+            similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+first contained in second:   {cont1:.5f}
+second contained in first:   {cont2:.5f}
 
-    name1 = sig1.name
-    name2 = sig2.name
+Note: cANI values not reported. One or more sketches contains too few hashes for accurate size estimation.
+"""
+        else:
+            cANI1 = cANI_result.ani
+            cANI2 = sig2.containment_ani(sig1).ani
+            avg_cANI = (cANI1 + cANI2) / 2
 
-    md5_1 = sig1.md5sum()
-    md5_2 = sig2.md5sum()
+            similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+first contained in second:   {cont1:.5f} (cANI: {cANI1:.5f})
+second contained in first:   {cont2:.5f} (cANI: {cANI2:.5f})
+average containment ANI:     {avg_cANI:.5f}
 
-    ksize = sig1.minhash.ksize
-    moltype = sig1.minhash.moltype
+"""
+    else:
+        similarity_info = f"""\
+--- Similarity measures ---
+jaccard similarity:          {jaccard:.5f}
+containment and ANI not available (one or both signatures are not scaled)
 
-    num = sig1.minhash.num
-    size1 = len(sig1.minhash)
-    size2 = len(sig2.minhash)
+"""
 
-    scaled = sig1.minhash.scaled
-
+    # --- hash counts and overlaps ---
     hashes_1 = set(sig1.minhash.hashes)
     hashes_2 = set(sig2.minhash.hashes)
 
+    size1 = len(hashes_1)
+    size2 = len(hashes_2)
     num_common = len(hashes_1 & hashes_2)
     disjoint_1 = len(hashes_1 - hashes_2)
     disjoint_2 = len(hashes_2 - hashes_1)
     num_union = len(hashes_1.union(hashes_2))
 
-    print(
-        """\
-first signature:
-  signature filename: {sig1_file}
-  signature: {name1}
-  md5: {md5_1}
-  k={ksize} molecule={moltype} num={num} scaled={scaled}
-
-second signature:
-  signature filename: {sig2_file}
-  signature: {name2}
-  md5: {md5_2}
-  k={ksize} molecule={moltype} num={num} scaled={scaled}
-
-similarity:                  {similarity:.5f}
-first contained in second:   {cont1:.5f}
-second contained in first:   {cont2:.5f}
-
+    hash_counts_info = f"""\
+--- Hash overlap summary ---
 number of hashes in first:   {size1}
 number of hashes in second:  {size2}
 
@@ -452,7 +456,39 @@ number of hashes in common:  {num_common}
 only in first:               {disjoint_1}
 only in second:              {disjoint_2}
 total (union):               {num_union}
-""".format(**locals())
+
+"""
+
+    # --- conditional abundance info ---
+    abundance_info = ""
+    if sig1.minhash.track_abundance and sig2.minhash.track_abundance:
+        angular_similarity = sig1.angular_similarity(sig2)
+        sum_hashes1 = sum(sig1.minhash.hashes.values())
+        sum_hashes2 = sum(sig2.minhash.hashes.values())
+        weighted_containment1 = sig1.contained_by_weighted(sig2)
+        weighted_containment2 = sig2.contained_by_weighted(sig1)
+        abundance_info = f"""\
+--- Abundance-weighted similarity: ---
+angular similarity:          {angular_similarity:.5f}
+first contained in second (weighted): {weighted_containment1:.5f}
+second contained in first (weighted): {weighted_containment2:.5f}
+
+number of hashes in first (weighted): {sum_hashes1}
+number of hashes in second (weighted): {sum_hashes2}
+    """
+    # --- output ---
+    print("first signature:")
+    sig1.display(args.signature1)
+    print("second signature:")
+    sig2.display(args.signature2)
+
+    print(
+        f"""\
+
+{similarity_info}
+{hash_counts_info}
+{abundance_info}
+"""
     )
 
 
@@ -512,7 +548,7 @@ def merge(args):
         error("no signatures to merge!?")
         sys.exit(-1)
 
-    merged_sigobj = sourmash.SourmashSignature(mh, name=args.name)
+    merged_sigobj = sourmash.SourmashSignature(mh, name=args.set_name)
 
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(merged_sigobj)
@@ -573,7 +609,7 @@ def intersect(args):
     # borrow abundances from a signature?
     if args.abundances_from:
         notify(f"loading signature from {args.abundances_from}, keeping abundances")
-        abund_sig = sourmash.load_one_signature(
+        abund_sig = sourmash_args.load_one_signature(
             args.abundances_from, ksize=args.ksize, select_moltype=moltype
         )
         if not abund_sig.minhash.track_abundance:
@@ -582,7 +618,8 @@ def intersect(args):
 
         intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
-    intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+    intersect_sigobj = sourmash.SourmashSignature(intersect_mh, name=args.set_name)
+
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(intersect_sigobj)
 
@@ -646,9 +683,8 @@ def subtract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    from_sigfile = args.signature_from
-    from_sigobj = sourmash.load_one_signature(
-        from_sigfile, ksize=args.ksize, select_moltype=moltype
+    from_sigobj = sourmash_args.load_one_signature(
+        args.signature_from, ksize=args.ksize, select_moltype=moltype
     )
 
     if args.abundances_from:  # it's ok to work with abund signatures if -A.
@@ -661,7 +697,7 @@ def subtract(args):
 
     subtract_mins = set(from_mh.hashes)
 
-    notify(f"loaded signature from {from_sigfile}...", end="\r")
+    notify(f"loaded signature from {args.signature_from}...", end="\r")
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -694,16 +730,17 @@ def subtract(args):
     # borrow abundances from somewhere?
     if args.abundances_from:
         notify(f"loading signature from {args.abundances_from}, keeping abundances")
-        abund_sig = sourmash.load_one_signature(
+        abund_sig = sourmash_args.load_one_signature(
             args.abundances_from, ksize=args.ksize, select_moltype=moltype
         )
+
         if not abund_sig.minhash.track_abundance:
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
 
         subtract_mh = subtract_mh.inflate(abund_sig.minhash)
 
-    subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
+    subtract_sigobj = sourmash.SourmashSignature(subtract_mh, name=args.set_name)
 
     with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
         save_sigs.add(subtract_sigobj)
@@ -814,11 +851,11 @@ def extract(args):
             save_sigs.add(ss)
 
     notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
+    save_sigs.close()
+
     if not save_sigs:
         error("no matching signatures to save!")
         sys.exit(-1)
-
-    save_sigs.close()
 
     notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 
@@ -1297,7 +1334,7 @@ def kmers(args):
     found_hashes = set(found_mh.hashes)
     cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
 
-    notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
+    notify(f"found {len(found_mh)} distinct matching hashes ({cont * 100:.1f}%)")
 
     if not kmer_w and not save_seqs:
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
@@ -1381,6 +1418,7 @@ def fileinfo(args):
     manifest = sourmash_args.get_manifest(
         idx, rebuild=args.rebuild_manifest, require=False
     )
+    manifest._check_row_values()
 
     if manifest is None:
         # actually can't find any file type to trigger this, but leaving it

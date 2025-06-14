@@ -1,6 +1,7 @@
 """
 Tests for sourmash sketch command-line functionality.
 """
+
 import os
 import gzip
 import shutil
@@ -26,6 +27,8 @@ from sourmash import VERSION
 
 from sourmash.command_sketch import _signatures_for_sketch_factory
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.sourmash_args import load_one_signature
+from sourmash.signature import load_signatures_from_json
 
 
 def test_do_sourmash_sketch_check_scaled_bounds_negative(runtmp):
@@ -342,6 +345,7 @@ def test_protein_override_bad_rust_foo():
     siglist = factory()
     assert len(siglist) == 1
     sig = siglist[0]
+    print(sig.minhash.ksize)
 
     # try adding something
     testdata1 = utils.get_test_data("ecoli.faa")
@@ -351,7 +355,7 @@ def test_protein_override_bad_rust_foo():
     with pytest.raises(ValueError) as exc:
         sig.add_protein(record.sequence)
 
-    assert 'Invalid hash function: "dna"' in str(exc)
+    assert "invalid DNA character in input k-mer: MRVLKFGGTS" in str(exc)
 
 
 def test_dayhoff_defaults():
@@ -468,6 +472,8 @@ def test_multiple_moltypes():
         ("dna,num=500", "dna,k=31,num=500"),
         ("scaled=1100,dna", "dna,k=31,scaled=1100"),
         ("dna,abund", "dna,k=31,scaled=1000,abund"),
+        ("skipm1n3", "skipm1n3,k=21,scaled=1000"),
+        ("skipm2n3", "skipm2n3,k=21,scaled=1000"),
     ],
 )
 def test_compute_parameters_to_param_str(input_param_str, expected_output):
@@ -601,7 +607,7 @@ def test_do_sourmash_sketchdna(runtmp):
     sigfile = runtmp.output("short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
 
@@ -612,7 +618,7 @@ def test_do_sourmash_sketchdna_check_sequence_succeed(runtmp):
     sigfile = runtmp.output("short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
 
@@ -656,7 +662,7 @@ def test_do_sourmash_sketchdna_from_file(runtmp):
     sigfile = runtmp.output("short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
 
@@ -709,7 +715,7 @@ def test_do_sourmash_sketchdna_outdir(c):
     sigfile = os.path.join(c.location, "short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
 
@@ -724,7 +730,7 @@ def test_do_sourmash_sketchdna_output_dir(c):
     sigfile = os.path.join(c.location, "short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("short.fa")
 
 
@@ -865,7 +871,7 @@ def test_do_sourmash_sketchdna_singleton(runtmp):
     sigfile = runtmp.output("short.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert str(sig).endswith("shortName")
 
 
@@ -876,7 +882,7 @@ def test_do_sourmash_sketchdna_name(runtmp):
     sigfile = runtmp.output("foo.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert sig.name == "foo"
 
     runtmp.sourmash("sketch", "dna", "--name", "foo", testdata1, "-o", "foo2.sig")
@@ -884,7 +890,7 @@ def test_do_sourmash_sketchdna_name(runtmp):
     sigfile2 = runtmp.output("foo2.sig")
     assert os.path.exists(sigfile2)
 
-    sig2 = next(signature.load_signatures(sigfile))
+    sig2 = next(load_signatures_from_json(sigfile))
     assert sig2.name == "foo"
     assert sig.name == sig2.name
 
@@ -918,7 +924,7 @@ def test_do_sourmash_sketchdna_name_from_first(runtmp):
     sigfile = runtmp.output("short3.fa.sig")
     assert os.path.exists(sigfile)
 
-    sig = next(signature.load_signatures(sigfile))
+    sig = next(load_signatures_from_json(sigfile))
     assert sig.name == "firstname"
 
 
@@ -929,7 +935,7 @@ def test_do_sourmash_sketchdna_multik(runtmp):
     outfile = runtmp.output("short.fa.sig")
     assert os.path.exists(outfile)
 
-    siglist = list(signature.load_signatures(outfile))
+    siglist = list(load_signatures_from_json(outfile))
     assert len(siglist) == 2
     ksizes = set([x.minhash.ksize for x in siglist])
     assert 21 in ksizes
@@ -984,7 +990,7 @@ def test_do_sketch_translate_multik_with_protein(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1007,7 +1013,7 @@ def test_do_sketch_translate_multik_with_protein_from_file(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1025,7 +1031,7 @@ def test_do_sketch_translate_multik_with_dayhoff(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1042,7 +1048,7 @@ def test_do_sketch_translate_multik_with_hp(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1060,7 +1066,7 @@ def test_do_sourmash_sketch_translate_multik_only_protein(c):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1077,7 +1083,7 @@ def test_do_sourmash_sketch_translate_bad_sequences(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1093,7 +1099,7 @@ def test_do_sketch_protein_multik_input(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1120,7 +1126,7 @@ def test_do_sketch_protein_multik_input_from_file(runtmp):
 
     with open(outfile) as fp:
         sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
+        siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
         ksizes = set([x.minhash.ksize for x in siglist])
         assert 7 in ksizes
@@ -1139,7 +1145,7 @@ def test_do_sourmash_sketchdna_multik_outfile(runtmp):
 
     assert os.path.exists(outfile)
 
-    siglist = list(signature.load_signatures(outfile))
+    siglist = list(load_signatures_from_json(outfile))
     assert len(siglist) == 2
     ksizes = set([x.minhash.ksize for x in siglist])
     assert 21 in ksizes
@@ -1156,7 +1162,7 @@ def test_do_sourmash_sketchdna_with_scaled_1(runtmp):
 
     assert os.path.exists(outfile)
 
-    siglist = list(signature.load_signatures(outfile))
+    siglist = list(load_signatures_from_json(outfile))
     assert len(siglist) == 2
 
     scaled_vals = [x.minhash.scaled for x in siglist]
@@ -1174,7 +1180,7 @@ def test_do_sourmash_sketchdna_with_scaled_2(runtmp):
 
     assert os.path.exists(outfile)
 
-    siglist = list(signature.load_signatures(outfile))
+    siglist = list(load_signatures_from_json(outfile))
     assert len(siglist) == 2
 
     max_hashes = [x.minhash._max_hash for x in siglist]
@@ -1192,7 +1198,7 @@ def test_do_sourmash_sketchdna_with_scaled(runtmp):
 
     assert os.path.exists(outfile)
 
-    siglist = list(signature.load_signatures(outfile))
+    siglist = list(load_signatures_from_json(outfile))
     assert len(siglist) == 2
 
     max_hashes = [x.minhash._max_hash for x in siglist]
@@ -1244,7 +1250,7 @@ def test_do_sketch_with_seed(runtmp):
 
     assert os.path.exists(outfile)
 
-    siglist = list(signature.load_signatures(outfile))
+    siglist = list(load_signatures_from_json(outfile))
     assert len(siglist) == 2
 
     seeds = [x.minhash.seed for x in siglist]
@@ -1269,11 +1275,11 @@ def test_do_sourmash_check_protein_comparisons(runtmp):
     sig2 = runtmp.output("ecoli.genes.fna.sig")
     assert os.path.exists(sig2)
 
-    # I'm not sure why load_signatures is randomizing order, but ok.
-    x = list(signature.load_signatures(sig1))
+    # I'm not sure why load_signatures_from_json is randomizing order, but ok.
+    x = list(load_signatures_from_json(sig1))
     sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
-    x = list(signature.load_signatures(sig2))
+    x = list(load_signatures_from_json(sig2))
     sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
     name1 = sig1_aa.name.split()[0]
@@ -1305,14 +1311,14 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
     sig1 = c.output("ecoli.genes.fna.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     sig1, sig2 = sorted(x, key=lambda x: x.name)
 
     print(sig1.name)
     print(sig2.name)
 
     knowngood = utils.get_test_data("benchmark.dna.sig")
-    good = list(signature.load_signatures(knowngood))[0]
+    good = list(load_signatures_from_json(knowngood))[0]
 
     assert sig2.similarity(good) == 1.0
 
@@ -1325,11 +1331,11 @@ def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
     sig1 = c.output("ecoli.genes.fna.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     sig1, sig2 = sorted(x, key=lambda x: x.name)
 
     knowngood = utils.get_test_data("benchmark.dna.sig")
-    good = list(signature.load_signatures(knowngood))[0]
+    good = list(load_signatures_from_json(knowngood))[0]
 
     assert sig2.similarity(good) == 1.0
 
@@ -1344,11 +1350,11 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons(runtmp):
     sig1 = runtmp.output("ecoli.faa.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
     knowngood = utils.get_test_data("benchmark.input_prot.sig")
-    good_aa = list(signature.load_signatures(knowngood))[0]
+    good_aa = list(load_signatures_from_json(knowngood))[0]
 
     assert sig1_aa.similarity(good_aa) == 1.0
 
@@ -1365,11 +1371,11 @@ def test_do_sourmash_check_knowngood_protein_comparisons(runtmp):
     sig1 = runtmp.output("ecoli.genes.fna.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
     knowngood = utils.get_test_data("benchmark.prot.sig")
-    good_trans = list(signature.load_signatures(knowngood))[0]
+    good_trans = list(load_signatures_from_json(knowngood))[0]
 
     assert sig2_trans.similarity(good_trans) == 1.0
 
@@ -1399,11 +1405,11 @@ def test_do_sourmash_singleton_multiple_files_no_out_specified(runtmp):
     sig2 = runtmp.output("shewanella.faa.sig")
     assert os.path.exists(sig2)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     for ss in x:
         print(ss.name)
 
-    y = list(signature.load_signatures(sig2))
+    y = list(load_signatures_from_json(sig2))
     for ss in y:
         print(ss.name)
 
@@ -1447,7 +1453,7 @@ def test_do_sourmash_singleton_multiple_files_output(runtmp):
     sig1 = runtmp.output("output.sig")
     assert os.path.exists(sig1)
 
-    x = list(signature.load_signatures(sig1))
+    x = list(load_signatures_from_json(sig1))
     for ss in x:
         print(ss.name)
 
@@ -1512,7 +1518,7 @@ def test_protein_with_stop_codons(runtmp):
     sig1 = runtmp.output("ecoli.faa.sig")
     assert os.path.exists(sig1)
 
-    x = signature.load_one_signature(sig1)
+    x = load_one_signature(sig1)
     cli_mh1 = x.minhash
 
     # second, via CLI w/stop codons
@@ -1525,7 +1531,7 @@ def test_protein_with_stop_codons(runtmp):
     sig2 = runtmp.output("ecoli.stop.faa.sig")
     assert os.path.exists(sig2)
 
-    x = signature.load_one_signature(sig2)
+    x = load_one_signature(sig2)
     cli_mh2 = x.minhash
 
     # now calculate sketch with MinHash...
@@ -1578,7 +1584,7 @@ def test_hp_with_stop_codons(runtmp):
     sig1 = runtmp.output("ecoli.faa.sig")
     assert os.path.exists(sig1)
 
-    x = signature.load_one_signature(sig1)
+    x = load_one_signature(sig1)
     cli_mh1 = x.minhash
 
     # second, via CLI w/stop codons
@@ -1591,7 +1597,7 @@ def test_hp_with_stop_codons(runtmp):
     sig2 = runtmp.output("ecoli.stop.faa.sig")
     assert os.path.exists(sig2)
 
-    x = signature.load_one_signature(sig2)
+    x = load_one_signature(sig2)
     cli_mh2 = x.minhash
 
     # now calculate sketch with MinHash...
@@ -1644,7 +1650,7 @@ def test_dayhoff_with_stop_codons(runtmp):
     sig1 = runtmp.output("ecoli.faa.sig")
     assert os.path.exists(sig1)
 
-    x = signature.load_one_signature(sig1)
+    x = load_one_signature(sig1)
     cli_mh1 = x.minhash
 
     # second, via CLI w/stop codons
@@ -1657,7 +1663,7 @@ def test_dayhoff_with_stop_codons(runtmp):
     sig2 = runtmp.output("ecoli.stop.faa.sig")
     assert os.path.exists(sig2)
 
-    x = signature.load_one_signature(sig2)
+    x = load_one_signature(sig2)
     cli_mh2 = x.minhash
 
     # now calculate sketch with MinHash...
@@ -1729,18 +1735,19 @@ def test_fromfile_dna(runtmp):
     assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
-def test_fromfile_dna_csv_gz(runtmp):
-    # test with a gzipped csv
+def test_fromfile_dna(runtmp):
+    # does it run? yes, hopefully.
     test_inp = utils.get_test_data("sketch_fromfile")
     shutil.copytree(test_inp, runtmp.output("sketch_fromfile"))
 
-    # gzip the CSV file
-    with open(runtmp.output("sketch_fromfile/salmonella.csv"), "rb") as infp:
-        with gzip.open(runtmp.output("salmonella.csv.gz"), "w") as outfp:
-            outfp.write(infp.read())
-
     runtmp.sourmash(
-        "sketch", "fromfile", "salmonella.csv.gz", "-o", "out.zip", "-p", "dna"
+        "sketch",
+        "fromfile",
+        "sketch_fromfile/salmonella.csv",
+        "-o",
+        "out.zip",
+        "-p",
+        "dna",
     )
 
     print(runtmp.last_result.out)
@@ -1754,6 +1761,64 @@ def test_fromfile_dna_csv_gz(runtmp):
     ss = siglist[0]
     assert ss.name == "GCA_903797575 Salmonella enterica"
     assert ss.minhash.moltype == "DNA"
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_skipm1n3(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data("sketch_fromfile")
+    shutil.copytree(test_inp, runtmp.output("sketch_fromfile"))
+
+    runtmp.sourmash(
+        "sketch",
+        "fromfile",
+        "sketch_fromfile/salmonella.csv",
+        "-o",
+        "out.zip",
+        "-p",
+        "skipm1n3",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output("out.zip"))
+    idx = sourmash.load_file_as_index(runtmp.output("out.zip"))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == "GCA_903797575 Salmonella enterica"
+    assert ss.minhash.moltype == "skipm1n3"
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_skipm2n3(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data("sketch_fromfile")
+    shutil.copytree(test_inp, runtmp.output("sketch_fromfile"))
+
+    runtmp.sourmash(
+        "sketch",
+        "fromfile",
+        "sketch_fromfile/salmonella.csv",
+        "-o",
+        "out.zip",
+        "-p",
+        "skipm2n3",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output("out.zip"))
+    idx = sourmash.load_file_as_index(runtmp.output("out.zip"))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == "GCA_903797575 Salmonella enterica"
+    assert ss.minhash.moltype == "skipm2n3"
     assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 

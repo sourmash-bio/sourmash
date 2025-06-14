@@ -11,14 +11,14 @@ Here's a checklist to copy/paste into an issue:
 
 Release candidate testing:
 - [ ] Command line tests pass for a release candidate
-- [ ] All eight release candidate wheels are built
+- [ ] All six release candidate wheels are built
 
 Releasing to PyPI:
 
 - [ ] RC tag(s)s deleted on github
 - [ ] Release tag cut
 - [ ] Release notes written
-- [ ] All eight release wheels built
+- [ ] All six release wheels built
 - [ ] Release wheels uploaded to pypi
 - [ ] tar.gz distribution uploaded to pypi
 
@@ -46,7 +46,7 @@ conda version with `conda --version` and update with `conda update conda`.
 Create the basic build environment:
 
 ```
-mamba create -y -n sourmash-rc python=3.10 pip \
+mamba create -y -n sourmash-rc python=3.12 pip \
     cxx-compiler make twine tox tox-conda rust
 ```
 
