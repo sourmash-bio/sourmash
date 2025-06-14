@@ -1481,9 +1481,10 @@ such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
 
-Most commands will load signatures automatically from indexed databases
-(SBT and LCA formats) as well as from signature files, and you can load
-signatures from stdin using `-` on the command line.
+All commands load signatures in all supported sourmash formats,
+including indexed databases, and will save signatures in formats based
+on the extension (e.g. `-o output.zip` will use the zip format).  You
+can load signatures from stdin using `-` on the command line.
 
 ### `sourmash signature cat` - combine signatures into one file
 
