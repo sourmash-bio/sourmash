@@ -28,7 +28,8 @@ After release to PyPI and conda-forge/bioconda packages built:
 - [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash&sort=mostrecent)
 - [ ] `pip install sourmash` installs the correct version
 - [ ] [conda-forge sourmash-minimal-feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock) has updated `sourmash-minimal` to the correct version 
-- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+- [ ] `mamba create -n smash-release1 -y sourmash-minimal` installs the correct version
+- [ ] `mamba create -n smash-release2 -y sourmash` installs the correct version
 
 Optional but recommended:
 
