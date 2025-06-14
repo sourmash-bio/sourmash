@@ -2155,7 +2155,7 @@ The following `coltype`s are currently supported for picklists:
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
 * `search` - use the CSV output of `sourmash prefetch` as a picklist
-* `manifest` - use CSV manifests produced by `sig manifest` as a picklist
+* `manifest` - use CSV manifests produced by `sig manifest`, `sig collect`, or `sig check` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
@@ -2333,6 +2333,10 @@ Manifests can _also_ be used externally (via the command-line), and
 these "standalone manifests" may be useful for organizing large
 collections of signatures. They can be generated with the `sig
 collect`, `sig manifest`, and `sig check` subcommands.
+
+The only difference between standalone manifests and internal manifests
+are that standalone manifests contain externally resolvable path names
+in the `internal_location` column.
 
 Suppose you have a large collection of signatures (`.sig` or `.sig.gz`
 files) in a location (e.g., under a directory, or in a zip file). You
