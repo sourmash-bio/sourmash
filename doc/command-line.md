@@ -360,8 +360,10 @@ information on the different approaches that can be used here.)
 
 If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
-specified).  `-o/--output` will create a CSV file containing the
-matches.
+specified). 
+
+`-o/--output` will create a CSV file containing the
+matches and quite a bit more information; see [the CSV output file documentation for gather](classifying-signatures.md#appendix-d-gather-csv-output-columns) for details of the output columns.
 
 `gather`, like `search`, works with any of the
 [signature collection formats supported by sourmash](#storing-and-searching-signatures)
@@ -515,7 +517,7 @@ memory (see `--linear` option, below), and does no post-processing of signatures
 
 `prefetch` has four main output options, which can all be used individually
 or together:
-* `-o/--output` produces a CSV summary file;
+* `-o/--output` produces a CSV summary file; see [the CSV output file documentation for prefetch](classifying-signatures.html#appendix-e-prefetch-csv-output-columns) for details of the output columns.
 * `--save-matches` saves all matching signatures;
 * `-save-matching-hashes` saves a single signature containing all of the hashes that matched any signature in the database at or above the specified threshold;
 * `--save-unmatched-hashes` saves a single signature containing the complement of `--save-matching-hashes`.
