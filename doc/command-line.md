@@ -252,6 +252,8 @@ ANI output matrix will be asymmetric as discussed above.
 
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
 
+**Note:** The [betterplot plugin](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) provides a wide array of improved visualization options, including MDS and tSNE plots, as well as more customizable version of `plot`. Please take a look!
+
 The `plot` subcommand produces two plots -- a dendrogram and a
 dendrogram+matrix -- from a matrix created by `sourmash compare
 --output <matrix>`.  The default output is two PNG files.
