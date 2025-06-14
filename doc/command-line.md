@@ -339,6 +339,8 @@ collection itself.
 
 ### `sourmash gather` - find metagenome members
 
+**Note:** As of 2025, we have a much faster implementation of `gather` called `fastgather` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and similar in memory usage, although it does accept a slightly more restricted set of inputs than `gather`.
+
 The `gather` subcommand selects the best reference genomes to use for
 a metagenome analysis, by finding the smallest set of non-overlapping
 matches to the query in a database.  This is specifically meant for
@@ -358,7 +360,7 @@ matches.
 `gather`, like `search`, works with any of the
 [signature collection formats supported by sourmash](#storing-and-searching-signatures)
 and will make use of [indexed databases](#loading-many-signatures) to
-decrease search time and memory where possible.
+decrease search time and memory where possible. We recommend using RocksDB indxes if you are running gather regularly!
 
 Usage:
 ```
@@ -546,6 +548,8 @@ memory-intensive `gather` step is run only on a small set of relevant
 signatures, rather than all the signatures in the database.
 
 ### `sourmash multigather` - do gather with many queries
+
+**Note:** As of 2025, we have a much faster implementation of `multigather` called `fastmultigather` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and similar in memory usage, although it does accept a slightly more restricted set of inputs than `multigather`.
 
 The `multigather` subcommand runs `sourmash gather` on multiple
 queries.  (See
