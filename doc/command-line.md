@@ -283,7 +283,7 @@ Example output:
 
 The `search` subcommand searches a collection of signatures
 (in any of the [formats supported by sourmash](#storing-and-searching-signatures))
-for matches to the query signature.  It can search for matches with either
+for matches to a single query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
@@ -337,6 +337,11 @@ As of sourmash 4.2.0, `search` supports `--picklist`, to
 can be used to search only a small subset of a large collection, or to
 exclude a few signatures from a collection, without modifying the
 collection itself.
+
+Related commands:
+* `sourmash compare` will compare many sketches to many sketches.
+* `sourmash prefetch` is an upgraded version of `search` that returns more information in the output CSV file.
+* `sourmash scripts multisearch` from [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater) will search multiple sketches against a database.
 
 ### `sourmash gather` - find metagenome members
 
