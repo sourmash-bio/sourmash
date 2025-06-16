@@ -370,7 +370,7 @@ matches and quite a bit more information; see [the CSV output file documentation
 `gather`, like `search`, works with any of the
 [signature collection formats supported by sourmash](#storing-and-searching-signatures)
 and will make use of [indexed databases](#loading-many-signatures) to
-decrease search time and memory where possible. We recommend using RocksDB indxes if you are running gather regularly!
+decrease search time and memory where possible. We recommend using RocksDB indexes if you are running gather regularly!
 
 Usage:
 ```
@@ -514,7 +514,7 @@ opposite order from `search --containment`.
 
 Note that the `manysearch` command in
 [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
-is a fast, multithreaded vresion of `prefetch` that will search for
+is a fast, multithreaded version of `prefetch` that will search for
 multiple genomes in multiple metagenomes.
 
 `sourmash prefetch` is intended to select a subset of a large database
