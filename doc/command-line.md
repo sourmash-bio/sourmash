@@ -5,8 +5,8 @@
 ```
 
 From the command line, sourmash can be used to create
-[FracMinHash sketches][0] from DNA and protein sequences, compare them to
-each other, and plot the results; these sketches are saved into
+[FracMinHash sketches][0] from DNA and protein sequences, compare them
+to each other, and plot the results; these sketches are saved into
 "signature files".  These signatures allow you to estimate sequence
 similarity and containment quickly and accurately in large
 collections, among other capabilities.
@@ -15,6 +15,14 @@ sourmash also provides a suite of metagenome functionality.  This
 includes genome search in metagenomes, metagenome decomposition into a
 list of genomes from a database, and taxonomic classification
 functionality.
+
+The sourmash team provides a collection of prepared
+[databases](databases.md) for GTDB and GenBank. There is an
+increasingly large ecosystem of plugins that support
+[high-performance search and sketching](https://github.com/sourmash-bio/sourmash_plugin_branchwater),
+[more advanced plotting capabilities](https://github.com/sourmash-bio/sourmash_plugin_betterplot/),
+and
+[streaming sketching of large collections of genomes](https://github.com/sourmash-bio/sourmash_plugin_directsketch).
 
 Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
