@@ -125,6 +125,25 @@ def subparser(subparsers):
     )
     add_rank_arg(subparser)
 
+    subparser.add_argument(
+        "--use-abundances",
+        action="store_true",
+        dest="use_abund",
+        default=None,
+        help="use abundances in sketch if available (for krona and XXX)",
+    )
+    subparser.add_argument(
+        "--ignore-abundances",
+        action="store_false",
+        default=None,
+        help="ignore abundances in sketch even if available (for XXX)",
+    )
+
+    subparser.add_argument(
+        "--v4", dest="cli_version", action="store_const", const="v4", default="v4"
+    )
+    subparser.add_argument("--v5", dest="cli_version", action="store_const", const="v5")
+
 
 def main(args):
     try:

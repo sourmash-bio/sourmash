@@ -900,6 +900,8 @@ def check_and_load_gather_csvs(
 ):
     """
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
+
+    Returns list of QueryTaxResults objects.
     """
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
@@ -1117,6 +1119,7 @@ def write_summary(
     limit_float_decimals=False,
     classification=False,
     lingroups=None,
+    use_abund=False
 ):
     """
     Write taxonomy-summarized gather results for each rank.
@@ -1127,6 +1130,7 @@ def write_summary(
             limit_float=limit_float_decimals,
             classification=classification,
             lingroups=lingroups,
+            use_abund=use_abund,
         )
         if w is None:
             w = csv.DictWriter(csv_fp, header, delimiter=sep)
@@ -2032,9 +2036,9 @@ class SummarizedGatherResult:
     """
 
     rank: str
-    fraction: float
+    fraction: float             # unweighted
     lineage: RankLineageInfo
-    f_weighted_at_rank: float
+    f_weighted_at_rank: float   # weighted
     bp_match_at_rank: int
     query_ani_at_rank: float = None
 
@@ -2221,17 +2225,26 @@ class ClassificationResult(SummarizedGatherResult):
         ):
             self.status = "match"
 
-    def build_krona_result(self, rank=None):
+    def build_krona_result(self, rank=None, use_abund=False):
         krona_classified, krona_unclassified = None, None
         if rank is not None and rank == self.rank:
             lin_as_list = self.lineage.display_lineage().split(";")
-            krona_classification = (
-                self.fraction,
-                *lin_as_list,
-            )  # v5?: f_weighted_at_rank
+
+            if use_abund:
+                krona_classification = (
+                    self.f_weighted_at_rank
+                    *lin_as_list,
+                )
+                unclassified_fraction = 1.0 - self.f_weighted_at_rank
+            else:
+                krona_classification = (
+                    self.fraction,
+                    *lin_as_list,
+                )
+                unclassified_fraction = 1.0 - self.fraction
+
             krona_classified = krona_classification
             # handle unclassified - do we want/need this?
-            unclassified_fraction = 1.0 - self.fraction  # v5?: f_weighted_at_rank
             len_unclassified_lin = len(lin_as_list)
             unclassifed_lin = ["unclassified"] * (len_unclassified_lin)
             krona_unclassified = (unclassified_fraction, *unclassifed_lin)
@@ -2566,7 +2579,8 @@ class QueryTaxResult:
         return results
 
     def make_full_summary(
-        self, classification=False, limit_float=False, lingroups=None
+        self, classification=False, limit_float=False, lingroups=None,
+            use_abund=False,
     ):
         results = []
         rD = {}
@@ -2618,9 +2632,14 @@ class QueryTaxResult:
                         continue
                 unclassified = []
                 rank_results = self.summarized_lineage_results[rank]
-                rank_results.sort(
-                    key=lambda res: -res.fraction
-                )  # v5?: f_weighted_at_rank)
+                if use_abund:
+                    rank_results.sort(
+                        key=lambda res: -res.f_weighted_at_rank
+                    )
+                else:
+                    rank_results.sort(
+                        key=lambda res: -res.fraction
+                    )
                 for res in rank_results:
                     rD = res.as_summary_dict(
                         query_info=self.query_info,
