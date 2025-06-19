@@ -205,20 +205,21 @@ Optional arguments:
 ```
 ### `sourmash compare` - compare many signatures
 
-**Note:** As of 2025, we have a much faster implementation of `compare` called `multisearch` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and should be (at worst) equivalent in memory usage, although it does accept a slightly more restricted set of inputs than `compare`.
+**Note:** As of 2025, we have a much faster implementation of `compare` called `multisearch` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and much more memory efficient than `compare`, although it does accept a slightly more restricted set of inputs.
 
 The `compare` subcommand compares one or more signatures
 (created with `sketch`) using estimated [Jaccard index][3] or
 (if signatures are created with `-p abund`) the [angular
-similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
+similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).  Jaccard is most appropriate for genome comparisons, while
+angular similarity has been used for comparing metagenomes (e.g. see [simka](https://github.com/GATB/simka)). Use `--ignore-abundance` to force Jaccard.
 
-The default output is a text display of a similarity matrix where each
-entry `[i, j]` contains the estimated Jaccard index between input
-signature `i` and input signature `j`.  The output matrix can be saved
-to a numpy binary file with `--output <outfile.mat>` and used with the
-`sourmash plot` subcommand (or loaded with `numpy.load(...)`.  Using
-`--csv <outfile.csv>` will output a CSV file that can be loaded into
-other languages than Python, such as R.
+The default output of `compare` is a text display of a similarity
+matrix where each entry `[i, j]` contains the estimated Jaccard index
+between input signature `i` and input signature `j`.  The output
+matrix can be saved to a numpy binary file with `--output
+<outfile.mat>` and used with the `sourmash plot` subcommand (or loaded
+with `numpy.load(...)`.  Using `--csv <outfile.csv>` will output a CSV
+file that can be loaded into other languages than Python, such as R.
 
 As of sourmash 4.4.0, `compare` also supports Average Nucleotide
 Identity (ANI) estimates instead of Jaccard or containment index; use
@@ -237,7 +238,7 @@ Options:
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
 * `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
 * `--from-file <filelist.txt>` -- append the list of files in this text file to the input signatures.
-* `--ignore-abundance` -- ignore abundances in signatures.
+* `--ignore-abundance` -- ignore abundances in signatures and calculate Jaccard instead of angular similarity.
 * `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 * `--csv <outfile.csv>` -- save the output matrix in CSV format.
 * `--labels-to <labels.csv>` -- create a CSV file (spreadsheet) that can be passed in to `sourmash plot` with `--labels-from` in order to customize the labels.
@@ -245,7 +246,7 @@ Options:
 **Note:** compare by default produces a symmetric similarity matrix
 that can be used for clustering in downstream tasks. With `--containment`,
 however, this matrix is no longer symmetric and cannot formally be
-used for clustering.
+used for clustering (although `sourmash plot` will still cluster it).
 
 The containment matrix is organized such that the value in row A for column B is the containment of the B'th sketch in the A'th sketch, i.e.
 
@@ -351,7 +352,7 @@ collection itself.
 Related commands:
 * `sourmash compare` will compare many sketches to many sketches.
 * `sourmash prefetch` is an upgraded version of `search` that returns more information in the output CSV file.
-* `sourmash scripts multisearch` from [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater) will search multiple sketches against a database.
+* `sourmash scripts manysearch` from [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater) will search multiple sketches against a database, and outputs abundance-weighted comparisons as well.
 
 ### `sourmash gather` - find metagenome members
 
