@@ -5,8 +5,8 @@
 ```
 
 From the command line, sourmash can be used to create
-[FracMinHash sketches][0] from DNA and protein sequences, compare them to
-each other, and plot the results; these sketches are saved into
+[FracMinHash sketches][0] from DNA and protein sequences, compare them
+to each other, and plot the results; these sketches are saved into
 "signature files".  These signatures allow you to estimate sequence
 similarity and containment quickly and accurately in large
 collections, among other capabilities.
@@ -15,6 +15,14 @@ sourmash also provides a suite of metagenome functionality.  This
 includes genome search in metagenomes, metagenome decomposition into a
 list of genomes from a database, and taxonomic classification
 functionality.
+
+The sourmash team provides a collection of prepared
+[databases](databases.md) for GTDB and GenBank. There is an
+increasingly large ecosystem of plugins that support
+[high-performance search and sketching](https://github.com/sourmash-bio/sourmash_plugin_branchwater),
+[more advanced plotting capabilities](https://github.com/sourmash-bio/sourmash_plugin_betterplot/),
+and
+[streaming sketching of large collections of genomes](https://github.com/sourmash-bio/sourmash_plugin_directsketch).
 
 Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
@@ -197,19 +205,21 @@ Optional arguments:
 ```
 ### `sourmash compare` - compare many signatures
 
+**Note:** As of 2025, we have a much faster implementation of `compare` called `multisearch` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and much more memory efficient than `compare`, although it does accept a slightly more restricted set of inputs.
 
 The `compare` subcommand compares one or more signatures
 (created with `sketch`) using estimated [Jaccard index][3] or
 (if signatures are created with `-p abund`) the [angular
-similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
+similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).  Jaccard is most appropriate for genome comparisons, while
+angular similarity has been used for comparing metagenomes (e.g. see [simka](https://github.com/GATB/simka)). Use `--ignore-abundance` to force Jaccard.
 
-The default output is a text display of a similarity matrix where each
-entry `[i, j]` contains the estimated Jaccard index between input
-signature `i` and input signature `j`.  The output matrix can be saved
-to a numpy binary file with `--output <outfile.mat>` and used with the
-`sourmash plot` subcommand (or loaded with `numpy.load(...)`.  Using
-`--csv <outfile.csv>` will output a CSV file that can be loaded into
-other languages than Python, such as R.
+The default output of `compare` is a text display of a similarity
+matrix where each entry `[i, j]` contains the estimated Jaccard index
+between input signature `i` and input signature `j`.  The output
+matrix can be saved to a numpy binary file with `--output
+<outfile.mat>` and used with the `sourmash plot` subcommand (or loaded
+with `numpy.load(...)`.  Using `--csv <outfile.csv>` will output a CSV
+file that can be loaded into other languages than Python, such as R.
 
 As of sourmash 4.4.0, `compare` also supports Average Nucleotide
 Identity (ANI) estimates instead of Jaccard or containment index; use
@@ -228,7 +238,7 @@ Options:
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
 * `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
 * `--from-file <filelist.txt>` -- append the list of files in this text file to the input signatures.
-* `--ignore-abundance` -- ignore abundances in signatures.
+* `--ignore-abundance` -- ignore abundances in signatures and calculate Jaccard instead of angular similarity.
 * `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 * `--csv <outfile.csv>` -- save the output matrix in CSV format.
 * `--labels-to <labels.csv>` -- create a CSV file (spreadsheet) that can be passed in to `sourmash plot` with `--labels-from` in order to customize the labels.
@@ -236,7 +246,7 @@ Options:
 **Note:** compare by default produces a symmetric similarity matrix
 that can be used for clustering in downstream tasks. With `--containment`,
 however, this matrix is no longer symmetric and cannot formally be
-used for clustering.
+used for clustering (although `sourmash plot` will still cluster it).
 
 The containment matrix is organized such that the value in row A for column B is the containment of the B'th sketch in the A'th sketch, i.e.
 
@@ -250,6 +260,8 @@ specified, those values will be used instead. With `--containment --ani`, the
 ANI output matrix will be asymmetric as discussed above.
 
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
+
+**Note:** The [betterplot plugin](https://github.com/sourmash-bio/sourmash_plugin_betterplot/) provides a wide array of improved visualization options, including MDS and tSNE plots, as well as more customizable version of `plot`. Please take a look!
 
 The `plot` subcommand produces two plots -- a dendrogram and a
 dendrogram+matrix -- from a matrix created by `sourmash compare
@@ -282,7 +294,7 @@ Example output:
 
 The `search` subcommand searches a collection of signatures
 (in any of the [formats supported by sourmash](#storing-and-searching-signatures))
-for matches to the query signature.  It can search for matches with either
+for matches to a single query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
@@ -337,11 +349,18 @@ can be used to search only a small subset of a large collection, or to
 exclude a few signatures from a collection, without modifying the
 collection itself.
 
+Related commands:
+* `sourmash compare` will compare many sketches to many sketches.
+* `sourmash prefetch` is an upgraded version of `search` that returns more information in the output CSV file.
+* `sourmash scripts manysearch` from [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater) will search multiple sketches against a database, and outputs abundance-weighted comparisons as well.
+
 ### `sourmash gather` - find metagenome members
+
+**Note:** As of 2025, we have a much faster implementation of `gather` called `fastgather` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and similar in memory usage, although it does accept a slightly more restricted set of inputs than `gather`.
 
 The `gather` subcommand selects the best reference genomes to use for
 a metagenome analysis, by finding the smallest set of non-overlapping
-matches to the query in a database.  This is specifically meant for
+matches to the query metagenome in a database of genomes.  This is specifically meant for
 metagenome and genome bin analysis.  (See
 [Classifying Signatures](classifying-signatures.md) for more
 information on the different approaches that can be used here.)
@@ -352,13 +371,15 @@ information on the different approaches that can be used here.)
 
 If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
-specified).  `-o/--output` will create a CSV file containing the
-matches.
+specified). 
+
+`-o/--output` will create a CSV file containing the
+matches and quite a bit more information; see [the CSV output file documentation for gather](classifying-signatures.md#appendix-d-gather-csv-output-columns) for details of the output columns.
 
 `gather`, like `search`, works with any of the
 [signature collection formats supported by sourmash](#storing-and-searching-signatures)
 and will make use of [indexed databases](#loading-many-signatures) to
-decrease search time and memory where possible.
+decrease search time and memory where possible. We recommend using RocksDB indexes if you are running gather regularly!
 
 Usage:
 ```
@@ -491,14 +512,19 @@ ksize/moltype/scaled.
 
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
-The `prefetch` subcommand searches a collection of scaled signatures
-for matches in a large database, using containment. It is similar to
+The `prefetch` subcommand searches a scaled signature (usually a genome or a metagenome)
+for matches in a large database of genomes, using containment. It is similar to
 `search --containment`, while taking a `--threshold-bp` argument like
 `gather` does for thresholding matches (instead of using Jaccard
 similarity or containment). Note that `prefetch` uses the composite
 sketch (e.g. a metagenome) as the query, and finds all matching
 subjects (e.g. genomes) from the database - the arguments are in the
 opposite order from `search --containment`.
+
+Note that the `manysearch` command in
+[the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
+is a fast, multithreaded version of `prefetch` that will search for
+multiple genomes in multiple metagenomes.
 
 `sourmash prefetch` is intended to select a subset of a large database
 for further processing. As such, it can search very large collections
@@ -507,7 +533,7 @@ memory (see `--linear` option, below), and does no post-processing of signatures
 
 `prefetch` has four main output options, which can all be used individually
 or together:
-* `-o/--output` produces a CSV summary file;
+* `-o/--output` produces a CSV summary file; see [the CSV output file documentation for prefetch](classifying-signatures.html#appendix-e-prefetch-csv-output-columns) for details of the output columns.
 * `--save-matches` saves all matching signatures;
 * `-save-matching-hashes` saves a single signature containing all of the hashes that matched any signature in the database at or above the specified threshold;
 * `--save-unmatched-hashes` saves a single signature containing the complement of `--save-matching-hashes`.
@@ -546,6 +572,8 @@ memory-intensive `gather` step is run only on a small set of relevant
 signatures, rather than all the signatures in the database.
 
 ### `sourmash multigather` - do gather with many queries
+
+**Note:** As of 2025, we have a much faster implementation of `multigather` called `fastmultigather` available in [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater). It is multithreaded and similar in memory usage, although it does accept a slightly more restricted set of inputs than `multigather`.
 
 The `multigather` subcommand runs `sourmash gather` on multiple
 queries.  (See
@@ -1467,9 +1495,10 @@ such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
 
-Most commands will load signatures automatically from indexed databases
-(SBT and LCA formats) as well as from signature files, and you can load
-signatures from stdin using `-` on the command line.
+All commands load signatures in all supported sourmash formats,
+including indexed databases, and will save signatures in formats based
+on the extension (e.g. `-o output.zip` will use the zip format).  You
+can load signatures from stdin using `-` on the command line.
 
 ### `sourmash signature cat` - combine signatures into one file
 
@@ -2140,7 +2169,7 @@ The following `coltype`s are currently supported for picklists:
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
 * `search` - use the CSV output of `sourmash prefetch` as a picklist
-* `manifest` - use CSV manifests produced by `sig manifest` as a picklist
+* `manifest` - use CSV manifests produced by `sig manifest`, `sig collect`, or `sig check` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
@@ -2318,6 +2347,10 @@ Manifests can _also_ be used externally (via the command-line), and
 these "standalone manifests" may be useful for organizing large
 collections of signatures. They can be generated with the `sig
 collect`, `sig manifest`, and `sig check` subcommands.
+
+The only difference between standalone manifests and internal manifests
+are that standalone manifests contain externally resolvable path names
+in the `internal_location` column.
 
 Suppose you have a large collection of signatures (`.sig` or `.sig.gz`
 files) in a location (e.g., under a directory, or in a zip file). You
