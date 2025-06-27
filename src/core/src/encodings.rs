@@ -490,7 +490,7 @@ impl Colors {
         }
     }
 
-    pub fn indices(&self, color: &Color) -> Indices {
+    pub fn indices(&self, color: &Color) -> Indices<'_> {
         // TODO: what if color is not present?
         Indices {
             iter: self.colors.get(color).unwrap().0.iter(),

@@ -20,7 +20,7 @@ Releasing to PyPI:
 - [ ] Release notes written
 - [ ] All six release wheels built
 - [ ] Release wheels uploaded to pypi
-- [ ] tar.gz distribution uploaded to pypi
+- [ ] tar.gz distribution built in **clean** checkout & uploaded to pypi
 
 After release to PyPI and conda-forge/bioconda packages built:
 
@@ -47,7 +47,7 @@ conda version with `conda --version` and update with `conda update conda`.
 Create the basic build environment:
 
 ```
-mamba create -y -n sourmash-rc python=3.12 pip \
+conda create -y -n sourmash-rc python=3.12 pip \
     cxx-compiler make twine tox tox-conda rust
 ```
 
@@ -249,9 +249,11 @@ make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
-(This must be done *after* the wheels are available, because some of
+Two notes:
+* This must be done *after* the wheels are available, because some of
 the conda package build steps require the source dist and are automatically
 triggered when a new version shows up on PyPI.)
+* make sure to do this in a completely clean checkout. If there are additional files present, they will be included in the tar.gz.
 
 5\. Edit the release on GitHub; there will already be one associated
 with the tag you pushed. Copy and paste in the release notes.
