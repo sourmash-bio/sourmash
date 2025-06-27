@@ -133,7 +133,8 @@ def subparser(subparsers):
         help="use abundances in sketch if available (for krona and XXX)",
     )
     subparser.add_argument(
-        "--ignore-abundances", "--no-abundances",
+        "--ignore-abundances",
+        "--no-abundances",
         dest="use_abund",
         action="store_false",
         help="ignore abundances in sketch even if available (for XXX)",

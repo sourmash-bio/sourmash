@@ -136,22 +136,24 @@ def metagenome(args):
 
     if not found_abund:
         match args.cli_version:
-           case "v4":
-              if args.use_abund != False:
-                  notify("** WARNING: no abundances found in gather results.")
-                  notify("** This is likely because the metagenome sketch was not")
-                  notify("** created with '-p abund'.")
-                  notify("** As a result, the output of 'tax metagenome' will")
-                  notify("** not be abundance-weighted. This is probably not what you want!")
-                  notify("** Specify '--no-abundances' to bypass this error.")
-           case "v5":
-              if args.use_abund is None:
-                  error("** ERROR: no abundances found in gather results.")
-                  error("** This is likely because the metagenome sketch was not")
-                  error("** created with '-p abund'.")
-                  error("** This is an error in sourmash v5 and greater.")
-                  error("** Specify '--no-abundances' to bypass this error.")
-                  sys.exit(-1)
+            case "v4":
+                if args.use_abund != False:
+                    notify("** WARNING: no abundances found in gather results.")
+                    notify("** This is likely because the metagenome sketch was not")
+                    notify("** created with '-p abund'.")
+                    notify("** As a result, the output of 'tax metagenome' will")
+                    notify(
+                        "** not be abundance-weighted. This is probably not what you want!"
+                    )
+                    notify("** Specify '--no-abundances' to bypass this error.")
+            case "v5":
+                if args.use_abund is None:
+                    error("** ERROR: no abundances found in gather results.")
+                    error("** This is likely because the metagenome sketch was not")
+                    error("** created with '-p abund'.")
+                    error("** This is an error in sourmash v5 and greater.")
+                    error("** Specify '--no-abundances' to bypass this error.")
+                    sys.exit(-1)
 
     # @CTB think about how this interacts with defaults for v4 vs v5.
     if (
