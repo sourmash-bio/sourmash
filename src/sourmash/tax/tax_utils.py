@@ -1119,7 +1119,7 @@ def write_summary(
     limit_float_decimals=False,
     classification=False,
     lingroups=None,
-    use_abund=False
+    use_abund=False,
 ):
     """
     Write taxonomy-summarized gather results for each rank.
@@ -2036,9 +2036,9 @@ class SummarizedGatherResult:
     """
 
     rank: str
-    fraction: float             # unweighted
+    fraction: float  # unweighted
     lineage: RankLineageInfo
-    f_weighted_at_rank: float   # weighted
+    f_weighted_at_rank: float  # weighted
     bp_match_at_rank: int
     query_ani_at_rank: float = None
 
@@ -2231,10 +2231,7 @@ class ClassificationResult(SummarizedGatherResult):
             lin_as_list = self.lineage.display_lineage().split(";")
 
             if use_abund:
-                krona_classification = (
-                    self.f_weighted_at_rank
-                    *lin_as_list,
-                )
+                krona_classification = (self.f_weighted_at_rank * lin_as_list,)
                 unclassified_fraction = 1.0 - self.f_weighted_at_rank
             else:
                 krona_classification = (
@@ -2579,8 +2576,11 @@ class QueryTaxResult:
         return results
 
     def make_full_summary(
-        self, classification=False, limit_float=False, lingroups=None,
-            use_abund=False,
+        self,
+        classification=False,
+        limit_float=False,
+        lingroups=None,
+        use_abund=False,
     ):
         results = []
         rD = {}
@@ -2633,13 +2633,9 @@ class QueryTaxResult:
                 unclassified = []
                 rank_results = self.summarized_lineage_results[rank]
                 if use_abund:
-                    rank_results.sort(
-                        key=lambda res: -res.f_weighted_at_rank
-                    )
+                    rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
                 else:
-                    rank_results.sort(
-                        key=lambda res: -res.fraction
-                    )
+                    rank_results.sort(key=lambda res: -res.fraction)
                 for res in rank_results:
                     rD = res.as_summary_dict(
                         query_info=self.query_info,

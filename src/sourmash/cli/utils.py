@@ -299,7 +299,7 @@ def check_tax_outputs(
                 f"Writing to stdout is incompatible with multiple output formats {args.output_format}"
             )
     elif not args.output_format:
-        if args.cli_version == 'v5':
+        if args.cli_version == "v5":
             args.output_format = ["human"]
 
             # default to use_abund = True for v5

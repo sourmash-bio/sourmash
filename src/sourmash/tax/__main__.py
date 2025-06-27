@@ -135,8 +135,12 @@ def metagenome(args):
                 break
 
     # @CTB think about how this interacts with defaults for v4 vs v5.
-    if found_abund and not args.use_abund and ('krona', 'lingroup') in args.output_format:
-        #assert 0
+    if (
+        found_abund
+        and not args.use_abund
+        and ("krona", "lingroup") in args.output_format
+    ):
+        # assert 0
         pass
 
     single_query_output_formats = ["kreport", "lingroup", "bioboxes"]
@@ -228,7 +232,7 @@ def metagenome(args):
                 out_fp,
                 limit_float_decimals=limit_float,
                 lingroups=lingroups,
-                use_abund=use_abund
+                use_abund=use_abund,
             )
 
     # write summarized --> kreport output tsv
