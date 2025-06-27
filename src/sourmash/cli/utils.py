@@ -301,13 +301,7 @@ def check_tax_outputs(
     elif not args.output_format:
         if args.cli_version == "v5":
             args.output_format = ["human"]
-
-            # default to use_abund = True for v5
-            if args.use_abund is None:
-                args.use_abund = True
         else:
             args.output_format = ["csv_summary"]
-            if args.use_abund is None:
-                args.use_abund = False
 
     return args.output_format
