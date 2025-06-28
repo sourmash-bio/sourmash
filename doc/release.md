@@ -20,7 +20,7 @@ Releasing to PyPI:
 - [ ] Release notes written
 - [ ] All six release wheels built
 - [ ] Release wheels uploaded to pypi
-- [ ] tar.gz distribution uploaded to pypi
+- [ ] tar.gz distribution built in **clean** checkout & uploaded to pypi
 
 After release to PyPI and conda-forge/bioconda packages built:
 
@@ -28,7 +28,8 @@ After release to PyPI and conda-forge/bioconda packages built:
 - [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash&sort=mostrecent)
 - [ ] `pip install sourmash` installs the correct version
 - [ ] [conda-forge sourmash-minimal-feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock) has updated `sourmash-minimal` to the correct version 
-- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+- [ ] `mamba create -n smash-release1 -y sourmash-minimal` installs the correct version
+- [ ] `mamba create -n smash-release2 -y sourmash` installs the correct version
 
 Optional but recommended:
 
@@ -46,7 +47,7 @@ conda version with `conda --version` and update with `conda update conda`.
 Create the basic build environment:
 
 ```
-mamba create -y -n sourmash-rc python=3.12 pip \
+conda create -y -n sourmash-rc python=3.12 pip \
     cxx-compiler make twine tox tox-conda rust
 ```
 
@@ -248,9 +249,11 @@ make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
-(This must be done *after* the wheels are available, because some of
+Two notes:
+* This must be done *after* the wheels are available, because some of
 the conda package build steps require the source dist and are automatically
 triggered when a new version shows up on PyPI.)
+* make sure to do this in a completely clean checkout. If there are additional files present, they will be included in the tar.gz.
 
 5\. Edit the release on GitHub; there will already be one associated
 with the tag you pushed. Copy and paste in the release notes.
