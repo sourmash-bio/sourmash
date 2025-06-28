@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.21.0] - 2025-06-28
+
+MSRV: 1.74
+
+Changes/additions:
+
+* make `RevIndex.len()` and `RevIndex.signatures()` use picklist, if set (#3647)
+* try fixing inline variables in rust `println!` (#3640)
+
+Updates:
+
+* Build(deps): Bump cfg-if from 1.0.0 to 1.0.1 (#3689)
+* Build(deps): Bump roaring from 0.10.12 to 0.11.0 (#3702)
+* Build(deps): Bump getset from 0.1.5 to 0.1.6 (#3700)
+* Build(deps): Bump proptest from 1.6.0 to 1.7.0 (#3674)
+* Build(deps): Bump camino from 1.1.9 to 1.1.10 (#3669)
+* Build(deps): Bump criterion from 0.5.1 to 0.6.0 (#3655)
+* Build(deps): Bump tempfile from 3.19.1 to 3.20.0 (#3639)
+
 ## [0.20.0] - 2025-05-06
 
 MSRV: 1.74
