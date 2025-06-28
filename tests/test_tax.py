@@ -37,7 +37,9 @@ def test_metagenome_stdout_0(runtmp, cli_v4_and_v5):
     if cli_v4_and_v5 == "v5":
         format_args = ["-F", "csv_summary"]
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, *format_args)
+    c.run_sourmash(
+        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, *format_args
+    )
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -149,7 +151,9 @@ def test_metagenome_stdout_0_db(runtmp, cli_v4_and_v5):
     if cli_v4_and_v5 == "v5":
         format_args = ["-F", "csv_summary"]
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, *format_args)
+    c.run_sourmash(
+        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, *format_args
+    )
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -273,7 +277,7 @@ def test_metagenome_summary_csv_out(runtmp, cli_v4_and_v5):
         csv_base,
         "--output-dir",
         outdir,
-        *format_args
+        *format_args,
     )
 
     print(runtmp.last_result.status)
@@ -411,7 +415,7 @@ def test_metagenome_summary_csv_out_empty_gather_force(runtmp, cli_v4_and_v5):
         "--output-dir",
         outdir,
         "-f",
-        *format_args
+        *format_args,
     )
     sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
@@ -642,7 +646,9 @@ def test_metagenome_kreport_out_lemonade_v4(runtmp, cli_v4_only):
     print(runtmp.last_result.err)
 
     # @CTB wait, are abundances found and not being used? :think:
-    assert '** WARNING: no abundances found in gather results.' in runtmp.last_result.err
+    assert (
+        "** WARNING: no abundances found in gather results." in runtmp.last_result.err
+    )
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
@@ -694,7 +700,7 @@ def test_metagenome_kreport_out_lemonade_v5(runtmp, cli_v5_only):
         "-F",
         "kreport",
         "--no-abundances",
-        "--v5"           # remove once we release v5
+        "--v5",  # remove once we release v5
     )
 
     print(runtmp.last_result.status)
@@ -702,7 +708,10 @@ def test_metagenome_kreport_out_lemonade_v5(runtmp, cli_v5_only):
     print(runtmp.last_result.err)
 
     # @CTB assert not using abundances warning message?
-    assert '** WARNING: no abundances found in gather results.' not in runtmp.last_result.err
+    assert (
+        "** WARNING: no abundances found in gather results."
+        not in runtmp.last_result.err
+    )
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
@@ -1413,7 +1422,14 @@ def test_metagenome_duplicated_taxonomy_force(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", duplicated_csv, "--force", *format_args
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        duplicated_csv,
+        "--force",
+        *format_args,
     )
 
     print(c.last_result.status)
@@ -1463,7 +1479,9 @@ def test_metagenome_missing_taxonomy(runtmp, cli_v4_and_v5):
     if cli_v4_and_v5 == "v5":
         format_args = ["-F", "csv_summary"]
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", subset_csv, *format_args)
+    c.run_sourmash(
+        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", subset_csv, *format_args
+    )
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -1546,7 +1564,14 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", taxonomy_csv, "--force", *format_args
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "--force",
+        *format_args,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -1617,7 +1642,8 @@ def test_metagenome_multiple_taxonomy_files(runtmp, cli_v4_and_v5):
         taxonomy_csv,
         protozoa_genbank,
         bacteria_refseq,
-        *format_args)
+        *format_args,
+    )
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -1724,7 +1750,9 @@ def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args(runtmp):
     )
 
 
-def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(runtmp, cli_v4_and_v5):
+def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(
+    runtmp, cli_v4_and_v5
+):
     # pass in mult tax files using mult tax arguments, with one empty,
     # and use --force
     c = runtmp
@@ -1760,7 +1788,7 @@ def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(r
         "-t",
         tax_empty,
         "--force",
-        *format_args
+        *format_args,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -2385,7 +2413,7 @@ def test_metagenome_gather_duplicate_filename(runtmp, cli_v4_and_v5):
         g_res,
         "--taxonomy-csv",
         taxonomy_csv,
-        *format_args
+        *format_args,
     )
 
     print(c.last_result.status)
@@ -2423,7 +2451,7 @@ def test_metagenome_gather_duplicate_filename_2(runtmp, cli_v4_and_v5):
         g_res,
         "--taxonomy-csv",
         taxonomy_csv,
-        *format_args
+        *format_args,
     )
 
     print(c.last_result.status)
@@ -2456,7 +2484,13 @@ def test_metagenome_gather_duplicate_filename_from_file(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "--from-file", g_from_file, "--taxonomy-csv", taxonomy_csv, *format_args
+        "tax",
+        "metagenome",
+        "--from-file",
+        g_from_file,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        *format_args,
     )
 
     print(c.last_result.status)
@@ -6240,7 +6274,9 @@ def test_metagenome_LIN(runtmp, cli_v4_and_v5):
     if cli_v4_and_v5 == "v5":
         format_args = ["-F", "csv_summary"]
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, "--lins", *format_args)
+    c.run_sourmash(
+        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, "--lins", *format_args
+    )
 
     print(c.last_result.status)
     print(c.last_result.out)
