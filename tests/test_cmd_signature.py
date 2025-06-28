@@ -4163,7 +4163,7 @@ def test_sig_manifest_1_zipfile_csv_gz(runtmp):
 
 
 def test_sig_manifest_1_zipfile_already_exists(runtmp):
-    # make a manifest from a .zip file; f
+    # make a manifest from a .zip file;
     protzip = utils.get_test_data("prot/protein.zip")
 
     mf_csv = runtmp.output("mf.csv")
@@ -4309,10 +4309,16 @@ def test_sig_manifest_does_not_exist(runtmp):
     )
 
 
-def test_sig_manifest_7_allzip_1(runtmp):
+def test_sig_manifest_7_allzip_1(runtmp, cli_v4_only):
     # the rebuilt manifest w/o '-f' will miss dna-sig.noext
+    # note: default in v4 is to rebuild manifest
     allzip = utils.get_test_data("prot/all.zip")
-    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv")
+    runtmp.sourmash(
+        "sig", "manifest", allzip, "-o", "xyz.csv", "-d", version=cli_v4_only
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
     manifest_fn = runtmp.output("xyz.csv")
     with open(manifest_fn, newline="") as csvfp:
@@ -4337,11 +4343,28 @@ def test_sig_manifest_7_allzip_2(runtmp):
     assert "dna-sig.noext" in filenames
 
 
-def test_sig_manifest_7_allzip_3(runtmp):
-    # the existing manifest contains 'dna-sig.noext' whther or not -f is
-    # used.
+def test_sig_manifest_7_allzip_3_no_rebuild(runtmp, cli_v4_only):
+    # the manifest contains 8 entries.
+    # note: --no-rebuild-manifest is default behavior on v4, but not on v5.
     allzip = utils.get_test_data("prot/all.zip")
-    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv", "--no-rebuild")
+    runtmp.sourmash(
+        "sig", "manifest", allzip, "-o", "xyz.csv", "--no-rebuild", version=cli_v4_only
+    )
+
+    manifest_fn = runtmp.output("xyz.csv")
+    with open(manifest_fn, newline="") as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set(row["internal_location"] for row in manifest.rows)
+    assert "dna-sig.noext" in filenames
+
+
+def test_sig_manifest_7_allzip_3_no_rebuild_is_default_v5(runtmp, cli_v5_only):
+    # by default, do not rebuild the manifest.
+    # note: --no-rebuild-manifest is on by default in v5
+    allzip = utils.get_test_data("prot/all.zip")
+    runtmp.sourmash("sig", "manifest", allzip, "-o", "xyz.csv", version=cli_v5_only)
 
     manifest_fn = runtmp.output("xyz.csv")
     with open(manifest_fn, newline="") as csvfp:
@@ -5762,7 +5785,7 @@ def test_sig_check_4_manifest_subdir_subdir(runtmp, abspath_or_relpath):
 
 def test_sig_check_5_relpath(runtmp):
     # check path rewriting when sketches are in a subdir.
-    # this will be the default behavior in v5 => remove --relpath.
+    # this will be the default behavior in v5.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
@@ -5801,9 +5824,9 @@ def test_sig_check_5_relpath(runtmp):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_relpath_subdir(runtmp):
+def test_sig_check_5_relpath_subdir(runtmp, cli_v4_and_v5):
     # check path rewriting when both sigs and mf are in different subdirs.
-    # this will be the default behavior in v5 => can remove --relpath then.
+    # use explicit --relpath (which will become default in v5)
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
 
@@ -5825,6 +5848,7 @@ def test_sig_check_5_relpath_subdir(runtmp):
         "-m",
         "mf.csv",
         "--relpath",
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5842,7 +5866,48 @@ def test_sig_check_5_relpath_subdir(runtmp):
     assert set(locations).issubset(expected_names), (locations, expected_names)
 
 
-def test_sig_check_5_abspath(runtmp):
+def test_sig_check_5_relpath_subdir_default_v5(runtmp, cli_v5_only):
+    # check path rewriting when both sigs and mf are in different subdirs.
+    # default in v5 is --relpath.
+    sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
+    picklist = utils.get_test_data("gather/salmonella-picklist.csv")
+
+    os.mkdir(runtmp.output("sigs_dir"))
+    new_names = []
+    for f in sigfiles:
+        basename = os.path.basename(f)
+        filename = os.path.join("sigs_dir", basename)
+
+        shutil.copyfile(f, runtmp.output(filename))
+        new_names.append(filename)
+
+    runtmp.sourmash(
+        "sig",
+        "check",
+        *new_names,
+        "--picklist",
+        f"{picklist}::manifest",
+        "-m",
+        "mf.csv",
+        version=cli_v5_only,
+    )
+
+    out_mf = runtmp.output("mf.csv")
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline="") as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    locations = [row["internal_location"] for row in mf.rows]
+    print("XXX", locations)
+    print("YYY", new_names)
+    expected_names = ["./" + f for f in new_names]
+    assert set(locations).issubset(expected_names), (locations, expected_names)
+
+
+def test_sig_check_5_abspath(runtmp, cli_v4_and_v5):
     # check path rewriting with `--abspath` => absolute paths.
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
@@ -5862,6 +5927,7 @@ def test_sig_check_5_abspath(runtmp):
         "-m",
         "mf.csv",
         "--abspath",
+        version=cli_v4_and_v5,
     )
 
     out_mf = runtmp.output("mf.csv")
@@ -5878,7 +5944,7 @@ def test_sig_check_5_abspath(runtmp):
         assert os.path.basename(k) in sigfiles  # converts back to basic
 
 
-def test_sig_check_5_no_abspath(runtmp):
+def test_sig_check_5_no_abspath(runtmp, cli_v4_only):
     # check path rewriting for default (--no-relpath --no-abspath)
     # this behavior will change in v5; specify `--no-abspath` then?
     sigfiles = glob.glob(utils.get_test_data("gather/GCF*.sig"))
@@ -5899,6 +5965,7 @@ def test_sig_check_5_no_abspath(runtmp):
         "-m",
         "mf.csv",
         # "--no-abspath" # => default behavior
+        version=cli_v4_only,
     )
 
     out_mf = runtmp.output("mf.csv")

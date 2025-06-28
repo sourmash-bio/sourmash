@@ -359,12 +359,22 @@ def manifest(args):
         error("Use -d/--debug for details.")
         sys.exit(-1)
 
-    rebuild = True
-    if args.no_rebuild_manifest:
-        debug("sig manifest: not forcing rebuild.")
+    # behavior switch: in v4, manifests were rebuilt by default; in v5, not.
+    if args.cli_version == "v4":
+        rebuild = True
+
+        # was --no-rebuild-manifest specified?
+        if args.rebuild_manifest is False:
+            debug("sig manifest: not forcing rebuild.")
+            rebuild = False
+        else:
+            # either left as default (None) or set (True) - rebuild
+            debug("sig manifest: forcing rebuild.")
+    else:  # args.cli_version == 'v5':
         rebuild = False
-    else:
-        debug("sig manifest: forcing rebuild.")
+        if args.rebuild_manifest:
+            debug("sig manifest: forcing rebuild.")
+            rebuild = True
 
     manifest = sourmash_args.get_manifest(loader, require=True, rebuild=rebuild)
     manifest._check_row_values()
@@ -1451,6 +1461,10 @@ def check(args):
     """
     from sourmash.picklist import PickStyle
 
+    if args.cli_version == "v5":
+        if args.abspath is None:  # not set by user
+            args.relpath = True
+
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
@@ -1589,6 +1603,10 @@ def check(args):
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     set_quiet(False, args.debug)
+
+    if args.cli_version == "v5":
+        if args.abspath is None:  # not set by user
+            args.relpath = True
 
     if os.path.exists(args.output):
         if args.merge_previous:

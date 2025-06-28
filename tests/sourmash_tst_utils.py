@@ -190,10 +190,25 @@ class RunnerContext:
         if "in_directory" not in kwargs:
             kwargs["in_directory"] = self.location
 
+        version_arg = None
+        if "version" in kwargs:
+            ver = kwargs["version"]
+            assert ver in ("v4", "v5", "(default)"), ver
+            if ver == "v4":
+                version_arg = "--v4"
+            elif ver == "v5":
+                version_arg = "--v5"
+            elif ver == "(default)":
+                pass
+
         cmdlist = ["sourmash"]
         cmdlist.extend(str(x) for x in args)
+        if version_arg is not None:
+            print(f"setting CLI version arg to: {version_arg}")
+            cmdlist.append(version_arg)
+
         self.last_command = " ".join(cmdlist)
-        self.last_result = runscript("sourmash", args, **kwargs)
+        self.last_result = runscript("sourmash", cmdlist[1:], **kwargs)
 
         if self.last_result.status:
             raise SourmashCommandFailed(self.last_result.err)
