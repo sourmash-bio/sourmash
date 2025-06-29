@@ -134,10 +134,12 @@ def metagenome(args):
                 found_abund = True
                 break
 
+    use_abund = args.use_abund
+
     if not found_abund:
         match args.cli_version:
             case "v4":
-                if args.use_abund != False:
+                if args.use_abund != False: # not intentionally set? => warn.
                     notify("** WARNING: no abundances found in gather results.")
                     notify("** This is likely because the metagenome sketch was not")
                     notify("** created with '-p abund'.")
@@ -147,7 +149,8 @@ def metagenome(args):
                     )
                     notify("** Specify '--no-abundances' to bypass this error.")
             case "v5":
-                if args.use_abund is None:
+                # no abundances and not explicitly set? => fail in v5.
+                if args.use_abund != False:
                     error("** ERROR: no abundances found in gather results.")
                     error("** This is likely because the metagenome sketch was not")
                     error("** created with '-p abund'.")
@@ -155,14 +158,12 @@ def metagenome(args):
                     error("** Specify '--no-abundances' to bypass this error.")
                     sys.exit(-1)
 
-    # @CTB think about how this interacts with defaults for v4 vs v5.
-    if (
-        found_abund
-        and not args.use_abund
-        and ("krona", "lingroup") in args.output_format
-    ):
-        # assert 0
-        pass
+    if use_abund is None:
+        match args.cli_version:
+            case "v4":
+                use_abund = False
+            case "v5":
+                use_abund = True
 
     single_query_output_formats = ["kreport", "lingroup", "bioboxes"]
     desired_single_outputs = []
@@ -253,7 +254,7 @@ def metagenome(args):
                 out_fp,
                 limit_float_decimals=limit_float,
                 lingroups=lingroups,
-                use_abund=args.use_abund,
+                use_abund=use_abund,
             )
 
     # write summarized --> kreport output tsv

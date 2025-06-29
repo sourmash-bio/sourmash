@@ -254,17 +254,13 @@ def test_metagenome_stdout_0_db(runtmp, cli_v4_and_v5):
     )
 
 
-def test_metagenome_summary_csv_out(runtmp, cli_v4_and_v5):
+def test_metagenome_summary_csv_out_v4(runtmp, cli_v4_only):
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.taxonomy.csv")
     csv_base = "out"
     sum_csv = csv_base + ".summarized.csv"
     csvout = runtmp.output(sum_csv)
     outdir = os.path.dirname(csvout)
-
-    format_args = []
-    if cli_v4_and_v5 == "v5":
-        format_args = ["-F", "csv_summary"]
 
     runtmp.run_sourmash(
         "tax",
@@ -277,7 +273,6 @@ def test_metagenome_summary_csv_out(runtmp, cli_v4_and_v5):
         csv_base,
         "--output-dir",
         outdir,
-        *format_args,
     )
 
     print(runtmp.last_result.status)
@@ -371,6 +366,134 @@ def test_metagenome_summary_csv_out(runtmp, cli_v4_and_v5):
     )
     assert (
         "test1,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[20]
+    )
+    assert (
+        "test1,species,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus,md5,test1.sig,0.015637726014008795,138000"
+        in sum_gather_results[21]
+    )
+    assert (
+        "test1,species,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[22]
+    )
+
+
+def test_metagenome_summary_csv_out_v5(runtmp, cli_v5_only):
+    # v5: use abundances
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--output-dir",
+        outdir,
+        "-F",
+        "csv_summary",
+        '--v5',
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test1,superkingdom,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[2]
+    )
+    assert (
+        "test1,phylum,0.11607499002792182,d__Bacteria;p__Bacteroidota,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[3]
+    )
+    assert (
+        "test1,phylum,0.08815317112086159,d__Bacteria;p__Proteobacteria,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[4]
+    )
+    assert (
+        "test1,phylum,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[5]
+    )
+    assert (
+        "test1,class,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[6]
+    )
+    assert (
+        "test1,class,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[7]
+    )
+    assert (
+        "test1,class,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[8]
+    )
+    assert (
+        "test1,order,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[9]
+    )
+    assert (
+        "test1,order,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[10]
+    )
+    assert (
+        "test1,order,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[11]
+    )
+    assert (
+        "test1,family,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[12]
+    )
+    assert (
+        "test1,family,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[13]
+    )
+    assert (
+        "test1,family,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[14]
+    )
+    assert (
+        "test1,genus,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia,md5,test1.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[15]
+    )
+    assert (
+        "test1,genus,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test1.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[16]
+    )
+    assert (
+        "test1,genus,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola,md5,test1.sig,0.015637726014008795,138000"
+        in sum_gather_results[17]
+    )
+    assert (
+        "test1,genus,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[18]
+    )
+    assert (
+        "test1,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test1.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[19]
+    )
+    assert (
+        "test1,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.05701254275940707,444000,0.9247805047263588,0"
         in sum_gather_results[20]
     )
     assert (
@@ -2097,7 +2220,7 @@ def test_metagenome_two_queries_human_output(runtmp):
     assert "test2              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus"
 
 
-def test_metagenome_two_queries_csv_summary_output(runtmp):
+def test_metagenome_two_queries_csv_summary_output(runtmp, cli_v4_only):
     # remove single-query outputs when working with multiple queries
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
@@ -2222,6 +2345,141 @@ def test_metagenome_two_queries_csv_summary_output(runtmp):
     )
     assert (
         "test2,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[42]
+    )
+    assert (
+        "test2,species,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus,md5,test2.sig,0.015637726014008795,138000"
+        in sum_gather_results[43]
+    )
+
+
+def test_metagenome_two_queries_csv_summary_output_v5(runtmp, cli_v5_only):
+    # remove single-query outputs when working with multiple queries
+    # with v5, => abund.
+    c = runtmp
+    taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
+    g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, "w") as fp:
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace("test1", "test2") + "\n"
+            fp.write(line)
+
+    csv_summary_out = runtmp.output("tst.summarized.csv")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_res,
+        g_res2,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "-F",
+        "csv_summary",
+        "--rank",
+        "phylum",
+        "-o",
+        "tst",
+        "--v5",
+    )
+
+    assert os.path.exists(csv_summary_out)
+
+    assert c.last_result.status == 0
+    assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
+    assert (
+        f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'"
+        in runtmp.last_result.err
+    )
+    sum_gather_results = [
+        x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()
+    ]
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    # check both queries exist in csv_summary results; check several
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test2,superkingdom,0.2042281611487834,d__Bacteria,md5,test2.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[23]
+    )
+    assert (
+        "test2,phylum,0.11607499002792182,d__Bacteria;p__Bacteroidota,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[25]
+    )
+    assert (
+        "test2,phylum,0.08815317112086159,d__Bacteria;p__Proteobacteria,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[26]
+    )
+    assert (
+        "test2,phylum,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[27]
+    )
+    assert (
+        "test2,class,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[28]
+    )
+    assert (
+        "test2,class,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[29]
+    )
+    assert (
+        "test2,class,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[30]
+    )
+    assert (
+        "test2,order,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[31]
+    )
+    assert (
+        "test2,order,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[32]
+    )
+    assert (
+        "test2,order,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[33]
+    )
+    assert (
+        "test2,family,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[34]
+    )
+    assert (
+        "test2,family,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[35]
+    )
+    assert (
+        "test2,family,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[36]
+    )
+    assert (
+        "test2,genus,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia,md5,test2.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[37]
+    )
+    assert (
+        "test2,genus,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test2.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[38]
+    )
+    assert (
+        "test2,genus,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola,md5,test2.sig,0.015637726014008795,138000"
+        in sum_gather_results[39]
+    )
+    assert (
+        "test2,genus,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[40]
+    )
+    assert (
+        "test2,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test2.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[41]
+    )
+    assert (
+        "test2,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.05701254275940707,444000,0.9247805047263588,0"
         in sum_gather_results[42]
     )
     assert (
