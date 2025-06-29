@@ -38,8 +38,14 @@ def test_metagenome_stdout_0(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, *format_args,
-        version=cli_v4_and_v5
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
@@ -154,8 +160,14 @@ def test_metagenome_stdout_0_db(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, *format_args,
-        version=cli_v4_and_v5
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
@@ -277,7 +289,7 @@ def test_metagenome_summary_csv_out_v4(runtmp, cli_v4_only):
         csv_base,
         "--output-dir",
         outdir,
-        version=cli_v4_only
+        version=cli_v4_only,
     )
 
     print(runtmp.last_result.status)
@@ -1028,10 +1040,7 @@ def test_metagenome_kreport_out_lemonade_no_abund_error_v5(runtmp, cli_v5_only):
     print(runtmp.last_result.err)
 
     # should error! @CTB
-    assert (
-        "ERROR: no abundances found in gather results."
-        in runtmp.last_result.err
-    )
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
 
 
 def test_metagenome_kreport_out_lemonade_no_abund_use_abund(runtmp):
@@ -1065,10 +1074,7 @@ def test_metagenome_kreport_out_lemonade_no_abund_use_abund(runtmp):
     print(runtmp.last_result.err)
 
     # should error! @CTB
-    assert (
-        "ERROR: no abundances found in gather results."
-        in runtmp.last_result.err
-    )
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
 
 
 def test_metagenome_kreport_out_fail(runtmp):
@@ -1812,7 +1818,14 @@ def test_metagenome_missing_taxonomy(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", subset_csv, *format_args, version=cli_v4_and_v5,
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        subset_csv,
+        *format_args,
+        version=cli_v4_and_v5,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -6750,7 +6763,15 @@ def test_metagenome_LIN(runtmp, cli_v4_and_v5):
         format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, "--lins", *format_args, version=cli_v4_and_v5,
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "--lins",
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
