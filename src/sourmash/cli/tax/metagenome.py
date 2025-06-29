@@ -23,7 +23,12 @@ Please see the 'tax metagenome' documentation for more details:
 
 import sourmash
 from sourmash.logging import notify, print_results, error
-from sourmash.cli.utils import add_rank_arg, check_rank, check_tax_outputs
+from sourmash.cli.utils import (
+    add_rank_arg,
+    check_rank,
+    check_tax_outputs,
+    add_v5_args,
+)
 
 
 def subparser(subparsers):
@@ -129,21 +134,18 @@ def subparser(subparsers):
         "--use-abundances",
         action="store_true",
         dest="use_abund",
-        default=None,
-        help="use abundances in sketch if available (for krona and XXX)",
+        default=None,           # default: not user specified
+        help="use abundances in sketch if available (for krona and XXX)", # @CTB
     )
     subparser.add_argument(
         "--ignore-abundances",
         "--no-abundances",
         dest="use_abund",
         action="store_false",
-        help="ignore abundances in sketch even if available (for XXX)",
+        help="ignore abundances in sketch even if available (for XXX)", #@CTB
     )
 
-    subparser.add_argument(
-        "--v4", dest="cli_version", action="store_const", const="v4", default="v4"
-    )
-    subparser.add_argument("--v5", dest="cli_version", action="store_const", const="v5")
+    add_v5_args(subparser)
 
 
 def main(args):

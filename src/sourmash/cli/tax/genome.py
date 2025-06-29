@@ -39,6 +39,7 @@ from sourmash.cli.utils import (
     check_rank,
     check_tax_outputs,
     add_rank_arg,
+    add_v5_args,
 )
 
 
@@ -133,11 +134,7 @@ def subparser(subparsers):
     )
     add_tax_threshold_arg(subparser, 0.1)
     add_rank_arg(subparser)
-
-    subparser.add_argument(
-        "--v4", dest="cli_version", action="store_const", const="v4", default="v4"
-    )
-    subparser.add_argument("--v5", dest="cli_version", action="store_const", const="v5")
+    add_v5_args(subparser)      # @CTB add -F support?
 
 
 def main(args):
