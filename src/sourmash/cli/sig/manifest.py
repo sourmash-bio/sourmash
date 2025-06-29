@@ -41,7 +41,7 @@ def subparser(subparsers):
         "--rebuild-manifest",
         help="use existing manifest if available",
         action="store_true",
-        default=None,           # default: not user specified
+        default=None,  # default: not user specified
     )
     subparser.add_argument(
         "--no-rebuild-manifest",
