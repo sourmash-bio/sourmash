@@ -135,14 +135,14 @@ def subparser(subparsers):
         action="store_true",
         dest="use_abund",
         default=None,           # default: not user specified
-        help="use abundances in sketch if available (for krona and XXX)", # @CTB
+        help="use abundances from sketches if available (for krona and XXX)", # @CTB
     )
     subparser.add_argument(
         "--ignore-abundances",
         "--no-abundances",
         dest="use_abund",
         action="store_false",
-        help="ignore abundances in sketch even if available (for XXX)", #@CTB
+        help="ignore abundances from sketches even if available (for XXX)", #@CTB
     )
 
     add_v5_args(subparser)
