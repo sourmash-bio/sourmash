@@ -680,6 +680,7 @@ def test_ClassificationResult():
         lineage=RankLineageInfo(lineage_str="a;b"),
         f_weighted_at_rank=0.3,
         bp_match_at_rank=30,
+        bp_weighted_at_rank=60,
         query_ani_at_rank=0.97,
     )
     cr.set_status(query_info=qInf, containment_threshold=0.1)
@@ -3067,6 +3068,7 @@ def test_QueryTaxResult_build_summarized_result_1():
             f_weighted_at_rank=0.4,
             lineage=RankLineageInfo(lineage_str="a"),
             bp_match_at_rank=40,
+            bp_weighted_at_rank=60,
             query_ani_at_rank=approx(0.95, rel=1e-2),
         ),
         SummarizedGatherResult(
@@ -3075,6 +3077,7 @@ def test_QueryTaxResult_build_summarized_result_1():
             f_weighted_at_rank=0.6,
             lineage=RankLineageInfo(),
             bp_match_at_rank=60,
+            bp_weighted_at_rank=120,
             query_ani_at_rank=None,
         ),
     ]
@@ -3088,6 +3091,7 @@ def test_QueryTaxResult_build_summarized_result_1():
             f_weighted_at_rank=0.4,
             lineage=RankLineageInfo(lineage_str="a;b"),
             bp_match_at_rank=40,
+            bp_weighted_at_rank=60,
             query_ani_at_rank=approx(0.95, rel=1e-2),
         ),
         SummarizedGatherResult(
@@ -3096,6 +3100,7 @@ def test_QueryTaxResult_build_summarized_result_1():
             f_weighted_at_rank=0.6,
             lineage=RankLineageInfo(),
             bp_match_at_rank=60,
+            bp_weighted_at_rank=80
             query_ani_at_rank=None,
         ),
     ]
@@ -3108,6 +3113,7 @@ def test_QueryTaxResult_build_summarized_result_1():
             f_weighted_at_rank=0.2,
             lineage=RankLineageInfo(lineage_str="a;b;c"),
             bp_match_at_rank=20,
+            bp_weighted_at_rank=40,
             query_ani_at_rank=approx(0.93, rel=1e-2),
         ),
         SummarizedGatherResult(
@@ -3116,6 +3122,7 @@ def test_QueryTaxResult_build_summarized_result_1():
             f_weighted_at_rank=0.2,
             lineage=RankLineageInfo(lineage_str="a;b;d"),
             bp_match_at_rank=20,
+            bp_weighted_at_rank=60,
             query_ani_at_rank=approx(0.93, rel=1e-2),
         ),
         SummarizedGatherResult(

@@ -1859,6 +1859,7 @@ class GatherRow:
 
     # non-essential, but used if available
     query_n_hashes: int = None
+    n_unique_weighted_found: int = None
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
 
@@ -2018,6 +2019,10 @@ class TaxResult(BaseTaxResult):
         self.f_unique_to_query = float(self.raw.f_unique_to_query)
         self.f_unique_weighted = float(self.raw.f_unique_weighted)
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
+        if self.raw.n_unique_weighted_found:
+            self.n_unique_weighted_found = int(self.raw.n_unique_weighted_found)
+        else:
+            self.n_unique_weighted_found = 0
         if self.lins:
             self.lineageInfo = LINLineageInfo()
         elif self.ictv:
@@ -2040,6 +2045,7 @@ class SummarizedGatherResult:
     lineage: RankLineageInfo
     f_weighted_at_rank: float  # weighted
     bp_match_at_rank: int
+    bp_weighted_at_rank: int
     query_ani_at_rank: float = None
 
     def __post_init__(self):
@@ -2283,6 +2289,7 @@ class QueryTaxResult:
         self.sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
         self.sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
         self.sum_uniq_bp = defaultdict(lambda: defaultdict(int))
+        self.sum_weighted_bp = defaultdict(lambda: defaultdict(int))
         self.summarized_ranks = []
         self._init_summarization_results()
 
@@ -2369,15 +2376,14 @@ class QueryTaxResult:
                         rank in lininfo.filled_ranks
                     ):  # only store if this rank is filled.
                         lin_at_rank = lininfo.pop_to_rank(rank)
-                        self.sum_uniq_weighted[rank][lin_at_rank] += (
+                        self.sum_uniq_weighted[rank][lin_at_rank] += \
                             taxres.f_unique_weighted
-                        )
-                        self.sum_uniq_to_query[rank][lin_at_rank] += (
+                        self.sum_uniq_to_query[rank][lin_at_rank] += \
                             taxres.f_unique_to_query
-                        )
-                        self.sum_uniq_bp[rank][lin_at_rank] += (
+                        self.sum_uniq_bp[rank][lin_at_rank] += \
                             taxres.unique_intersect_bp
-                        )
+                        self.sum_weighted_bp[rank][lin_at_rank] += \
+                            taxres.n_unique_weighted_found
         # reset ranks levels to the ones that were actually summarized + that we can access for summarized result
         self.summarized_ranks = [
             x for x in self.summarized_ranks if x in self.sum_uniq_bp.keys()
@@ -2415,13 +2421,15 @@ class QueryTaxResult:
                 ):  # no annotated results for this query. do we need to handle this differently now?
                     continue
                 f_weighted_at_rank = self.sum_uniq_weighted[rank][lineage]
-                bp_intersect_at_rank = self.sum_uniq_bp[rank][lineage]
+                bp_match_at_rank = self.sum_uniq_bp[rank][lineage]
+                bp_weighted_at_rank = self.sum_weighted_bp[rank][lineage]
                 sres = SummarizedGatherResult(
                     lineage=lineage,
                     rank=rank,
                     f_weighted_at_rank=f_weighted_at_rank,
                     fraction=f_unique,
-                    bp_match_at_rank=bp_intersect_at_rank,
+                    bp_match_at_rank=bp_match_at_rank,
+                    bp_weighted_at_rank=bp_weighted_at_rank,
                 )
                 sres.set_query_ani(query_info=self.query_info)
                 self.summarized_lineage_results[rank].append(sres)
@@ -2430,7 +2438,7 @@ class QueryTaxResult:
                 # now that I pulled best_only into separate fn, these don't need to be dicts...
                 self.total_f_classified[rank] += f_unique
                 self.total_f_weighted[rank] += f_weighted_at_rank
-                self.total_bp_classified[rank] += bp_intersect_at_rank
+                self.total_bp_classified[rank] += bp_weighted_at_rank
 
             # record unclassified
             if self.lins:
@@ -2443,15 +2451,18 @@ class QueryTaxResult:
             f_unique = 1.0 - self.total_f_classified[rank]
             if f_unique > 0:
                 f_weighted_at_rank = 1.0 - self.total_f_weighted[rank]
-                bp_intersect_at_rank = (
+                bp_intersect_at_rank = \
                     self.query_info.query_bp - self.total_bp_classified[rank]
-                )
+                bp_weighted_at_rank = \
+                    self.query_info.total_weighted_hashes - self.total_bp_classified[rank]
+
                 sres = SummarizedGatherResult(
                     lineage=lineage,
                     rank=rank,
                     f_weighted_at_rank=f_weighted_at_rank,
                     fraction=f_unique,
-                    bp_match_at_rank=bp_intersect_at_rank,
+                    bp_match_at_rank=bp_match_at_rank,
+                    bp_weighted_at_rank=bp_weighted_at_rank,
                     query_ani_at_rank=query_ani,
                 )
                 self.summarized_lineage_results[rank].append(sres)
@@ -2512,7 +2523,9 @@ class QueryTaxResult:
             if lingroups and this_lineage not in lingroups:
                 # ignore this lineage and continue up
                 continue
-            bp_intersect_at_rank = self.sum_uniq_bp[this_rank][this_lineage]
+
+            bp_match_at_rank = self.sum_uniq_bp[this_rank][this_lineage]
+            bp_weighted_at_rank = self.sum_weighted_bp[rank][this_lineage]
             f_weighted = self.sum_uniq_weighted[this_rank][this_lineage]
 
             classif = ClassificationResult(
@@ -2520,7 +2533,8 @@ class QueryTaxResult:
                 fraction=f_unique_at_rank,
                 lineage=this_lineage,
                 f_weighted_at_rank=f_weighted,
-                bp_match_at_rank=bp_intersect_at_rank,
+                bp_match_at_rank=bp_match_at_rank,
+                bp_weighted_at_rank=bp_weighted_at_rank,
             )
 
             classif.set_status(
@@ -2596,6 +2610,7 @@ class QueryTaxResult:
                 "query_filename",
                 "f_weighted_at_rank",
                 "bp_match_at_rank",
+                "bp_weighted_at_rank",
                 "query_ani_at_rank",
             ]
             rD = self.classification_result.as_summary_dict(
@@ -2614,6 +2629,7 @@ class QueryTaxResult:
                 "query_filename",
                 "f_weighted_at_rank",
                 "bp_match_at_rank",
+                "bp_weighted_at_rank",
                 "query_ani_at_rank",
                 "total_weighted_hashes",
             ]
