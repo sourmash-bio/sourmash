@@ -2376,14 +2376,18 @@ class QueryTaxResult:
                         rank in lininfo.filled_ranks
                     ):  # only store if this rank is filled.
                         lin_at_rank = lininfo.pop_to_rank(rank)
-                        self.sum_uniq_weighted[rank][lin_at_rank] += \
+                        self.sum_uniq_weighted[rank][lin_at_rank] += (
                             taxres.f_unique_weighted
-                        self.sum_uniq_to_query[rank][lin_at_rank] += \
+                        )
+                        self.sum_uniq_to_query[rank][lin_at_rank] += (
                             taxres.f_unique_to_query
-                        self.sum_uniq_bp[rank][lin_at_rank] += \
+                        )
+                        self.sum_uniq_bp[rank][lin_at_rank] += (
                             taxres.unique_intersect_bp
-                        self.sum_weighted_bp[rank][lin_at_rank] += \
+                        )
+                        self.sum_weighted_bp[rank][lin_at_rank] += (
                             taxres.n_unique_weighted_found
+                        )
         # reset ranks levels to the ones that were actually summarized + that we can access for summarized result
         self.summarized_ranks = [
             x for x in self.summarized_ranks if x in self.sum_uniq_bp.keys()
@@ -2451,10 +2455,13 @@ class QueryTaxResult:
             f_unique = 1.0 - self.total_f_classified[rank]
             if f_unique > 0:
                 f_weighted_at_rank = 1.0 - self.total_f_weighted[rank]
-                bp_intersect_at_rank = \
+                (
                     self.query_info.query_bp - self.total_bp_classified[rank]
-                bp_weighted_at_rank = \
-                    self.query_info.total_weighted_hashes - self.total_bp_classified[rank]
+                )
+                bp_weighted_at_rank = (
+                    self.query_info.total_weighted_hashes
+                    - self.total_bp_classified[rank]
+                )
 
                 sres = SummarizedGatherResult(
                     lineage=lineage,
@@ -2512,7 +2519,6 @@ class QueryTaxResult:
             # reset for this rank
             f_weighted = 0.0
             f_unique_at_rank = 0.0
-            bp_intersect_at_rank = 0
             sum_uniq_to_query = self.sum_uniq_to_query[this_rank]
             # sort the results and grab best
             sorted_sum_uniq_to_query = list(sum_uniq_to_query.items())
