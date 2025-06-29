@@ -125,6 +125,13 @@ def add_ksize_arg(parser, *, default=None):
     )
 
 
+def add_v5_args(parser):
+    parser.add_argument(
+        "--v4", dest="cli_version", action="store_const", const="v4", default="v4", help="use sourmash v4 command-line behavior (default)"
+    )
+    parser.add_argument("--v5", dest="cli_version", action="store_const", const="v5", help="use sourmash v5 command-line behavior")
+
+
 # https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
 def range_limited_float_type(arg):
     """Type function for argparse - a float within some predefined bounds"""
