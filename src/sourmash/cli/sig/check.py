@@ -20,6 +20,7 @@ from sourmash.cli.utils import (
     add_ksize_arg,
     add_picklist_args,
     add_pattern_args,
+    add_v5_args,
 )
 
 
@@ -97,11 +98,7 @@ def subparser(subparsers):
     add_moltype_args(subparser)
     add_pattern_args(subparser)
     add_picklist_args(subparser)
-
-    subparser.add_argument(
-        "--v4", dest="cli_version", action="store_const", const="v4", default="v4"
-    )
-    subparser.add_argument("--v5", dest="cli_version", action="store_const", const="v5")
+    add_v5_args(subparser)
 
 
 def main(args):
