@@ -127,6 +127,7 @@ def metagenome(args):
         sys.exit(-1)
 
     # check for abundance weighting and output formats in first 10 of first 10
+    use_abund = args.use_abund
     found_abund = False
     for vv, _ in zip(query_gather_results, range(10)):
         for v, _ in zip(vv.raw_taxresults, range(10)):
@@ -134,36 +135,32 @@ def metagenome(args):
                 found_abund = True
                 break
 
-    use_abund = args.use_abund
+    if not found_abund and args.cli_version == "v4":
+        if use_abund != False: # not intentionally set? => warn in v4
+            notify("** WARNING: no abundances found in gather results.")
+            notify("** This is likely because the metagenome sketch was not")
+            notify("** created with '-p abund'.")
+            notify("** As a result, the output of 'tax metagenome' will")
+            notify(
+                "** not be abundance-weighted. This is probably not what you want!"
+            )
+            notify("** Specify '--no-abundances' to bypass this error.")
 
-    if not found_abund:
-        match args.cli_version:
-            case "v4":
-                if args.use_abund != False: # not intentionally set? => warn.
-                    notify("** WARNING: no abundances found in gather results.")
-                    notify("** This is likely because the metagenome sketch was not")
-                    notify("** created with '-p abund'.")
-                    notify("** As a result, the output of 'tax metagenome' will")
-                    notify(
-                        "** not be abundance-weighted. This is probably not what you want!"
-                    )
-                    notify("** Specify '--no-abundances' to bypass this error.")
-            case "v5":
-                # no abundances and not explicitly set? => fail in v5.
-                if args.use_abund != False:
-                    error("** ERROR: no abundances found in gather results.")
-                    error("** This is likely because the metagenome sketch was not")
-                    error("** created with '-p abund'.")
-                    error("** This is an error in sourmash v5 and greater.")
-                    error("** Specify '--no-abundances' to bypass this error.")
-                    sys.exit(-1)
-
+    # set use_abund defaults in v4 (False)/v5 (True)
     if use_abund is None:
         match args.cli_version:
             case "v4":
                 use_abund = False
             case "v5":
                 use_abund = True
+
+    if use_abund and not found_abund:
+        error("** ERROR: no abundances found in gather results.")
+        error("** This is likely because the metagenome sketch was not")
+        error("** created with '-p abund'.")
+        error("** This is an error in sourmash v5 and greater.")
+        error("** Specify '--no-abundances' to bypass this error.")
+        sys.exit(-1)
 
     single_query_output_formats = ["kreport", "lingroup", "bioboxes"]
     desired_single_outputs = []
