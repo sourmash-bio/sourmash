@@ -136,14 +136,12 @@ def metagenome(args):
                 break
 
     if not found_abund and args.cli_version == "v4":
-        if use_abund != False: # not intentionally set? => warn in v4
+        if use_abund != False:  # not intentionally set? => warn in v4
             notify("** WARNING: no abundances found in gather results.")
             notify("** This is likely because the metagenome sketch was not")
             notify("** created with '-p abund'.")
             notify("** As a result, the output of 'tax metagenome' will")
-            notify(
-                "** not be abundance-weighted. This is probably not what you want!"
-            )
+            notify("** not be abundance-weighted. This is probably not what you want!")
             notify("** Specify '--no-abundances' to bypass this error.")
 
     # set use_abund defaults in v4 (False)/v5 (True)
