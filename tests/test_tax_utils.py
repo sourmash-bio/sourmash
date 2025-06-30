@@ -1510,7 +1510,7 @@ def test_format_for_krona_summarization_two_queries():
     ]
     gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True)
     kres, header = format_for_krona(
-        list(gres.values()), "superkingdom", use_abund=False
+        list(gres.values()), "superkingdom", use_abund=False # @CTB
     )
     assert header == ["fraction", "superkingdom"]
     print("krona_res: ", kres)
@@ -3430,10 +3430,10 @@ def test_aggregate_by_lineage_at_rank_noabund():
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
     summarized, all_queries = aggregate_by_lineage_at_rank(
-        [q_res], rank="phylum", by_query=False, use_abund=True
+        [q_res], rank="phylum", by_query=False, use_abund=False
     )
     print(summarized)
-    assert summarized == {"a;b": 0.5, "a;c": 0.3, "unclassified": approx(0.2, rel=1e-2)}
+    assert summarized == {"a;b": 0.4, "a;c": 0.3, "unclassified": approx(0.3, rel=1e-2)}
     assert all_queries == ["queryA"]
 
 
@@ -3464,10 +3464,10 @@ def test_aggregate_by_lineage_at_rank_abund():
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
     summarized, all_queries = aggregate_by_lineage_at_rank(
-        [q_res], rank="phylum", by_query=False, use_abund=False
+        [q_res], rank="phylum", by_query=False, use_abund=True
     )
     print(summarized)
-    assert summarized == {"a;b": 0.4, "a;c": 0.3, "unclassified": approx(0.3, rel=1e-2)}
+    assert summarized == {"a;b": 0.5, "a;c": 0.3, "unclassified": approx(0.2, rel=1e-2)}
     assert all_queries == ["queryA"]
 
 

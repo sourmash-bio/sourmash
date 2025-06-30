@@ -208,7 +208,7 @@ def metagenome(args):
             query_gather_results=query_gather_results,
             rank=args.rank,
             by_query=True,
-            use_abund=False,  # @CTB
+            use_abund=use_abund, # @CTB does this break any tests? T/F/??
         )
 
         with FileOutputCSV(lineage_outfile) as out_fp:
