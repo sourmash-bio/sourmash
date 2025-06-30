@@ -1509,7 +1509,9 @@ def test_format_for_krona_summarization_two_queries():
         },
     ]
     gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True)
-    kres, header = format_for_krona(list(gres.values()), "superkingdom", use_abund=False)
+    kres, header = format_for_krona(
+        list(gres.values()), "superkingdom", use_abund=False
+    )
     assert header == ["fraction", "superkingdom"]
     print("krona_res: ", kres)
     assert kres == [(0.5, "a"), (0.5, "unclassified")]

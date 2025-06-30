@@ -985,7 +985,9 @@ def report_missing_and_skipped_identities(gather_results):
         )
 
 
-def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False, use_abund=True):
+def aggregate_by_lineage_at_rank(
+    query_gather_results, rank, *, by_query=False, use_abund=True
+):
     """
     Aggregate list of summarized_lineage_results at rank, keeping
     query names or not (but this aggregates across queries if multiple).
@@ -1022,7 +1024,9 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False, 
     return lineage_summary, all_queries
 
 
-def format_for_krona(query_gather_results, rank, *, classification=False, use_abund=True):
+def format_for_krona(
+    query_gather_results, rank, *, classification=False, use_abund=True
+):
     """
     Aggregate and format for krona output. Single query recommended, but we don't want query headers.
     """
@@ -1051,7 +1055,10 @@ def format_for_krona(query_gather_results, rank, *, classification=False, use_ab
             )  # , q_res.krona_unclassified])
     else:
         lineage_summary, _ = aggregate_by_lineage_at_rank(
-            query_gather_results, rank, by_query=False, use_abund=use_abund,
+            query_gather_results,
+            rank,
+            by_query=False,
+            use_abund=use_abund,
         )
 
         # sort by fraction
