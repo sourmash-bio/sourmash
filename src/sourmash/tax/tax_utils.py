@@ -23,7 +23,8 @@ __all__ = [
     "collect_gather_csvs",
     "load_gather_results",
     "check_and_load_gather_csvsreport_missing_and_skipped_identities",
-    "aggregate_by_lineage_at_rankformat_for_krona",
+    "aggregate_by_lineage_at_rank",
+    "format_for_krona",
     "write_output",
     "write_bioboxes",
     "parse_lingroups",
@@ -984,7 +985,7 @@ def report_missing_and_skipped_identities(gather_results):
         )
 
 
-def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
+def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False, use_abund=True):
     """
     Aggregate list of summarized_lineage_results at rank, keeping
     query names or not (but this aggregates across queries if multiple).
@@ -1003,12 +1004,15 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
 
         for res in queryResult.summarized_lineage_results[rank]:
             lineage = res.lineage.display_lineage(null_as_unclassified=True)
-            if by_query:
-                lineage_summary[lineage][query_name] = (
-                    res.fraction
-                )  # v5?: res.f_weighted_at_rank
+            if use_abund:
+                fraction = res.f_weighted_at_rank
             else:
-                lineage_summary[lineage] += res.fraction
+                fraction = res.fraction
+
+            if by_query:
+                lineage_summary[lineage][query_name] = fraction
+            else:
+                lineage_summary[lineage] += fraction
 
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
@@ -1018,7 +1022,7 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
     return lineage_summary, all_queries
 
 
-def format_for_krona(query_gather_results, rank, *, classification=False):
+def format_for_krona(query_gather_results, rank, *, classification=False, use_abund=True):
     """
     Aggregate and format for krona output. Single query recommended, but we don't want query headers.
     """
@@ -1047,7 +1051,7 @@ def format_for_krona(query_gather_results, rank, *, classification=False):
             )  # , q_res.krona_unclassified])
     else:
         lineage_summary, _ = aggregate_by_lineage_at_rank(
-            query_gather_results, rank, by_query=False
+            query_gather_results, rank, by_query=False, use_abund=use_abund,
         )
 
         # sort by fraction
@@ -2225,20 +2229,17 @@ class ClassificationResult(SummarizedGatherResult):
         ):
             self.status = "match"
 
-    def build_krona_result(self, rank=None, use_abund=False):
+    # CTB: note, used only in tax genome.
+    def build_krona_result(self, rank=None):
         krona_classified, krona_unclassified = None, None
         if rank is not None and rank == self.rank:
             lin_as_list = self.lineage.display_lineage().split(";")
 
-            if use_abund:
-                krona_classification = (self.f_weighted_at_rank * lin_as_list,)
-                unclassified_fraction = 1.0 - self.f_weighted_at_rank
-            else:
-                krona_classification = (
-                    self.fraction,
-                    *lin_as_list,
-                )
-                unclassified_fraction = 1.0 - self.fraction
+            krona_classification = (
+                self.fraction,
+                *lin_as_list,
+            )
+            unclassified_fraction = 1.0 - self.fraction
 
             krona_classified = krona_classification
             # handle unclassified - do we want/need this?

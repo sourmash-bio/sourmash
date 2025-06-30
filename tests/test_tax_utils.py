@@ -1395,7 +1395,7 @@ def test_format_for_krona_summarization():
     q_res = make_QueryTaxResults(
         gather_info=gather_results, taxD=taxD, summarize=True, single_query=True
     )
-    kres, header = format_for_krona([q_res], "superkingdom")
+    kres, header = format_for_krona([q_res], "superkingdom", use_abund=False)
     assert header == ["fraction", "superkingdom"]
     print("krona_res: ", kres)
     assert kres == [(0.5, "a"), (0.5, "unclassified")]
@@ -1509,7 +1509,7 @@ def test_format_for_krona_summarization_two_queries():
         },
     ]
     gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True)
-    kres, header = format_for_krona(list(gres.values()), "superkingdom")
+    kres, header = format_for_krona(list(gres.values()), "superkingdom", use_abund=False)
     assert header == ["fraction", "superkingdom"]
     print("krona_res: ", kres)
     assert kres == [(0.5, "a"), (0.5, "unclassified")]
@@ -3401,7 +3401,7 @@ def test_build_summarized_result_rank_fail_not_available_resummarize():
     assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
 
 
-def test_aggregate_by_lineage_at_rank():
+def test_aggregate_by_lineage_at_rank_noabund():
     """test aggregate by lineage at rank"""
     # make mini taxonomy
     gA_tax = ("gA", "a;b")
@@ -3428,7 +3428,41 @@ def test_aggregate_by_lineage_at_rank():
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
     summarized, all_queries = aggregate_by_lineage_at_rank(
-        [q_res], rank="phylum", by_query=False
+        [q_res], rank="phylum", by_query=False, use_abund=True
+    )
+    print(summarized)
+    assert summarized == {"a;b": 0.5, "a;c": 0.3, "unclassified": approx(0.2, rel=1e-2)}
+    assert all_queries == ["queryA"]
+
+
+def test_aggregate_by_lineage_at_rank_abund():
+    """test aggregate by lineage at rank"""
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [
+        {
+            "query_name": "queryA",
+            "name": "gA",
+            "f_unique_weighted": 0.5,
+            "f_unique_to_query": 0.4,
+            "unique_intersect_bp": 50,
+        },
+        {
+            "query_name": "queryA",
+            "name": "gB",
+            "f_unique_weighted": 0.3,
+            "f_unique_to_query": 0.3,
+            "unique_intersect_bp": 30,
+        },
+    ]
+    q_res = make_QueryTaxResults(
+        gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
+    )
+    summarized, all_queries = aggregate_by_lineage_at_rank(
+        [q_res], rank="phylum", by_query=False, use_abund=False
     )
     print(summarized)
     assert summarized == {"a;b": 0.4, "a;c": 0.3, "unclassified": approx(0.3, rel=1e-2)}

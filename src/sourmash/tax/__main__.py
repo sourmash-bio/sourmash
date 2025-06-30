@@ -207,7 +207,7 @@ def metagenome(args):
 
         ## aggregate by lineage by query
         lineageD, query_names = tax_utils.aggregate_by_lineage_at_rank(
-            query_gather_results=query_gather_results, rank=args.rank, by_query=True
+            query_gather_results=query_gather_results, rank=args.rank, by_query=True, use_abund=False # @CTB
         )
 
         with FileOutputCSV(lineage_outfile) as out_fp:
@@ -216,7 +216,7 @@ def metagenome(args):
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
         krona_results, header = tax_utils.format_for_krona(
-            query_gather_results, rank=args.rank
+            query_gather_results, rank=args.rank, use_abund=use_abund,
         )
 
         krona_outfile, limit_float = make_outfile(
