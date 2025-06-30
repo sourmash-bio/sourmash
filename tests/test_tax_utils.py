@@ -1510,7 +1510,9 @@ def test_format_for_krona_summarization_two_queries():
     ]
     gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True)
     kres, header = format_for_krona(
-        list(gres.values()), "superkingdom", use_abund=False # @CTB
+        list(gres.values()),
+        "superkingdom",
+        use_abund=False,  # @CTB
     )
     assert header == ["fraction", "superkingdom"]
     print("krona_res: ", kres)
