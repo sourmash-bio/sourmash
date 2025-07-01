@@ -659,8 +659,8 @@ signatures, see <project:classifying-signatures.md>
 
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
-`sourmash tax metagenome` summarizes gather results for each query metagenome by
-taxonomic lineage.
+`sourmash tax metagenome` summarizes gather results for each query
+metagenome by taxonomic lineage.
 
 Here is an example command to summarize a single `gather csv`, where
  the query was gathered against `gtdb-rs202` representative species
@@ -682,10 +682,26 @@ The possible output formats are listed below, followed by the file extension use
 - `lingroup`: ".lingroup.tsv",
 - `bioboxes`: ".bioboxes.profile",
 
+**sourmash v5 breaking change:** In sourmash v5.0 and later, the
+default output format will become `human`, instead of `csv_summary`.
+Likewise, `--use-abundances` will be on by default for `tax
+metagenome`, and it will be an error to not have abundances in your
+gather output.  You can specify `--ignore-abundances` to override the
+error.
+
+You can specify `--v4` to keep the old behavior, or `--v5` to support
+the new default behavior, or simply specify the desired formats and/or
+abundance flags to override the default. See
+[Migrating from sourmash v4.x to sourmash v5.x](@CTB) for more
+details.
+
+#### `human` output format
+
+`human` is the default outpu format in sourmash v5. @CTB
 
 #### `csv_summary` output format
 
-`csv_summary` is the default output format. This outputs a `csv` with lineage
+`csv_summary` is the default output format in sourmash v4. This outputs a `csv` with lineage
 summarization for each taxonomic rank. This output currently consists of six
 columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
 `fraction` is the  fraction of the query matched to the reported rank and
@@ -1998,6 +2014,13 @@ To produce a SQLite manifest, use `sourmash sig manifest ... -F sql`.
 All sourmash commands that work with manifests will accept both
 CSV and SQLite manifest files.
 
+**sourmash v5 breaking change:** In sourmash v5.0 and later,
+`--no-rebuild-manifest` will become default. You can specify `--v4` to
+keep the old behavior, or `--v5` to support the new default behavior,
+or simply specify `--no-rebuild-manifest` to override the default. See
+[Migrating from sourmash v4.x to sourmash v5.x](@CTB) for more
+details.
+
 ### `sourmash signature check` - compare picklists and manifests
 
 Compare picklists and manifests across databases, and optionally
@@ -2034,6 +2057,13 @@ use the paths given to `sig check` on the command line; we recommend
 using zip files and sig files, and avoiding directory hierarchies or
 path lists. You can use `--from-file` to pass in long lists of
 filenames via a text file.
+
+**sourmash v5 breaking change:** In sourmash v5.0 and later,
+`--relpath` will become default. You can specify `--v4` to keep the
+old behavior, or `--v5` to support the new default behavior, or simply
+specify `--relpath` or `--abspath` to specify the desired
+behavior. See [Migrating from sourmash v4.x to sourmash v5.x](@CTB)
+for more details.
 
 ### `sourmash signature collect` - collect manifests across databases
 

@@ -149,6 +149,17 @@ The major changes are detailed below; please see the
 [full release notes for 4.0](release-notes/sourmash-4.0.md) for all
 the details and links to the code changes.
 
+### Migrating from sourmash v4.x to sourmash v5.x
+
+sourmash v5 is not yet out, but we have begun to make v5 breaking changes.
+We are doing this using `--v5` command line flags that support the switch
+to v5 behavior. Until sourmash v5 is released, no breaking changes will
+be introduced into the default behavior of sourmash v4.x.
+
+A full list of breaking changes can be found in the [draft release notes
+for 5.0](@CTB), which will be kept up to date with the changes as they
+are made.
+
 ### Sourmash command line
 
 If you use sourmash from the command line, there are a few major changes in 4.0 that you should know about.
