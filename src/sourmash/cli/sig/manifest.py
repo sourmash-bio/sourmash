@@ -39,13 +39,13 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         "--rebuild-manifest",
-        help="use existing manifest if available",
+        help="force rebuilding manifest if available",
         action="store_true",
         default=None,  # default: not user specified
     )
     subparser.add_argument(
         "--no-rebuild-manifest",
-        help="force rebuilding manifest if available",
+        help="use existing manifest if available",
         action="store_false",
         dest="rebuild_manifest",
     )
