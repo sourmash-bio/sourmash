@@ -1451,6 +1451,10 @@ def check(args):
     """
     from sourmash.picklist import PickStyle
 
+    if args.cli_version == "v5":
+        if args.abspath is None:  # not set by user
+            args.relpath = True
+
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
@@ -1589,6 +1593,10 @@ def check(args):
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     set_quiet(False, args.debug)
+
+    if args.cli_version == "v5":
+        if args.abspath is None:  # not set by user
+            args.relpath = True
 
     if os.path.exists(args.output):
         if args.merge_previous:

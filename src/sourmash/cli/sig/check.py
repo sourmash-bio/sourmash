@@ -20,6 +20,7 @@ from sourmash.cli.utils import (
     add_ksize_arg,
     add_picklist_args,
     add_pattern_args,
+    add_v5_args,
 )
 
 
@@ -72,6 +73,7 @@ def subparser(subparsers):
         "--use-absolute-paths",
         help="convert all locations to absolute paths",
         action="store_true",
+        default=None,
     )
     subparser.add_argument(
         "--no-abspath",
@@ -96,6 +98,7 @@ def subparser(subparsers):
     add_moltype_args(subparser)
     add_pattern_args(subparser)
     add_picklist_args(subparser)
+    add_v5_args(subparser)
 
 
 def main(args):
