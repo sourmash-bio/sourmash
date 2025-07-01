@@ -14,6 +14,7 @@ collections, rebuilding the manifest can take a long time!
 See also the 'describe' and 'fileinfo' commands under 'sourmash sig'.
 
 """
+from sourmash.cli.utils import add_v5_args
 
 
 def subparser(subparsers):
@@ -37,10 +38,18 @@ def subparser(subparsers):
         "-f", "--force", action="store_true", help="try to load all files as signatures"
     )
     subparser.add_argument(
+        "--rebuild-manifest",
+        help="force rebuilding manifest if available",
+        action="store_true",
+        default=None,  # default: not user specified
+    )
+    subparser.add_argument(
         "--no-rebuild-manifest",
         help="use existing manifest if available",
-        action="store_true",
+        action="store_false",
+        dest="rebuild_manifest",
     )
+
     subparser.add_argument(
         "-F",
         "--manifest-format",
@@ -48,6 +57,8 @@ def subparser(subparsers):
         default="csv",
         choices=["csv", "sql"],
     )
+
+    add_v5_args(subparser)
 
 
 def main(args):
