@@ -4345,7 +4345,7 @@ def test_sig_manifest_7_allzip_2(runtmp):
 
 def test_sig_manifest_7_allzip_3_no_rebuild(runtmp, cli_v4_only):
     # the manifest contains 8 entries.
-    # note: --no-rebuild-manifest is default behavior on v4, but not on v5.
+    # note: --rebuild-manifest is default behavior on v4; in v5, no rebuild.
     allzip = utils.get_test_data("prot/all.zip")
     runtmp.sourmash(
         "sig", "manifest", allzip, "-o", "xyz.csv", "--no-rebuild", version=cli_v4_only
