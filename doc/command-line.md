@@ -697,7 +697,7 @@ details.
 
 #### `human` output format
 
-`human` is the default outpu format in sourmash v5. @CTB
+`human` is the default output format in sourmash v5. @CTB
 
 #### `csv_summary` output format
 
@@ -1036,6 +1036,18 @@ containment threshold of 0.1 (10%).
 - `csv_summary`: ".classifications.csv",
 - `krona`: ".krona.tsv",
 - `lineage_summary`: ".lineage_summary.tsv",
+
+**sourmash v5 breaking change:** In sourmash v5.0 and later, the
+default output format will become `human`, instead of `csv_summary`.
+
+You can specify `--v4` to keep the old behavior, or `--v5` to support
+the new default behavior, or simply specify the desired output format.
+See [Migrating from sourmash v4.x to sourmash v5.x](@CTB) for more
+details.
+
+#### `human` output format
+
+`human` is the default output format in sourmash v5. @CTB
 
 #### `csv_summary` output format
 
