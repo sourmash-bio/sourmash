@@ -135,14 +135,23 @@ def metagenome(args):
                 found_abund = True
                 break
 
-    if not found_abund and args.cli_version == "v4":
-        if use_abund != False:  # not intentionally set? => warn in v4
+    if args.cli_version == "v4":
+        # not intentionally set? => warn in v4        
+        if not found_abund and use_abund is None:
             notify("** WARNING: no abundances found in gather results.")
             notify("** This is likely because the metagenome sketch was not")
             notify("** created with '-p abund'.")
             notify("** As a result, the output of 'tax metagenome' will")
             notify("** not be abundance-weighted. This is probably not what you want!")
-            notify("** Specify '--no-abundances' to bypass this error.")
+            notify("** Specify '--no-abundances' to silence this warning.")
+
+        if found_abund and use_abund is None:
+            notify("** WARNING: abundances in gather results are not being used.")
+            notify("** This is because the default in sourmash v4 is to not use them.")
+            notify("** As a result, the output of 'tax metagenome' will")
+            notify("** not be abundance-weighted. This is probably not what you want!")
+            notify("** Specify '--use-abundances' to use abundances, or")
+            notify("** '--no-abundances' to silence this warning.")
 
     # set use_abund defaults in v4 (False)/v5 (True)
     if use_abund is None:
@@ -239,7 +248,7 @@ def metagenome(args):
                 human_display_rank = query_gather_results[0].ranks[-1]  # lowest rank
 
             tax_utils.write_human_summary(
-                query_gather_results, out_fp, human_display_rank
+                query_gather_results, out_fp, human_display_rank, use_abund=use_abund
             )
 
     # write summarized output csv

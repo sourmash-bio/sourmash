@@ -672,7 +672,8 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
+One or more output formats can be provided with `-F/--output-format`, and
+output will be saved to files named for each format. The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
 
 - `human`: ".human.txt",
 - `csv_summary`: ".summarized.csv",
