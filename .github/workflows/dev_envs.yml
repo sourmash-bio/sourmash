@@ -18,7 +18,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@v17
+      uses: DeterminateSystems/nix-installer-action@v18
 
     - run: nix run .# -- --version
 
