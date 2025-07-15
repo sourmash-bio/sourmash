@@ -39,7 +39,7 @@ histogram = "0.11.3"
 itertools = "0.14.0"
 log = "0.4.27"
 md5 = "0.7.0"
-memmap2 = "0.9.5"
+memmap2 = "0.9.7"
 murmurhash3 = "0.0.5"
 needletail = { version = "0.6.3", default-features = false }
 niffler = { version = "3.0.0", default-features = false, features = [ "gz", "lzma", "zstd" ] }
