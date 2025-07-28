@@ -59,6 +59,7 @@ jobs:
 
   build_wasm:
     runs-on: ubuntu-latest
+    if: false  # disable for now, need to fix emsdk with Rust: https://github.com/emscripten-core/emscripten/pull/24359
     steps:
       - uses: actions/checkout@v4
 
