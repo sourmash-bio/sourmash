@@ -136,7 +136,7 @@ def metagenome(args):
                 break
 
     if args.cli_version == "v4":
-        # not intentionally set? => warn in v4        
+        # not intentionally set? => warn in v4
         if not found_abund and use_abund is None:
             notify("** WARNING: no abundances found in gather results.")
             notify("** This is likely because the metagenome sketch was not")
