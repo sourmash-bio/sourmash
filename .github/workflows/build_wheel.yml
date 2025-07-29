@@ -57,27 +57,28 @@ jobs:
           name: wheel-${{ matrix.build }}-${{ matrix.os }}
           path: './wheelhouse/sourmash*.whl'
 
-  build_wasm:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
-        env:
-          CIBW_PLATFORM: pyodide 
-          CIBW_BUILD: 'cp312-pyodide_wasm32'
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheel-wasm
-          path: './wheelhouse/sourmash*.whl'
+#  build_wasm:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Build wheels
+#        uses: pypa/cibuildwheel@v2.23.3
+#        env:
+#          CIBW_PLATFORM: pyodide 
+#          CIBW_BUILD: 'cp312-pyodide_wasm32'
+#
+#      - uses: actions/upload-artifact@v4
+#        with:
+#          name: wheel-wasm
+#          path: './wheelhouse/sourmash*.whl'
 
   release:
     name: Publish wheels
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build_wheels, build_wasm]
+#    needs: [build_wheels, build_wasm]
+    needs: [build_wheels]
 
     steps:
       - name: Fetch wheels from artifacts
