@@ -56,7 +56,7 @@ rkyv = { version = "0.7.45", optional = true }
 roaring = "0.11.0"
 roots = "0.0.8"
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
+serde_json = "1.0.141"
 statrs = "0.18.0"
 streaming-stats = "0.2.3"
 thiserror = "2.0"
@@ -67,7 +67,7 @@ vec-collections = "0.4.3"
 [dev-dependencies]
 codspeed-criterion-compat = "2.7.2"
 proptest = { version = "1.7.0", default-features = false, features = ["std"]}
-rand = "0.9.1"
+rand = "0.9.2"
 tempfile = "3.20.0"
 
 [[bench]]
@@ -115,4 +115,4 @@ default-features = false
 features = [ "bindgen-runtime", "snappy", "zstd" ]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-criterion = "0.6.0"
+criterion = "0.7.0"
