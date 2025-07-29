@@ -115,4 +115,4 @@ default-features = false
 features = [ "bindgen-runtime", "snappy", "zstd" ]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-criterion = "0.6.0"
+criterion = "0.7.0"
