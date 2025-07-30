@@ -5,6 +5,12 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  commit-message:
+    prefix: Build(deps-py)
+  group:
+    dependencies:
+      patterns:
+        - "*"
 - package-ecosystem: cargo
   directory: "/"
   schedule:
@@ -12,6 +18,8 @@ updates:
   allow:
     - dependency-type: "direct"
   open-pull-requests-limit: 10
+  commit-message:
+    prefix: Build(deps-rs)
   ignore:
     - dependency-name: "byteorder"
     - dependency-name: "wasm-bindgen"
@@ -19,7 +27,13 @@ updates:
     - dependency-name: "chrono"
     - dependency-name: "js-sys"
     - dependency-name: "web-sys"
+  group:
+    dependencies:
+      patterns:
+        - "*"
 - package-ecosystem: "github-actions"
   directory: "/"
+  commit-message:
+    prefix: Build(ci)
   schedule:
     interval: weekly
