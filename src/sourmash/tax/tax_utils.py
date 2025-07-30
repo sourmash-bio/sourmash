@@ -1151,7 +1151,11 @@ def write_summary(
 
 
 def write_human_summary(
-    query_gather_results, out_fp, display_rank, classification=False, use_abund=True,
+    query_gather_results,
+    out_fp,
+    display_rank,
+    classification=False,
+    use_abund=True,
 ):
     """
     Write human-readable taxonomy-summarized gather results for a specific rank.
@@ -1167,9 +1171,9 @@ def write_human_summary(
 
             for rD in results:
                 if use_abund:
-                    rD['proportion'] = rD['f_weighted_at_rank']
+                    rD["proportion"] = rD["f_weighted_at_rank"]
                 else:
-                    rD['proportion'] = rD['fraction_p']
+                    rD["proportion"] = rD["fraction_p"]
                 out_fp.write(
                     "{query_name:<15s}   {status}    {proportion}     {query_ani_at_rank}  {lineage}\n".format(
                         **rD
@@ -1181,9 +1185,9 @@ def write_human_summary(
 
             for rD in results:
                 if use_abund:
-                    rD['proportion'] = rD['f_weighted_at_rank']
+                    rD["proportion"] = rD["f_weighted_at_rank"]
                 else:
-                    rD['proportion'] = rD['fraction_p']
+                    rD["proportion"] = rD["fraction_p"]
 
                 out_fp.write(
                     "{query_name:<15s}   {proportion}     {query_ani_at_rank}  {lineage}\n".format(
