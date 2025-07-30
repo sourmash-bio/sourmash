@@ -296,6 +296,7 @@ def test_SummarizedGatherResult():
     assert hD == {
         "rank": "phylum",
         "fraction": "0.200",
+        "fraction_p": "20.0%",
         "lineage": "a;b",
         "f_weighted_at_rank": "30.0%",
         "bp_match_at_rank": "30",
@@ -377,6 +378,7 @@ def test_SummarizedGatherResult_withtaxids():
     assert hD == {
         "rank": "phylum",
         "fraction": "0.200",
+        "fraction_p": "20.0%",
         "lineage": "a;b",
         "f_weighted_at_rank": "30.0%",
         "bp_match_at_rank": "30",
@@ -3855,6 +3857,7 @@ def test_make_human_summary():
         {
             "rank": "superkingdom",
             "fraction": "0.800",
+            "fraction_p": "80.0%",
             "lineage": "unclassified",
             "f_weighted_at_rank": "60.0%",
             "bp_match_at_rank": "60",
@@ -3867,6 +3870,7 @@ def test_make_human_summary():
         {
             "rank": "superkingdom",
             "fraction": "0.200",
+            "fraction_p": "20.0%",
             "lineage": "a",
             "f_weighted_at_rank": "40.0%",
             "bp_match_at_rank": "40",
@@ -3891,6 +3895,7 @@ def test_make_human_summary_2():
         {
             "rank": "phylum",
             "fraction": "0.800",
+            "fraction_p": "80.0%",
             "lineage": "unclassified",
             "f_weighted_at_rank": "60.0%",
             "bp_match_at_rank": "60",
@@ -3903,6 +3908,7 @@ def test_make_human_summary_2():
         {
             "rank": "phylum",
             "fraction": "0.200",
+            "fraction_p": "20.0%",
             "lineage": "a;b",
             "f_weighted_at_rank": "40.0%",
             "bp_match_at_rank": "40",
@@ -3931,6 +3937,7 @@ def test_make_human_summary_classification():
         {
             "rank": "superkingdom",
             "fraction": "0.200",
+            "fraction_p": "20.0%",
             "lineage": "a",
             "f_weighted_at_rank": "40.0%",
             "bp_match_at_rank": "40",
@@ -3960,6 +3967,7 @@ def test_make_human_summary_classification_2():
         {
             "rank": "phylum",
             "fraction": "0.200",
+            "fraction_p": "20.0%",
             "lineage": "a;b",
             "f_weighted_at_rank": "40.0%",
             "bp_match_at_rank": "40",
