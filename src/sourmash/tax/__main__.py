@@ -250,10 +250,11 @@ def metagenome(args):
             if args.lins and not args.rank:
                 human_display_rank = query_gather_results[0].ranks[-1]  # lowest rank
 
-            
-
             tax_utils.write_human_summary(
-                query_gather_results, out_fp, human_display_rank, use_abund=use_abund_for_human
+                query_gather_results,
+                out_fp,
+                human_display_rank,
+                use_abund=use_abund_for_human,
             )
 
     # write summarized output csv
