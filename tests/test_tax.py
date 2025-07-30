@@ -147,6 +147,39 @@ def test_metagenome_stdout_0(runtmp, cli_v4_and_v5):
     )
 
 
+def test_metagenome_stdout_0_default_v4(runtmp, cli_v4_only):
+    # test basic metagenome; output is csv_summary in v4.
+    c = runtmp
+
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "--use-abund",
+        version=cli_v4_only,
+    )
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in c.last_result.out
+    )
+    assert (
+        "test1,superkingdom,0.204,d__Bacteria,md5,test1.sig,0.131,1024000"
+        in c.last_result.out
+    )
+
+
 def test_metagenome_stdout_0_db(runtmp, cli_v4_and_v5):
     # test basic metagenome with sqlite database;
     # force output to csv_summary with v5
@@ -1505,6 +1538,55 @@ def test_metagenome_human_format_out_default_v5(runtmp, cli_v4_and_v5):
     assert (
         outp[5]
         == "test1              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola"
+    )
+
+
+def test_metagenome_human_format_out_default_v5_simple(runtmp, cli_v5_only):
+    # 'human' is default output format for v5, simple/explicit version
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+    csv_base = "out"
+    csvout = runtmp.output(csv_base + ".human.txt")
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--rank",
+        "genus",
+        "--output-dir",
+        outdir,
+        version=cli_v5_only,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
+
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 6
+    outp = [x.strip() for x in outp]
+    print(outp)
+
+    assert outp[0] == "sample name    proportion   cANI   lineage"
+    assert outp[1] == "-----------    ----------   ----   -------"
+    assert outp[2] == "test1             86.9%     -      unclassified"
+    assert (
+        outp[3]
+        == "test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia"
     )
 
 
