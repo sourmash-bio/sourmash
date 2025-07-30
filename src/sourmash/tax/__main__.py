@@ -155,11 +155,14 @@ def metagenome(args):
 
     # set use_abund defaults in v4 (False)/v5 (True)
     if use_abund is None:
+        use_abund_for_human = True
         match args.cli_version:
             case "v4":
                 use_abund = False
             case "v5":
                 use_abund = True
+    elif not use_abund:
+        use_abund_for_human = False
 
     if use_abund and not found_abund:
         error("** ERROR: no abundances found in gather results.")
@@ -247,8 +250,10 @@ def metagenome(args):
             if args.lins and not args.rank:
                 human_display_rank = query_gather_results[0].ranks[-1]  # lowest rank
 
+            
+
             tax_utils.write_human_summary(
-                query_gather_results, out_fp, human_display_rank, use_abund=use_abund
+                query_gather_results, out_fp, human_display_rank, use_abund=use_abund_for_human
             )
 
     # write summarized output csv
