@@ -145,9 +145,13 @@ def metagenome(args):
             notify("** not be abundance-weighted. This is probably not what you want!")
             notify("** Specify '--no-abundances' to silence this warning.")
 
-        if found_abund and use_abund is None and \
-           ('lineage_summary' in args.output_format or
-            'krona' in args.output_format):
+        if (
+            found_abund
+            and use_abund is None
+            and (
+                "lineage_summary" in args.output_format or "krona" in args.output_format
+            )
+        ):
             notify("** WARNING: abundances in gather results are not being")
             notify("** used for 'krona' and 'lineage_summary' outputs.")
             notify("** This is because the default in sourmash v4 is to not use them.")
@@ -255,10 +259,11 @@ def metagenome(args):
             if args.lins and not args.rank:
                 human_display_rank = query_gather_results[0].ranks[-1]  # lowest rank
 
-            
-
             tax_utils.write_human_summary(
-                query_gather_results, out_fp, human_display_rank, use_abund=use_abund_unset
+                query_gather_results,
+                out_fp,
+                human_display_rank,
+                use_abund=use_abund_unset,
             )
 
     # write summarized output csv
@@ -283,7 +288,9 @@ def metagenome(args):
         )
 
         with FileOutputCSV(kreport_outfile) as out_fp:
-            header, kreport_results = single_query_results.make_kreport_results(use_abund=use_abund_unset)
+            header, kreport_results = single_query_results.make_kreport_results(
+                use_abund=use_abund_unset
+            )
             tax_utils.write_output(
                 header, kreport_results, out_fp, sep="\t", write_header=False
             )

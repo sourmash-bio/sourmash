@@ -2158,10 +2158,8 @@ class SummarizedGatherResult:
             )
         else:
             sD["percent_containment"] = f"{self.fraction * 100:.2f}"
-            sD["num_bp_contained"] = str(
-                int(self.bp_match_at_rank)
-            )
-                
+            sD["num_bp_contained"] = str(int(self.bp_match_at_rank))
+
         if isinstance(self.lineage, LINLineageInfo):
             raise ValueError("Cannot produce 'kreport' with LIN taxonomy.")
         if self.lineage != RankLineageInfo():
