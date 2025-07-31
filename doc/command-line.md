@@ -672,20 +672,56 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
+One or more output formats can be provided with `-F/--output-format`, and
+output will be saved to files named for each format. The possible output formats are listed below, followed by the file extension used when writing to a file rather than stdout. When using more than one output format, you must provide an output basename (`--output-base`) that will be used to name the output files. If an `--output-dir` is provided, files will output to that directory.
 
-- `human`: ".human.txt",
-- `csv_summary`: ".summarized.csv",
-- `lineage_summary`: ".lineage_summary.tsv",
-- `krona`: ".krona.tsv",
-- `kreport`: ".kreport.txt",
-- `lingroup`: ".lingroup.tsv",
-- `bioboxes`: ".bioboxes.profile",
+- `human`: ".human.txt"
+- `csv_summary`: ".summarized.csv"
+- `lineage_summary`: ".lineage_summary.tsv"
+- `krona`: ".krona.tsv"
+- `kreport`: ".kreport.txt"
+- `lingroup`: ".lingroup.tsv"
+- `bioboxes`: ".bioboxes.profile"
 
+In general, `tax metagenome` should be used with gather results that
+use abundance (e.g. sketches calculated with `-p abund`). This will
+properly report the proportion of the metagenome data that can be
+classified.  However, in sourmash v4, abundance reporting is
+inconsistent between formats; see the below table for a summary.
+
+As of sourmash v4.9.4, we recommend using `--use-abund` with `tax
+metagenome`, which will force consistent reporting of abundances, and
+will fail when abundances are not available. `--ignore-abund` can be
+used to force ignoring abundances.  `--use-abund` will be the default
+behavior in sourmash v5.
+
+| output format | v4 behavior | v5 default behavior | notes |
+| -------- | -------- | -------- | -- |
+| human     | abund     | abund     | default output in v5
+| csv_summary     | provides both     | provides both     | default output in v4
+| lineage_summary     | no abund     | abund     |
+| krona     | no abund    | abund     |
+| kreport     | abund | abund     |
+
+#### `human` output format
+
+`human` will be the default output format in sourmash v5. This outputs a human-readable table with summarization for each leaf node. It is not intended for automated parsing.
+
+example `human` output:
+
+```
+sample name    proportion   cANI   lineage
+-----------    ----------   ----   -------
+test1             86.9%     -      unclassified
+test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli
+test1              5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri
+test1              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
+
+```
 
 #### `csv_summary` output format
 
-`csv_summary` is the default output format. This outputs a `csv` with lineage
+`csv_summary` is the default output format in sourmash v4. This outputs a `csv` with lineage
 summarization for each taxonomic rank. This output currently consists of six
 columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
 `fraction` is the  fraction of the query matched to the reported rank and
@@ -932,29 +968,6 @@ example output (using small test data):
 821	species	2|976|200643|171549|815|909656|821	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola|Phocaeicola vulgatus	1.56
 ```
 
-
-#### `lingroup` output format
-
-When using LIN taxonomic information, you can optionally also provide a `lingroup` file with two required columns: `name` and `lin`. If provided, we will produce a file, `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output will select information from the full summary that match the LIN prefixes provided as groups.
-
-This output format consists of four columns:
-- `name`, `lin` columns are taken directly from the `--lingroup` file
-- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
-- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
-
-Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
-
-example output:
-```
-name	lin	percent_containment	num_bp_contained
-lg1	0;0;0	5.82	714000
-lg2	1;0;0	5.05	620000
-lg3	2;0;0	1.56	192000
-lg3	1;0;1	0.65	80000
-lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
-```
-
-Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
 ### `sourmash tax genome` - classify a genome using `gather` results
 

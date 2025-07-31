@@ -317,7 +317,9 @@ def check_tax_outputs(
                 f"Writing to stdout is incompatible with multiple output formats {args.output_format}"
             )
     elif not args.output_format:
-        # change to "human" for 5.0
-        args.output_format = ["csv_summary"]
+        if args.cli_version == "v5":
+            args.output_format = ["human"]
+        else:
+            args.output_format = ["csv_summary"]
 
     return args.output_format

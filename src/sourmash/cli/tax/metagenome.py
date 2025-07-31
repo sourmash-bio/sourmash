@@ -23,7 +23,12 @@ Please see the 'tax metagenome' documentation for more details:
 
 import sourmash
 from sourmash.logging import notify, print_results, error
-from sourmash.cli.utils import add_rank_arg, check_rank, check_tax_outputs
+from sourmash.cli.utils import (
+    add_rank_arg,
+    check_rank,
+    check_tax_outputs,
+    add_v5_args,
+)
 
 
 def subparser(subparsers):
@@ -124,6 +129,23 @@ def subparser(subparsers):
         help="use ICTV taxonomy in place of standard taxonomic ranks. Note that the taxonomy CSV must contain ICTV ranks.",
     )
     add_rank_arg(subparser)
+
+    subparser.add_argument(
+        "--use-abundances",
+        action="store_true",
+        dest="use_abund",
+        default=None,  # default: not user specified
+        help="use abundances from sketches if available (for krona and lineage_summary)",
+    )
+    subparser.add_argument(
+        "--ignore-abundances",
+        "--no-abundances",
+        dest="use_abund",
+        action="store_false",
+        help="ignore abundances from sketches even if available",
+    )
+
+    add_v5_args(subparser)
 
 
 def main(args):
