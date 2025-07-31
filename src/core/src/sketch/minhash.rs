@@ -310,7 +310,7 @@ impl KmerMinHash {
                 md5_ctx.consume(&buffer);
                 buffer.clear();
             }
-            *data = Some(format!("{:x}", md5_ctx.compute()));
+            *data = Some(format!("{:x}", md5_ctx.finalize()));
         }
         data.clone().unwrap()
     }
@@ -1265,7 +1265,7 @@ impl KmerMinHashBTree {
                 md5_ctx.consume(&buffer);
                 buffer.clear();
             }
-            *data = Some(format!("{:x}", md5_ctx.compute()));
+            *data = Some(format!("{:x}", md5_ctx.finalize()));
         }
         data.clone().unwrap()
     }
