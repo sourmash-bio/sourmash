@@ -1514,7 +1514,6 @@ def test_format_for_krona_summarization_two_queries():
     kres, header = format_for_krona(
         list(gres.values()),
         "superkingdom",
-        use_abund=False,  # @CTB
     )
     assert header == ["fraction", "superkingdom"]
     print("krona_res: ", kres)

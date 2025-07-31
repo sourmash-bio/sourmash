@@ -948,7 +948,6 @@ def test_metagenome_kreport_out_lemonade_v4(runtmp, cli_v4_only):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    # @CTB wait, are abundances found and not being used? :think:
     assert (
         "** WARNING: no abundances found in gather results." in runtmp.last_result.err
     )
@@ -1072,7 +1071,6 @@ def test_metagenome_kreport_out_lemonade_no_abund_error_v5(runtmp, cli_v5_only):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    # should error! @CTB
     assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
 
 
@@ -1106,7 +1104,6 @@ def test_metagenome_kreport_out_lemonade_no_abund_use_abund(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    # should error! @CTB
     assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
 
 
