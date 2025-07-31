@@ -135,22 +135,43 @@ def metagenome(args):
                 found_abund = True
                 break
 
-    if not found_abund and args.cli_version == "v4":
-        if use_abund != False:  # not intentionally set? => warn in v4
+    if args.cli_version == "v4":
+        # not intentionally set? => warn in v4
+        if not found_abund and use_abund is None:
             notify("** WARNING: no abundances found in gather results.")
             notify("** This is likely because the metagenome sketch was not")
             notify("** created with '-p abund'.")
             notify("** As a result, the output of 'tax metagenome' will")
             notify("** not be abundance-weighted. This is probably not what you want!")
-            notify("** Specify '--no-abundances' to bypass this error.")
+            notify("** Specify '--no-abundances' to silence this warning.")
 
-    # set use_abund defaults in v4 (False)/v5 (True)
+        if (
+            found_abund
+            and use_abund is None
+            and (
+                "lineage_summary" in args.output_format or "krona" in args.output_format
+            )
+        ):
+            notify("** WARNING: abundances in gather results are not being")
+            notify("** used for 'krona' and 'lineage_summary' outputs.")
+            notify("** This is because the default in sourmash v4 is to not use them.")
+            notify("** As a result, the output of 'tax metagenome' will")
+            notify("** not be abundance-weighted. This is probably not what you want!")
+            notify("** Specify '--use-abundances' to use abundances, or")
+            notify("** '--no-abundances' to silence this warning.")
+
+    # set use_abund defaults in v4 (False)/v5 (True). Look, it works, ok?
+    use_abund_unset = True
+
     if use_abund is None:
+        use_abund_unset = True
         match args.cli_version:
             case "v4":
                 use_abund = False
             case "v5":
                 use_abund = True
+    elif not use_abund:
+        use_abund_unset = False
 
     if use_abund and not found_abund:
         error("** ERROR: no abundances found in gather results.")
@@ -208,7 +229,7 @@ def metagenome(args):
             query_gather_results=query_gather_results,
             rank=args.rank,
             by_query=True,
-            use_abund=use_abund,  # @CTB does this break any tests? T/F/??
+            use_abund=use_abund,
         )
 
         with FileOutputCSV(lineage_outfile) as out_fp:
@@ -239,7 +260,10 @@ def metagenome(args):
                 human_display_rank = query_gather_results[0].ranks[-1]  # lowest rank
 
             tax_utils.write_human_summary(
-                query_gather_results, out_fp, human_display_rank
+                query_gather_results,
+                out_fp,
+                human_display_rank,
+                use_abund=use_abund_unset,
             )
 
     # write summarized output csv
@@ -264,7 +288,9 @@ def metagenome(args):
         )
 
         with FileOutputCSV(kreport_outfile) as out_fp:
-            header, kreport_results = single_query_results.make_kreport_results()
+            header, kreport_results = single_query_results.make_kreport_results(
+                use_abund=use_abund_unset
+            )
             tax_utils.write_output(
                 header, kreport_results, out_fp, sep="\t", write_header=False
             )

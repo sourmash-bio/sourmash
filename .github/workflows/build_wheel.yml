@@ -43,10 +43,10 @@ jobs:
       - uses: actions/setup-python@v5
         name: Install Python
         with:
-          python-version: '3.12'
+          python-version: '3.13'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.1.1
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
@@ -59,14 +59,15 @@ jobs:
 
   build_wasm:
     runs-on: ubuntu-latest
+    if: false  # disable for now, need to fix emsdk with Rust: https://github.com/emscripten-core/emscripten/pull/24359
     steps:
       - uses: actions/checkout@v4
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.1.1
         env:
-          CIBW_PLATFORM: pyodide 
-          CIBW_BUILD: 'cp312-pyodide_wasm32'
+          CIBW_PLATFORM: pyodide
+          CIBW_BUILD: 'cp313-pyodide_wasm32'
 
       - uses: actions/upload-artifact@v4
         with:
@@ -77,7 +78,8 @@ jobs:
     name: Publish wheels
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build_wheels, build_wasm]
+#    needs: [build_wheels, build_wasm]
+    needs: [build_wheels]
 
     steps:
       - name: Fetch wheels from artifacts

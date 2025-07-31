@@ -1151,7 +1151,11 @@ def write_summary(
 
 
 def write_human_summary(
-    query_gather_results, out_fp, display_rank, classification=False
+    query_gather_results,
+    out_fp,
+    display_rank,
+    classification=False,
+    use_abund=True,
 ):
     """
     Write human-readable taxonomy-summarized gather results for a specific rank.
@@ -1166,8 +1170,12 @@ def write_human_summary(
             out_fp.write("-----------    ------    ----------   ----   -------\n")
 
             for rD in results:
+                if use_abund:
+                    rD["proportion"] = rD["f_weighted_at_rank"]
+                else:
+                    rD["proportion"] = rD["fraction_p"]
                 out_fp.write(
-                    "{query_name:<15s}   {status}    {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(
+                    "{query_name:<15s}   {status}    {proportion}     {query_ani_at_rank}  {lineage}\n".format(
                         **rD
                     )
                 )
@@ -1176,8 +1184,13 @@ def write_human_summary(
             out_fp.write("-----------    ----------   ----   -------\n")
 
             for rD in results:
+                if use_abund:
+                    rD["proportion"] = rD["f_weighted_at_rank"]
+                else:
+                    rD["proportion"] = rD["fraction_p"]
+
                 out_fp.write(
-                    "{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(
+                    "{query_name:<15s}   {proportion}     {query_ani_at_rank}  {lineage}\n".format(
                         **rD
                     )
                 )
@@ -2121,6 +2134,7 @@ class SummarizedGatherResult:
 
     def as_human_friendly_dict(self, query_info):
         sD = self.as_summary_dict(query_info=query_info, limit_float=True)
+        sD["fraction_p"] = f"{self.fraction * 100:>4.1f}%"
         sD["f_weighted_at_rank"] = f"{self.f_weighted_at_rank * 100:>4.1f}%"
         if self.query_ani_at_rank is not None:
             sD["query_ani_at_rank"] = f"{self.query_ani_at_rank * 100:>3.1f}%"
@@ -2128,7 +2142,7 @@ class SummarizedGatherResult:
             sD["query_ani_at_rank"] = "-    "
         return sD
 
-    def as_kreport_dict(self, query_info):
+    def as_kreport_dict(self, query_info, *, use_abund=True):
         """
         Produce kreport dict for named taxonomic groups.
         """
@@ -2137,10 +2151,15 @@ class SummarizedGatherResult:
         sD["num_bp_assigned"] = str(0)
         sD["ncbi_taxid"] = None
         # total percent containment, weighted to include abundance info
-        sD["percent_containment"] = f"{self.f_weighted_at_rank * 100:.2f}"
-        sD["num_bp_contained"] = str(
-            int(self.f_weighted_at_rank * query_info.total_weighted_bp)
-        )
+        if use_abund:
+            sD["percent_containment"] = f"{self.f_weighted_at_rank * 100:.2f}"
+            sD["num_bp_contained"] = str(
+                int(self.f_weighted_at_rank * query_info.total_weighted_bp)
+            )
+        else:
+            sD["percent_containment"] = f"{self.fraction * 100:.2f}"
+            sD["num_bp_contained"] = str(int(self.bp_match_at_rank))
+
         if isinstance(self.lineage, LINLineageInfo):
             raise ValueError("Cannot produce 'kreport' with LIN taxonomy.")
         if self.lineage != RankLineageInfo():
@@ -2660,7 +2679,7 @@ class QueryTaxResult:
                 results += unclassified
         return header, results
 
-    def make_kreport_results(self):
+    def make_kreport_results(self, *, use_abund=True):
         """
         Format taxonomy-summarized gather results as kraken-style kreport.
 
@@ -2735,7 +2754,7 @@ class QueryTaxResult:
                 continue
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
-                kresD = res.as_kreport_dict(self.query_info)
+                kresD = res.as_kreport_dict(self.query_info, use_abund=use_abund)
                 if kresD["sci_name"] == "unclassified":
                     # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
                     # Here, we only need to report it once, since it will be the same fraction for all ranks

@@ -134,7 +134,7 @@ def subparser(subparsers):
     )
     add_tax_threshold_arg(subparser, 0.1)
     add_rank_arg(subparser)
-    add_v5_args(subparser)  # @CTB add -F support?
+    add_v5_args(subparser)
 
 
 def main(args):
