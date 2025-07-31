@@ -7439,3 +7439,444 @@ def test_metagenome_LIN_lingroups_lg_only_header(runtmp):
 
     assert c.last_result.status != 0
     assert f"No lingroups loaded from {lg_file}" in c.last_result.err
+
+
+def test_metagenome_abund_reporting_default(runtmp, cli_v4_and_v5):
+    # test default abundance behavior across versions
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output('xxx'),
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+    
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund used by default in both v4 and v5:
+    assert "test1             86.9%     -      unclassified" in human_txt
+    assert "86.92\t10672000\t10672000\tU\t\tunclassified" in kreport_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert 'test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139' in csvsum_txt
+
+    if cli_v4_and_v5 == "(default)":
+        # abund not used by default in v4:
+        assert '0.7957718388512166\tunclassified' in krona_txt
+        assert 'unclassified\t0.795' in linsum_txt
+
+        # warning printed in v4
+        assert "WARNING: abundances" in runtmp.last_result.err
+    elif cli_v4_and_v5 == "v4":
+        # abund not used by default in v4:
+        assert '0.7957718388512166\tunclassified' in krona_txt
+        assert 'unclassified\t0.795' in linsum_txt
+
+        # warning printed
+        assert "WARNING: abundances" in runtmp.last_result.err
+    elif cli_v4_and_v5 == "v5":
+        # abund used by default in v5:
+        assert '0.8691969376119889\tunclassified' in krona_txt
+        assert 'unclassified\t0.869' in linsum_txt
+
+        # no warning printed
+        assert not "WARNING: abundances" in runtmp.last_result.err
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_metagenome_abund_reporting_no_abund_fail_v4(runtmp, cli_v4_only):
+    # test abundance behavior with defaults and no abundances; behavior varies
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output('xxx'),
+        version=cli_v4_only,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "WARNING: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_no_abund_fail_v5(runtmp, cli_v5_only):
+    # test abundance behavior with defaults and no abundances; behavior varies
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    with pytest.raises(SourmashCommandFailed) as e:
+        runtmp.run_sourmash(
+            "tax",
+            "metagenome",
+            "-g",
+            g_csv,
+            "--taxonomy-csv",
+            tax,
+            "-F",
+            "human",
+            "-F",
+            "csv_summary",
+            "-F",
+            "lineage_summary",
+            "-F",
+            "krona",
+            "-F",
+            "kreport",
+            "-r",
+            "species",
+            "-o",
+            runtmp.output('xxx'),
+            version=cli_v5_only,
+        )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_use_abund(runtmp, cli_v4_and_v5):
+    # test abundance behavior across versions with --use-abund
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output('xxx'),
+        "--use-abund",
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+    
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund used by default in both v4 and v5:
+    assert "test1             86.9%     -      unclassified" in human_txt
+    assert "86.92\t10672000\t10672000\tU\t\tunclassified" in kreport_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert 'test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139' in csvsum_txt
+
+    # abund used with --use-abund:
+    assert '0.8691969376119889\tunclassified' in krona_txt
+    assert 'unclassified\t0.869' in linsum_txt
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning printed
+    assert not "WARNING: abundances" in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_ignore_abund(runtmp, cli_v4_and_v5):
+    # test abundance behavior across versions with --ignore-abund
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output('xxx'),
+        "--ignore-abund",
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+    
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund ignored with --ignore-abund:
+    assert "test1             79.6%     -      unclassified" in human_txt
+    assert "79.58\t3990000\t3990000\tU\t\tunclassified" in kreport_txt
+    assert '0.7957718388512166\tunclassified' in krona_txt
+    assert 'unclassified\t0.795' in linsum_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert 'test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139' in csvsum_txt
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning printed
+    assert not "WARNING: abundances" in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_use_abund_fail(runtmp, cli_v4_and_v5):
+    # test abundance behavior with --use-abund and no abundances; should fail.
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    with pytest.raises(SourmashCommandFailed) as e:
+        runtmp.run_sourmash(
+            "tax",
+            "metagenome",
+            "-g",
+            g_csv,
+            "--taxonomy-csv",
+            tax,
+            "-F",
+            "human",
+            "-F",
+            "csv_summary",
+            "-F",
+            "lineage_summary",
+            "-F",
+            "krona",
+            "-F",
+            "kreport",
+            "-r",
+            "species",
+            "-o",
+            runtmp.output('xxx'),
+            "--use-abund",
+            version=cli_v4_and_v5,
+        )
+
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_ignore_abund(runtmp, cli_v4_and_v5):
+    # test abundance behavior across versions with --ignore-abund
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output('xxx'),
+        "--ignore-abund",
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+    
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund ignored with --ignore-abund:
+    assert "test1             79.6%     -      unclassified" in human_txt
+    assert "79.58\t3990000\t3990000\tU\t\tunclassified" in kreport_txt
+    assert '0.7957718388512166\tunclassified' in krona_txt
+    assert 'unclassified\t0.795' in linsum_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert 'test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139' in csvsum_txt
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning printed
+    assert not "WARNING: abundances" in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_ignore_abund_pass(runtmp, cli_v4_and_v5):
+    # test abundance behavior with --use-abund and no abundances; should pass.
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output('xxx'),
+        "--ignore-abund",
+        version=cli_v4_and_v5,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
