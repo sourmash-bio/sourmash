@@ -13,6 +13,9 @@ Links:
 
 Files:
 
+* zip: [ncbi-euks-all-2025.01.k51.rocksdb.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip) - all NCBI eukaryotes, indexed in a RocksDB - DNA, k=51, scaled=10000 (19.0 GB)
+
+
 * zip: [ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip) - vertebrate reference genomes (NCBI:txid7742) - DNA, k=51, scaled=10000 (4.0 GB)
 
 
@@ -42,6 +45,9 @@ Files:
 ### Download via curl using the command line
 
 ```shell
+# download ncbi-euks-all-2025.01.k51.rocksdb.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip
+
 # download ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
 curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
 
@@ -67,6 +73,7 @@ curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genba
 ### A list of all the URLs
 
 ```
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip
