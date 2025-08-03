@@ -13,15 +13,15 @@ Links:
 
 Files:
 
-* zip: [ncbi-viruses-2025.01.dna.k=21.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=21.sig.zip) - all viral genomes. - DNA, k=21, scaled=50 (1.4 GB)
-* zip: [ncbi-viruses-2025.01.dna.k=31.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=31.sig.zip) - all viral genomes. - DNA, k=31, scaled=50 (1.4 GB)
-* zip: [ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip) - all viral genomes. - skip_m2n3, k=24, scaled=50 (2.7 GB)
+* zip: [ncbi-viruses-2025.01.dna.k=21.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=21.sig.zip) - all viral genomes. - DNA, k=21, scaled=50 (1.4 GB)
+* zip: [ncbi-viruses-2025.01.dna.k=31.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=31.sig.zip) - all viral genomes. - DNA, k=31, scaled=50 (1.4 GB)
+* zip: [ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip) - all viral genomes. - skip_m2n3, k=24, scaled=50 (2.7 GB)
 
 
 
 ## Taxonomy files:
 
-* [NCBI taxonomy for viruses as of January 2025.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses.2025.01.lineages.csv)
+* [NCBI taxonomy for viruses as of January 2025.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses.2025.01.lineages.csv)
 
 
 ## Advanced
@@ -30,20 +30,23 @@ Files:
 
 ```shell
 # download ncbi-viruses-2025.01.dna.k=21.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=21.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=21.sig.zip
 
 # download ncbi-viruses-2025.01.dna.k=31.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=31.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=31.sig.zip
 
 # download ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip
 
+# download taxonomy file
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses.2025.01.lineages.csv
 ```
 
 ### A list of all the URLs
 
 ```
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=21.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=31.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/ncbi-viruses-2025.01/ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=21.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.dna.k=31.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses-2025.01.skip_m2n3.k=24.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-viruses-2025.01/ncbi-viruses.2025.01.lineages.csv
 ```

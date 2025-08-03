@@ -13,15 +13,15 @@ Links:
 
 Files:
 
-* zip: [gtdb-rs220-k21.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k21.dna.zip) - all GTDB genomes. - DNA, k=21, scaled=1000 (17.0 GB)
-* zip: [gtdb-rs220-k31.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k31.dna.zip) - all GTDB genomes. - DNA, k=31, scaled=1000 (17.0 GB)
-* zip: [gtdb-rs220-k51.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k51.dna.zip) - all GTDB genomes. - DNA, k=51, scaled=1000 (17.0 GB)
+* zip: [gtdb-rs220-k21.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k21.dna.zip) - all GTDB genomes. - DNA, k=21, scaled=1000 (17.0 GB)
+* zip: [gtdb-rs220-k31.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k31.dna.zip) - all GTDB genomes. - DNA, k=31, scaled=1000 (17.0 GB)
+* zip: [gtdb-rs220-k51.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k51.dna.zip) - all GTDB genomes. - DNA, k=51, scaled=1000 (17.0 GB)
 
 
 
 ## Taxonomy files:
 
-* [GTDB taxonomy for RS220.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220.lineages.csv)
+* [GTDB taxonomy for RS220.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220.lineages.csv)
 
 
 ## Advanced
@@ -30,20 +30,23 @@ Files:
 
 ```shell
 # download gtdb-rs220-k21.dna.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k21.dna.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k21.dna.zip
 
 # download gtdb-rs220-k31.dna.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k31.dna.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k31.dna.zip
 
 # download gtdb-rs220-k51.dna.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k51.dna.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k51.dna.zip
 
+# download taxonomy file
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220.lineages.csv
 ```
 
 ### A list of all the URLs
 
 ```
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k21.dna.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k31.dna.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs220/gtdb-rs220-k51.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k21.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k31.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k51.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220.lineages.csv
 ```
