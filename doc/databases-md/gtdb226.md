@@ -18,6 +18,11 @@ Files:
 * zip: [gtdb-rs226-k51.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226-k51.dna.zip) - all GTDB genomes. - DNA, k=51, scaled=1000 (21.0 GB)
 
 
+* zip: [gtdb-reps-rs226-k21.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k21.dna.zip) - all GTDB species representative genomes. - DNA, k=21, scaled=1000 (21.0 GB)
+* zip: [gtdb-reps-rs226-k31.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k31.dna.zip) - all GTDB species representative genomes. - DNA, k=31, scaled=1000 (21.0 GB)
+* zip: [gtdb-reps-rs226-k51.dna.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k51.dna.zip) - all GTDB species representative genomes. - DNA, k=51, scaled=1000 (21.0 GB)
+
+
 
 ## Taxonomy files:
 
@@ -38,6 +43,15 @@ curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-
 # download gtdb-rs226-k51.dna.zip
 curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226-k51.dna.zip
 
+# download gtdb-reps-rs226-k21.dna.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k21.dna.zip
+
+# download gtdb-reps-rs226-k31.dna.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k31.dna.zip
+
+# download gtdb-reps-rs226-k51.dna.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k51.dna.zip
+
 # download taxonomy file
 curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226.lineages.csv
 ```
@@ -48,5 +62,8 @@ curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226-k21.dna.zip
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226-k31.dna.zip
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226-k51.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k21.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k31.dna.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-reps-rs226-k51.dna.zip
 https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs226/gtdb-rs226.lineages.csv
 ```
