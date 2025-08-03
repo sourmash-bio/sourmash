@@ -3,6 +3,8 @@
 ```{contents}
 ```
 
+## Modern databases
+
 We provide a number of pre-built collections and indexed databases
 that you can use with sourmash.  As of August 2025, we provide
 databases in zip and RocksDB formats; older databases are available in
@@ -24,6 +26,6 @@ later (May 2025).  All older database formats work with these versions
 of sourmash as well, and we always recommend using the latest version
 available.
 
-# Legacy database information (2024 and before)
+## Legacy database information (2024 and before)
 
 Legacy databases are available [here](legacy-databases.md).
