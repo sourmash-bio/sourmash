@@ -13,16 +13,16 @@ questions as you have them!
 
 Please ask questions and file bug descriptions [on the GitHub issue tracker for sourmash, sourmash-bio/sourmash/issues][0].
 
-You can also ask questions of Titus on Twitter at [@ctitusbrown][1].
+You can also ask questions of Titus on Bluesky at [@titus.idyll.org][1].
 
 [0]:https://github.com/sourmash-bio/sourmash/issues
-[1]:https://twitter.com/ctitusbrown/
+[1]:https://bsky.app/profile/titus.idyll.org
 
 ## Versioning and stability of features and APIs
 
 We do our best to guarantee stability of features and APIs within
-major versions - because of this, upgrading from (e.g.) sourmash v3.4 to
-sourmash v3.5 should be a simple matter of installing the new version.
+major versions - because of this, upgrading from (e.g.) sourmash v4.0 to
+sourmash v4.9 should be a simple matter of installing the new version.
 
 We also recommend using _version pinning_ for software and workflows
 that depend on sourmash, e.g. specifying `sourmash >=3,<4` for
@@ -131,6 +131,45 @@ and fix any major issues noted.
 In particular, we recommend upgrading major versions of sourmash in
 isolation, without adding any new features to your software.
 
+### Migrating from sourmash v4.x to sourmash v5.x
+
+sourmash v5 is not yet out, but we have begun to make v5 breaking
+changes.  We are doing this using `--v5` command line flags that
+support the switch to v5 behavior. Until sourmash v5 is released, no
+breaking changes will be introduced into the default behavior of
+sourmash.
+
+To experiment with the new v5 behavior in v4.9.4 and above, specify
+`--v5` for any of the changed commands below. If you want to retain
+`--v4` behavior (and cause errors when v5.0 is released) specify
+`--v4` instead.
+
+A full list of breaking changes can be found in the
+[draft release notes for 5.0](release-notes/sourmash-5.0.md), which
+will be kept up to date with the changes as they are made.
+
+### Sourmash command line changes for 5.0
+
+If you use sourmash from the command line, there are a few major
+changes in 5.0 that you should know about.
+
+`tax` subcommands:
+* several `tax metagenome` output formats will produce different results: in particular, the `lineage_summary` and `krona` formats now use abundances, and `tax metagenome` requires abundance-weighted gather results. You can use `--ignore-abund` to recover the v4 behavior. See [#3711](https://github.com/sourmash-bio/sourmash/pull/3711) for details.
+* the default output format for `tax metagenome` is now `human`, instead of `csv_summary`. You can use `-F human` to recover the v4 behavior. ([#3711](https://github.com/sourmash-bio/sourmash/pull/3711))
+
+`sig` subcommands:
+* `sig manifest` now defaults to `--no-rebuild-manifest` - see [#3074](https://github.com/sourmash-bio/sourmash/pull/3074).
+* `sig check` and `sig collect` now default to `--relpath` - see [#3071](https://github.com/sourmash-bio/sourmash/issues/3071).
+
+Please post questions and concerns to the
+[sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues)
+and we'll be happy to help!
+
+## Appendix: Migration guide for v4
+
+sourmash v4.0.0 was released on Mar 2, 2021. This migration guide is
+left here for posterity :).
+
 ### Migrating from sourmash v3.x to sourmash v4.x.
 
 If you want to upgrade workflows and scripts from prior releases of
@@ -145,7 +184,7 @@ the sourmash output for deprecation warnings and fix those.
 Next, upgrade to the latest version of 4.x, which will introduce some
 backwards incompatibilities based upon the deprecation warnings.
 
-The major changes are detailed below; please see the
+Please see the
 [full release notes for 4.0](release-notes/sourmash-4.0.md) for all
 the details and links to the code changes.
 
