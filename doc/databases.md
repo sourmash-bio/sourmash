@@ -21,7 +21,7 @@ a variety of [legacy formats](legacy-databases.md).
 ## Database formats and sourmash versions
 
 Zip format databases can be used with sourmash v4.1.0 and later (May
-201), while RocksDB databases can be used with sourmash v4.9.0 and
+2021), while RocksDB databases can be used with sourmash v4.9.0 and
 later (May 2025).  All older database formats work with these versions
 of sourmash as well, and we always recommend using the latest version
 available.
