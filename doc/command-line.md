@@ -1055,10 +1055,6 @@ the new default behavior, or simply specify the desired output format.
 See [Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x) for more
 details.
 
-#### `human` output format
-
-`human` is the default output format in sourmash v5. @CTB
-
 #### `csv_summary` output format
 
 `csv_summary` is the default output format. This outputs a `csv` with taxonomic
