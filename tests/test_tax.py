@@ -1287,9 +1287,9 @@ def test_metagenome_bioboxes_stdout_missing_ranktaxinfo(runtmp):
     tax_mod = runtmp.output("missingtaxranks.taxonomy.csv")
 
     # modify the taxonomy CSV to remove some ranks
-#    GCF_001881345.1,562,Bacteria,Pseudomonadota,Gammaproteobacteria,Enterobacterales,Enterobacteriaceae,Escherichia,Escherichia coli,,2|1224|1236|91347|543|561|562|
+    #    GCF_001881345.1,562,Bacteria,Pseudomonadota,Gammaproteobacteria,Enterobacterales,Enterobacteriaceae,Escherichia,Escherichia coli,,2|1224|1236|91347|543|561|562|
     # GCF_009494285.1,165179,Bacteria,Bacteroidota,Bacteroidia,Bacteroidales,Prevotellaceae,Prevotella,Prevotella copri,,2|976|200643|171549|171552|838|165179|
-    with open(tax, "r") as fp:
+    with open(tax) as fp:
         csv_reader = csv.DictReader(fp)
         with open(tax_mod, "w") as fp_out:
             csv_writer = csv.DictWriter(
