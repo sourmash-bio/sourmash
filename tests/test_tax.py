@@ -26,14 +26,27 @@ def test_run_sourmash_tax():
     assert status != 0  # no args provided, ok ;)
 
 
-def test_metagenome_stdout_0(runtmp):
-    # test basic metagenome
+def test_metagenome_stdout_0(runtmp, cli_v4_and_v5):
+    # test basic metagenome; force output is csv_summary with v5
     c = runtmp
 
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.taxonomy.csv")
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax)
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        *format_args,
+        version=cli_v4_and_v5,
+    )
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -134,14 +147,61 @@ def test_metagenome_stdout_0(runtmp):
     )
 
 
-def test_metagenome_stdout_0_db(runtmp):
-    # test basic metagenome with sqlite database
+def test_metagenome_stdout_0_default_v4(runtmp, cli_v4_only):
+    # test basic metagenome; output is csv_summary in v4.
+    c = runtmp
+
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "--use-abund",
+        version=cli_v4_only,
+    )
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in c.last_result.out
+    )
+    assert (
+        "test1,superkingdom,0.204,d__Bacteria,md5,test1.sig,0.131,1024000"
+        in c.last_result.out
+    )
+
+
+def test_metagenome_stdout_0_db(runtmp, cli_v4_and_v5):
+    # test basic metagenome with sqlite database;
+    # force output to csv_summary with v5
     c = runtmp
 
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.taxonomy.db")
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax)
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        *format_args,
+        version=cli_v4_and_v5,
+    )
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -242,7 +302,8 @@ def test_metagenome_stdout_0_db(runtmp):
     )
 
 
-def test_metagenome_summary_csv_out(runtmp):
+def test_metagenome_summary_csv_out_v4(runtmp, cli_v4_only):
+    # test summary_csv output format; default with v4
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.taxonomy.csv")
     csv_base = "out"
@@ -261,6 +322,7 @@ def test_metagenome_summary_csv_out(runtmp):
         csv_base,
         "--output-dir",
         outdir,
+        version=cli_v4_only,
     )
 
     print(runtmp.last_result.status)
@@ -366,8 +428,264 @@ def test_metagenome_summary_csv_out(runtmp):
     )
 
 
-def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
-    # test multiple -g, empty -g file, and --force
+def test_metagenome_summary_csv_out_v5(runtmp, cli_v5_only):
+    # test CSV summary format for v5: use abundances in output
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--output-dir",
+        outdir,
+        "-F",
+        "csv_summary",
+        version=cli_v5_only,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test1,superkingdom,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[2]
+    )
+    assert (
+        "test1,phylum,0.11607499002792182,d__Bacteria;p__Bacteroidota,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[3]
+    )
+    assert (
+        "test1,phylum,0.08815317112086159,d__Bacteria;p__Proteobacteria,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[4]
+    )
+    assert (
+        "test1,phylum,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[5]
+    )
+    assert (
+        "test1,class,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[6]
+    )
+    assert (
+        "test1,class,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[7]
+    )
+    assert (
+        "test1,class,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[8]
+    )
+    assert (
+        "test1,order,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[9]
+    )
+    assert (
+        "test1,order,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[10]
+    )
+    assert (
+        "test1,order,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[11]
+    )
+    assert (
+        "test1,family,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[12]
+    )
+    assert (
+        "test1,family,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[13]
+    )
+    assert (
+        "test1,family,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[14]
+    )
+    assert (
+        "test1,genus,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia,md5,test1.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[15]
+    )
+    assert (
+        "test1,genus,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test1.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[16]
+    )
+    assert (
+        "test1,genus,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola,md5,test1.sig,0.015637726014008795,138000"
+        in sum_gather_results[17]
+    )
+    assert (
+        "test1,genus,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[18]
+    )
+    assert (
+        "test1,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test1.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[19]
+    )
+    assert (
+        "test1,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[20]
+    )
+    assert (
+        "test1,species,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus,md5,test1.sig,0.015637726014008795,138000"
+        in sum_gather_results[21]
+    )
+    assert (
+        "test1,species,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[22]
+    )
+
+
+def test_metagenome_summary_csv_out_abund(runtmp):
+    # test CSV summary format with --use-abund
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--output-dir",
+        outdir,
+        "-F",
+        "csv_summary",
+        "--use-abund",
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test1,superkingdom,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[2]
+    )
+    assert (
+        "test1,phylum,0.11607499002792182,d__Bacteria;p__Bacteroidota,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[3]
+    )
+    assert (
+        "test1,phylum,0.08815317112086159,d__Bacteria;p__Proteobacteria,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[4]
+    )
+    assert (
+        "test1,phylum,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[5]
+    )
+    assert (
+        "test1,class,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[6]
+    )
+    assert (
+        "test1,class,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[7]
+    )
+    assert (
+        "test1,class,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[8]
+    )
+    assert (
+        "test1,order,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[9]
+    )
+    assert (
+        "test1,order,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[10]
+    )
+    assert (
+        "test1,order,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[11]
+    )
+    assert (
+        "test1,family,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.07265026877341586,582000"
+        in sum_gather_results[12]
+    )
+    assert (
+        "test1,family,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test1.sig,0.05815279361459521,442000"
+        in sum_gather_results[13]
+    )
+    assert (
+        "test1,family,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[14]
+    )
+    assert (
+        "test1,genus,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia,md5,test1.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[15]
+    )
+    assert (
+        "test1,genus,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test1.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[16]
+    )
+    assert (
+        "test1,genus,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola,md5,test1.sig,0.015637726014008795,138000"
+        in sum_gather_results[17]
+    )
+    assert (
+        "test1,genus,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[18]
+    )
+    assert (
+        "test1,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test1.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[19]
+    )
+    assert (
+        "test1,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[20]
+    )
+    assert (
+        "test1,species,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus,md5,test1.sig,0.015637726014008795,138000"
+        in sum_gather_results[21]
+    )
+    assert (
+        "test1,species,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000"
+        in sum_gather_results[22]
+    )
+
+
+def test_metagenome_summary_csv_out_empty_gather_force(runtmp, cli_v4_and_v5):
+    # test multiple -g, empty -g file, and --force. v5: force csv_summary.
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.taxonomy.csv")
     csv_base = "out"
@@ -379,6 +697,10 @@ def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
     with open(gather_empty, "w") as fp:
         fp.write("")
     print("g_csv: ", gather_empty)
+
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
 
     runtmp.run_sourmash(
         "tax",
@@ -394,6 +716,8 @@ def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
         "--output-dir",
         outdir,
         "-f",
+        *format_args,
+        version=cli_v4_and_v5,
     )
     sum_gather_results = [x.rstrip() for x in Path(csvout).read_text().splitlines()]
     assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
@@ -594,8 +918,9 @@ def test_metagenome_kreport_ncbi_taxid_out(runtmp):
     ] == kreport_results[16]
 
 
-def test_metagenome_kreport_out_lemonade(runtmp):
-    # test 'kreport' kraken output format against lemonade output
+def test_metagenome_kreport_out_lemonade_v4(runtmp, cli_v4_only):
+    # test 'kreport' kraken output format against lemonade output;
+    # no abundances provided => warning is printed in v4.
     g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
     tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
     csv_base = "out"
@@ -616,11 +941,16 @@ def test_metagenome_kreport_out_lemonade(runtmp):
         outdir,
         "-F",
         "kreport",
+        version=cli_v4_only,
     )
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
+
+    assert (
+        "** WARNING: no abundances found in gather results." in runtmp.last_result.err
+    )
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
@@ -647,6 +977,134 @@ def test_metagenome_kreport_out_lemonade(runtmp):
         "",
         "s__Prosthecochloris vibrioformis",
     ] == kreport_results[7]
+
+
+def test_metagenome_kreport_out_lemonade_ignore_abund(runtmp):
+    # test 'kreport' kraken output format against lemonade output;
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--output-dir",
+        outdir,
+        "-F",
+        "kreport",
+        "--no-abundances",
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning message!
+    assert (
+        "** WARNING: no abundances found in gather results."
+        not in runtmp.last_result.err
+    )
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    kreport_results = [
+        x.rstrip().split("\t") for x in Path(csvout).read_text().splitlines()
+    ]
+    assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
+    print(kreport_results)
+    assert ["5.35", "116000", "0", "D", "", "d__Bacteria"] == kreport_results[0]
+    assert ["94.65", "2054000", "2054000", "U", "", "unclassified"] == kreport_results[
+        1
+    ]
+    assert ["5.35", "116000", "0", "P", "", "p__Bacteroidota"] == kreport_results[2]
+    assert ["5.35", "116000", "0", "C", "", "c__Chlorobia"] == kreport_results[3]
+    assert ["5.35", "116000", "0", "O", "", "o__Chlorobiales"] == kreport_results[4]
+    assert ["5.35", "116000", "0", "F", "", "f__Chlorobiaceae"] == kreport_results[5]
+    assert ["5.35", "116000", "0", "G", "", "g__Prosthecochloris"] == kreport_results[6]
+    assert [
+        "5.35",
+        "116000",
+        "116000",
+        "S",
+        "",
+        "s__Prosthecochloris vibrioformis",
+    ] == kreport_results[7]
+
+
+def test_metagenome_kreport_out_lemonade_no_abund_error_v5(runtmp, cli_v5_only):
+    # error in v5 if no abundances provided
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash(
+            "tax",
+            "metagenome",
+            "--gather-csv",
+            g_csv,
+            "--taxonomy-csv",
+            tax,
+            "-o",
+            csv_base,
+            "--output-dir",
+            outdir,
+            "-F",
+            "kreport",
+            version=cli_v5_only,
+        )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_kreport_out_lemonade_no_abund_use_abund(runtmp):
+    # error if --use-abund is provided but no abundances
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash(
+            "tax",
+            "metagenome",
+            "--gather-csv",
+            g_csv,
+            "--taxonomy-csv",
+            tax,
+            "-o",
+            csv_base,
+            "--output-dir",
+            outdir,
+            "-F",
+            "kreport",
+            "--use-abund",
+        )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
 
 
 def test_metagenome_kreport_out_fail(runtmp):
@@ -1018,6 +1476,117 @@ def test_metagenome_human_format_out(runtmp):
     )
 
 
+def test_metagenome_human_format_out_default_v5(runtmp, cli_v4_and_v5):
+    # 'human' is default output format for v5
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+    csv_base = "out"
+    csvout = runtmp.output(csv_base + ".human.txt")
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    format_args = []
+    if cli_v4_and_v5 != "v5":
+        format_args = ["-F", "human"]
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--rank",
+        "genus",
+        "--output-dir",
+        outdir,
+        *format_args,
+        version=cli_v4_and_v5,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
+
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 6
+    outp = [x.strip() for x in outp]
+    print(outp)
+
+    assert outp[0] == "sample name    proportion   cANI   lineage"
+    assert outp[1] == "-----------    ----------   ----   -------"
+    assert outp[2] == "test1             86.9%     -      unclassified"
+    assert (
+        outp[3]
+        == "test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia"
+    )
+    assert (
+        outp[4]
+        == "test1              5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella"
+    )
+    assert (
+        outp[5]
+        == "test1              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola"
+    )
+
+
+def test_metagenome_human_format_out_default_v5_simple(runtmp, cli_v5_only):
+    # 'human' is default output format for v5, simple/explicit version
+    g_csv = utils.get_test_data("tax/test1.gather.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+    csv_base = "out"
+    csvout = runtmp.output(csv_base + ".human.txt")
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-o",
+        csv_base,
+        "--rank",
+        "genus",
+        "--output-dir",
+        outdir,
+        version=cli_v5_only,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
+
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 6
+    outp = [x.strip() for x in outp]
+    print(outp)
+
+    assert outp[0] == "sample name    proportion   cANI   lineage"
+    assert outp[1] == "-----------    ----------   ----   -------"
+    assert outp[2] == "test1             86.9%     -      unclassified"
+    assert (
+        outp[3]
+        == "test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia"
+    )
+
+
 def test_metagenome_no_taxonomy_fail(runtmp):
     c = runtmp
     g_csv = utils.get_test_data("tax/test1.gather.csv")
@@ -1314,9 +1883,9 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
     assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
 
 
-def test_metagenome_duplicated_taxonomy_force(runtmp):
+def test_metagenome_duplicated_taxonomy_force(runtmp, cli_v4_and_v5):
     c = runtmp
-    # write temp taxonomy with duplicates
+    # write temp taxonomy with duplicates.
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, "w") as dup:
@@ -1326,8 +1895,20 @@ def test_metagenome_duplicated_taxonomy_force(runtmp):
 
     g_csv = utils.get_test_data("tax/test1.gather.csv")
 
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", duplicated_csv, "--force"
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        duplicated_csv,
+        "--force",
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
@@ -1362,7 +1943,7 @@ def test_metagenome_duplicated_taxonomy_force(runtmp):
     )
 
 
-def test_metagenome_missing_taxonomy(runtmp):
+def test_metagenome_missing_taxonomy(runtmp, cli_v4_and_v5):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
@@ -1373,7 +1954,20 @@ def test_metagenome_missing_taxonomy(runtmp):
 
     g_csv = utils.get_test_data("tax/test1.gather.csv")
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", subset_csv)
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        subset_csv,
+        *format_args,
+        version=cli_v4_and_v5,
+    )
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -1443,7 +2037,7 @@ def test_metagenome_missing_fail_taxonomy(runtmp):
     assert c.last_result.status == -1
 
 
-def test_metagenome_multiple_taxonomy_files_missing(runtmp):
+def test_metagenome_multiple_taxonomy_files_missing(runtmp, cli_v4_and_v5):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
@@ -1451,8 +2045,20 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     # gather against mult databases
     g_csv = utils.get_test_data("tax/test1_x_gtdbrs202_genbank_euks.gather.csv")
 
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
     c.run_sourmash(
-        "tax", "metagenome", "-g", g_csv, "--taxonomy-csv", taxonomy_csv, "--force"
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "--force",
+        *format_args,
+        version=cli_v4_and_v5,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -1500,7 +2106,7 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     )
 
 
-def test_metagenome_multiple_taxonomy_files(runtmp):
+def test_metagenome_multiple_taxonomy_files(runtmp, cli_v4_and_v5):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
@@ -1509,6 +2115,10 @@ def test_metagenome_multiple_taxonomy_files(runtmp):
 
     # gather against mult databases
     g_csv = utils.get_test_data("tax/test1_x_gtdbrs202_genbank_euks.gather.csv")
+
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
         "tax",
@@ -1519,6 +2129,8 @@ def test_metagenome_multiple_taxonomy_files(runtmp):
         taxonomy_csv,
         protozoa_genbank,
         bacteria_refseq,
+        *format_args,
+        version=cli_v4_and_v5,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -1626,7 +2238,9 @@ def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args(runtmp):
     )
 
 
-def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(runtmp):
+def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(
+    runtmp, cli_v4_and_v5
+):
     # pass in mult tax files using mult tax arguments, with one empty,
     # and use --force
     c = runtmp
@@ -1644,6 +2258,10 @@ def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(r
     # gather against mult databases
     g_csv = utils.get_test_data("tax/test1_x_gtdbrs202_genbank_euks.gather.csv")
 
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
     c.run_sourmash(
         "tax",
         "metagenome",
@@ -1658,6 +2276,8 @@ def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(r
         "-t",
         tax_empty,
         "--force",
+        *format_args,
+        version=cli_v4_and_v5,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -1966,7 +2586,7 @@ def test_metagenome_two_queries_human_output(runtmp):
     assert "test2              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus"
 
 
-def test_metagenome_two_queries_csv_summary_output(runtmp):
+def test_metagenome_two_queries_csv_summary_output(runtmp, cli_v4_only):
     # remove single-query outputs when working with multiple queries
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
@@ -1995,6 +2615,7 @@ def test_metagenome_two_queries_csv_summary_output(runtmp):
         "phylum",
         "-o",
         "tst",
+        version=cli_v4_only,
     )
 
     assert os.path.exists(csv_summary_out)
@@ -2091,6 +2712,141 @@ def test_metagenome_two_queries_csv_summary_output(runtmp):
     )
     assert (
         "test2,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[42]
+    )
+    assert (
+        "test2,species,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus,md5,test2.sig,0.015637726014008795,138000"
+        in sum_gather_results[43]
+    )
+
+
+def test_metagenome_two_queries_csv_summary_output_v5(runtmp, cli_v5_only):
+    # remove single-query outputs when working with multiple queries
+    # with v5, => abund.
+    c = runtmp
+    taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
+    g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, "w") as fp:
+        for line in Path(g_res).read_text().splitlines():
+            line = line.replace("test1", "test2") + "\n"
+            fp.write(line)
+
+    csv_summary_out = runtmp.output("tst.summarized.csv")
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_res,
+        g_res2,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        "-F",
+        "csv_summary",
+        "--rank",
+        "phylum",
+        "-o",
+        "tst",
+        version=cli_v5_only,
+    )
+
+    assert os.path.exists(csv_summary_out)
+
+    assert c.last_result.status == 0
+    assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
+    assert (
+        f"saving 'csv_summary' output to '{os.path.basename(csv_summary_out)}'"
+        in runtmp.last_result.err
+    )
+    sum_gather_results = [
+        x.rstrip() for x in Path(csv_summary_out).read_text().splitlines()
+    ]
+    assert (
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        in sum_gather_results[0]
+    )
+    # check both queries exist in csv_summary results; check several
+    assert (
+        "test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[1]
+    )
+    assert (
+        "test2,superkingdom,0.2042281611487834,d__Bacteria,md5,test2.sig,0.13080306238801107,1024000,0.9500482567175479,0"
+        in sum_gather_results[23]
+    )
+    assert (
+        "test2,phylum,0.11607499002792182,d__Bacteria;p__Bacteroidota,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[25]
+    )
+    assert (
+        "test2,phylum,0.08815317112086159,d__Bacteria;p__Proteobacteria,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[26]
+    )
+    assert (
+        "test2,phylum,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[27]
+    )
+    assert (
+        "test2,class,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[28]
+    )
+    assert (
+        "test2,class,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[29]
+    )
+    assert (
+        "test2,class,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[30]
+    )
+    assert (
+        "test2,order,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[31]
+    )
+    assert (
+        "test2,order,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[32]
+    )
+    assert (
+        "test2,order,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[33]
+    )
+    assert (
+        "test2,family,0.11607499002792182,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test2.sig,0.07265026877341586,582000"
+        in sum_gather_results[34]
+    )
+    assert (
+        "test2,family,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test2.sig,0.05815279361459521,442000"
+        in sum_gather_results[35]
+    )
+    assert (
+        "test2,family,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[36]
+    )
+    assert (
+        "test2,genus,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia,md5,test2.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[37]
+    )
+    assert (
+        "test2,genus,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test2.sig,0.05701254275940707,444000,0.9247805047263588,0"
+        in sum_gather_results[38]
+    )
+    assert (
+        "test2,genus,0.027522935779816515,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola,md5,test2.sig,0.015637726014008795,138000"
+        in sum_gather_results[39]
+    )
+    assert (
+        "test2,genus,0.7957718388512166,unclassified,md5,test2.sig,0.8691969376119889,3990000"
+        in sum_gather_results[40]
+    )
+    assert (
+        "test2,species,0.08815317112086159,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli,md5,test2.sig,0.05815279361459521,442000,0.9246458342627294,0"
+        in sum_gather_results[41]
+    )
+    assert (
+        "test2,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.05701254275940707,444000,0.9247805047263588,0"
         in sum_gather_results[42]
     )
     assert (
@@ -2263,12 +3019,16 @@ def test_metagenome_two_queries_krona(runtmp):
     assert "0.7957718388512166	unclassified" in c.last_result.out
 
 
-def test_metagenome_gather_duplicate_filename(runtmp):
+def test_metagenome_gather_duplicate_filename(runtmp, cli_v4_and_v5):
     # test that a duplicate filename is properly flagged, when passed in
     # twice to a single -g argument.
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
     g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
         "tax",
@@ -2278,6 +3038,8 @@ def test_metagenome_gather_duplicate_filename(runtmp):
         g_res,
         "--taxonomy-csv",
         taxonomy_csv,
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
@@ -2296,11 +3058,15 @@ def test_metagenome_gather_duplicate_filename(runtmp):
     )
 
 
-def test_metagenome_gather_duplicate_filename_2(runtmp):
+def test_metagenome_gather_duplicate_filename_2(runtmp, cli_v4_and_v5):
     # test that a duplicate filename is properly flagged, with -g a -g b
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
     g_res = utils.get_test_data("tax/test1.gather.csv")
+
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
         "tax",
@@ -2311,6 +3077,8 @@ def test_metagenome_gather_duplicate_filename_2(runtmp):
         g_res,
         "--taxonomy-csv",
         taxonomy_csv,
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
@@ -2329,7 +3097,7 @@ def test_metagenome_gather_duplicate_filename_2(runtmp):
     )
 
 
-def test_metagenome_gather_duplicate_filename_from_file(runtmp):
+def test_metagenome_gather_duplicate_filename_from_file(runtmp, cli_v4_and_v5):
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.taxonomy.csv")
     g_res = utils.get_test_data("tax/test1.gather.csv")
@@ -2338,8 +3106,19 @@ def test_metagenome_gather_duplicate_filename_from_file(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res}\n")
 
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
     c.run_sourmash(
-        "tax", "metagenome", "--from-file", g_from_file, "--taxonomy-csv", taxonomy_csv
+        "tax",
+        "metagenome",
+        "--from-file",
+        g_from_file,
+        "--taxonomy-csv",
+        taxonomy_csv,
+        *format_args,
+        version=cli_v4_and_v5,
     )
 
     print(c.last_result.status)
@@ -3290,13 +4069,17 @@ def test_genome_gather_two_queries(runtmp):
     )
 
 
-def test_genome_gather_ictv(runtmp):
+def test_genome_gather_ictv(runtmp, cli_v4_and_v5):
     """
     test genome classification with ictv taxonomy
     """
     c = runtmp
     taxonomy_csv = utils.get_test_data("tax/test.ictv-taxonomy.csv")
     g_res = utils.get_test_data("tax/47+63_x_gtdb-rs202.gather.csv")
+
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
 
     c.run_sourmash(
         "tax",
@@ -3308,6 +4091,8 @@ def test_genome_gather_ictv(runtmp):
         "--containment-threshold",
         "0",
         "--ictv",
+        *format_args,
+        version=cli_v4_and_v5,
     )
     print(c.last_result.status)
     print(c.last_result.out)
@@ -6107,14 +6892,28 @@ def test_tax_summarize_LINS(runtmp):
         assert c["4"] == 2
 
 
-def test_metagenome_LIN(runtmp):
+def test_metagenome_LIN(runtmp, cli_v4_and_v5):
     # test basic metagenome with LIN taxonomy
     c = runtmp
 
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.LIN-taxonomy.csv")
 
-    c.run_sourmash("tax", "metagenome", "-g", g_csv, "--taxonomy-csv", tax, "--lins")
+    format_args = []
+    if cli_v4_and_v5 == "v5":
+        format_args = ["-F", "csv_summary"]
+
+    c.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "--lins",
+        *format_args,
+        version=cli_v4_and_v5,
+    )
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -6637,3 +7436,456 @@ def test_metagenome_LIN_lingroups_lg_only_header(runtmp):
 
     assert c.last_result.status != 0
     assert f"No lingroups loaded from {lg_file}" in c.last_result.err
+
+
+def test_metagenome_abund_reporting_default(runtmp, cli_v4_and_v5):
+    # test default abundance behavior across versions
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output("xxx"),
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund used by default in both v4 and v5:
+    assert "test1             86.9%     -      unclassified" in human_txt
+    assert "86.92\t10672000\t10672000\tU\t\tunclassified" in kreport_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert (
+        "test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in csvsum_txt
+    )
+
+    if cli_v4_and_v5 == "(default)":
+        # abund not used by default in v4:
+        assert "0.7957718388512166\tunclassified" in krona_txt
+        assert "unclassified\t0.795" in linsum_txt
+
+        # warning printed in v4
+        assert "WARNING: abundances" in runtmp.last_result.err
+    elif cli_v4_and_v5 == "v4":
+        # abund not used by default in v4:
+        assert "0.7957718388512166\tunclassified" in krona_txt
+        assert "unclassified\t0.795" in linsum_txt
+
+        # warning printed
+        assert "WARNING: abundances" in runtmp.last_result.err
+    elif cli_v4_and_v5 == "v5":
+        # abund used by default in v5:
+        assert "0.8691969376119889\tunclassified" in krona_txt
+        assert "unclassified\t0.869" in linsum_txt
+
+        # no warning printed
+        assert "WARNING: abundances" not in runtmp.last_result.err
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_metagenome_abund_reporting_no_abund_fail_v4(runtmp, cli_v4_only):
+    # test abundance behavior with defaults and no abundances; behavior varies
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output("xxx"),
+        version=cli_v4_only,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "WARNING: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_no_abund_fail_v5(runtmp, cli_v5_only):
+    # test abundance behavior with defaults and no abundances; behavior varies
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash(
+            "tax",
+            "metagenome",
+            "-g",
+            g_csv,
+            "--taxonomy-csv",
+            tax,
+            "-F",
+            "human",
+            "-F",
+            "csv_summary",
+            "-F",
+            "lineage_summary",
+            "-F",
+            "krona",
+            "-F",
+            "kreport",
+            "-r",
+            "species",
+            "-o",
+            runtmp.output("xxx"),
+            version=cli_v5_only,
+        )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_use_abund(runtmp, cli_v4_and_v5):
+    # test abundance behavior across versions with --use-abund
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output("xxx"),
+        "--use-abund",
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund used by default in both v4 and v5:
+    assert "test1             86.9%     -      unclassified" in human_txt
+    assert "86.92\t10672000\t10672000\tU\t\tunclassified" in kreport_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert (
+        "test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in csvsum_txt
+    )
+
+    # abund used with --use-abund:
+    assert "0.8691969376119889\tunclassified" in krona_txt
+    assert "unclassified\t0.869" in linsum_txt
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning printed
+    assert "WARNING: abundances" not in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_ignore_abund(runtmp, cli_v4_and_v5):
+    # test abundance behavior across versions with --ignore-abund
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output("xxx"),
+        "--ignore-abund",
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund ignored with --ignore-abund:
+    assert "test1             79.6%     -      unclassified" in human_txt
+    assert "79.58\t3990000\t3990000\tU\t\tunclassified" in kreport_txt
+    assert "0.7957718388512166\tunclassified" in krona_txt
+    assert "unclassified\t0.795" in linsum_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert (
+        "test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in csvsum_txt
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning printed
+    assert "WARNING: abundances" not in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_use_abund_fail(runtmp, cli_v4_and_v5):
+    # test abundance behavior with --use-abund and no abundances; should fail.
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash(
+            "tax",
+            "metagenome",
+            "-g",
+            g_csv,
+            "--taxonomy-csv",
+            tax,
+            "-F",
+            "human",
+            "-F",
+            "csv_summary",
+            "-F",
+            "lineage_summary",
+            "-F",
+            "krona",
+            "-F",
+            "kreport",
+            "-r",
+            "species",
+            "-o",
+            runtmp.output("xxx"),
+            "--use-abund",
+            version=cli_v4_and_v5,
+        )
+
+    assert "ERROR: no abundances found in gather results." in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_ignore_abund(runtmp, cli_v4_and_v5):
+    # test abundance behavior across versions with --ignore-abund
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.taxonomy.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output("xxx"),
+        "--ignore-abund",
+        version=cli_v4_and_v5,
+    )
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+    human_txt = open(human_out).read()
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+    krona_txt = open(krona_out).read()
+
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+    linsum_txt = open(linsum_out).read()
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+    kreport_txt = open(kreport_out).read()
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)
+    csvsum_txt = open(csvsum_out).read()
+
+    # abund ignored with --ignore-abund:
+    assert "test1             79.6%     -      unclassified" in human_txt
+    assert "79.58\t3990000\t3990000\tU\t\tunclassified" in kreport_txt
+    assert "0.7957718388512166\tunclassified" in krona_txt
+    assert "unclassified\t0.795" in linsum_txt
+
+    # both flat and abund reported in v4 and v5:
+    assert (
+        "test1,species,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        in csvsum_txt
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # no warning printed
+    assert "WARNING: abundances" not in runtmp.last_result.err
+
+
+def test_metagenome_abund_reporting_ignore_abund_pass(runtmp, cli_v4_and_v5):
+    # test abundance behavior with --use-abund and no abundances; should pass.
+    g_csv = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.csv")
+    tax = utils.get_test_data("tax/lemonade-MAG3.x.gtdb.matches.tax.csv")
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "-g",
+        g_csv,
+        "--taxonomy-csv",
+        tax,
+        "-F",
+        "human",
+        "-F",
+        "csv_summary",
+        "-F",
+        "lineage_summary",
+        "-F",
+        "krona",
+        "-F",
+        "kreport",
+        "-r",
+        "species",
+        "-o",
+        runtmp.output("xxx"),
+        "--ignore-abund",
+        version=cli_v4_and_v5,
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    human_out = runtmp.output("xxx.human.txt")
+    assert os.path.exists(human_out)
+
+    krona_out = runtmp.output("xxx.krona.tsv")
+    assert os.path.exists(krona_out)
+
+    linsum_out = runtmp.output("xxx.lineage_summary.tsv")
+    assert os.path.exists(linsum_out)
+
+    kreport_out = runtmp.output("xxx.kreport.txt")
+    assert os.path.exists(kreport_out)
+
+    csvsum_out = runtmp.output("xxx.summarized.csv")
+    assert os.path.exists(csvsum_out)

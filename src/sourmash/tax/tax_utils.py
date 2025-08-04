@@ -23,7 +23,8 @@ __all__ = [
     "collect_gather_csvs",
     "load_gather_results",
     "check_and_load_gather_csvsreport_missing_and_skipped_identities",
-    "aggregate_by_lineage_at_rankformat_for_krona",
+    "aggregate_by_lineage_at_rank",
+    "format_for_krona",
     "write_output",
     "write_bioboxes",
     "parse_lingroups",
@@ -900,6 +901,8 @@ def check_and_load_gather_csvs(
 ):
     """
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
+
+    Returns list of QueryTaxResults objects.
     """
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
@@ -982,7 +985,9 @@ def report_missing_and_skipped_identities(gather_results):
         )
 
 
-def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
+def aggregate_by_lineage_at_rank(
+    query_gather_results, rank, *, by_query=False, use_abund=True
+):
     """
     Aggregate list of summarized_lineage_results at rank, keeping
     query names or not (but this aggregates across queries if multiple).
@@ -1001,12 +1006,15 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
 
         for res in queryResult.summarized_lineage_results[rank]:
             lineage = res.lineage.display_lineage(null_as_unclassified=True)
-            if by_query:
-                lineage_summary[lineage][query_name] = (
-                    res.fraction
-                )  # v5?: res.f_weighted_at_rank
+            if use_abund:
+                fraction = res.f_weighted_at_rank
             else:
-                lineage_summary[lineage] += res.fraction
+                fraction = res.fraction
+
+            if by_query:
+                lineage_summary[lineage][query_name] = fraction
+            else:
+                lineage_summary[lineage] += fraction
 
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
@@ -1016,7 +1024,9 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
     return lineage_summary, all_queries
 
 
-def format_for_krona(query_gather_results, rank, *, classification=False):
+def format_for_krona(
+    query_gather_results, rank, *, classification=False, use_abund=True
+):
     """
     Aggregate and format for krona output. Single query recommended, but we don't want query headers.
     """
@@ -1045,7 +1055,10 @@ def format_for_krona(query_gather_results, rank, *, classification=False):
             )  # , q_res.krona_unclassified])
     else:
         lineage_summary, _ = aggregate_by_lineage_at_rank(
-            query_gather_results, rank, by_query=False
+            query_gather_results,
+            rank,
+            by_query=False,
+            use_abund=use_abund,
         )
 
         # sort by fraction
@@ -1121,6 +1134,7 @@ def write_summary(
     limit_float_decimals=False,
     classification=False,
     lingroups=None,
+    use_abund=False,
 ):
     """
     Write taxonomy-summarized gather results for each rank.
@@ -1131,6 +1145,7 @@ def write_summary(
             limit_float=limit_float_decimals,
             classification=classification,
             lingroups=lingroups,
+            use_abund=use_abund,
         )
         if w is None:
             w = csv.DictWriter(csv_fp, header, delimiter=sep)
@@ -1140,7 +1155,11 @@ def write_summary(
 
 
 def write_human_summary(
-    query_gather_results, out_fp, display_rank, classification=False
+    query_gather_results,
+    out_fp,
+    display_rank,
+    classification=False,
+    use_abund=True,
 ):
     """
     Write human-readable taxonomy-summarized gather results for a specific rank.
@@ -1155,8 +1174,12 @@ def write_human_summary(
             out_fp.write("-----------    ------    ----------   ----   -------\n")
 
             for rD in results:
+                if use_abund:
+                    rD["proportion"] = rD["f_weighted_at_rank"]
+                else:
+                    rD["proportion"] = rD["fraction_p"]
                 out_fp.write(
-                    "{query_name:<15s}   {status}    {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(
+                    "{query_name:<15s}   {status}    {proportion}     {query_ani_at_rank}  {lineage}\n".format(
                         **rD
                     )
                 )
@@ -1165,8 +1188,13 @@ def write_human_summary(
             out_fp.write("-----------    ----------   ----   -------\n")
 
             for rD in results:
+                if use_abund:
+                    rD["proportion"] = rD["f_weighted_at_rank"]
+                else:
+                    rD["proportion"] = rD["fraction_p"]
+
                 out_fp.write(
-                    "{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(
+                    "{query_name:<15s}   {proportion}     {query_ani_at_rank}  {lineage}\n".format(
                         **rD
                     )
                 )
@@ -2036,9 +2064,9 @@ class SummarizedGatherResult:
     """
 
     rank: str
-    fraction: float
+    fraction: float  # unweighted
     lineage: RankLineageInfo
-    f_weighted_at_rank: float
+    f_weighted_at_rank: float  # weighted
     bp_match_at_rank: int
     query_ani_at_rank: float = None
 
@@ -2110,6 +2138,7 @@ class SummarizedGatherResult:
 
     def as_human_friendly_dict(self, query_info):
         sD = self.as_summary_dict(query_info=query_info, limit_float=True)
+        sD["fraction_p"] = f"{self.fraction * 100:>4.1f}%"
         sD["f_weighted_at_rank"] = f"{self.f_weighted_at_rank * 100:>4.1f}%"
         if self.query_ani_at_rank is not None:
             sD["query_ani_at_rank"] = f"{self.query_ani_at_rank * 100:>3.1f}%"
@@ -2117,7 +2146,7 @@ class SummarizedGatherResult:
             sD["query_ani_at_rank"] = "-    "
         return sD
 
-    def as_kreport_dict(self, query_info):
+    def as_kreport_dict(self, query_info, *, use_abund=True):
         """
         Produce kreport dict for named taxonomic groups.
         """
@@ -2126,10 +2155,15 @@ class SummarizedGatherResult:
         sD["num_bp_assigned"] = str(0)
         sD["ncbi_taxid"] = None
         # total percent containment, weighted to include abundance info
-        sD["percent_containment"] = f"{self.f_weighted_at_rank * 100:.2f}"
-        sD["num_bp_contained"] = str(
-            int(self.f_weighted_at_rank * query_info.total_weighted_bp)
-        )
+        if use_abund:
+            sD["percent_containment"] = f"{self.f_weighted_at_rank * 100:.2f}"
+            sD["num_bp_contained"] = str(
+                int(self.f_weighted_at_rank * query_info.total_weighted_bp)
+            )
+        else:
+            sD["percent_containment"] = f"{self.fraction * 100:.2f}"
+            sD["num_bp_contained"] = str(int(self.bp_match_at_rank))
+
         if isinstance(self.lineage, LINLineageInfo):
             raise ValueError("Cannot produce 'kreport' with LIN taxonomy.")
         if self.lineage != RankLineageInfo():
@@ -2225,17 +2259,20 @@ class ClassificationResult(SummarizedGatherResult):
         ):
             self.status = "match"
 
+    # CTB: note, used only in tax genome.
     def build_krona_result(self, rank=None):
         krona_classified, krona_unclassified = None, None
         if rank is not None and rank == self.rank:
             lin_as_list = self.lineage.display_lineage().split(";")
+
             krona_classification = (
                 self.fraction,
                 *lin_as_list,
-            )  # v5?: f_weighted_at_rank
+            )
+            unclassified_fraction = 1.0 - self.fraction
+
             krona_classified = krona_classification
             # handle unclassified - do we want/need this?
-            unclassified_fraction = 1.0 - self.fraction  # v5?: f_weighted_at_rank
             len_unclassified_lin = len(lin_as_list)
             unclassifed_lin = ["unclassified"] * (len_unclassified_lin)
             krona_unclassified = (unclassified_fraction, *unclassifed_lin)
@@ -2570,7 +2607,11 @@ class QueryTaxResult:
         return results
 
     def make_full_summary(
-        self, classification=False, limit_float=False, lingroups=None
+        self,
+        classification=False,
+        limit_float=False,
+        lingroups=None,
+        use_abund=False,
     ):
         results = []
         rD = {}
@@ -2622,9 +2663,10 @@ class QueryTaxResult:
                         continue
                 unclassified = []
                 rank_results = self.summarized_lineage_results[rank]
-                rank_results.sort(
-                    key=lambda res: -res.fraction
-                )  # v5?: f_weighted_at_rank)
+                if use_abund:
+                    rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+                else:
+                    rank_results.sort(key=lambda res: -res.fraction)
                 for res in rank_results:
                     rD = res.as_summary_dict(
                         query_info=self.query_info,
@@ -2641,7 +2683,7 @@ class QueryTaxResult:
                 results += unclassified
         return header, results
 
-    def make_kreport_results(self):
+    def make_kreport_results(self, *, use_abund=True):
         """
         Format taxonomy-summarized gather results as kraken-style kreport.
 
@@ -2716,7 +2758,7 @@ class QueryTaxResult:
                 continue
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
-                kresD = res.as_kreport_dict(self.query_info)
+                kresD = res.as_kreport_dict(self.query_info, use_abund=use_abund)
                 if kresD["sci_name"] == "unclassified":
                     # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
                     # Here, we only need to report it once, since it will be the same fraction for all ranks
