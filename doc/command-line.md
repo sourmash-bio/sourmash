@@ -923,7 +923,7 @@ Note: this output format requires a single sample only. For a similar output wit
 
 #### `bioboxes` output format
 
-When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.
+When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges. As of v4.9.4, `bioboxes` will support taxonomies with missing ranks, as seen in some NCBI taxonomies (e.g. taxpath: 2|1239|||||2292892|). In these cases, the (missing) rank-taxid combinations will be omitted from the output.
 
 This output format starts with some header information:
 ```
