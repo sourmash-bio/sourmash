@@ -713,7 +713,7 @@ error.
 You can specify `--v4` to keep the old behavior, or `--v5` to support
 the new default behavior, or simply specify the desired formats and/or
 abundance flags to override the default. See
-[Migrating from sourmash v4.x to sourmash v5.x](@CTB) for more
+[Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x) for more
 details.
 
 #### `human` output format
@@ -1052,7 +1052,7 @@ default output format will become `human`, instead of `csv_summary`.
 
 You can specify `--v4` to keep the old behavior, or `--v5` to support
 the new default behavior, or simply specify the desired output format.
-See [Migrating from sourmash v4.x to sourmash v5.x](@CTB) for more
+See [Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x) for more
 details.
 
 #### `human` output format
@@ -2040,7 +2040,7 @@ CSV and SQLite manifest files.
 `--no-rebuild-manifest` will become default. You can specify `--v4` to
 keep the old behavior, or `--v5` to support the new default behavior,
 or simply specify `--no-rebuild-manifest` to override the default. See
-[Migrating from sourmash v4.x to sourmash v5.x](@CTB) for more
+[Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x) for more
 details.
 
 ### `sourmash signature check` - compare picklists and manifests
@@ -2084,7 +2084,7 @@ filenames via a text file.
 `--relpath` will become default. You can specify `--v4` to keep the
 old behavior, or `--v5` to support the new default behavior, or simply
 specify `--relpath` or `--abspath` to specify the desired
-behavior. See [Migrating from sourmash v4.x to sourmash v5.x](@CTB)
+behavior. See [Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x)
 for more details.
 
 ### `sourmash signature collect` - collect manifests across databases
