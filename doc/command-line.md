@@ -533,7 +533,7 @@ memory (see `--linear` option, below), and does no post-processing of signatures
 
 `prefetch` has four main output options, which can all be used individually
 or together:
-* `-o/--output` produces a CSV summary file; see [the CSV output file documentation for prefetch](classifying-signatures.html#appendix-e-prefetch-csv-output-columns) for details of the output columns.
+* `-o/--output` produces a CSV summary file; see [the CSV output file documentation for prefetch](classifying-signatures.md#appendix-e-prefetch-csv-output-columns) for details of the output columns.
 * `--save-matches` saves all matching signatures;
 * `-save-matching-hashes` saves a single signature containing all of the hashes that matched any signature in the database at or above the specified threshold;
 * `--save-unmatched-hashes` saves a single signature containing the complement of `--save-matching-hashes`.
@@ -703,12 +703,14 @@ behavior in sourmash v5.
 | krona     | no abund    | abund     |
 | kreport     | abund | abund     |
 
+:::{warning}
 **sourmash v5 breaking change:** In sourmash v5.0 and later, the
 default output format will become `human`, instead of `csv_summary`.
 Likewise, `--use-abundances` will be on by default for `tax
 metagenome`, and it will be an error to not have abundances in your
 gather output.  You can specify `--ignore-abundances` to override the
 error.
+:::
 
 You can specify `--v4` to keep the old behavior, or `--v5` to support
 the new default behavior, or simply specify the desired formats and/or
@@ -1047,6 +1049,7 @@ containment threshold of 0.1 (10%).
 - `krona`: ".krona.tsv",
 - `lineage_summary`: ".lineage_summary.tsv",
 
+:::{warning}
 **sourmash v5 breaking change:** In sourmash v5.0 and later, the
 default output format will become `human`, instead of `csv_summary`.
 
@@ -1054,6 +1057,7 @@ You can specify `--v4` to keep the old behavior, or `--v5` to support
 the new default behavior, or simply specify the desired output format.
 See [Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x) for more
 details.
+:::
 
 #### `csv_summary` output format
 
@@ -2032,12 +2036,14 @@ To produce a SQLite manifest, use `sourmash sig manifest ... -F sql`.
 All sourmash commands that work with manifests will accept both
 CSV and SQLite manifest files.
 
+:::{warning}
 **sourmash v5 breaking change:** In sourmash v5.0 and later,
 `--no-rebuild-manifest` will become default. You can specify `--v4` to
 keep the old behavior, or `--v5` to support the new default behavior,
 or simply specify `--no-rebuild-manifest` to override the default. See
 [Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x) for more
 details.
+:::
 
 ### `sourmash signature check` - compare picklists and manifests
 
@@ -2076,12 +2082,14 @@ using zip files and sig files, and avoiding directory hierarchies or
 path lists. You can use `--from-file` to pass in long lists of
 filenames via a text file.
 
+:::{warning}
 **sourmash v5 breaking change:** In sourmash v5.0 and later,
 `--relpath` will become default. You can specify `--v4` to keep the
 old behavior, or `--v5` to support the new default behavior, or simply
 specify `--relpath` or `--abspath` to specify the desired
 behavior. See [Migrating from sourmash v4.x to sourmash v5.x](support.md#migrating-from-sourmash-v4x-to-sourmash-v5x)
 for more details.
+:::
 
 ### `sourmash signature collect` - collect manifests across databases
 

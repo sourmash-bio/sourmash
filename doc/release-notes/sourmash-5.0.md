@@ -12,9 +12,9 @@ Please see
 [our migration guide](../support.md#migrating-from-sourmash-v4x-to-sourmash-v5x)
 for guidance on updating to sourmash v5, and post questions about
 migrating to sourmash 5.0 in the
-[sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/new).
+[sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/new)!
 
-## Breaking changes for 4.0
+## Breaking changes for 5.0
 
 ### Numerical output and search results are mostly unchanged
 
