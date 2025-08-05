@@ -17,6 +17,8 @@ Indexed RocksDB collections:
    * zip: [ncbi-euks-all-2025.01.k51.rocksdb.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip) - all NCBI eukaryotes, indexed in a RocksDB - DNA, k=51, scaled=10000 (19.0 GB)
 
 
+Note: RocksDB indexes must be unzipped before use.
+
 
 Zip collections:
 
