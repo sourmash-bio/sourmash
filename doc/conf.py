@@ -42,6 +42,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "myst_parser",
     "sphinx_design",
+    "sphinx_copybutton",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
