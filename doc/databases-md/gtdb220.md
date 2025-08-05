@@ -9,7 +9,7 @@ Links:
 
 * [Announcement](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r09-rs220/595)
 
-## Database files:
+## Database files
 
 | K-mer size | GTDB reps | GTDB entire |
 | -------- | -------- | -------- |
@@ -18,7 +18,7 @@ Links:
 | 51 | [download (2.8 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-reps-rs220-k51.dna.zip) | [download (17.0 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220-k51.dna.zip)  |
 
 
-## Taxonomy files:
+## Taxonomy files
 
 * [GTDB taxonomy for RS220.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220.lineages.csv)
 
@@ -67,6 +67,8 @@ curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-
 # download taxonomy file
 curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/gtdb-rs220/gtdb-rs220.lineages.csv
 ```
+
+
 
 ### A list of all the URLs
 

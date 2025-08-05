@@ -9,35 +9,39 @@ Links:
 
 * [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=2759&lvl=3&lin=f&keep=1&srchmode=1&unlock)
 
-## Database files:
+## Database files
 
 
-Indexed RocksDB collections:
+### Indexed RocksDB collections
 
-   * zip: [ncbi-euks-all-2025.01.k51.rocksdb.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip) - all NCBI eukaryotes, indexed in a RocksDB - DNA, k=51, scaled=10000 (19.0 GB)
-
-
-Note: RocksDB indexes must be unzipped before use.
+   * tar.gz: [ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz) - all NCBI eukaryotes, indexed in a RocksDB - DNA, k=51, scaled=10000 (19.0 GB)
 
 
-Zip collections:
-
-   * zip: [ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip) - vertebrate reference genomes (NCBI:txid7742) - DNA, k=51, scaled=10000 (4.0 GB)
-
-   * zip: [ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip) - bilateria minus the vertebrates - DNA, k=51, scaled=10000 (1.7 GB)
-
-   * zip: [ncbi-euks-plants-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip) - plant reference genomes (NCBI:txid33090) - DNA, k=51, scaled=10000 (1.3 GB)
-
-   * zip: [ncbi-euks-fungi-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip) - fungal reference genomes (NCBI:txid4751) - DNA, k=51, scaled=10000 (0.2 GB)
-
-   * zip: [ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip) - metazoan reference genomes minus the bilateria - DNA, k=51, scaled=10000 (0.1 GB)
-
-   * zip: [ncbi-euks-other-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip) - remaining eukaryotes (not plants, fungi, or metazoa) - DNA, k=51, scaled=10000 (0.1 GB)
+Note: RocksDB indexes must be unpacked before use, while the other
+databases can be used directly as zip files. You can
+[unpack while downloading](https://unix.stackexchange.com/questions/85194/how-to-download-an-archive-and-extract-it-without-saving-the-archive-to-disk/85195#85195)
+in order to avoid temporarily using disk space to store the downloaded tar.gz.
 
 
-## Taxonomy files:
 
-* [NCBI taxonomy for eukaryotes (NCBI:txid2759) as of January 2025.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv)
+### Zip collections
+
+   * zip: [ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip) - vertebrate reference genomes (NCBI:txid7742) - DNA, k=51, scaled=10000 (4.0 GB)
+
+   * zip: [ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip) - bilateria minus the vertebrates - DNA, k=51, scaled=10000 (1.7 GB)
+
+   * zip: [ncbi-euks-plants-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip) - plant reference genomes (NCBI:txid33090) - DNA, k=51, scaled=10000 (1.3 GB)
+
+   * zip: [ncbi-euks-fungi-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip) - fungal reference genomes (NCBI:txid4751) - DNA, k=51, scaled=10000 (0.2 GB)
+
+   * zip: [ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip) - metazoan reference genomes minus the bilateria - DNA, k=51, scaled=10000 (0.1 GB)
+
+   * zip: [ncbi-euks-other-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip) - remaining eukaryotes (not plants, fungi, or metazoa) - DNA, k=51, scaled=10000 (0.1 GB)
+
+
+## Taxonomy files
+
+* [NCBI taxonomy for eukaryotes (NCBI:txid2759) as of January 2025.](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv)
 
 
 ## Advanced
@@ -49,65 +53,77 @@ Zip collections:
 
 Files:
 
-* zip: [ncbi-euks-all-2025.01.k51.rocksdb.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip) - all NCBI eukaryotes, indexed in a RocksDB - DNA, k=51, scaled=10000 (19.0 GB)
+* tar.gz: [ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz) - all NCBI eukaryotes, indexed in a RocksDB - DNA, k=51, scaled=10000 (19.0 GB)
 
 
-* zip: [ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip) - vertebrate reference genomes (NCBI:txid7742) - DNA, k=51, scaled=10000 (4.0 GB)
+* zip: [ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip) - vertebrate reference genomes (NCBI:txid7742) - DNA, k=51, scaled=10000 (4.0 GB)
 
 
-* zip: [ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip) - bilateria minus the vertebrates - DNA, k=51, scaled=10000 (1.7 GB)
+* zip: [ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip) - bilateria minus the vertebrates - DNA, k=51, scaled=10000 (1.7 GB)
 
 
-* zip: [ncbi-euks-plants-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip) - plant reference genomes (NCBI:txid33090) - DNA, k=51, scaled=10000 (1.3 GB)
+* zip: [ncbi-euks-plants-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip) - plant reference genomes (NCBI:txid33090) - DNA, k=51, scaled=10000 (1.3 GB)
 
 
-* zip: [ncbi-euks-fungi-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip) - fungal reference genomes (NCBI:txid4751) - DNA, k=51, scaled=10000 (0.2 GB)
+* zip: [ncbi-euks-fungi-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip) - fungal reference genomes (NCBI:txid4751) - DNA, k=51, scaled=10000 (0.2 GB)
 
 
-* zip: [ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip) - metazoan reference genomes minus the bilateria - DNA, k=51, scaled=10000 (0.1 GB)
+* zip: [ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip) - metazoan reference genomes minus the bilateria - DNA, k=51, scaled=10000 (0.1 GB)
 
 
-* zip: [ncbi-euks-other-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip) - remaining eukaryotes (not plants, fungi, or metazoa) - DNA, k=51, scaled=10000 (0.1 GB)
+* zip: [ncbi-euks-other-2025.01.dna.k=51.sig.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip) - remaining eukaryotes (not plants, fungi, or metazoa) - DNA, k=51, scaled=10000 (0.1 GB)
 
 
 
 ### Download via curl using the command line
 
 ```shell
-# download ncbi-euks-all-2025.01.k51.rocksdb.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip
+# download ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz
 
 # download ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
 
 # download ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip
 
 # download ncbi-euks-plants-2025.01.dna.k=51.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip
 
 # download ncbi-euks-fungi-2025.01.dna.k=51.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip
 
 # download ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip
 
 # download ncbi-euks-other-2025.01.dna.k=51.sig.zip
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip
 
 # download taxonomy file
-curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv
+curl -O --no-clobber https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv
 ```
+
+
+
+### Download and unpack RocksDB indexes
+
+```
+
+# download and unpack ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz
+curl -L https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz | tar xzf -
+
+```
+
 
 ### A list of all the URLs
 
 ```
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-all-2025.01.k51.rocksdb.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip
-https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/genbank-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-all-2025.01-k51.dna.rocksdb.tar.gz
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-vertebrates-2025.01.dna.k=51.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-bilateria-minus-vertebrates-2025.01.dna.k=51.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-plants-2025.01.dna.k=51.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-metazoa-minus-bilateria-2025.01.dna.k=51.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-other-2025.01.dna.k=51.sig.zip
+https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv
 ```
