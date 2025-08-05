@@ -656,8 +656,8 @@ impl KmerMinHash {
         let mut prod = 0;
         let mut other_iter = other.mins.iter().enumerate();
         let mut next_hash = other_iter.next();
-        let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
-        let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
+        let a_sq: u64 = abunds.iter().map(|a| a * a).sum();
+        let b_sq: u64 = other_abunds.iter().map(|a| a * a).sum();
 
         for (i, hash) in self.mins.iter().enumerate() {
             while let Some((j, k)) = next_hash {
@@ -1508,8 +1508,8 @@ impl KmerMinHashBTree {
         let other_abunds = other.abunds.as_ref().unwrap();
 
         let mut prod = 0;
-        let a_sq: u64 = abunds.values().map(|a| (a * a)).sum();
-        let b_sq: u64 = other_abunds.values().map(|a| (a * a)).sum();
+        let a_sq: u64 = abunds.values().map(|a| a * a).sum();
+        let b_sq: u64 = other_abunds.values().map(|a| a * a).sum();
 
         for (hash, value) in abunds.iter() {
             if let Some(oa) = other_abunds.get(hash) {
