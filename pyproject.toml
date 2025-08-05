@@ -172,6 +172,7 @@ doc = [
   "sphinx-design==0.6.1",
   "ipython",
   "docutils>=0.17.1,<0.22",
+  "sphinx-copybutton",
 ]
 storage = [
   "ipfshttpclient>=0.4.13",

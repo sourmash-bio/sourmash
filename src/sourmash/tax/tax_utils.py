@@ -1118,6 +1118,10 @@ def write_bioboxes(header_lines, results, out_fp, *, sep="\t"):
     for inf in header_lines:
         out_fp.write(inf + "\n")
     for res in results:
+        # NCBI lineages can often have empty taxids at e.g. order level or strain level
+        # without a taxid, we cannot write the row to bioboxes format; here we just skip those rows.
+        if res[0] == "":  # no taxid for this results row -- skip!
+            continue
         res = sep.join(res) + "\n"
         out_fp.write(res)
 
