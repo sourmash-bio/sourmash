@@ -7,7 +7,7 @@ updates:
   open-pull-requests-limit: 10
   commit-message:
     prefix: Build(deps-py)
-  group:
+  groups:
     dependencies:
       patterns:
         - "*"
@@ -27,7 +27,7 @@ updates:
     - dependency-name: "chrono"
     - dependency-name: "js-sys"
     - dependency-name: "web-sys"
-  group:
+  groups:
     dependencies:
       patterns:
         - "*"
