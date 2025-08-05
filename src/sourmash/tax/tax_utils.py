@@ -2111,9 +2111,9 @@ class SummarizedGatherResult:
     def as_summary_dict(self, query_info, limit_float=False, lingroups=None):
         sD = asdict(self)
         sD["lineage"] = self.lineage.display_lineage(null_as_unclassified=True)
-        # if lingroups, convert lingroup number to lingroup name
+        # if lingroups, add 'lingroup' column linking lingroup number to lingroup name
         if lingroups is not None and sD["lineage"] in lingroups.keys():
-            sD["lineage"] = lingroups[sD["lineage"]]
+            sD["lingroup"] = lingroups[sD["lineage"]]
         elif (
             lingroups
             and sD["lineage"] != "unclassified"
@@ -2651,6 +2651,7 @@ class QueryTaxResult:
 
             lingroup_ranks = set()
             if lingroups is not None:
+                header.append("lingroup")
                 for lin in lingroups.keys():
                     # e.g. "14;1;0;0;0;0;0;0;0;0" => 9
                     lin_rank = len(lin.split(";")) - 1
