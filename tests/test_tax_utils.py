@@ -4501,6 +4501,32 @@ def test_make_cami_results_with_taxids():
     ]
 
 
+def test_make_cami_results_with_taxids_missing_ranks():
+    taxD = make_mini_taxonomy_with_taxids(
+        [("gA", "a;b;c", "1;2;3"), ("gB", "a;b;c;d;;f;", "1;2;3;4;;6;")]
+    )
+    print(taxD)
+    # need to go down to species to check that `num_bp_assigned` is happening correctly
+    gather_results = [
+        {"total_weighted_hashes": 100},
+        {"name": "gB", "total_weighted_hashes": 100},
+    ]
+    q_res = make_QueryTaxResults(
+        gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
+    )
+    header, camires = q_res.make_cami_bioboxes()
+    print(camires)
+    assert camires == [
+        ["1", "superkingdom", "1", "a", "40.00"],
+        ["2", "phylum", "1|2", "a|b", "40.00"],
+        ["3", "class", "1|2|3", "a|b|c", "40.00"],
+        ["4", "order", "1|2|3|4", "a|b|c|d", "20.00"],
+        ["", "family", None, "a|b|c|d|", "20.00"],
+        ["6", "genus", "1|2|3|4||6", "a|b|c|d||f", "20.00"],
+        ["", "species", None, "a|b|c|d||f|", "20.00"],
+    ]
+
+
 def test_make_lingroup_results():
     taxD = make_mini_taxonomy(
         [("gA", "1;0;0"), ("gB", "1;0;1"), ("gC", "1;1;0")], LIN=True

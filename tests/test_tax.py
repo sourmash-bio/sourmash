@@ -1280,6 +1280,122 @@ def test_metagenome_bioboxes_outfile(runtmp):
     ] == bb_results[16]
 
 
+def test_metagenome_bioboxes_stdout_missing_ranktaxinfo(runtmp):
+    # test CAMI bioboxes format output
+    g_csv = utils.get_test_data("tax/test1.gather.v450.csv")
+    tax = utils.get_test_data("tax/test.ncbi-taxonomy.csv")
+    tax_mod = runtmp.output("missingtaxranks.taxonomy.csv")
+
+    # modify the taxonomy CSV to remove some ranks
+    #    GCF_001881345.1,562,Bacteria,Pseudomonadota,Gammaproteobacteria,Enterobacterales,Enterobacteriaceae,Escherichia,Escherichia coli,,2|1224|1236|91347|543|561|562|
+    # GCF_009494285.1,165179,Bacteria,Bacteroidota,Bacteroidia,Bacteroidales,Prevotellaceae,Prevotella,Prevotella copri,,2|976|200643|171549|171552|838|165179|
+    with open(tax) as fp:
+        csv_reader = csv.DictReader(fp)
+        with open(tax_mod, "w") as fp_out:
+            csv_writer = csv.DictWriter(
+                fp_out, fieldnames=csv_reader.fieldnames, delimiter=","
+            )
+            csv_writer.writeheader()
+            # now remove genus from Escherichia order from Prevotella
+            for row in csv_reader:
+                if row["taxid"] == "562":
+                    row["genus"] = ""
+                    row["taxpath"] = "2|1224|1236|91347|543||562"
+                elif row["taxid"] == "165179":
+                    row["order"] = ""
+                    row["taxpath"] = "2|976|200643||171552|838|165179"
+                csv_writer.writerow(row)
+
+    runtmp.run_sourmash(
+        "tax",
+        "metagenome",
+        "--gather-csv",
+        g_csv,
+        "--taxonomy-csv",
+        tax_mod,
+        "-F",
+        "bioboxes",
+    )
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+
+    assert "# Taxonomic Profiling Output" in runtmp.last_result.out
+    assert "@SampleID:test1" in runtmp.last_result.out
+    assert "@Version:0.10.0" in runtmp.last_result.out
+    assert (
+        "@Ranks:superkingdom|phylum|class|order|family|genus|species|strain"
+        in runtmp.last_result.out
+    )
+    assert "@__program__:sourmash" in runtmp.last_result.out
+    assert "2	superkingdom	2	Bacteria	13.08" in runtmp.last_result.out
+    assert (
+        "976	phylum	2|976	Bacteria|Bacteroidota	7.27"
+        in runtmp.last_result.out
+    )
+    assert (
+        "1224	phylum	2|1224	Bacteria|Pseudomonadota	5.82"
+        in runtmp.last_result.out
+    )
+    assert (
+        "200643	class	2|976|200643	Bacteria|Bacteroidota|Bacteroidia	7.27"
+        in runtmp.last_result.out
+    )
+    assert (
+        "1236	class	2|1224|1236	Bacteria|Pseudomonadota|Gammaproteobacteria	5.82"
+        in runtmp.last_result.out
+    )
+    # this one is NOT in the output, because Bacteroidales order is missing from tax
+    assert (
+        "171549	order	2|976|200643|171549	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales	7.27"
+        not in runtmp.last_result.out
+    )
+    assert (
+        "91347	order	2|1224|1236|91347	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales	5.82"
+        in runtmp.last_result.out
+    )
+    assert (
+        "171552	family	2|976|200643||171552	Bacteria|Bacteroidota|Bacteroidia||Prevotellaceae	5.70"
+        in runtmp.last_result.out
+    )
+    assert (
+        "543	family	2|1224|1236|91347|543	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae	5.82"
+        in runtmp.last_result.out
+    )
+    assert (
+        "815	family	2|976|200643|171549|815	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae	1.56"
+        in runtmp.last_result.out
+    )
+    assert (
+        "838	genus	2|976|200643||171552|838	Bacteria|Bacteroidota|Bacteroidia||Prevotellaceae|Prevotella	5.70"
+        in runtmp.last_result.out
+    )
+    # this one is NOT in the output, because Escherichia genus is missing from tax
+    assert (
+        "561	genus	2|1224|1236|91347|543|561	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia	5.82"
+        not in runtmp.last_result.out
+    )
+    assert (
+        "909656	genus	2|976|200643|171549|815|909656	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola	1.56"
+        in runtmp.last_result.out
+    )
+    assert (
+        "165179	species	2|976|200643||171552|838|165179	Bacteria|Bacteroidota|Bacteroidia||Prevotellaceae|Prevotella|Prevotella copri	5.70"
+        in runtmp.last_result.out
+    )
+    assert (
+        "562	species	2|1224|1236|91347|543||562	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae||Escherichia coli	5.82"
+        in runtmp.last_result.out
+    )
+    assert (
+        "821	species	2|976|200643|171549|815|909656|821	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola|Phocaeicola vulgatus	1.56"
+        in runtmp.last_result.out
+    )
+
+
 def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data("tax/test1.gather.csv")
     tax = utils.get_test_data("tax/test.taxonomy.csv")
@@ -7035,9 +7151,9 @@ def test_metagenome_LIN_lingroups_summary(runtmp):
         out.write("0;0;0,lg1\n")
         out.write("1;0;0,lg2\n")
         out.write("2;0;0,lg3\n")
-        out.write("1;0;1,lg3\n")
+        out.write("1;0;1,lg4\n")
         # write a 19 so we can check the end
-        out.write("1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n")
+        out.write("1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg5\n")
 
     c.run_sourmash(
         "tax",
@@ -7071,35 +7187,35 @@ def test_metagenome_LIN_lingroups_summary(runtmp):
     print(sum_gather_results)
     assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
     assert (
-        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank"
+        "query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank,total_weighted_hashes,lingroup"
         in sum_gather_results[0]
     )
     assert (
-        "test1,2,0.08815317112086159,lg1,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.05815279361459521,442000,0.9246458342627294,6139"
+        "test1,2,0.08815317112086159,0;0;0,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.05815279361459521,442000,0.9246458342627294,6139,lg1"
         in sum_gather_results[1]
     )
     assert (
-        "test1,2,0.07778220981252493,lg2,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.050496823586903404,390000,0.920920083987624,6139"
+        "test1,2,0.07778220981252493,1;0;0,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.050496823586903404,390000,0.920920083987624,6139,lg2"
         in sum_gather_results[2]
     )
     assert (
-        "test1,2,0.027522935779816515,lg3,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.015637726014008795,138000,0.8905689983332759,6139"
+        "test1,2,0.027522935779816515,2;0;0,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.015637726014008795,138000,0.8905689983332759,6139,lg3"
         in sum_gather_results[3]
     )
     assert (
-        "test1,2,0.010769844435580374,lg3,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139"
+        "test1,2,0.010769844435580374,1;0;1,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139,lg4"
         in sum_gather_results[4]
     )
     assert (
-        "test1,2,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        "test1,2,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139,"
         in sum_gather_results[5]
     )
     assert (
-        "test1,19,0.010769844435580374,lg4,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139"
+        "test1,19,0.010769844435580374,1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.006515719172503665,54000,0.8640181883213995,6139,lg5"
         in sum_gather_results[6]
     )
     assert (
-        "test1,19,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139"
+        "test1,19,0.7957718388512166,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.8691969376119889,3990000,,6139,"
         in sum_gather_results[7]
     )
 
