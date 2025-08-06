@@ -171,7 +171,6 @@ doc = [
   "nbsphinx",
   "sphinx-design==0.6.1",
   "ipython",
-  "docutils>=0.17.1,<0.23",
   "sphinx-copybutton",
 ]
 storage = [
