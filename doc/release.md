@@ -3,22 +3,32 @@
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
+## A release process overview
+
+Suggested overall process:
+
+1. Create an issue entitled "release checklist: sourmash vX.Y.Z".
+2. Copy-paste the below checklist into it.
+3. Follow the overall process.
+4. Place draft release notes in the release PR, so that they are linked to the relevant issues.
+5. link the release PR to the release issue, too.
+
 ## Checklist
 
-Here's a checklist to copy/paste into an issue:
+Here's a checklist to copy/paste into the issue:
 
 ```
 
 Release candidate testing:
 - [ ] Command line tests pass for a release candidate
-- [ ] All six release candidate wheels are built
+- [ ] All five release candidate wheels are built
 
 Releasing to PyPI:
 
 - [ ] RC tag(s)s deleted on github
 - [ ] Release tag cut
 - [ ] Release notes written
-- [ ] All six release wheels built
+- [ ] All five release wheels built
 - [ ] Release wheels uploaded to pypi
 - [ ] tar.gz distribution built in **clean** checkout & uploaded to pypi
 
@@ -55,8 +65,11 @@ Then activate it with `conda activate sourmash-rc`.
 
 ## Writing release notes
 
-Draft release notes can be created with `git log --oneline
-v4.6.1..latest`, but should then be edited manually. We suggest
+Draft release notes can be created with this command:
+```
+git log --oneline v4.9.3..latest | cut -d\  -f2- | sort > release-notes.txt
+```
+but should then be edited manually. We suggest
 putting PRs in the following categories:
 
 ```
@@ -73,7 +86,7 @@ Developer updates:
 Dependabot updates:
 ```
 
-A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the release PR.
+A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, paste them into the release PR.
 
 ## Testing a release
 
@@ -84,10 +97,18 @@ and also the [rendered docs] should be up to date.
 [Read the Docs]: https://readthedocs.org/projects/sourmash/builds/
 [rendered docs]: https://sourmash.readthedocs.io/en/latest/
 
-1\. The below should be done in a clean checkout:
+1\. The below should be done in a clean checkout.
+
+With token:
 ```
 cd $(mktemp -d)
 git clone https://github.com/sourmash-bio/sourmash
+cd sourmash
+```
+or with SSH key:
+```
+cd $(mktemp -d)
+git clone git@github.com:sourmash-bio/sourmash
 cd sourmash
 ```
 
@@ -95,8 +116,8 @@ cd sourmash
 You might want to check [the releases page] for next version number,
 or you can run `make last-tag` and check the output.
 ```
-new_version=4.X.X
 rc=rc1
+new_version=4.X.X
 ```
 
 Next create a new branch to work on release candidates and the version bump:
@@ -122,7 +143,7 @@ echo "https://github.com/sourmash-bio/sourmash/pull/new/release/v${new_version}"
 
 [the releases page]: https://github.com/sourmash-bio/sourmash/releases
 
-Once the checks for the PR work, let's trigger the automatic wheel building
+Once the checks for the PR work, trigger the automatic wheel building
 by creating a tag:
 
 ```
@@ -131,25 +152,30 @@ git push origin refs/tags/v${new_version}${rc}
 ```
 
 3\. Test the release candidate. Bonus: repeat on macOS:
-```
+
+Set up:
+```shell
 python -m pip install -U pip
 
 cd ..
 python -m venv testenv1
 python -m venv testenv2
 python -m venv testenv3
+```
 
-# First we test the tag
-
+First we test the tag:
+```shell
 cd testenv1
 source bin/activate
 git clone --depth 1 --branch release/v${new_version} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
 pytest && cargo test
+```
 
-# Secondly we test via pip
+Secondly we test via pip:
 
+```shell
 cd ../../testenv2
 deactivate
 source bin/activate
@@ -159,10 +185,12 @@ cd src/sourmash
 pytest && cargo test
 make dist
 cp dist/sourmash*tar.gz ../../../testenv3/
+```
 
-# Is the distribution in testenv2 complete enough to build another
-# functional distribution?
+Is the distribution in testenv2 complete enough to build another
+functional distribution?
 
+```shell
 cd ../../../testenv3/
 deactivate
 source bin/activate
@@ -188,7 +216,7 @@ should have nine wheel files attached to it.
 6\. Remove release candidate tags
 
 NOTE: If you delete the rc tag before the rc wheels are done building, they
-may get added to the wrong release.
+may get added to the wrong release. So you should wait for the rc actions to finish!
 
 ```
 cd ../../sourmash
@@ -252,7 +280,7 @@ twine upload dist/sourmash-${new_version}.tar.gz
 Two notes:
 * This must be done *after* the wheels are available, because some of
 the conda package build steps require the source dist and are automatically
-triggered when a new version shows up on PyPI.)
+triggered when a new version shows up on PyPI.
 * make sure to do this in a completely clean checkout. If there are additional files present, they will be included in the tar.gz.
 
 5\. Edit the release on GitHub; there will already be one associated
@@ -303,7 +331,7 @@ You will need to open a PR on spack manually, e.g. [spack#40062 for 4.8.4](https
 
 ## Announce it!
 
-If a bioinformatics software is released and no one tweets, is it really released?
+If a bioinformatics software is released and no one posts about it, is it really released?
 
 Examples:
 
