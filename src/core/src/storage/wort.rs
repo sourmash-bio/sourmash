@@ -6,16 +6,24 @@ use crate::Result;
 /// This is read-only, no support for writing data to wort.
 #[derive(Debug, Clone)]
 pub struct WortStorage {
-    // TODO: save reqwest blocking client here?
+    // Save a reqwest blocking client here to avoid initialization on every download
     client: reqwest::blocking::Client,
 
-    // TODO: use a default URL pointing to wort.sourmash.bio, and allow mirrors?
+    // Base URL for the wort API, by default https://wort.sourmash.bio/v1/view
+    base_url: String,
+}
+
+impl Default for WortStorage {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WortStorage {
     pub fn new() -> Self {
         Self {
-          client: reqwest::blocking::Client::new(),
+            client: reqwest::blocking::Client::new(),
+            base_url: "https://wort.sourmash.bio/v1/view".to_string(),
         }
     }
 }
@@ -26,7 +34,10 @@ impl Storage for WortStorage {
     }
 
     fn load(&self, path: &str) -> Result<Vec<u8>> {
-        let resp = self.client.get(format!("/{}", path)).send()?;
+        let resp = self
+            .client
+            .get(dbg!(format!("{}/{}", self.base_url, path)))
+            .send()?;
         Ok(resp.bytes()?.into())
     }
 

@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use tempfile::TempDir;
 
+use sourmash::prelude::Select;
+use sourmash::selection::Selection;
 use sourmash::signature::Signature;
 use sourmash::storage::{FSStorage, InnerStorage, Storage, StorageArgs, ZipStorage};
 
@@ -164,6 +166,32 @@ fn innerstorage_from_args() -> Result<(), Box<dyn std::error::Error>> {
     assert!(matches!(args, StorageArgs::FSStorage { .. }));
     let StorageArgs::FSStorage { path: p2 } = args;
     assert_eq!(p2, path);
+
+    Ok(())
+}
+
+#[test]
+fn wortstorage_genomes() -> Result<(), Box<dyn std::error::Error>> {
+    let storage = InnerStorage::from_spec("wort://".to_string())?;
+
+    // Using the following signature from wort:
+    // https://wort.sourmash.bio/view/genomes/GCA_000250945.2/
+    // which can be downloaded from the API with the URL
+    // https://wort.sourmash.bio/v1/view/genomes/GCA_000250945.2
+
+    let mut selection = Selection::default();
+    selection.set_ksize(31);
+
+    let raw_data = storage.load("genomes/GCA_000250945.2")?;
+    let loaded_sig = Signature::from_reader(raw_data.as_slice())?
+        .swap_remove(0)
+        .select(&selection)?;
+
+    assert_eq!(
+        loaded_sig.name(),
+        Some("GCA_000250945.2 Enterococcus faecium Aus0004 strain=Aus0004, ASM25094v2".to_string())
+    );
+    assert_eq!(loaded_sig.md5sum(), "f6b8b19547211001f87ef397bf4ac1e1");
 
     Ok(())
 }
