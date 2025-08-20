@@ -155,6 +155,10 @@ pub mod rocksdb;
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub use self::rocksdb::RocksDBStorage;
 
+//#[cfg(not(target_arch = "wasm32"))]
+pub mod wort;
+pub use self::wort::WortStorage;
+
 pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
 // =========================================
@@ -171,6 +175,7 @@ impl InnerStorage {
                 InnerStorage::new(FSStorage::new("", path))
             }
             x if x.starts_with("memory") => InnerStorage::new(MemStorage::new()),
+            x if x.starts_with("wort") => InnerStorage::new(WortStorage::new()),
             x if x.starts_with("rocksdb") => {
                 let path = x.split("://").last().expect("not a valid path");
 

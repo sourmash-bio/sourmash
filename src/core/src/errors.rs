@@ -107,6 +107,9 @@ pub enum SourmashError {
 
     #[error(transparent)]
     ZipError(#[from] piz::result::ZipError),
+
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
 }
 
 #[derive(Debug, Error)]
@@ -163,6 +166,7 @@ pub enum SourmashErrorCode {
     CsvError = 100_006,
     RocksDBError = 100_007,
     ZipError = 100_008,
+    ReqwestError = 100_009,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
@@ -206,6 +210,7 @@ impl SourmashErrorCode {
             SourmashError::RocksDBError { .. } => SourmashErrorCode::RocksDBError,
 
             SourmashError::ZipError { .. } => SourmashErrorCode::ZipError,
+            SourmashError::ReqwestError { .. } => SourmashErrorCode::ReqwestError,
         }
     }
 }

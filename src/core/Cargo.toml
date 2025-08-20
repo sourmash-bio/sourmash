@@ -64,6 +64,7 @@ thiserror = "2.0"
 twox-hash = "1.6.0"
 typed-builder = "0.20.0"
 vec-collections = "0.4.3"
+reqwest = { version = "0.12.23", default-features = false, features = ["blocking", "rustls-tls"] }
 
 [dev-dependencies]
 codspeed-criterion-compat = "2.7.2"
