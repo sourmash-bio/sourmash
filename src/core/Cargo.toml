@@ -86,7 +86,7 @@ harness = false
 name = "gather"
 harness = false
 
-[package.metadata.cargo-all-features]
+[package.metadata.cargo-feature-combinations]
 skip_optional_dependencies = true
 denylist = ["maturin"]
 skip_feature_sets = [
