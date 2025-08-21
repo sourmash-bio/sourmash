@@ -37,7 +37,7 @@ jobs:
     - name: set up pixi
       uses: prefix-dev/setup-pixi@v0.9.0
       with:
-        pixi-version: v0.50.2
+        pixi-version: v0.53.0
         cache: true
         frozen: true
 
