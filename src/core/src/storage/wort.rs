@@ -36,7 +36,7 @@ impl Storage for WortStorage {
     fn load(&self, path: &str) -> Result<Vec<u8>> {
         let resp = self
             .client
-            .get(dbg!(format!("{}/{}", self.base_url, path)))
+            .get(format!("{}/{}", self.base_url, path))
             .send()?;
         Ok(resp.bytes()?.into())
     }
