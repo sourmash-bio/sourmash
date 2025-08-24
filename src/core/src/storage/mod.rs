@@ -180,7 +180,7 @@ impl InnerStorage {
             x if x.starts_with("wort") => {
                 cfg_if! {
                     if #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))] {
-                        InnerStorage::new(WortStorage::new()),
+                        InnerStorage::new(WortStorage::new())
                     } else {
                         return Err(StorageError::MissingFeature("wasm32-unknown-unknown".into(), "wort".into()).into())
                     }
