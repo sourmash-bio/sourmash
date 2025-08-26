@@ -332,14 +332,14 @@ bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
 [tool.pixi.feature.dev.tasks.install-tools]
-cmd = "echo $CARGO_HOME && cargo install cargo-binstall@1.14.4 && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack && cargo binstall -y cbindgen --version 0.26.0"
-#outputs = [
-#  "$CARGO_HOME/bin/cbindgen",
-#  "$CARGO_HOME/bin/cargo-semver-checks",
-#  "$CARGO_HOME/bin/cargo-binstall",
-#  "$CARGO_HOME/bin/cargo-feature-combinations",
-#  "$CARGO_HOME/bin/wasm-pack",
-#]
+cmd = "cargo install cargo-binstall@1.14.4 && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack && cargo binstall -y cbindgen --version 0.26.0"
+outputs = [
+  "$CARGO_HOME/bin/cbindgen",
+  "$CARGO_HOME/bin/cargo-semver-checks",
+  "$CARGO_HOME/bin/cargo-binstall",
+  "$CARGO_HOME/bin/cargo-feature-combinations",
+  "$CARGO_HOME/bin/wasm-pack",
+]
 
 [tool.pixi.feature.dev.tasks.semver-check]
 cmd = "cargo semver-checks check-release --default-features --features branchwater"
@@ -381,6 +381,10 @@ outputs = [
   "pkg/sourmash.d.ts",
   "pkg/sourmash.js",
 ]
+
+[tool.pixi.feature.wasm.activation.env]
+CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
+PATH = "$PATH:$CARGO_HOME/bin"
 
 [tool.pixi.feature.wasm.tasks]
 test-wasm = { cmd = "wasm-pack test --node src/core -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
