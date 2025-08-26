@@ -299,6 +299,9 @@ run.plugins = ["covdefaults"]
 channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
+[tool.pixi.tasks.rust-ci]
+depends-on = ["coverage-rust", "semver-check", "check-features", "cbindgen-generate", "build-wasm", "check-msrv"]
+
 [tool.pixi.feature.build.dependencies]
 clangdev = ">=16.0.6,<16.1"
 cxx-compiler = ">=1.7.0,<1.8"
