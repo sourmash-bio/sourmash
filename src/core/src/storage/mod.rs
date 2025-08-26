@@ -161,6 +161,9 @@ pub mod wort;
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub use self::wort::WortStorage;
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+pub use self::wort::WortMirrorStorage;
+
 pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
 // =========================================
@@ -177,6 +180,17 @@ impl InnerStorage {
                 InnerStorage::new(FSStorage::new("", path))
             }
             x if x.starts_with("memory") => InnerStorage::new(MemStorage::new()),
+            x if x.starts_with("wort+") => {
+                let mirror_url = x.split("wort+").last().expect("not a valid path");
+
+                cfg_if! {
+                    if #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))] {
+                        InnerStorage::new(WortMirrorStorage::new(mirror_url))
+                    } else {
+                        return Err(StorageError::MissingFeature("wasm32-unknown-unknown".into(), "wort".into()).into())
+                    }
+                }
+            }
             x if x.starts_with("wort") => {
                 cfg_if! {
                     if #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))] {

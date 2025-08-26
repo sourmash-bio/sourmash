@@ -49,3 +49,46 @@ impl Storage for WortStorage {
         "wort://".into()
     }
 }
+
+/// Load data from a wort mirror
+///
+/// This is read-only
+#[derive(Debug, Clone)]
+pub struct WortMirrorStorage {
+    // Save a reqwest blocking client here to avoid initialization on every download
+    client: reqwest::blocking::Client,
+
+    // Base URL for the wort mirror
+    base_url: String,
+}
+
+impl WortMirrorStorage {
+    pub fn new(mirror_url: &str) -> Self {
+        Self {
+            client: reqwest::blocking::Client::new(),
+            base_url: mirror_url.into(),
+        }
+    }
+}
+
+impl Storage for WortMirrorStorage {
+    fn save(&self, _path: &str, _content: &[u8]) -> Result<String> {
+        unimplemented!()
+    }
+
+    fn load(&self, path: &str) -> Result<Vec<u8>> {
+        let resp = self
+            .client
+            .get(format!("{}/{}", self.base_url, path))
+            .send()?;
+        Ok(resp.bytes()?.into())
+    }
+
+    fn args(&self) -> StorageArgs {
+        unimplemented!()
+    }
+
+    fn spec(&self) -> String {
+        format!("wort+{}", self.base_url)
+    }
+}
