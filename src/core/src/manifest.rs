@@ -19,7 +19,7 @@ use crate::{Result, ScaledType};
 
 /// Individual manifest record, containing information about sketches.
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, Default)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -258,47 +258,68 @@ impl Manifest {
     }
 }
 
+impl Select for Record {
+    // select only a record if it satisfy selection conditions; also update
+    // scaled value to match.
+    fn select(self, selection: &Selection) -> Result<Self> {
+        //let mut row = self;
+        let mut row = self;
+
+        let mut valid = true;
+        valid = if let Some(ksize) = selection.ksize() {
+            row.ksize == ksize
+        } else {
+            valid
+        };
+        valid = if let Some(abund) = selection.abund() {
+            valid && row.with_abundance() == abund
+        } else {
+            valid
+        };
+        valid = if let Some(moltype) = selection.moltype() {
+            valid && row.moltype() == moltype
+        } else {
+            valid
+        };
+        valid = if let Some(num) = selection.num() {
+            valid && row.num == num
+        } else {
+            valid
+        };
+
+        valid = if let Some(scaled) = selection.scaled() {
+            // num sigs have row.scaled = 0, don't include them
+            let v = valid && row.scaled != 0 && row.scaled <= scaled;
+            // if scaled is set, update!
+            if v {
+                row.scaled = scaled
+            };
+            v
+        } else {
+            valid
+        };
+
+        if valid {
+            Ok(row)
+        } else {
+            Err(crate::Error::EmptyRecord)
+        }
+    }
+}
+
 impl Select for Manifest {
     // select only records that satisfy selection conditions; also update
     // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
         let Manifest { mut records } = self;
 
-        // TODO: with num as well?
         records.retain_mut(|row| {
-            let mut valid = true;
-            valid = if let Some(ksize) = selection.ksize() {
-                row.ksize == ksize
-            } else {
-                valid
-            };
-            valid = if let Some(abund) = selection.abund() {
-                valid && row.with_abundance() == abund
-            } else {
-                valid
-            };
-            valid = if let Some(moltype) = selection.moltype() {
-                valid && row.moltype() == moltype
-            } else {
-                valid
-            };
-            valid = if let Some(scaled) = selection.scaled() {
-                // num sigs have row.scaled = 0, don't include them
-                let v = valid && row.scaled != 0 && row.scaled <= scaled;
-                // if scaled is set, update!
-                if v {
-                    row.scaled = scaled
-                };
-                v
-            } else {
-                valid
-            };
-            valid = if let Some(num) = selection.num() {
-                valid && row.num == num
-            } else {
-                valid
-            };
-            valid
+            let old_row = std::mem::take(row);
+            match old_row.select(&selection) {
+                Ok(new_row) => { let _ = std::mem::replace(row, new_row); true }
+                Err(crate::Error::EmptyRecord) => false,
+                Err(_) => todo!("unknown error"),
+            }
         });
 
         Ok(Manifest { records })
