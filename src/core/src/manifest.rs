@@ -316,7 +316,10 @@ impl Select for Manifest {
         records.retain_mut(|row| {
             let old_row = std::mem::take(row);
             match old_row.select(&selection) {
-                Ok(new_row) => { let _ = std::mem::replace(row, new_row); true }
+                Ok(new_row) => {
+                    let _ = std::mem::replace(row, new_row);
+                    true
+                }
                 Err(crate::Error::EmptyRecord) => false,
                 Err(_) => todo!("unknown error"),
             }
