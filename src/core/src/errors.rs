@@ -187,7 +187,7 @@ impl SourmashErrorCode {
             SourmashError::InvalidSkipmerFrame { .. } => SourmashErrorCode::InvalidSkipmerFrame,
             SourmashError::InvalidSkipmerSize { .. } => SourmashErrorCode::InvalidSkipmerSize,
             SourmashError::InvalidTranslateFrame { .. } => SourmashErrorCode::InvalidTranslateFrame,
-            SourmashError::EmptyRecord { .. } => SourmashErrorCode::EmptyRecord,
+            SourmashError::EmptyRecord => SourmashErrorCode::EmptyRecord,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
             SourmashError::HLLPrecisionBounds => SourmashErrorCode::HLLPrecisionBounds,
