@@ -1,11 +1,9 @@
-use std::collections::{BTreeMap, HashMap};
-use std::ffi::OsStr;
+use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 use cfg_if::cfg_if;
 use once_cell::sync::OnceCell;
@@ -125,23 +123,6 @@ pub struct FSStorage {
     subdir: String,
 }
 
-/// Store files in a zip file.
-#[ouroboros::self_referencing]
-pub struct ZipStorage {
-    mapping: Option<memmap2::Mmap>,
-
-    #[borrows(mapping)]
-    #[covariant]
-    archive: piz::ZipArchive<'this>,
-
-    subdir: Option<String>,
-    path: Option<PathBuf>,
-
-    #[borrows(archive)]
-    #[covariant]
-    metadata: Metadata<'this>,
-}
-
 /// Store data in memory (no permanent storage)
 #[derive(TypedBuilder, Debug, Clone, Default)]
 pub struct MemStorage {
@@ -149,13 +130,17 @@ pub struct MemStorage {
     sigs: Arc<RwLock<HashMap<String, SigStore>>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod zip;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use self::zip::ZipStorage;
+
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub mod rocksdb;
 
 #[cfg(all(feature = "branchwater", not(target_arch = "wasm32")))]
 pub use self::rocksdb::RocksDBStorage;
-
-pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
 
 // =========================================
 
@@ -184,7 +169,14 @@ impl InnerStorage {
             }
             x if x.starts_with("zip") => {
                 let path = x.split("://").last().expect("not a valid path");
-                InnerStorage::new(ZipStorage::from_file(path)?)
+
+                cfg_if! {
+                    if #[cfg(not(target_arch = "wasm32"))] {
+                        InnerStorage::new(ZipStorage::from_file(path)?)
+                    } else {
+                        return Err(StorageError::MissingFeature("wasm".into(), path.into()).into())
+                    }
+                }
             }
             _ => todo!("storage not supported, throw error"),
         })
@@ -323,144 +315,6 @@ impl Storage for FSStorage {
 
     fn spec(&self) -> String {
         format!("fs://{}", self.subdir)
-    }
-}
-
-fn lookup<'a, P: AsRef<Path>>(
-    metadata: &'a Metadata,
-    path: P,
-) -> Result<&'a piz::read::FileMetadata<'a>> {
-    let path = path.as_ref();
-    metadata
-        .get(&path.as_os_str())
-        .ok_or_else(|| StorageError::PathNotFoundError(path.to_string()).into())
-        .copied()
-}
-
-fn find_subdirs<'a>(archive: &'a piz::ZipArchive<'a>) -> Result<Option<String>> {
-    let subdirs: Vec<_> = archive
-        .entries()
-        .iter()
-        .filter(|entry| entry.is_dir())
-        .collect();
-    if subdirs.len() == 1 {
-        Ok(Some(subdirs[0].path.as_str().into()))
-    } else {
-        Ok(None)
-    }
-}
-
-impl Storage for ZipStorage {
-    fn save(&self, _path: &str, _content: &[u8]) -> Result<String> {
-        unimplemented!();
-    }
-
-    fn load(&self, path: &str) -> Result<Vec<u8>> {
-        let metadata = self.borrow_metadata();
-
-        let entry = lookup(metadata, path).or_else(|_| {
-            if let Some(subdir) = self.borrow_subdir() {
-                lookup(metadata, subdir.to_owned() + path)
-                    .map_err(|_| StorageError::PathNotFoundError(path.into()))
-            } else {
-                Err(StorageError::PathNotFoundError(path.into()))
-            }
-        })?;
-
-        let mut reader = BufReader::new(
-            self.borrow_archive()
-                .read(entry)
-                .map_err(|_| StorageError::DataReadError(path.into()))?,
-        );
-        let mut contents = Vec::new();
-        reader.read_to_end(&mut contents)?;
-
-        Ok(contents)
-    }
-
-    fn args(&self) -> StorageArgs {
-        unimplemented!();
-    }
-
-    fn load_sig(&self, path: &str) -> Result<SigStore> {
-        let raw = self.load(path)?;
-        let mut vs = Signature::from_reader(&mut &raw[..])?;
-        if vs.len() > 1 {
-            unimplemented!("only one Signature currently allowed");
-        }
-        let sig = vs.swap_remove(0);
-
-        Ok(sig.into())
-    }
-
-    fn spec(&self) -> String {
-        format!("zip://{}", self.path().unwrap_or_else(|| "".into()))
-    }
-}
-
-impl ZipStorage {
-    pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
-        let zip_file = File::open(location.as_ref())?;
-        let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
-
-        let mut storage = ZipStorageTryBuilder {
-            mapping: Some(mapping),
-            archive_builder: |mapping: &Option<memmap2::Mmap>| {
-                piz::ZipArchive::new(mapping.as_ref().unwrap())
-            },
-            metadata_builder: |archive: &piz::ZipArchive| {
-                Ok(archive
-                    .entries()
-                    .iter()
-                    .map(|entry| (entry.path.as_os_str(), entry))
-                    .collect())
-            },
-            subdir: None,
-            path: Some(location.as_ref().into()),
-        }
-        .try_build()?;
-
-        let subdir = find_subdirs(storage.borrow_archive())?;
-        storage.with_mut(|fields| *fields.subdir = subdir);
-
-        Ok(storage)
-    }
-
-    pub fn path(&self) -> Option<PathBuf> {
-        self.borrow_path().clone()
-    }
-
-    pub fn subdir(&self) -> Option<String> {
-        self.borrow_subdir().clone()
-    }
-
-    pub fn set_subdir(&mut self, path: String) {
-        self.with_mut(|fields| *fields.subdir = Some(path))
-    }
-
-    pub fn list_sbts(&self) -> Result<Vec<String>> {
-        Ok(self
-            .borrow_archive()
-            .entries()
-            .iter()
-            .filter_map(|entry| {
-                let path = entry.path.as_str();
-                if path.ends_with(".sbt.json") {
-                    Some(path.into())
-                } else {
-                    None
-                }
-            })
-            .collect())
-    }
-
-    pub fn filenames(&self) -> Result<Vec<String>> {
-        Ok(self
-            .borrow_archive()
-            .entries()
-            .iter()
-            .map(|entry| entry.path.as_str().into())
-            .collect())
     }
 }
 

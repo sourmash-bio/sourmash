@@ -96,12 +96,13 @@ pub enum SourmashError {
     Panic(#[from] crate::ffi::utils::Panic),
 
     #[cfg(not(target_arch = "wasm32"))]
+    #[error(transparent)]
+    ZipError(#[from] rc_zip::error::Error),
+
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(feature = "branchwater")]
     #[error(transparent)]
     RocksDBError(#[from] rocksdb::Error),
-
-    #[error(transparent)]
-    ZipError(#[from] piz::result::ZipError),
 }
 
 #[derive(Debug, Error)]
@@ -192,12 +193,11 @@ impl SourmashErrorCode {
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
             SourmashError::CsvError { .. } => SourmashErrorCode::CsvError,
+            SourmashError::ZipError { .. } => SourmashErrorCode::ZipError,
 
             #[cfg(not(target_arch = "wasm32"))]
             #[cfg(feature = "branchwater")]
             SourmashError::RocksDBError { .. } => SourmashErrorCode::RocksDBError,
-
-            SourmashError::ZipError { .. } => SourmashErrorCode::ZipError,
         }
     }
 }

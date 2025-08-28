@@ -114,5 +114,9 @@ optional = true
 default-features = false
 features = [ "bindgen-runtime", "snappy", "zstd" ]
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rc-zip = { version = "5.2.0", default-features = false }
+rc-zip-sync = "4.2.4"
+
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = "0.7.0"

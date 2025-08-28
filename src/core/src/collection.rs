@@ -6,7 +6,7 @@ use camino::Utf8PathBuf as PathBuf;
 use crate::encodings::Idx;
 use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
-use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore, ZipStorage};
+use crate::storage::{FSStorage, InnerStorage, MemStorage, SigStore};
 use crate::{Error, Result, ScaledType};
 
 #[cfg(feature = "parallel")]
@@ -130,8 +130,9 @@ impl Collection {
             .ok_or(Error::MismatchKSizes)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn from_zipfile<P: AsRef<Path>>(zipfile: P) -> Result<Self> {
-        let storage = ZipStorage::from_file(zipfile)?;
+        let storage = crate::storage::ZipStorage::from_file(zipfile)?;
         // Load manifest from standard location in zipstorage
         let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
         Ok(Self {
