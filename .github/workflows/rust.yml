@@ -3,9 +3,14 @@ name: Rust checks
 on:
   push:
     branches: [latest]
+    tags:
+      - 'r*'
   pull_request:
   schedule:
     - cron: "0 0 * * *" # daily
+
+env:
+  PIXI_VERSION: "v0.53.0"
 
 jobs:
   check:
@@ -13,15 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Run cargo check
         run: |
-          cargo check
+          pixi run cargo check
 
   test:
     runs-on: ${{ matrix.os }}
@@ -47,7 +58,7 @@ jobs:
             rust: stable
             continue: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -64,34 +75,37 @@ jobs:
   test_all_features:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-all-features
-
       - name: Run tests for all feature combinations
-        run: cargo test-all-features --no-fail-fast --all
+        run: pixi run check-features
 
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
         with:
-          components: llvm-tools-preview
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
       - uses: Swatinem/rust-cache@v2
 
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: taiki-e/install-action@nextest
-
       - name: Collect coverage data
-        run: cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
+        run: pixi run coverage-rust
 
       - name: Upload Rust coverage to codecov
         uses: codecov/codecov-action@v3
@@ -114,7 +128,7 @@ jobs:
             rust: stable
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -136,38 +150,30 @@ jobs:
     name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
         with:
-          target: wasm32-unknown-unknown
-
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
       - uses: Swatinem/rust-cache@v2
-
-      - name: Install wasm-pack
-        run: "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh"
-
-      - name: Prepare node for running tests
-        uses: actions/setup-node@v4
-        with:
-          node-version: 16
-          registry-url: https://registry.npmjs.org/
 
       - name: run wasm tests
         continue-on-error: true  ## TODO: remove this when tests works again...
-        run: wasm-pack test --node src/core -- --features 'niffler/wasm'
+        run: pixi run -e wasm test-wasm
 
       - name: run wasm-pack build
-        run: wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'
+        run: pixi run -e wasm build-wasm
 
       - name: Prepare package for NPM publishing
-        working-directory: pkg
-        run: npm pack
+        run: pixi run -e wasm pack-npm
 
       - name: Publish to NPM
         if: startsWith(github.ref, 'refs/tags/r')
-        working-directory: pkg
-        run: npm publish
+        run: pixi run -e wasm publish-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -180,69 +186,69 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
-
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
       - uses: Swatinem/rust-cache@v2
 
       - name: Check semver
-        uses: obi1kenobi/cargo-semver-checks-action@v2
-        with:
-          crate-name: sourmash
-          version-tag-prefix: r
-          feature-group: default-features
-          features: branchwater
+        run: pixi run semver-check
 
       - name: Make sure we can publish the sourmash crate
-        run: |
-          cargo publish --dry-run --manifest-path src/core/Cargo.toml
+        run: pixi run cargo publish --dry-run --manifest-path src/core/Cargo.toml
 
       # Login to crates.io on tags
       - name: login to crates.io
         if: startsWith(github.ref, 'refs/tags/r')
-        run: |
-          cargo login ${{ secrets.CRATES_IO_TOKEN }}
+        run: pixi run cargo login ${{ secrets.CRATES_IO_TOKEN }}
 
       # Publish to crates.io on tags
       - name: Publish to crates.io
         if: startsWith(github.ref, 'refs/tags/r')
-        run: |
-          cargo publish --manifest-path src/core/Cargo.toml
+        run: pixi run cargo publish --manifest-path src/core/Cargo.toml
 
   minimum_rust_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@master
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
         with:
-          toolchain: "1.74.0"
-
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
       - uses: Swatinem/rust-cache@v2
 
       - name: check if README matches MSRV defined here
         run: grep '1.74.0' src/core/README.md
 
       - name: Check if it builds properly
-        run: |
-          cargo build --all-features
+        run: pixi run check-msrv
 
   check_cbindgen:
     name: "Check if cbindgen runs cleanly for generating the C headers"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
-
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
       - uses: Swatinem/rust-cache@v2
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cbindgen@0.26.0
-
-      - run: make include/sourmash.h
+      - run: pixi run cbindgen-generate
 
       - name: check if headers have the same content
         run: |

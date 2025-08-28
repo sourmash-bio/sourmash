@@ -314,7 +314,7 @@ check-msrv = "cargo build --all-features"
 cargo-llvm-cov = "~=0.6.15"
 cargo-nextest = "~=0.9.78"
 git = "2.41.0.*"
-rust = "~=1.84.0"
+rust = "~=1.89.0"
 
 pandoc = "3.1.3.*"
 python = "3.11.*"
@@ -331,22 +331,70 @@ cachetools = ">=4,<6"
 bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 
-[tool.pixi.feature.dev.tasks]
-install-tools = "cargo install cargo-binstall && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack"
-semver-check = { cmd = "cargo semver-checks check-release --default-features --features branchwater" }
+[tool.pixi.feature.dev.tasks.install-tools]
+cmd = "cargo install cargo-binstall@1.14.4 && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack && cargo binstall -y cbindgen --version 0.26.0"
+outputs = [
+  "$CARGO_HOME/bin/cbindgen",
+  "$CARGO_HOME/bin/cargo-semver-checks",
+  "$CARGO_HOME/bin/cargo-binstall",
+  "$CARGO_HOME/bin/cargo-feature-combinations",
+  "$CARGO_HOME/bin/wasm-pack",
+]
+
+[tool.pixi.feature.dev.tasks.semver-check]
+cmd = "cargo semver-checks check-release --default-features --features branchwater"
+depends-on = "install-tools"
+
+[tool.pixi.feature.dev.tasks.cbindgen-generate]
+cmd = "cbindgen -c cbindgen.toml . -o ../../include/sourmash.h"
+cwd = "src/core"
+env = { RUSTC_BOOTSTRAP = "1" }
+depends-on = "install-tools"
+inputs = [
+  "src/core/src/lib.rs",
+  "src/core/src/errors.rs",
+  "src/core/src/ffi/*.rs",
+  "src/core/cbindgen.toml",
+]
+outputs = ["include/sourmash.h"]
+
+[tool.pixi.feature.dev.tasks.check-features]
+cmd = "cargo fc nextest run"
+depends-on = "install-tools"
+
+[tool.pixi.feature.dev.tasks.coverage-rust]
+cmd = "cargo llvm-cov nextest --all-features --lcov --output-path lcov.info"
 
 [tool.pixi.feature.wasm.dependencies]
 rust-std-wasm32-unknown-unknown = "*"
 nodejs = "~=20.0"
 
+[tool.pixi.feature.wasm.tasks.build-wasm]
+cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'"
+depends-on = ["install-tools"]
+outputs = [
+  "pkg/package.json",
+  "pkg/README",
+  "pkg/sourmash_bg.js",
+  "pkg/sourmash_bg.wasm",
+  "pkg/sourmash_bg.wasm.d.ts",
+  "pkg/sourmash.d.ts",
+  "pkg/sourmash.js",
+]
+
+[tool.pixi.feature.wasm.activation.env]
+CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
+PATH = "$PATH:$CARGO_HOME/bin"
+
 [tool.pixi.feature.wasm.tasks]
-build-wasm = { cmd = "wasm-pack build src/core -d ../../pkg -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
 test-wasm = { cmd = "wasm-pack test --node src/core -- --features 'niffler/wasm'" , depends-on = ["install-tools"] }
+pack-npm = { cmd = "npm pack" , depends-on = ["build-wasm"], cwd = "pkg", outputs = ["pkg/sourmash-*.tgz"] }
+publish-npm = { cmd = "npm publish" , depends-on = ["pack-npm"], cwd = "pkg" }
 
 [tool.pixi.environments]
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
-msrv = { features = ["build", "msrv"], solve-group = "msrv" }
-wasm = { features = ["dev", "build", "wasm"], solve-group = "default" }
+msrv = { features = ["build", "msrv"], solve-group = "msrv", no-default-feature = true }
+wasm = { features = ["dev", "build", "wasm"], solve-group = "default", no-default-feature = true }
 
 [tool.pixi.system-requirements]
 macos = "11.0"
