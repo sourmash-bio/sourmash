@@ -70,8 +70,8 @@ pub enum SourmashError {
     #[error("error while calculating ANI confidence intervals: {message}")]
     ANIEstimationError { message: String },
 
-    #[error("Empty record, failed to select any valid sketches")]
-    EmptyRecord,
+    #[error("Empty record, failed to select any valid sketches: {record}")]
+    EmptyRecord { record: crate::manifest::Record },
 
     #[error(transparent)]
     ReadDataError(#[from] ReadDataError),
@@ -188,7 +188,7 @@ impl SourmashErrorCode {
             SourmashError::InvalidSkipmerFrame { .. } => SourmashErrorCode::InvalidSkipmerFrame,
             SourmashError::InvalidSkipmerSize { .. } => SourmashErrorCode::InvalidSkipmerSize,
             SourmashError::InvalidTranslateFrame { .. } => SourmashErrorCode::InvalidTranslateFrame,
-            SourmashError::EmptyRecord => SourmashErrorCode::EmptyRecord,
+            SourmashError::EmptyRecord { .. } => SourmashErrorCode::EmptyRecord,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
             SourmashError::HLLPrecisionBounds => SourmashErrorCode::HLLPrecisionBounds,

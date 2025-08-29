@@ -19,7 +19,7 @@ use crate::{Result, ScaledType};
 
 /// Individual manifest record, containing information about sketches.
 
-#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, CopyGetters, Getters, Setters)]
 pub struct Record {
     #[getset(get = "pub", set = "pub")]
     internal_location: PathBuf,
@@ -79,6 +79,12 @@ where
             de::Unexpected::Str(other),
             &"0/1, true/false, True/False are the only supported values",
         )),
+    }
+}
+
+impl std::fmt::Display for Record {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(fmt, "{:?}", self)
     }
 }
 
@@ -301,7 +307,7 @@ impl Select for Record {
         if valid {
             Ok(row)
         } else {
-            Err(crate::Error::EmptyRecord)
+            Err(crate::Error::EmptyRecord { record: row })
         }
     }
 }
@@ -316,8 +322,8 @@ impl Select for Manifest {
 
         records.retain_mut(|row| {
             replace_with_or_abort_and_return(row, |new_row| match new_row.select(selection) {
-                Ok(new_row) => (true, new_row),
-                Err(crate::Error::EmptyRecord) => (false, Record::default()),
+                Ok(record) => (true, record),
+                Err(crate::Error::EmptyRecord { record }) => (false, record),
                 Err(_) => todo!("unknown error"),
             })
         });
