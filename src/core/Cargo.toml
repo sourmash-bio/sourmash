@@ -63,6 +63,7 @@ thiserror = "2.0"
 twox-hash = "1.6.0"
 typed-builder = "0.20.0"
 vec-collections = "0.4.3"
+replace_with = "0.1.8"
 
 [dev-dependencies]
 codspeed-criterion-compat = "2.7.2"

@@ -262,7 +262,6 @@ impl Select for Record {
     // select only a record if it satisfy selection conditions; also update
     // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
-        //let mut row = self;
         let mut row = self;
 
         let mut valid = true;
@@ -311,18 +310,16 @@ impl Select for Manifest {
     // select only records that satisfy selection conditions; also update
     // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
+        use replace_with::replace_with_or_abort_and_return;
+
         let Manifest { mut records } = self;
 
         records.retain_mut(|row| {
-            let old_row = std::mem::take(row);
-            match old_row.select(selection) {
-                Ok(new_row) => {
-                    let _ = std::mem::replace(row, new_row);
-                    true
-                }
-                Err(crate::Error::EmptyRecord) => false,
+            replace_with_or_abort_and_return(row, |new_row| match new_row.select(selection) {
+                Ok(new_row) => (true, new_row),
+                Err(crate::Error::EmptyRecord) => (false, Record::default()),
                 Err(_) => todo!("unknown error"),
-            }
+            })
         });
 
         Ok(Manifest { records })
