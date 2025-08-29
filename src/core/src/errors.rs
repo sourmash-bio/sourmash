@@ -71,7 +71,9 @@ pub enum SourmashError {
     ANIEstimationError { message: String },
 
     #[error("Empty record, failed to select any valid sketches: {record}")]
-    EmptyRecord { record: Box<crate::manifest::Record> },
+    EmptyRecord {
+        record: Box<crate::manifest::Record>,
+    },
 
     #[error(transparent)]
     ReadDataError(#[from] ReadDataError),

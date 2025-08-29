@@ -307,7 +307,9 @@ impl Select for Record {
         if valid {
             Ok(row)
         } else {
-            Err(crate::Error::EmptyRecord { record: Box::new(row) })
+            Err(crate::Error::EmptyRecord {
+                record: Box::new(row),
+            })
         }
     }
 }
