@@ -114,6 +114,7 @@ pub enum ReadDataError {
 }
 
 #[repr(u32)]
+#[non_exhaustive]
 pub enum SourmashErrorCode {
     // no error
     NoError = 0,
