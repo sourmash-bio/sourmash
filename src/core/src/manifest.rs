@@ -307,7 +307,7 @@ impl Select for Record {
         if valid {
             Ok(row)
         } else {
-            Err(crate::Error::EmptyRecord { record: row })
+            Err(crate::Error::EmptyRecord { record: Box::new(row) })
         }
     }
 }
@@ -323,7 +323,7 @@ impl Select for Manifest {
         records.retain_mut(|row| {
             replace_with_or_abort_and_return(row, |new_row| match new_row.select(selection) {
                 Ok(record) => (true, record),
-                Err(crate::Error::EmptyRecord { record }) => (false, record),
+                Err(crate::Error::EmptyRecord { record }) => (false, *record),
                 Err(_) => todo!("unknown error"),
             })
         });
