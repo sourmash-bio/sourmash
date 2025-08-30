@@ -173,6 +173,7 @@ impl DiskRevIndex {
         }))
     }
 
+    /// # Safety
     /// Access to the DB is unsafe because RocksDB allows writing with
     /// a regular Arc<DB> handle; it doesn't have to be mut.
     pub unsafe fn db(&self) -> Arc<DB> {
@@ -371,7 +372,7 @@ impl RevIndexOps for DiskRevIndex {
                         new_vals = Datasets::new(&val_set[..]);
                     }
 
-                    if new_vals.len() > 0 {
+                    if !new_vals.is_empty() {
                         let color = compute_color(&new_vals);
                         query_colors
                             .entry(color)
@@ -399,13 +400,11 @@ impl RevIndexOps for DiskRevIndex {
         mut cg: CounterGather,
         threshold: usize,
         orig_query: &KmerMinHash,
-        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>> {
         let match_size = usize::MAX;
         let mut matches = vec![];
         let mut query = KmerMinHashBTree::from(orig_query.clone());
         let mut sum_weighted_found = 0;
-        let _selection = selection.unwrap_or_else(|| self.collection.selection());
         let total_weighted_hashes = orig_query.sum_abunds();
 
         // or set this with user --track-abundance?
@@ -557,6 +556,18 @@ impl RevIndexOps for DiskRevIndex {
 
     fn collection(&self) -> &CollectionSet {
         &self.collection
+    }
+
+    fn select(&mut self, selection: &Selection) -> Result<()> {
+        let cs = self.collection().clone();
+        self.collection = Arc::new(cs.select(selection)?);
+        Ok(())
+    }
+
+    fn intersect_manifest(&mut self, manifest: &Manifest) {
+        let mut cs = self.collection().clone();
+        cs.intersect_manifest(manifest);
+        self.collection = Arc::new(cs);
     }
 
     fn internalize_storage(&mut self) -> Result<()> {

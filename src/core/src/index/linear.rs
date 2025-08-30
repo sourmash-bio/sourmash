@@ -18,19 +18,21 @@ use crate::storage::SigStore;
 use crate::Result;
 
 /// Supports parallel search without a particular index.
+#[derive(Clone)]
 pub struct LinearIndex {
     collection: CollectionSet,
     template: Sketch,
 }
 
 impl LinearIndex {
-    pub fn from_collection(collection: CollectionSet) -> Self {
-        let sig = collection.sig_for_dataset(0).unwrap();
+    pub fn from_collection(collection: CollectionSet) -> Result<Self> {
+        // @CTB can we do this from manifest?
+        let sig = collection.sig_for_dataset(0)?;
         let template = sig.sketches().swap_remove(0);
-        Self {
+        Ok(Self {
             collection,
             template,
-        }
+        })
     }
 
     pub fn sig_for_dataset(&self, dataset_id: Idx) -> Result<SigStore> {

@@ -11,7 +11,7 @@ use rayon::prelude::*;
 use serde::de;
 use serde::{Deserialize, Serialize};
 
-use crate::encodings::HashFunctions;
+use crate::encodings::{HashFunctions, Idx};
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
@@ -210,6 +210,10 @@ impl Hash for Record {
 }
 
 impl Manifest {
+    pub fn get_record(&self, idx: Idx) -> Option<&Record> {
+        self.records.get(idx as usize)
+    }
+
     pub fn from_reader<R: Read>(rdr: R) -> Result<Self> {
         let mut records = vec![];
 
@@ -262,6 +266,7 @@ impl Select for Manifest {
     // select only records that satisfy selection conditions; also update
     // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
+        // @CTB note this never returns Err?
         let Manifest { mut records } = self;
 
         // TODO: with num as well?

@@ -252,7 +252,7 @@ unsafe fn revindex_signatures(
 
     // load sigs
     let sigs: Vec<Signature> = records.iter()
-        .filter_map(|(idx, record)| match coll.sig_from_record(record) {
+        .filter_map(|(_idx, record)| match coll.sig_from_record(record) {
             Ok(sig) => Some(sig.into()),
             Err(_) => None,
         })

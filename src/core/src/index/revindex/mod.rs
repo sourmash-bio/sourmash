@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
-use crate::manifest::Record;
+use crate::manifest::{Manifest, Record};
 use crate::prelude::*;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
@@ -35,7 +35,7 @@ pub struct HashToColor(HashToColorT);
 
 /// Struct to hold interim results of a containment analysis, supporting
 /// iterative peek/consume.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CounterGather {
     counter: SigCounter,
     query_colors: QueryColors,
@@ -43,6 +43,7 @@ pub struct CounterGather {
 }
 
 #[enum_dispatch(RevIndexOps)]
+#[derive(Clone)]
 pub enum RevIndex {
     Disk(disk_revindex::DiskRevIndex),
     Mem(mem_revindex::MemRevIndex),
@@ -150,10 +151,13 @@ pub trait RevIndexOps {
         cg: CounterGather,
         threshold: usize,
         query: &KmerMinHash,
-        selection: Option<Selection>,
     ) -> Result<Vec<GatherResult>>;
 
     fn collection(&self) -> &CollectionSet;
+
+    fn select(&mut self, selection: &Selection) -> Result<()>;
+
+    fn intersect_manifest(&mut self, manifest: &Manifest);
 
     fn internalize_storage(&mut self) -> Result<()>;
 
@@ -184,6 +188,11 @@ impl CounterGather {
         }
 
         found_mh
+    }
+
+    pub fn counter(&self) -> &SigCounter {
+        // @CTB turn into iterator?
+        &self.counter
     }
 
     pub fn peek(&self, threshold: usize) -> Option<(Idx, usize)> {
@@ -490,6 +499,10 @@ impl Datasets {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn contains(&self, value: &Idx) -> bool {
         match self {
             Self::Empty => false,
@@ -698,7 +711,7 @@ mod test {
         assert_eq!(cg.len(), 1);
         assert_eq!(cg.is_empty(), false);
 
-        let matches = index.gather(cg, 0, &query, Some(selection))?;
+        let matches = index.gather(cg, 0, &query)?;
 
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].name(), ""); // signature name is empty
@@ -759,10 +772,8 @@ mod test {
         let cg = index.prepare_gather_counters(&query, None);
 
         let matches = index.gather(
-            cg,
-            5, // 50kb threshold
+            cg, 5, // 50kb threshold
             &query,
-            Some(selection),
         )?;
 
         // should be 11, based on test_gather_metagenome_num_results
@@ -906,7 +917,7 @@ mod test {
 
         let cg = index.prepare_gather_counters(&query, None);
 
-        let matches = index.gather(cg, 0, &query, Some(selection))?;
+        let matches = index.gather(cg, 0, &query)?;
 
         // should be 3.
         // see sourmash#3193.
@@ -1004,10 +1015,8 @@ mod test {
         let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
 
         let matches = index.gather(
-            cg,
-            5, // 50kb threshold
+            cg, 5, // 50kb threshold
             &query,
-            Some(selection),
         )?;
 
         // should be 1, b/c of picklist.
@@ -1164,9 +1173,7 @@ mod test {
 
         let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_external = index
-            .gather(cg, 0, &query, Some(selection.clone()))
-            .expect("failed to gather!");
+        let matches_external = index.gather(cg, 0, &query).expect("failed to gather!");
 
         {
             let mut index = index;
@@ -1176,7 +1183,7 @@ mod test {
 
             let cg = index.prepare_gather_counters(&query, None);
 
-            let matches_internal = index.gather(cg, 0, &query, Some(selection.clone()))?;
+            let matches_internal = index.gather(cg, 0, &query)?;
             assert_eq!(matches_external, matches_internal);
         }
         let new_path = outdir.path().join("new_index_path");
@@ -1186,7 +1193,7 @@ mod test {
 
         let cg = index.prepare_gather_counters(&query, None);
 
-        let matches_moved = index.gather(cg, 0, &query, Some(selection.clone()))?;
+        let matches_moved = index.gather(cg, 0, &query)?;
         assert_eq!(matches_external, matches_moved);
 
         Ok(())

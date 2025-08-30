@@ -73,7 +73,12 @@ impl CollectionSet {
     }
 
     pub fn selection(&self) -> Selection {
-        todo!("Extract selection from first sig")
+        let (_, r) = self.iter().next().expect("foo"); // @CTB handle
+        Selection::from_record(r).expect("fiz")
+    }
+
+    pub fn intersect_manifest(&mut self, mf: &Manifest) {
+        self.manifest = self.manifest.intersect_manifest(mf);
     }
 
     /// Replace the storage with a new one.
@@ -179,6 +184,40 @@ impl Collection {
         })
     }
 
+    pub fn load_into_memory(self) -> Result<Self> {
+        let new_storage = MemStorage::new();
+        /*
+                #[cfg(feature = "parallel")]
+                let iter = self.manifest.into_par_iter();
+
+                #[cfg(not(feature = "parallel"))]
+        */
+        let iter = self.manifest.iter();
+
+        let records: Vec<_> = iter
+            .enumerate()
+            .map(|(i, record)| {
+                let path = format!("{i}");
+                //let match_path = record.internal_location().as_str();
+                //let selection = Selection::from_record(record)?;
+                let sig: Signature = self
+                    .sig_from_record(record)
+                    .expect("cannot load sketch")
+                    .into();
+                let path = new_storage.save_sig(&path, sig).expect("Error saving sig");
+
+                let mut record = record.clone();
+                record.set_internal_location(path.clone().into());
+                record
+            })
+            .collect();
+
+        Ok(Self {
+            manifest: records.into(),
+            storage: InnerStorage::new(new_storage),
+        })
+    }
+
     pub fn from_paths(paths: &[PathBuf]) -> Result<Self> {
         // TODO:
         // - figure out if there is a common path between sigs for FSStorage?
@@ -240,6 +279,13 @@ impl Collection {
 impl Select for Collection {
     fn select(mut self, selection: &Selection) -> Result<Self> {
         self.manifest = self.manifest.select(selection)?;
+        Ok(self)
+    }
+}
+
+impl Select for CollectionSet {
+    fn select(mut self, selection: &Selection) -> Result<Self> {
+        self.collection = self.collection.select(selection)?;
         Ok(self)
     }
 }
