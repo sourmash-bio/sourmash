@@ -5,7 +5,7 @@ use crate::encodings::HashFunctions;
 use crate::manifest::Record;
 use crate::{Result, ScaledType};
 
-#[derive(Default, Debug, TypedBuilder, Clone, PartialEq)]
+#[derive(Default, Debug, TypedBuilder, Clone)]
 pub struct Selection {
     #[builder(default, setter(strip_option))]
     ksize: Option<u32>,
@@ -29,7 +29,7 @@ pub struct Selection {
     picklist: Option<Picklist>,
 }
 
-#[derive(Default, TypedBuilder, CopyGetters, Getters, Setters, Clone, Debug, PartialEq)]
+#[derive(Default, TypedBuilder, CopyGetters, Getters, Setters, Clone, Debug)]
 pub struct Picklist {
     #[getset(get = "pub", set = "pub")]
     #[builder(default = "".into())]
@@ -48,7 +48,7 @@ pub struct Picklist {
     pickstyle: PickStyle,
 }
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug)]
 #[repr(u32)]
 pub enum PickStyle {
     #[default]
