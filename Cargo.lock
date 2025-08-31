@@ -1807,6 +1807,7 @@ version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51743d3e274e2b18df81c4dc6caf8a5b8e15dbe799e0dca05c7617380094e884"
 
+[[package]]
 name = "reqwest"
 version = "0.12.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2198,12 +2199,8 @@ dependencies = [
  "proptest",
  "rand 0.9.2",
  "rayon",
-<<<<<<< HEAD
  "replace_with",
-||||||| parent of 395347bc (Implement a WortStorage backend)
-=======
  "reqwest",
->>>>>>> 395347bc (Implement a WortStorage backend)
  "rkyv",
  "roaring",
  "rocksdb",
