@@ -82,6 +82,12 @@ where
     }
 }
 
+impl std::fmt::Display for Record {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(fmt, "{:?}", self)
+    }
+}
+
 /// A description of a collection of sketches.
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -258,47 +264,70 @@ impl Manifest {
     }
 }
 
+impl Select for Record {
+    // select only a record if it satisfy selection conditions; also update
+    // scaled value to match.
+    fn select(self, selection: &Selection) -> Result<Self> {
+        let mut row = self;
+
+        let mut valid = true;
+        valid = if let Some(ksize) = selection.ksize() {
+            row.ksize == ksize
+        } else {
+            valid
+        };
+        valid = if let Some(abund) = selection.abund() {
+            valid && row.with_abundance() == abund
+        } else {
+            valid
+        };
+        valid = if let Some(moltype) = selection.moltype() {
+            valid && row.moltype() == moltype
+        } else {
+            valid
+        };
+        valid = if let Some(num) = selection.num() {
+            valid && row.num == num
+        } else {
+            valid
+        };
+
+        valid = if let Some(scaled) = selection.scaled() {
+            // num sigs have row.scaled = 0, don't include them
+            let v = valid && row.scaled != 0 && row.scaled <= scaled;
+            // if scaled is set, update!
+            if v {
+                row.scaled = scaled
+            };
+            v
+        } else {
+            valid
+        };
+
+        if valid {
+            Ok(row)
+        } else {
+            Err(crate::Error::EmptyRecord {
+                record: Box::new(row),
+            })
+        }
+    }
+}
+
 impl Select for Manifest {
     // select only records that satisfy selection conditions; also update
     // scaled value to match.
     fn select(self, selection: &Selection) -> Result<Self> {
+        use replace_with::replace_with_or_abort_and_return;
+
         let Manifest { mut records } = self;
 
-        // TODO: with num as well?
         records.retain_mut(|row| {
-            let mut valid = true;
-            valid = if let Some(ksize) = selection.ksize() {
-                row.ksize == ksize
-            } else {
-                valid
-            };
-            valid = if let Some(abund) = selection.abund() {
-                valid && row.with_abundance() == abund
-            } else {
-                valid
-            };
-            valid = if let Some(moltype) = selection.moltype() {
-                valid && row.moltype() == moltype
-            } else {
-                valid
-            };
-            valid = if let Some(scaled) = selection.scaled() {
-                // num sigs have row.scaled = 0, don't include them
-                let v = valid && row.scaled != 0 && row.scaled <= scaled;
-                // if scaled is set, update!
-                if v {
-                    row.scaled = scaled
-                };
-                v
-            } else {
-                valid
-            };
-            valid = if let Some(num) = selection.num() {
-                valid && row.num == num
-            } else {
-                valid
-            };
-            valid
+            replace_with_or_abort_and_return(row, |new_row| match new_row.select(selection) {
+                Ok(record) => (true, record),
+                Err(crate::Error::EmptyRecord { record }) => (false, *record),
+                Err(_) => todo!("unknown error"),
+            })
         });
 
         Ok(Manifest { records })

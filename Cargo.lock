@@ -1432,6 +1432,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "replace_with"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51743d3e274e2b18df81c4dc6caf8a5b8e15dbe799e0dca05c7617380094e884"
+
+[[package]]
 name = "rkyv"
 version = "0.7.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1644,7 +1650,7 @@ checksum = "9f1341053f34bb13b5e9590afb7d94b48b48d4b87467ec28e3c238693bb553de"
 
 [[package]]
 name = "sourmash"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "az",
  "byteorder",
@@ -1678,6 +1684,7 @@ dependencies = [
  "proptest",
  "rand 0.9.2",
  "rayon",
+ "replace_with",
  "rkyv",
  "roaring",
  "rocksdb",

@@ -70,6 +70,11 @@ pub enum SourmashError {
     #[error("error while calculating ANI confidence intervals: {message}")]
     ANIEstimationError { message: String },
 
+    #[error("Empty record, failed to select any valid sketches: {record}")]
+    EmptyRecord {
+        record: Box<crate::manifest::Record>,
+    },
+
     #[error(transparent)]
     ReadDataError(#[from] ReadDataError),
 
@@ -111,6 +116,7 @@ pub enum ReadDataError {
 }
 
 #[repr(u32)]
+#[non_exhaustive]
 pub enum SourmashErrorCode {
     // no error
     NoError = 0,
@@ -132,6 +138,7 @@ pub enum SourmashErrorCode {
     NoMinHashFound = 1_10,
     EmptySignature = 1_11,
     MultipleSketchesFound = 1_12,
+    EmptyRecord = 1_13,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -183,6 +190,7 @@ impl SourmashErrorCode {
             SourmashError::InvalidSkipmerFrame { .. } => SourmashErrorCode::InvalidSkipmerFrame,
             SourmashError::InvalidSkipmerSize { .. } => SourmashErrorCode::InvalidSkipmerSize,
             SourmashError::InvalidTranslateFrame { .. } => SourmashErrorCode::InvalidTranslateFrame,
+            SourmashError::EmptyRecord { .. } => SourmashErrorCode::EmptyRecord,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
             SourmashError::HLLPrecisionBounds => SourmashErrorCode::HLLPrecisionBounds,
