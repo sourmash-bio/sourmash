@@ -98,20 +98,6 @@ impl Collection {
         self.manifest.iter().enumerate().map(|(i, r)| (i as Idx, r))
     }
 
-    pub fn selection(&self) -> Selection {
-        let s1 = Selection::from_record(&self.manifest[0_usize]).expect("Empty collection?");
-        let s2: Option<Selection> =
-            Selection::from_record(&self.manifest[1_usize]).map_or_else(|_| None, Some);
-
-        match (s1, s2) {
-            (s, None) => s,
-            (s1, Some(s2)) => {
-                assert_eq!(s1, s2, "Multiple selections found, aborting");
-                s1
-            }
-        }
-    }
-
     #[cfg(feature = "parallel")]
     pub fn par_iter(&self) -> impl IndexedParallelIterator<Item = (Idx, &Record)> {
         self.manifest
