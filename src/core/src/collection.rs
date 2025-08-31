@@ -73,7 +73,8 @@ impl CollectionSet {
     }
 
     pub fn selection(&self) -> Selection {
-        todo!("Extract selection from first sig")
+        Selection::from_record(&self.manifest[0_usize])
+            .expect("Should always be able to extract a selection from a CollectionSet")
     }
 
     /// Replace the storage with a new one.
@@ -95,6 +96,20 @@ impl Collection {
 
     pub fn iter(&self) -> impl Iterator<Item = (Idx, &Record)> {
         self.manifest.iter().enumerate().map(|(i, r)| (i as Idx, r))
+    }
+
+    pub fn selection(&self) -> Selection {
+        let s1 = Selection::from_record(&self.manifest[0_usize]).expect("Empty collection?");
+        let s2: Option<Selection> =
+            Selection::from_record(&self.manifest[1_usize]).map_or_else(|_| None, Some);
+
+        match (s1, s2) {
+            (s, None) => s,
+            (s1, Some(s2)) => {
+                assert_eq!(s1, s2, "Multiple selections found, aborting");
+                s1
+            }
+        }
     }
 
     #[cfg(feature = "parallel")]
