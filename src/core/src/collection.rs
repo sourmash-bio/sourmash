@@ -67,6 +67,13 @@ impl TryFrom<Collection> for CollectionSet {
     }
 }
 
+impl Select for CollectionSet {
+    fn select(mut self, selection: &Selection) -> Result<Self> {
+        self.collection = self.collection.select(selection)?;
+        Ok(self)
+    }
+}
+
 impl CollectionSet {
     pub fn into_inner(self) -> Collection {
         self.collection
