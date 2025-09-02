@@ -266,7 +266,7 @@ impl Manifest {
                 String(s) => match s.to_ascii_lowercase().as_ref() {
                     "0" | "false" | "False" => String("0".into()),
                     "1" | "true" | "True" => String("1".into()),
-                    other => todo!("error"),
+                    _other => todo!("error"),
                 },
 
                 _ => todo!(),

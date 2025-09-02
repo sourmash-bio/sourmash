@@ -414,9 +414,22 @@ genomes/GCA_027604105.1,b8bfefac8cff5a1e774e553ea6d53ea4,b8bfefac,21,DNA,0,1000,
 #[test]
 fn collection_from_wort_db() -> Result<(), Box<dyn std::error::Error>> {
     use sourmash::collection::{Collection, CollectionSet};
+    use sourmash::signature::SigsTrait;
+
     let collection = Collection::from_wort_db("img")?;
 
     assert_eq!(collection.len(), 196659);
+
+    let mut selection = Selection::default();
+    selection.set_ksize(21);
+
+    let collection_k21: CollectionSet = collection.select(&selection)?.try_into()?;
+
+    assert_eq!(collection_k21.len(), 65553);
+
+    // Do this to trigger a signature download, and assert it is actually k=21
+    let sig = collection_k21.sig_for_dataset(0)?;
+    assert_eq!(sig.minhash().unwrap().ksize(), 21);
 
     Ok(())
 }
