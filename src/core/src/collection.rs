@@ -211,9 +211,9 @@ impl Collection {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_wort_db(db: &str) -> Result<Self> {
-        let storage = InnerStorage::from_spec(
-            format!("wort+https://farm.cse.ucdavis.edu/~irber/wort-{db}/").into(),
-        )?;
+        let storage = InnerStorage::from_spec(format!(
+            "wort+https://farm.cse.ucdavis.edu/~irber/wort-{db}/"
+        ))?;
 
         let pq_manifest = storage.load("SOURMASH-MANIFEST.parquet").unwrap();
 
