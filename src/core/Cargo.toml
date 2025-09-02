@@ -66,6 +66,10 @@ twox-hash = "1.6.0"
 typed-builder = "0.20.0"
 vec-collections = "0.4.3"
 
+parquet = { version = "54.3.1", default-features = false, features = ["serde", "json", "zstd"] }
+bytes = { version = "1.10.1", default-features = false }
+serde-transcode = "1.1.1"
+
 [dev-dependencies]
 codspeed-criterion-compat = "2.7.2"
 proptest = { version = "1.7.0", default-features = false, features = ["std"]}

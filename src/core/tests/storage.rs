@@ -389,3 +389,34 @@ wort-genomes/sigs/GCA_027604105.1.sig,b8bfefac8cff5a1e774e553ea6d53ea4,b8bfefac,
 
     Ok(())
 }
+
+#[test]
+fn collection_from_wort_manifest() -> Result<(), Box<dyn std::error::Error>> {
+    use sourmash::collection::{Collection, CollectionSet};
+    use sourmash::manifest::Manifest;
+
+    let manifest = r#"# SOURMASH-MANIFEST-VERSION: 1.0
+internal_location,md5,md5short,ksize,moltype,num,scaled,n_hashes,with_abundance,name,filename
+genomes/GCA_027604085.1,4bbf422430fe90c3b4d63032d604af19,4bbf4224,21,DNA,0,1000,27639,True,"GCA_027604085.1 Chytriomyces hyalinus strain=JEL0345, ASM2760408v1",/dev/fd/63
+genomes/GCA_027604165.1,ff1f063c431f819b08be2955ee54ade0,ff1f063c,21,DNA,0,1000,28704,True,"GCA_027604165.1 Chytriomyces hyalinus strain=ARG085, ASM2760416v1",/dev/fd/63
+genomes/GCA_027604745.1,0b626d3a644f585ca09d4b34875ecd6a,0b626d3a,21,DNA,0,1000,28490,True,"GCA_027604745.1 Chytriomyces hyalinus strain=JEL0176, ASM2760474v1",/dev/fd/63
+genomes/GCA_900079185.1,9862ba9f9c58681ca28b4e7dd3f6a53c,9862ba9f,21,DNA,0,1000,37958,True,"GCA_900079185.1 Absidia glauca strain=CBS 101.48 substr. RVII-324 met-, AG_v1",/dev/fd/63
+genomes/GCA_027604105.1,b8bfefac8cff5a1e774e553ea6d53ea4,b8bfefac,21,DNA,0,1000,28568,True,"GCA_027604105.1 Chytriomyces hyalinus strain=ARG121, ASM2760410v1",/dev/fd/63"#;
+
+    let manifest = Manifest::from_reader(manifest.as_bytes())?;
+    let collection: CollectionSet = Collection::from_wort_manifest(manifest)?.try_into()?;
+
+    assert_eq!(collection.len(), 5);
+
+    Ok(())
+}
+
+#[test]
+fn collection_from_wort_db() -> Result<(), Box<dyn std::error::Error>> {
+    use sourmash::collection::{Collection, CollectionSet};
+    let collection = Collection::from_wort_db("img")?;
+
+    assert_eq!(collection.len(), 196659);
+
+    Ok(())
+}
