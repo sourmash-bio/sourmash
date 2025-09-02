@@ -246,7 +246,25 @@ impl Manifest {
         use serde_json::Value::{Number, String};
 
         let reader = SerializedFileReader::new(rdr).unwrap();
-        // TODO: read kv metadata, check SOURMASH-MANIFEST-VERSION == 1.0
+
+        // read kv metadata, check SOURMASH-MANIFEST-VERSION == 1.0
+        let metadata = reader.metadata();
+        let file_metadata = metadata.file_metadata();
+        let kv = file_metadata.key_value_metadata();
+        let marker = kv
+            .map(|fields| {
+                fields.iter().any(|k| {
+                    if k.key == "SOURMASH-MANIFEST-VERSION" {
+                        k.value == Some("1.0".into())
+                    } else {
+                        false
+                    }
+                })
+            })
+            .unwrap_or(false);
+        if !marker {
+            todo!("return error, invalid manifest, no marker found");
+        }
 
         let mut records: Vec<Record> = vec![];
 

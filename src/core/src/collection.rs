@@ -211,6 +211,10 @@ impl Collection {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_wort_db(db: &str) -> Result<Self> {
+        // TODO: add routes in wort API to return
+        // - main archive
+        // - mirrors
+        // and select one instead of hardcoding here?
         let storage = InnerStorage::from_spec(format!(
             "wort+https://farm.cse.ucdavis.edu/~irber/wort-{db}/"
         ))?;

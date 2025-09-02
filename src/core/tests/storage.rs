@@ -242,8 +242,6 @@ genomes/GCA_027604105.1,b8bfefac8cff5a1e774e553ea6d53ea4,b8bfefac,21,DNA,0,1000,
     let manifest = Manifest::from_reader(manifest.as_bytes())?;
     let collection: CollectionSet = Collection::new(manifest, storage).try_into()?;
 
-    let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
     let outdir = TempDir::new()?;
     let output: PathBuf = outdir.path().join("index").try_into().unwrap();
 
@@ -335,6 +333,7 @@ fn wortmirror_collection_to_rocksdb() -> sourmash::Result<()> {
     use tempfile::TempDir;
 
     use sourmash::collection::{Collection, CollectionSet};
+
     use sourmash::index::revindex::{prepare_query, RevIndex, RevIndexOps};
     use sourmash::manifest::Manifest;
 
@@ -350,8 +349,6 @@ wort-genomes/sigs/GCA_027604105.1.sig,b8bfefac8cff5a1e774e553ea6d53ea4,b8bfefac,
 
     let manifest = Manifest::from_reader(manifest.as_bytes())?;
     let collection: CollectionSet = Collection::new(manifest, storage).try_into()?;
-
-    let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
     let outdir = TempDir::new()?;
     let output: PathBuf = outdir.path().join("index").try_into().unwrap();
