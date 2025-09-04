@@ -1714,8 +1714,6 @@ def collect(args):
 
             collected_mf.add_row(row)
 
-    sourmash_args.report_picklist(args, picklist)
-
     if args.manifest_format == "csv":
         collected_mf.write_to_filename(
             args.output, database_format="csv", ok_if_exists=args.merge_previous
@@ -1724,6 +1722,8 @@ def collect(args):
         collected_mf.close()
 
     notify(f"saved {len(collected_mf)} manifest rows to '{args.output}'")
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     return 0
 
