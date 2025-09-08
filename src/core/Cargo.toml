@@ -28,7 +28,7 @@ default = []
 [dependencies]
 az = "1.0.0"
 byteorder = "1.4.3"
-camino = { version = "1.1.11", features = ["serde1"] }
+camino = { version = "1.1.12", features = ["serde1"] }
 cfg-if = "1.0"
 counter = "0.6.0"
 csv = "1.3.1"
@@ -37,7 +37,7 @@ fixedbitset = "0.4.0"
 getset = "0.1.6"
 histogram = "0.11.3"
 itertools = "0.14.0"
-log = "0.4.27"
+log = "0.4.28"
 md5 = "0.8.0"
 memmap2 = "0.9.8"
 murmurhash3 = "0.0.5"
