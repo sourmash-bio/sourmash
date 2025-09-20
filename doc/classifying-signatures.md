@@ -545,7 +545,7 @@ Note that order of columns is not guaranteed and may change between versions.
 | `unique_intersect_bp`          | integer       | Size of overlap between match and _remaining_ query, estimated by multiplying the number of overlapping hashes by scaled. Rank/order dependent. Does not double count hashes. |
 | `intersect_bp`                 | integer       | Size of overlap between match and query, estimated by multiplying the number of overlapping hashes by scaled. Independent of rank order and will often double-count hashes. |
 | `f_orig_query`                 | float         | The fraction of the original query represented by this match. Approximates the fraction of metagenomic reads that will map to this genome. |
-| `f_match`                      | float         | The containment of the match in the query. |
+| `f_match`                      | float         | The containment of the match in the query after previous matches have been removed from the query. |
 | `f_unique_to_query`            | float         | The fraction of matching hashes (unweighted) that are unique to this match; rank dependent. Will sum to the fraction of total k-mers (unweighted) that were identified. |
 | `f_unique_weighted`            | float         | The fraction of matching hashes (weighted by multiplicity) that are unique to this match. This will sum (across the rows) to the fraction of total _weighted_ k-mers that were identified. Approximates the fraction of metagenomic reads that will map to this genome _after_ all previous matches at lower (earlier) ranks are mapped. |
 | `average_abund`                | float         | Mean abundance of the weighted hashes unique to the intersection. Empty if query does not have abundance. Rank dependent, does not double count. |
