@@ -142,4 +142,5 @@ sidebar
 command-line
 databases
 api-example
+cite
 ```
