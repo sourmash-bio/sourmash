@@ -18,7 +18,7 @@ Unless noted otherwise, the below database formats are supported in all releases
 
 sourmash signatures are typically serialized into JSON for on-disk storage, with rare exceptions (SQLite and LCA databases). The internal sourmash code automatically detects and properly handles compressed (gzipped) JSON data.
 
-## Storing signatures in `.zip` files: the **recommended** format.
+## Storing signatures in `.zip` files
 
 **This is our recommended format for storing collections of signatures.**
 
@@ -38,6 +38,41 @@ RocksDB indexes are fast and low-memory on-disk inverted indexes that
 support massive-scale content-based search. They can be built with
 `sourmash index -F rocksdb`.  RocksDB indexes are fully supported
 since sourmash v4.9.0.
+
+### Standalone manifests
+
+(This format is ideal for many advanced use cases.)
+
+Manifests are catalogs of signature metadata - name, molecule type,
+k-mer size, and other information - that can be used to select
+specific signatures for searching or processing. Typically when using
+manifests the actual signatures themselves are not loaded until they
+are needed, although the efficiency of this depends on the signature
+storage mechanism; for example, JSON-format containers (`.sig` and
+`.lca.json` files) must be entirely loaded before any signature in the
+file them can be used, unlike zip containers.
+
+As of sourmash 4.4 manifests can be *directly* loaded from the command
+line as standalone collections. This lets manifests serve as a catalog
+of signatures stored in many different locations. Sketches can be
+selected by name, k-mer size, molecule type, and other features
+without loading the actual sketch data.
+
+Standalone manifests are preferable to both directory storage and
+pathlists (below), because they support fast selection and direct lazy
+loading. This means that sourmash operations that support streaming or
+online search (such as `prefetch` and `gather`, among others) can
+avoid loading everything all at once.
+
+Standalone manifests are the most effective solution for managing custom
+collections of thousands to millions of signatures, as well as working
+with multiple large sketches.
+
+They can be created with `sourmash sig collect` and `sourmash sig
+check` (sourmash v4.4 and later).
+
+Sourmash supports two manifest file formats - CSV and SQLite. SQLite
+manifests are much faster and lower-memory than CSV manifests.
 
 ## Storing JSON in `.sig` and `.sig.gz` files: the original format.
 
@@ -78,41 +113,6 @@ memory.  See
 [the `index` documentation](command-line.md#sourmash-index-build-an-index-of-signatures).  The
 taxonomic functionality of LCAs is also no longer recommended; use
 [`sourmash tax` instead](command-line.md#sourmash-tax-subcommands-for-integrating-taxonomic-information-into-gather-results).
-
-### Standalone manifests
-
-(This format is ideal for many advanced use cases.)
-
-Manifests are catalogs of signature metadata - name, molecule type,
-k-mer size, and other information - that can be used to select
-specific signatures for searching or processing. Typically when using
-manifests the actual signatures themselves are not loaded until they
-are needed, although the efficiency of this depends on the signature
-storage mechanism; for example, JSON-format containers (`.sig` and
-`.lca.json` files) must be entirely loaded before any signature in the
-file them can be used, unlike zip containers.
-
-As of sourmash 4.4 manifests can be *directly* loaded from the command
-line as standalone collections. This lets manifests serve as a catalog
-of signatures stored in many different locations. Sketches can be
-selected by name, k-mer size, molecule type, and other features
-without loading the actual sketch data.
-
-Standalone manifests are preferable to both directory storage and
-pathlists (below), because they support fast selection and direct lazy
-loading. This means that sourmash operations that support streaming or
-online search (such as `prefetch` and `gather`, among others) can
-avoid loading everything all at once.
-
-Standalone manifests are the most effective solution for managing custom
-collections of thousands to millions of signatures, as well as working
-with multiple large sketches.
-
-They can be created with `sourmash sig collect` and `sourmash sig
-check` (sourmash v4.4 and later).
-
-Sourmash supports two manifest file formats - CSV and SQLite. SQLite
-manifests are much faster and lower-memory than CSV manifests.
 
 ### Directories
 
