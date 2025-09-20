@@ -1,3 +1,5 @@
+<!-- this file is included from the sidebar toctree section in index.md  ->
+
 ## Tutorials and examples
 
 These tutorials are command line tutorials that should work on Mac OS

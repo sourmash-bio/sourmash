@@ -130,6 +130,9 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 This toctree sets the sidebar menu, but is otherwise hidden so that it
 doesn't show up redundantly at the bottom of the index page.
 
+Edit sidebar.md to add to the initial set of headings, or add direct links
+like `cite`.
+
 -->
 
 ```{toctree}
