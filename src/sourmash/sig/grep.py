@@ -46,12 +46,12 @@ def main(args):
         debug("sig grep: manifest required")
 
     # are we doing --count? if so, enforce --silent so no sigs are printed.
-    if args.count:
+    if args.count or args.print_matched_names:
         args.silent = True
 
     # define output type: signatures, or no?
     if args.silent:
-        notify("(no signatures will be saved because of --silent/--count).")
+        notify("(no signatures will be saved because of --silent/--count/--print-matched-names).")
         save_sigs = sourmash_args.SaveSignaturesToLocation(None)
     else:
         notify(f"saving matching signatures to '{args.output}'")
@@ -98,6 +98,13 @@ def main(args):
         # just print out number of matches?
         if args.count:
             print_results(f"{len(sub_manifest)} matches: {filename}")
+        elif args.print_matched_names:
+            seen = set()
+            for row in sub_manifest.rows:
+                name = row["name"]
+                if name not in seen:
+                    print_results(row["name"])
+                    seen.add(name)
         elif not args.silent:
             # nope - do output signatures. convert manifest to picklist, apply.
             sub_picklist = sub_manifest.to_picklist()

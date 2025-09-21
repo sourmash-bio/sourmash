@@ -79,13 +79,20 @@ def subparser(subparsers):
     subparser.add_argument(
         "--silent",
         "--no-signatures-output",
+        "--no-sigs",
         help="do not output signatures",
         action="store_true",
     )
     subparser.add_argument(
         "-c",
         "--count",
-        help="only output a count of discovered signatures; implies --silent",
+        help="only output a count of discovered signatures; implies --no-sigs",
+        action="store_true",
+    )
+    subparser.add_argument(
+        "-l",
+        "--print-matched-names",
+        help="output the full names of matched signatures; implies --no-sigs",
         action="store_true",
     )
     add_ksize_arg(subparser)
