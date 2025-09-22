@@ -52,7 +52,7 @@ def main(args):
     # define output type: signatures, or no?
     if args.no_sigs:
         notify(
-            "(no signatures will be saved because of --no-sigs/--count/--print-matched-names)."
+            "(no signatures will be saved because of --no-sigs/--count/--print-matched-names)"
         )
         save_sigs = sourmash_args.SaveSignaturesToLocation(None)
     else:
