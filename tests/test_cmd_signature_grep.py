@@ -398,7 +398,7 @@ def test_sig_grep_8_count(runtmp):
     print(out)
     print(err)
 
-    assert "(no signatures will be saved because of --silent/--count)." in err
+    assert "(no signatures will be saved because of --silent/--count" in err
 
     for line in """\
 6 matches: prot/all.zip
