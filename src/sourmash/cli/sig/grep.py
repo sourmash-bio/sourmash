@@ -74,8 +74,9 @@ def subparser(subparsers):
         action="store_true",
     )
     subparser.add_argument(
-        "--csv", "--save-picklist",
-        help="save CSV file containing signature data in manifest format; can be used as a picklist"
+        "--csv",
+        "--save-picklist",
+        help="save CSV file containing signature data in manifest format; can be used as a picklist",
     )
     subparser.add_argument(
         "--no-sigs",
