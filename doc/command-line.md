@@ -1632,12 +1632,13 @@ in their name and save them to `shew.sig.zip`.
 e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
 of those expressions.
 
-`-l/--print-matched-names` will print a list of distinct matching
-sketch names and `-c/--count` will print a count of total matching
-sketches; both imply `--no-sigs` and so will disable signature output .
-
 String matching modifiers include `-i` for case-insensitive matching,
 and `-v` for exclusion rather than inclusion.
+
+By default, `sig grep` outputs matching sketches. Alternatively,
+`-l/--print-matched-names` prints a list of distinct matching
+sketch names and `-c/--count` prints a count of total matching
+sketches; both disable sketch output by setting `--no-sigs`.
 
 A CSV file of the matching sketch information can be saved using
 `--csv <outfile>`; this file is in the sourmash manifest format and
@@ -1645,23 +1646,6 @@ can be used as a picklist with `--pickfile <outfile>::manifest`.
 
 If `--no-sigs` is specified, `sourmash sig grep` will not output matching
 signatures.
-
-`sourmash sig grep` also supports a counting mode, `-c/--count`, in which
-only the number of matching sketches in files will be displayed; for example,
-
-```
-% sourmash signature grep -ci 'os185|os223' tests/test-data/prot/*.zip 
-```
-will produce the following output:
-```
-2 matches: tests/test-data/prot/all.zip
-0 matches: tests/test-data/prot/dayhoff.sbt.zip
-0 matches: tests/test-data/prot/dayhoff.zip
-0 matches: tests/test-data/prot/hp.sbt.zip
-0 matches: tests/test-data/prot/hp.zip
-0 matches: tests/test-data/prot/protein.sbt.zip
-0 matches: tests/test-data/prot/protein.zip
-```
 
 ### `sourmash signature split` - split signatures into individual files
 
