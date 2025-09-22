@@ -1544,10 +1544,10 @@ Concatenate signature files.
 
 For example,
 ```
-sourmash signature cat file1.sig file2.sig -o all.zip
+sourmash signature cat file1.sig file2.sig -o all.sig.zip
 ```
 will combine all signatures in `file1.sig` and `file2.sig` and put them
-in the file `all.zip`.
+in the file `all.sig.zip`.
 
 #### Using picklists with `sourmash sig cat`
 
@@ -1623,22 +1623,27 @@ on the name, filename, and md5 fields.
 
 For example,
 ```
-sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.zip
+sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.sig.zip
 ```
 will extract the two signatures in `all.zip` with 'Shewanella baltica'
-in their name and save them to `shew.zip`.
+in their name and save them to `shew.sig.zip`.
 
 `grep` will search for substring matches or regular expressions;
 e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
 of those expressions.
 
-Command line options include `-i` for case-insensitive matching, and `-v`
-for exclusion rather than inclusion.
+`-l/--print-matched-names` will print a list of distinct matching
+sketch names and `-c/--count` will print a count of total matching
+sketches; both imply `--no-sigs` and so will disable signature output .
+
+String matching modifiers include `-i` for case-insensitive matching,
+and `-v` for exclusion rather than inclusion.
 
 A CSV file of the matching sketch information can be saved using
-`--csv <outfile>`; this file is in the sourmash manifest format and can be used as a picklist with `--pickfile <outfile>::manifest`.
+`--csv <outfile>`; this file is in the sourmash manifest format and
+can be used as a picklist with `--pickfile <outfile>::manifest`.
 
-If `--silent` is specified, `sourmash sig grep` will not output matching
+If `--no-sigs` is specified, `sourmash sig grep` will not output matching
 signatures.
 
 `sourmash sig grep` also supports a counting mode, `-c/--count`, in which
@@ -2276,10 +2281,10 @@ slow, especially for many (100s or 1000s) of signatures.
 
 All of the `sourmash` commands support loading collections of
 signatures from zip files.  You can create a compressed collection of
-signatures using `sourmash sig cat *.sig -o collections.zip` and then
-specifying `collections.zip` on the command line in place of `*.sig`;
+signatures using `sourmash sig cat *.sig -o collections.sig.zip` and then
+specifying `collections.sig.zip` on the command line in place of `*.sig`;
 you can also sketch FASTA/FASTQ files directly into a zip file with
-`-o collections.zip`.
+`-o collections.sig.zip`.
 
 ### Choosing signature output formats
 
