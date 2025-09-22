@@ -412,6 +412,42 @@ def test_sig_grep_8_count(runtmp):
         assert line.strip() in out
 
 
+def test_sig_grep_9_name(runtmp):
+    zips = [
+        "prot/all.zip",
+        "prot/dayhoff.sbt.zip",
+        "prot/dayhoff.zip",
+        "prot/hp.sbt.zip",
+        "prot/hp.zip",
+        "prot/protein.sbt.zip",
+        "prot/protein.zip",
+    ]
+
+    zip_src = [utils.get_test_data(x) for x in zips]
+
+    os.mkdir(runtmp.output("prot"))
+    for src, dest in zip(zip_src, zips):
+        shutil.copyfile(src, runtmp.output(dest))
+
+    runtmp.sourmash("sig", "grep", "-l", "0015939", *zips)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "(no signatures will be saved because of " in err
+
+    for line in """\
+GCA_001593925
+GCA_001593935
+""".splitlines():
+        assert line.strip() in out
+
+    assert len(out.splitlines()) == 2, (out,)
+
+
 def test_sig_grep_identical_md5s(runtmp):
     # test that we properly handle different signatures with identical md5s
     sig47 = utils.get_test_data("47.fa.sig")

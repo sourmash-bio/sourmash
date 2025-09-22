@@ -69,6 +69,7 @@ def main(args):
 
     # start loading!
     total_rows_examined = 0
+    seen = set()
     for filename in args.signatures:
         idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
@@ -101,11 +102,10 @@ def main(args):
         if args.count:
             print_results(f"{len(sub_manifest)} matches: {filename}")
         elif args.print_matched_names:
-            seen = set()
             for row in sub_manifest.rows:
                 name = row["name"]
                 if name not in seen:
-                    print_results(row["name"])
+                    print_results(name)
                     seen.add(name)
         elif not args.no_sigs:
             # nope - do output signatures. convert manifest to picklist, apply.
