@@ -4501,6 +4501,38 @@ def test_multigather_metagenome(runtmp):
     )
 
 
+def test_multigather_metagenome_scaled(runtmp):
+    # does multigather properly downsample query sketches with --scaled?
+    testdata_glob = utils.get_test_data("gather/GCF*.sig")
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data("gather/combined.sig")
+
+    cmd = ["index", "gcf_all.rocksdb"]
+    cmd.extend(testdata_sigs)
+     # rocksdb will complain if scaled does not match
+    cmd.extend(["-k", "21", "-F", "rocksdb", "--scaled", "100_000"])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output("gcf_all.rocksdb"))
+
+    runtmp.sourmash(
+        "multigather",
+        "--query",
+        query_sig,
+        "--db",
+        "gcf_all.rocksdb",
+        "-k",
+        "21",
+        "--scaled", "100_000",
+        "--threshold-bp=0",
+    )
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
 def test_multigather_check_scaled_bounds_negative(runtmp):
     c = runtmp
     testdata_glob = utils.get_test_data("gather/GCF*.sig")

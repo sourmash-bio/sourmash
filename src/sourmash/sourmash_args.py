@@ -775,6 +775,7 @@ def load_file_as_signatures(
     *,
     select_moltype=None,
     ksize=None,
+    scaled=None,
     picklist=None,
     yield_all_files=False,
     progress=None,
@@ -808,7 +809,7 @@ def load_file_as_signatures(
     if not _use_manifest and db.manifest:
         db.manifest = None
 
-    db = db.select(moltype=select_moltype, ksize=ksize)
+    db = db.select(moltype=select_moltype, ksize=ksize, scaled=scaled)
 
     # apply pattern search & picklist
     db = apply_picklist_and_pattern(db, picklist, pattern)

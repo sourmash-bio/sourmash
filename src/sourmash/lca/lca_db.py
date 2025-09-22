@@ -266,7 +266,7 @@ class LCA_Database(Index):
         if num:
             raise ValueError("cannot use 'num' MinHashes to search LCA database")
 
-        if scaled > self.scaled and not containment:
+        if scaled and scaled > self.scaled and not containment:
             raise ValueError(
                 f"cannot use scaled={scaled} on this database (scaled={self.scaled})"
             )
