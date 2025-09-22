@@ -4510,7 +4510,7 @@ def test_multigather_metagenome_scaled(runtmp):
 
     cmd = ["index", "gcf_all.rocksdb"]
     cmd.extend(testdata_sigs)
-     # rocksdb will complain if scaled does not match
+    # rocksdb will complain if scaled does not match
     cmd.extend(["-k", "21", "-F", "rocksdb", "--scaled", "100_000"])
 
     runtmp.sourmash(*cmd)
@@ -4525,7 +4525,8 @@ def test_multigather_metagenome_scaled(runtmp):
         "gcf_all.rocksdb",
         "-k",
         "21",
-        "--scaled", "100_000",
+        "--scaled",
+        "100_000",
         "--threshold-bp=0",
     )
 

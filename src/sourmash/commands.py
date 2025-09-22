@@ -1205,7 +1205,9 @@ def multigather(args):
     query = next(
         iter(
             sourmash_args.load_file_as_signatures(
-                inp_files[0], ksize=args.ksize, select_moltype=moltype,
+                inp_files[0],
+                ksize=args.ksize,
+                select_moltype=moltype,
                 scaled=scaled,
             )
         )
@@ -1233,8 +1235,7 @@ def multigather(args):
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(
-            queryfile, ksize=args.ksize, select_moltype=moltype,
-            scaled=scaled
+            queryfile, ksize=args.ksize, select_moltype=moltype, scaled=scaled
         ):
             notify(
                 f"loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)}, scaled={query.minhash.scaled})"
