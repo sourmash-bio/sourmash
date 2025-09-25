@@ -1,60 +1,47 @@
 # sourmash databases - advanced usage information.
 
-sourmash uses a variety of different mechanisms and formats for storing, organizing, and searching signatures. Some of these mechanisms, "collections", just store the signatures; others ("indexed" databases) provide indices on the signatures for fast content-based search. _Most_ of the mechanisms now use manifests that permit fast selection and loading of signatures based on metadata. Below we refer to "databases" generically as any on-disk storage mechanism for sourmash signatures.
+tl;dr use `zip` files for heterogeneous collections of sourmash
+sketches, and RocksDB indexes for fast, low-memory searches at a
+specific ksize/moltype/scaled.
+
+sourmash supports a variety of different mechanisms and formats for storing, organizing, indexing, and searching signatures. Some of these mechanisms, "collections", just store the signatures; others ("indexed" databases) provide indices on the signatures for fast content-based search. _Most_ of the mechanisms now use manifests that permit fast selection and loading of signatures based on metadata. Below we refer to "databases" generically as any on-disk storage mechanism for sourmash signatures.
 
 Which database type is best to use depends on what you're doing - which is what this document is about! In general, however, sourmash should be fast enough that database choice will only impact performance when searching thousands of signatures, or doing thousands of searches.
 
-The recommended file extensions below are conventions used to signal the output format when using `-o` with `sourmash sketch` and the `sourmash sig` subcommands; so, for example, `sourmash sketch dna *.fa -o xyz.zip` will output signatures in the .zip format.
+The recommended file extensions below are conventions used to signal the output format when using `-o` with `sourmash sketch` and the `sourmash sig` subcommands; so, for example, `sourmash sketch dna *.fa -o xyz.zip` will output signatures in the .zip format. Indexed formats (SBT, LCA, and RocksDB) need to be constructed with `sourmash index`.
 
 sourmash will automatically detect and load the database, based on the database _content_ and not the database extension, in most cases.
 
-Unless noted otherwise, the below database formats are supported in all release since sourmash v3.5.
+Unless noted otherwise, the below database formats are supported in all releases since sourmash v4.9.0.
 
 ## How are signatures actually stored?
 
 sourmash signatures are typically serialized into JSON for on-disk storage, with rare exceptions (SQLite and LCA databases). The internal sourmash code automatically detects and properly handles compressed (gzipped) JSON data.
 
-## Storing JSON in `.sig` and `.sig.gz` files: the original format.
+## Storing signatures in `.zip` files
 
-Multiple signatures can be stored in a single JSON file. However, this file will be loaded in its entirety by sourmash, even if you only select one for later analysis.
-
-This is the least efficient way to store multiple signatures, because all of the JSON must be loaded before any signature can be selected or searched. But it is the oldest format and so a lot of our documentation describes it!
-
-## Storing signatures in `.zip` files: the **recommended** format.
-
-**This is our recommended format for storing collections of signatures. It is supported as of sourmash v4.1.**
+**This is our recommended format for storing collections of signatures.**
 
 Multiple signatures can be stored in a single .zip file. The best way to construct that zip file is from within sourmash, by specifying `-o filename.zip` when outputting signatures. Zip files created from within sourmash will automatically have manifests; this enables rapid subselection and direct loading of signatures via e.g. picklists.
 
 Zip files are not indexed by content, so they can be slow for searching. But they are small, and provide a good compromise between disk size (small), flexibility (can store any mixture of signatures), and speed (good for `gather`, not good for `search`).
 
-Zip file collections can contain any number of signatures, of any type (`num` or `scaled`, DNA/protein/dayhoff/hp).
+Zip file collections can contain any number of signatures, of any type (`num` or `scaled`, DNA/protein/dayhoff/hp/skipm1n3/skipm2n3).
 
-You can create your own Zip files by simply zipping any number of `.sig` or `.sig.gz` files into a .zip file, and sourmash will read this. However, since this zip file will not have a manifest, it will not be fast for certain operations that rely on manifests for speed, such as picklists and `sourmash sig summarize`. So we recommend using sourmash to create zip file collections with manifests.
+You should create your own zip files by using `sourmash cat ... -o <filename>.sig.zip`; this will create a zip file with an internal manifest that will speed up many operations, including picklists.
 
-### Storing signatures in SQLite databases
+### RocksDB indexes.
 
-As of sourmash 4.4, we support storing signatures directly in a [SQLite](https://www.sqlite.org/index.html) database (`-o .sqldb`). This is a fast, low-memory, on-disk format that is suitable for use with `search` and can support multiple simultaneous queries. However, the resulting file is also rather large, so we do not distribute databases in this format.
+**This is our recommended format for indexing signatures for search.**
 
-SQLite databases are implemented as an [inverted index](https://en.wikipedia.org/wiki/Inverted_index), with hashes stored directly in a table.
-
-SQLite databases are limited to scaled signatures, and can only contain sketches with the same scaled value across the entire database. They *can* store multiple molecule types.
-
-While SQLite databases are a new format, they seem promising, especially when disk space is not a concern and/or when memory is limited. We particularly recommend them for use as LCA databases (see next section) where they are a considerable improvement over the legacy JSON format.
-
-### Other Indexed collections - SBTs and LCAs.
-
-We provide two other indexed collection formats, Sequence Bloom Trees (SBTs) and LCA databases.
-
-SBTs implement our version of [Sequence Bloom Trees](http://www.cs.cmu.edu/~ckingsf/software/bloomtree/), a fast tree-based index that support rapid `search` for matches; they are particularly effective when searching for *best* matches across large databases. They are relatively low memory and typically about twice the size of .zip files on disk. They can be constructed with `sourmash index`.
-
-LCA databases are [inverted indices](https://en.wikipedia.org/wiki/Inverted_index) that support individual hash lookup. They provide fast `search` and `gather`, and also support all of the `sourmash lca` subcommands for hash-based taxonomic analysis. There are two LCA database formats, JSON and SQLite; JSON is small on disk but JSON LCA databases consume a lot of memory when loaded, while SQLite LCA databases are large on disk but low-memory and fast. JSON LCA databases do not support multiprocess queries. LCA databases can be constructed with `sourmash lca index`.
-
-Both SBTs and LCA databases can only store homogenous collections of signature types - all signatures must have the same molecule type and scaled or num value. Furthermore, LCA databases can only store scaled signatures.
-
-We recommend SBT and LCA databases for use only in specific situations - e.g. SBTs are great for single-genome "best match" search for SBTs, and `sourmash lca` commands require LCA databases.
+RocksDB indexes are fast and low-memory on-disk inverted indexes that
+support massive-scale content-based search. They can be built with
+`sourmash index -F rocksdb`.  RocksDB indexes are fully supported
+since sourmash v4.9.0.
 
 ### Standalone manifests
+
+(This format is ideal for many advanced use cases.)
 
 Manifests are catalogs of signature metadata - name, molecule type,
 k-mer size, and other information - that can be used to select
@@ -87,7 +74,49 @@ check` (sourmash v4.4 and later).
 Sourmash supports two manifest file formats - CSV and SQLite. SQLite
 manifests are much faster and lower-memory than CSV manifests.
 
+## Storing JSON in `.sig` and `.sig.gz` files: the original format.
+
+(This format is not recommended. Use zip files instead.)
+
+Multiple signatures can be stored in a single JSON file. However, this file will be loaded in its entirety by sourmash, even if you only select one for later analysis.
+
+This is the least efficient way to store multiple signatures, because all of the JSON must be loaded before any signature can be selected or searched. But it is the oldest format and so a lot of our documentation describes it!
+
+### Storing signatures in SQLite databases
+
+(This format is not recommended any more; use zip files.)
+
+As of sourmash 4.4, we support storing signatures directly in a [SQLite](https://www.sqlite.org/index.html) database (`-o .sqldb`). This is a fast, low-memory, on-disk format that is suitable for use with `search` and can support multiple simultaneous queries. However, the resulting file is also rather large, so we do not distribute databases in this format.
+
+SQLite databases are implemented as an [inverted index](https://en.wikipedia.org/wiki/Inverted_index), with hashes stored directly in a table.
+
+SQLite databases are limited to scaled signatures, and can only contain sketches with the same scaled value across the entire database. They *can* store multiple molecule types.
+
+We do not recommend using SQLite databases for storing signatures, although
+they are still fully supported.
+
+### Other Indexed collections - SBTs and LCAs.
+
+(These formats are not recommended any more, although they are still supported; use RocksDB indexes instead.)
+
+We provide two other indexed collection formats, Sequence Bloom Trees (SBTs) and LCA databases.
+
+SBTs implement our version of [Sequence Bloom Trees](http://www.cs.cmu.edu/~ckingsf/software/bloomtree/), a fast tree-based index that support rapid `search` for matches; they are particularly effective when searching for *best* matches across large databases. They are relatively low memory and typically about twice the size of .zip files on disk. They can be constructed with `sourmash index`.
+
+LCA databases are [inverted indices](https://en.wikipedia.org/wiki/Inverted_index) that support individual hash lookup. They provide fast `search` and `gather`, and also support all of the `sourmash lca` subcommands for hash-based taxonomic analysis. There are two LCA database formats, JSON and SQLite; JSON is small on disk but JSON LCA databases consume a lot of memory when loaded, while SQLite LCA databases are large on disk but low-memory and fast. JSON LCA databases do not support multiprocess queries. LCA databases can be constructed with `sourmash lca index`.
+
+Both SBTs and LCA databases can only store homogeneous collections of signature types - all signatures must have the same molecule type and scaled or num value. Furthermore, LCA databases can only store scaled signatures.
+
+We no longer recommend SBT and LCA databases. As of sourmash v4.9.0,
+sourmash supports RocksDB indexes, which are much faster and lower
+memory.  See
+[the `index` documentation](command-line.md#sourmash-index-build-an-index-of-signatures).  The
+taxonomic functionality of LCAs is also no longer recommended; use
+[`sourmash tax` instead](command-line.md#sourmash-tax-subcommands-for-integrating-taxonomic-information-into-gather-results).
+
 ### Directories
+
+(No longer recommended. Use zip files or standalone manifests instead.)
 
 Directory hierarchies of signatures are read natively by sourmash, and
 can be created or extended by specifying `-o dirname/` (with a
@@ -108,6 +137,8 @@ of the use cases for directories are now covered by other approaches -
 in particular, standalone manifests.
 
 ### Pathlists
+
+(No longer recommended. Use zip files or standalone manifests instead.)
 
 Pathlists are text files containing paths to one or more sourmash
 databases; any type of sourmash-readable collection can be listed.
@@ -143,7 +174,7 @@ SQLite taxonomy databases are typically built from CSV using `sourmash tax prepa
 
 ## Appendix: SQLite complexities
 
-The SQLite implementation of signature storage, metadata manifests, and LCA databases is all bundled into a single SQLite database. Beacuse of this, sourmash must examine the database tables to decide what kind of sourmash structure the database is - the logic is roughly this:
+The SQLite implementation of signature storage, metadata manifests, and LCA databases is all bundled into a single SQLite database. Because of this, sourmash must examine the database tables to decide what kind of sourmash structure the database is - the logic is roughly this:
 
 * does the database store both sketch information and taxonomy information? It's an LCA database!
 * if it has sketch information but no taxonomy information, it's just a regular index.

@@ -617,10 +617,13 @@ to allow overwriting of output files without an error.
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
 The `sourmash tax` subcommands support taxonomic analysis of genomes
-and taxonomic profiling of metagenomes.
-See
+and taxonomic profiling of metagenomes.  See
 [taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
-for more information.
+for more information. There are a number of plotting and visualization
+options for `tax metagenome` output available in
+[the betterplot plugin](#the-betterplot-plugin-improved-plotting-and-visualization)
+as well as
+[the taxburst fork of the Krona visualization software](https://taxburst.github.io/).
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
  information with the results of `sourmash gather`. All `tax` commands
