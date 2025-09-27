@@ -820,7 +820,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                 values.append(select_d["ksize"])
             if "num" in select_d and select_d["num"] > 0:
                 conditions.append("sourmash_sketches.num > 0")
-            if "scaled" in select_d and select_d["scaled"] > 0:
+            if "scaled" in select_d and select_d["scaled"] and select_d["scaled"] > 0:
                 conditions.append("sourmash_sketches.scaled > 0")
             if "containment" in select_d and select_d["containment"]:
                 conditions.append("sourmash_sketches.scaled > 0")

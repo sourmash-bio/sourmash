@@ -1192,6 +1192,8 @@ def multigather(args):
         error("Error! must specify at least one query signature with --query")
         sys.exit(-1)
 
+    scaled = int(args.scaled) if args.scaled else None
+
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
@@ -1203,13 +1205,23 @@ def multigather(args):
     query = next(
         iter(
             sourmash_args.load_file_as_signatures(
-                inp_files[0], ksize=args.ksize, select_moltype=moltype
+                inp_files[0],
+                ksize=args.ksize,
+                select_moltype=moltype,
+                scaled=scaled,
             )
         )
     )
 
+    if scaled and scaled != query.minhash.scaled:
+        notify(
+            f"downsampling query from scaled={query.minhash.scaled} to {int(scaled)}"
+        )
+        with query.update() as query:
+            query.minhash = query.minhash.downsample(scaled=scaled)
+
     notify(
-        f"loaded first query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})"
+        f"loaded first query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)}, scaled={query.minhash.scaled})"
     )
 
     databases = sourmash_args.load_dbs_and_sigs(
@@ -1223,10 +1235,10 @@ def multigather(args):
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(
-            queryfile, ksize=args.ksize, select_moltype=moltype
+            queryfile, ksize=args.ksize, select_moltype=moltype, scaled=scaled
         ):
             notify(
-                f"loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})"
+                f"loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)}, scaled={query.minhash.scaled})"
             )
 
             # verify signature was computed right.
@@ -1234,12 +1246,12 @@ def multigather(args):
                 error("query signature needs to be created with --scaled; skipping")
                 continue
 
-            if args.scaled and args.scaled != query.minhash.scaled:
+            if scaled and scaled != query.minhash.scaled:
                 notify(
-                    f"downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}"
+                    f"downsampling query from scaled={query.minhash.scaled} to {int(scaled)}"
                 )
                 with query.update() as query:
-                    query.minhash = query.minhash.downsample(scaled=args.scaled)
+                    query.minhash = query.minhash.downsample(scaled=scaled)
 
             # empty?
             if not len(query.minhash):
