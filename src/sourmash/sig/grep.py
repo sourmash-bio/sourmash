@@ -45,13 +45,15 @@ def main(args):
     else:
         debug("sig grep: manifest required")
 
-    # are we doing --count? if so, enforce --silent so no sigs are printed.
-    if args.count:
-        args.silent = True
+    # are we doing --count? if so, enforce --no-sigs so no sigs are printed.
+    if args.count or args.print_matched_names:
+        args.no_sigs = True
 
     # define output type: signatures, or no?
-    if args.silent:
-        notify("(no signatures will be saved because of --silent/--count).")
+    if args.no_sigs:
+        notify(
+            "(no signatures will be saved because of --no-sigs/--count/--print-matched-names)"
+        )
         save_sigs = sourmash_args.SaveSignaturesToLocation(None)
     else:
         notify(f"saving matching signatures to '{args.output}'")
@@ -67,6 +69,7 @@ def main(args):
 
     # start loading!
     total_rows_examined = 0
+    seen = set()
     for filename in args.signatures:
         idx = sourmash_args.load_file_as_index(filename, yield_all_files=args.force)
 
@@ -98,7 +101,13 @@ def main(args):
         # just print out number of matches?
         if args.count:
             print_results(f"{len(sub_manifest)} matches: {filename}")
-        elif not args.silent:
+        elif args.print_matched_names:
+            for row in sub_manifest.rows:
+                name = row["name"]
+                if name not in seen:
+                    print_results(name)
+                    seen.add(name)
+        elif not args.no_sigs:
             # nope - do output signatures. convert manifest to picklist, apply.
             sub_picklist = sub_manifest.to_picklist()
 
@@ -117,7 +126,7 @@ def main(args):
                 save_sigs.add(ss)
     # done with the big loop over all indexes!
 
-    if args.silent:
+    if args.no_sigs:
         pass
     else:
         notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
