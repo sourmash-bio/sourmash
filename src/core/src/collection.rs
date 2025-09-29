@@ -202,6 +202,30 @@ impl Collection {
         })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_wort_manifest(manifest: Manifest) -> Result<Self> {
+        let storage = InnerStorage::from_spec("wort://".into())?;
+
+        Ok(Self { manifest, storage })
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_wort_db(db: &str) -> Result<Self> {
+        // TODO: add routes in wort API to return
+        // - main archive
+        // - mirrors
+        // and select one instead of hardcoding here?
+        let storage = InnerStorage::from_spec(format!(
+            "wort+https://farm.cse.ucdavis.edu/~irber/wort-{db}/"
+        ))?;
+
+        let pq_manifest = storage.load("SOURMASH-MANIFEST.parquet").unwrap();
+
+        let manifest = Manifest::from_parquet(pq_manifest.into())?;
+
+        Ok(Self { manifest, storage })
+    }
+
     pub fn record_for_dataset(&self, dataset_id: Idx) -> Result<&Record> {
         Ok(&self.manifest[dataset_id as usize])
     }

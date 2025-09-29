@@ -241,6 +241,77 @@ impl Manifest {
         Ok(())
     }
 
+    pub fn from_parquet(rdr: bytes::Bytes) -> Result<Self> {
+        use parquet::file::reader::{FileReader, SerializedFileReader};
+        use serde_json::Value::{Number, String};
+
+        let reader = SerializedFileReader::new(rdr).unwrap();
+
+        // read kv metadata, check SOURMASH-MANIFEST-VERSION == 1.0
+        let metadata = reader.metadata();
+        let file_metadata = metadata.file_metadata();
+        let kv = file_metadata.key_value_metadata();
+        let marker = kv
+            .map(|fields| {
+                fields.iter().any(|k| {
+                    if k.key == "SOURMASH-MANIFEST-VERSION" {
+                        k.value == Some("1.0".into())
+                    } else {
+                        false
+                    }
+                })
+            })
+            .unwrap_or(false);
+        if !marker {
+            todo!("return error, invalid manifest, no marker found");
+        }
+
+        let mut records: Vec<Record> = vec![];
+
+        for row in reader.get_row_iter(None).unwrap() {
+            // TODO: avoid roundtrip with JSON
+            let mut json_record = row.unwrap().to_json_value();
+            let with_abundance = json_record.get_mut("with_abundance").unwrap();
+            *with_abundance = match with_abundance {
+                Number(v) => v
+                    .as_u64()
+                    .map(|n| match n {
+                        0 => String("0".into()),
+                        1 => String("1".into()),
+                        _ => todo!("error"),
+                    })
+                    .unwrap_or_else(|| todo!("error")),
+                String(s) => match s.to_ascii_lowercase().as_ref() {
+                    "0" | "false" | "False" => String("0".into()),
+                    "1" | "true" | "True" => String("1".into()),
+                    _other => todo!("error"),
+                },
+
+                _ => todo!(),
+                /*
+                other => return Err(serde::de::Error::invalid_value(
+                    serde::de::Unexpected::Str(&other.to_string()),
+                    &"0/1, true/false, True/False are the only supported values",
+                )),
+                */
+            };
+            let name = json_record.get_mut("name").unwrap();
+            if name.is_null() {
+                *name = String("".into())
+            }
+
+            let record: Record = serde_json::from_value(json_record)?;
+            /*
+            let deserializer = ();
+            let serializer = ();
+            serde_transcode::transcode(&mut deserializer, &mut serializer).unwrap();
+            */
+            records.push(record);
+        }
+
+        Ok(Manifest { records })
+    }
+
     pub fn internal_locations(&self) -> impl Iterator<Item = &str> {
         self.records.iter().map(|r| r.internal_location.as_str())
     }
