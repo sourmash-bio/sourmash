@@ -7,6 +7,7 @@ maxdepth: 2
 
 api-example.md
 api.md
+cite.md
 classifying-signatures.md
 command-line.md
 databases-advanced.md
