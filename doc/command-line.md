@@ -617,10 +617,13 @@ to allow overwriting of output files without an error.
 ## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
 The `sourmash tax` subcommands support taxonomic analysis of genomes
-and taxonomic profiling of metagenomes.
-See
+and taxonomic profiling of metagenomes.  See
 [taxonomic profiling with sourmash](classifying-signatures.md#taxonomic-profiling-with-sourmash)
-for more information.
+for more information. There are a number of plotting and visualization
+options for `tax metagenome` output available in
+[the betterplot plugin](#the-betterplot-plugin-improved-plotting-and-visualization)
+as well as
+[the taxburst fork of the Krona visualization software](https://taxburst.github.io/).
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
  information with the results of `sourmash gather`. All `tax` commands
@@ -1544,10 +1547,10 @@ Concatenate signature files.
 
 For example,
 ```
-sourmash signature cat file1.sig file2.sig -o all.zip
+sourmash signature cat file1.sig file2.sig -o all.sig.zip
 ```
 will combine all signatures in `file1.sig` and `file2.sig` and put them
-in the file `all.zip`.
+in the file `all.sig.zip`.
 
 #### Using picklists with `sourmash sig cat`
 
@@ -1623,40 +1626,29 @@ on the name, filename, and md5 fields.
 
 For example,
 ```
-sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.zip
+sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.sig.zip
 ```
 will extract the two signatures in `all.zip` with 'Shewanella baltica'
-in their name and save them to `shew.zip`.
+in their name and save them to `shew.sig.zip`.
 
 `grep` will search for substring matches or regular expressions;
 e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
 of those expressions.
 
-Command line options include `-i` for case-insensitive matching, and `-v`
-for exclusion rather than inclusion.
+String matching modifiers include `-i` for case-insensitive matching,
+and `-v` for exclusion rather than inclusion.
+
+By default, `sig grep` outputs matching sketches. Alternatively,
+`-l/--print-matched-names` prints a list of distinct matching
+sketch names and `-c/--count` prints a count of total matching
+sketches; both disable sketch output by setting `--no-sigs`.
 
 A CSV file of the matching sketch information can be saved using
-`--csv <outfile>`; this file is in the sourmash manifest format and can be used as a picklist with `--pickfile <outfile>::manifest`.
+`--csv <outfile>`; this file is in the sourmash manifest format and
+can be used as a picklist with `--pickfile <outfile>::manifest`.
 
-If `--silent` is specified, `sourmash sig grep` will not output matching
+If `--no-sigs` is specified, `sourmash sig grep` will not output matching
 signatures.
-
-`sourmash sig grep` also supports a counting mode, `-c/--count`, in which
-only the number of matching sketches in files will be displayed; for example,
-
-```
-% sourmash signature grep -ci 'os185|os223' tests/test-data/prot/*.zip 
-```
-will produce the following output:
-```
-2 matches: tests/test-data/prot/all.zip
-0 matches: tests/test-data/prot/dayhoff.sbt.zip
-0 matches: tests/test-data/prot/dayhoff.zip
-0 matches: tests/test-data/prot/hp.sbt.zip
-0 matches: tests/test-data/prot/hp.zip
-0 matches: tests/test-data/prot/protein.sbt.zip
-0 matches: tests/test-data/prot/protein.zip
-```
 
 ### `sourmash signature split` - split signatures into individual files
 
@@ -2276,10 +2268,10 @@ slow, especially for many (100s or 1000s) of signatures.
 
 All of the `sourmash` commands support loading collections of
 signatures from zip files.  You can create a compressed collection of
-signatures using `sourmash sig cat *.sig -o collections.zip` and then
-specifying `collections.zip` on the command line in place of `*.sig`;
+signatures using `sourmash sig cat *.sig -o collections.sig.zip` and then
+specifying `collections.sig.zip` on the command line in place of `*.sig`;
 you can also sketch FASTA/FASTQ files directly into a zip file with
-`-o collections.zip`.
+`-o collections.sig.zip`.
 
 ### Choosing signature output formats
 
