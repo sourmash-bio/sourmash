@@ -2490,10 +2490,6 @@ def test_lineage_at_rank_1():
         LineagePair(rank="superkingdom", name="d__a", taxid=None),
     )
 
-    print("lineage_at_rank:", lin1.lineage_at_rank("genus")[-1].name)
-    #print("lineage_above_rank:", lin1.lineage_above_rank("superkingdom")[-1].name)
-    #print("lineage_below_rank:", lin1.lineage_below_rank("genus")[-1].name)
-
     assert lin1.lineage_at_rank("class") == (
         LineagePair(rank="superkingdom", name="d__a", taxid=None),
         LineagePair(rank="phylum", name="p__b", taxid=None),
@@ -2509,8 +2505,6 @@ def test_lineage_at_rank_1():
         LineagePair(rank="class", name="c__c", taxid=None),
         LineagePair(rank="order", name="o__d", taxid=None),
     )
-
-test_lineage_at_rank_1()
 
 def test_lineage_at_rank_below_rank():
     lin1 = RankLineageInfo(lineage_str="d__a;p__b;c__c;o__d;f__f")
