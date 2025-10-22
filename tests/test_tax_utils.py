@@ -2506,6 +2506,7 @@ def test_lineage_at_rank_1():
         LineagePair(rank="order", name="o__d", taxid=None),
     )
 
+
 def test_lineage_at_rank_below_rank():
     lin1 = RankLineageInfo(lineage_str="d__a;p__b;c__c;o__d;f__f")
     print(lin1.lineage_at_rank("superkingdom"))

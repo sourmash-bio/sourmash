@@ -356,7 +356,7 @@ class BaseLineageInfo:
         if not self.rank_is_filled(rank):
             return self.filled_lineage
         rank_idx = self.rank_index(rank)
-        return self.filled_lineage[: rank_idx]
+        return self.filled_lineage[:rank_idx]
 
     def lineage_below_rank(self, rank):
         """
@@ -382,7 +382,6 @@ class BaseLineageInfo:
             if self.is_lineage_match(other, rank):
                 return self.pop_to_rank(rank)
         return None
-
 
 
 @dataclass(frozen=True, order=True)
