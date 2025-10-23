@@ -124,34 +124,39 @@ def calculate_moltype(args, default=None):
     return moltype
 
 
-def load_picklist(args):
+def load_picklist(args=None,picklist=None):
     "Load a SignaturePicklist from --picklist arguments."
-    picklist = None
-    if args.picklist:
+    if args is None:
+        picklist=picklist
+    elif isinstance(args, (str, bytes)):
+        picklist=args
+
+    picklist_obj = None
+    if picklist:
         try:
-            picklist = SignaturePicklist.from_picklist_args(args.picklist)
+            picklist_obj = SignaturePicklist.from_picklist_args(picklist)
 
             notify(
-                f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'"
+                f"picking column '{picklist_obj.column_name}' of type '{picklist_obj.coltype}' from '{picklist_obj.pickfile}'"
             )
 
-            n_empty_val, dup_vals = picklist.load()
+            n_empty_val, dup_vals = picklist_obj.load()
         except ValueError as exc:
             error("ERROR: could not load picklist.")
             error(str(exc))
             sys.exit(-1)
 
-        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
+        notify(f"loaded {len(picklist_obj.pickset)} distinct values into picklist.")
         if n_empty_val:
             notify(
-                f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file"
+                f"WARNING: {n_empty_val} empty values in column '{picklist_obj.column_name}' in picklist file"
             )
         if dup_vals:
             notify(
-                f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct"
+                f"WARNING: {len(dup_vals)} values in picklist column '{picklist_obj.column_name}' were not distinct"
             )
 
-    return picklist
+    return picklist_obj
 
 
 def report_picklist(args, picklist):
