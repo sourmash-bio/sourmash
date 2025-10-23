@@ -124,12 +124,12 @@ def calculate_moltype(args, default=None):
     return moltype
 
 
-def load_picklist(args=None,picklist=None):
+def load_picklist(args=None, picklist=None):
     "Load a SignaturePicklist from --picklist arguments."
     if args is None:
-        picklist=picklist
+        picklist = picklist
     elif isinstance(args, (str, bytes)):
-        picklist=args
+        picklist = args
 
     picklist_obj = None
     if picklist:
