@@ -79,6 +79,7 @@ class Nodegraph(RustObject):
         return self._methodcall(lib.nodegraph_expected_collisions)
 
     def matches(self, mh):
+        "return number of matches between MinHash and nodegraph"
         if not isinstance(mh, MinHash):
             # FIXME: we could take sets here too (or anything that can be
             # converted to a list of ints...)
