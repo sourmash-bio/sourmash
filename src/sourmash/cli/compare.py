@@ -48,7 +48,7 @@ def subparser(subparsers):
         "-o",
         "--output",
         metavar="F",
-        help="save comparison matrix in numpy binary format to this file"
+        help="save comparison matrix in numpy binary format to this file",
     )
     subparser.add_argument(
         "--ignore-abundance",
