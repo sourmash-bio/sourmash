@@ -39,7 +39,7 @@ histogram = "0.11.3"
 itertools = "0.14.0"
 log = "0.4.28"
 md5 = "0.8.0"
-memmap2 = "0.9.8"
+memmap2 = "0.9.9"
 murmurhash3 = "0.0.5"
 needletail = { version = "0.6.3", default-features = false }
 niffler = { version = "3.0.0", default-features = false, features = [ "gz", "lzma", "zstd" ] }
@@ -67,7 +67,7 @@ vec-collections = "0.4.3"
 
 [dev-dependencies]
 codspeed-criterion-compat = "2.7.2"
-proptest = { version = "1.8.0", default-features = false, features = ["std"]}
+proptest = { version = "1.9.0", default-features = false, features = ["std"]}
 rand = "0.9.2"
 tempfile = "3.23.0"
 
