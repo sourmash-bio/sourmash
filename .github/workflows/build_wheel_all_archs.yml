@@ -75,7 +75,7 @@ jobs:
     steps:
       - name: Fetch wheels from artifacts
         id: fetch_artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: 'wheels/'
 
