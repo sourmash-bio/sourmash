@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<1.10.0",
+    "maturin>=1,<1.11.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -147,7 +147,7 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<8.5.0",
+  "pytest>=6.2.4,<9.1.0",
   "pytest-cov>=4,<8.0",
   "pytest-xdist>=3.1",
   "pyyaml>=6,<7",
