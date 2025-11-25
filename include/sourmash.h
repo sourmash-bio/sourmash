@@ -71,6 +71,8 @@ typedef struct SourmashManifest SourmashManifest;
 
 typedef struct SourmashManifestRowIter SourmashManifestRowIter;
 
+typedef struct SourmashMatchResult SourmashMatchResult;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
@@ -327,6 +329,12 @@ const SourmashManifestRow *manifest_rows_iter_next(SourmashManifestRowIter *ptr)
 
 void manifestrow_free(SourmashManifestRow *ptr);
 
+void matchresult_free(SourmashMatchResult *ptr);
+
+uintptr_t matchresult_matches(const SourmashMatchResult *ptr);
+
+SourmashStr matchresult_name(const SourmashMatchResult *ptr);
+
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
 bool nodegraph_count(SourmashNodegraph *ptr, uint64_t h);
@@ -386,9 +394,14 @@ void revindex_countergather_free(SourmashRevIndex_CounterGather *ptr);
 
 uint64_t revindex_countergather_len(SourmashRevIndex_CounterGather *cg_ptr);
 
+const SourmashMatchResult *const *revindex_countergather_matches_from_counter(const SourmashRevIndex_CounterGather *cg_ptr,
+                                                                              const SourmashRevIndex *db_ptr,
+                                                                              uintptr_t threshold_hashes,
+                                                                              uintptr_t *size);
+
 SourmashSignature *revindex_countergather_peek(const SourmashRevIndex_CounterGather *cg_ptr,
                                                const SourmashRevIndex *db_ptr,
-                                               uint64_t threshold_bp);
+                                               uint64_t threshold_hashes);
 
 SourmashSignature **revindex_countergather_signatures(const SourmashRevIndex_CounterGather *cg_ptr,
                                                       const SourmashRevIndex *db_ptr,

@@ -37,7 +37,7 @@ pub struct HashToColor(HashToColorT);
 /// iterative peek/consume.
 #[derive(Debug)]
 pub struct CounterGather {
-    counter: SigCounter,
+    pub counter: SigCounter,
     query_colors: QueryColors,
     hash_to_color: HashToColor,
 }
