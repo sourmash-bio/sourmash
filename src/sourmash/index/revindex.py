@@ -715,8 +715,10 @@ class RevIndex_CounterGather_Colors(RustObject):
         "Return (overlap, name)"
         size = ffi.new("uintptr_t *")
         matches_ptr = self._methodcall(
-            lib.revindex_countergather_matches_from_counter, self.db._objptr,
-            threshold_hashes, size
+            lib.revindex_countergather_matches_from_counter,
+            self.db._objptr,
+            threshold_hashes,
+            size,
         )
         size = size[0]
 
