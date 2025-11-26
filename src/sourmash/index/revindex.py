@@ -219,6 +219,7 @@ class RevIndex(RustObject, Index):
         pass
 
     def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
+        # @CTB threhsold_bp is ignored!
         """
         Return a CounterGather object that holds interim results for a
         'gather', and can be used to get iterative results.
