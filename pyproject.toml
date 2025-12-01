@@ -163,7 +163,7 @@ demo = [
   "ipython",
 ]
 doc = [
-  "sphinx>=6,<9",
+  "sphinx>=6,<10",
   "myst-parser",
   "Jinja2",
   "alabaster",
