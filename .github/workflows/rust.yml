@@ -10,7 +10,7 @@ on:
     - cron: "0 0 * * *" # daily
 
 env:
-  PIXI_VERSION: "v0.53.0"
+  PIXI_VERSION: "v0.63.2"
 
 jobs:
   check:
