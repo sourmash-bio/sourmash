@@ -56,7 +56,7 @@ jobs:
         fetch-depth: 0
 
     - name: cache conda
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       env:
         CACHE_NUMBER: 0
       with:
