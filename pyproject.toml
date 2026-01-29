@@ -169,7 +169,7 @@ doc = [
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
-  "sphinx-design==0.6.1",
+  "sphinx-design==0.7.0",
   "ipython",
   "sphinx-copybutton",
 ]
