@@ -6,6 +6,10 @@ on:
 concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/latest' }}
+
+env:
+  PIXI_VERSION: "v0.65.0"
+
 jobs:
   nix:
     runs-on: ${{ matrix.os }}
@@ -37,7 +41,7 @@ jobs:
     - name: set up pixi
       uses: prefix-dev/setup-pixi@v0.9.4
       with:
-        pixi-version: v0.63.2
+        pixi-version: ${{ env.PIXI_VERSION }}
         cache: true
         frozen: true
 
