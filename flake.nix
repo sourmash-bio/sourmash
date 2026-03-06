@@ -12,8 +12,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, rust-overlay, utils }:
-    utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      rust-overlay,
+      utils,
+    }:
+    utils.lib.eachDefaultSystem (
+      system:
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
@@ -23,7 +30,10 @@
           #extensions = [ "rust-src" ];
           extensions = [ "llvm-tools-preview" ];
           #targets = [ "x86_64-unknown-linux-musl" ];
-          targets = [ "wasm32-unknown-unknown" "wasm32-unknown-emscripten" ];
+          targets = [
+            "wasm32-unknown-unknown"
+            "wasm32-unknown-emscripten"
+          ];
         };
         rustPlatform = pkgs.makeRustPlatform {
           cargo = rustVersion;
@@ -43,9 +53,16 @@
             export MACOSX_DEPLOYMENT_TARGET=10.14
           '';
 
-          buildInputs = lib.optionals stdenv.isDarwin [ pkgs.libiconv pkgs.darwin.apple_sdk.frameworks.Security ];
+          buildInputs = lib.optionals stdenv.isDarwin [
+            pkgs.libiconv
+            pkgs.darwin.apple_sdk.frameworks.Security
+          ];
 
-          nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook bindgenHook ];
+          nativeBuildInputs = with rustPlatform; [
+            cargoSetupHook
+            maturinBuildHook
+            bindgenHook
+          ];
         };
 
       in
@@ -54,26 +71,41 @@
       {
         packages = {
 
-          lib = rustPlatform.buildRustPackage ( commonArgs // {
-            name = "libsourmash";
-            copyLibs = true;
-            cargoLock.lockFile = ./Cargo.lock;
-            nativeBuildInputs = with rustPlatform; [ bindgenHook ];
-          });
+          lib = rustPlatform.buildRustPackage (
+            commonArgs
+            // {
+              name = "libsourmash";
+              copyLibs = true;
+              cargoLock.lockFile = ./Cargo.lock;
+              nativeBuildInputs = with rustPlatform; [ bindgenHook ];
+            }
+          );
 
-          sourmash = python.buildPythonPackage ( commonArgs // rec {
-            pname = "sourmash";
-            version = "4.9.4";
-            format = "pyproject";
+          sourmash = python.buildPythonPackage (
+            commonArgs
+            // rec {
+              pname = "sourmash";
+              version = "4.9.4";
+              format = "pyproject";
 
-            cargoDeps = rustPlatform.importCargoLock {
-              lockFile = ./Cargo.lock;
-            };
+              cargoDeps = rustPlatform.importCargoLock {
+                lockFile = ./Cargo.lock;
+              };
 
-            propagatedBuildInputs = with python; [ cffi deprecation cachetools bitstring numpy scipy matplotlib screed ];
+              propagatedBuildInputs = with python; [
+                cffi
+                deprecation
+                cachetools
+                bitstring
+                numpy
+                scipy
+                matplotlib
+                screed
+              ];
 
-            DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
-          });
+              DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
+            }
+          );
 
           docker =
             let
@@ -93,56 +125,66 @@
 
         defaultPackage = self.packages.${system}.sourmash;
 
-        devShells.default = pkgs.mkShell.override { stdenv = stdenv; } (commonArgs // {
-          nativeBuildInputs = with rustPlatform; [ bindgenHook ];
+        devShells.default = pkgs.mkShell.override { stdenv = stdenv; } (
+          commonArgs
+          // {
+            nativeBuildInputs = with rustPlatform; [ bindgenHook ];
 
-          buildInputs = [
-            rustVersion
-            openssl
-            pkg-config
+            buildInputs = [
+              rustVersion
+              openssl
+              pkg-config
 
-            git
-            stdenv.cc.cc.lib
-            #(python313.withPackages (ps: with ps; [ virtualenv ]))
-            (python312.withPackages (ps: with ps; [ virtualenv tox cffi ]))
-            (python311.withPackages (ps: with ps; [ virtualenv ]))
+              git
+              stdenv.cc.cc.lib
+              #(python313.withPackages (ps: with ps; [ virtualenv ]))
+              (python312.withPackages (
+                ps: with ps; [
+                  virtualenv
+                  tox
+                  cffi
+                ]
+              ))
+              (python311.withPackages (ps: with ps; [ virtualenv ]))
 
-            #rust-cbindgen
-            maturin
+              #rust-cbindgen
+              maturin
 
-            wasmtime
-            wasm-pack
-            nodejs_20
-            #emscripten
+              wasmtime
+              wasm-pack
+              nodejs_20
+              #emscripten
 
-            #py-spy
-            #heaptrack
-            cargo-all-features
-            cargo-watch
-            cargo-limit
-            cargo-outdated
-            cargo-udeps
-            cargo-deny
-            cargo-nextest
-            #cargo-llvm-cov
-            cargo-component
-            cargo-codspeed
-            #cargo-semver-checks
-            nixpkgs-fmt
-          ];
+              #py-spy
+              #heaptrack
+              cargo-all-features
+              cargo-watch
+              cargo-limit
+              cargo-outdated
+              cargo-udeps
+              cargo-deny
+              cargo-nextest
+              #cargo-llvm-cov
+              cargo-component
+              cargo-codspeed
+              #cargo-semver-checks
+              nixpkgs-fmt
+            ];
 
-          shellHook = ''
+            shellHook = ''
               export MACOSX_DEPLOYMENT_TARGET=10.14
             '';
 
-          # Needed for matplotlib
-          LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+            # Needed for matplotlib
+            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
 
-          # workaround for https://github.com/NixOS/nixpkgs/blob/48dfc9fa97d762bce28cc8372a2dd3805d14c633/doc/languages-frameworks/python.section.md#python-setuppy-bdist_wheel-cannot-create-whl
-          SOURCE_DATE_EPOCH = 315532800; # 1980
+            # workaround for https://github.com/NixOS/nixpkgs/blob/48dfc9fa97d762bce28cc8372a2dd3805d14c633/doc/languages-frameworks/python.section.md#python-setuppy-bdist_wheel-cannot-create-whl
+            SOURCE_DATE_EPOCH = 315532800; # 1980
 
-          # exporting to fix doc building errors in sphinx
-          LC_ALL="C.utf8";
-        });
-      });
+            # exporting to fix doc building errors in sphinx
+            LC_ALL = "C.utf8";
+          }
+        );
+      }
+    );
 }
