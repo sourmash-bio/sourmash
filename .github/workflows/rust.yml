@@ -228,7 +228,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: check if README matches MSRV defined here
-        run: grep '1.74.0' src/core/README.md
+        run: grep '1.85.0' src/core/README.md
 
       - name: Check if it builds properly
         run: pixi run check-msrv
