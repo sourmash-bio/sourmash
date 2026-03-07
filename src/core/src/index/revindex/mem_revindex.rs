@@ -168,7 +168,7 @@ impl MemRevIndex {
         let mut colors = Colors::default();
 
         if let Some(qs) = queries {
-            if let Some(ref merged) = merged_query {
+            if let Some(merged) = merged_query {
                 let (matched_hashes, intersection) = merged.intersection(search_mh).unwrap();
                 if !matched_hashes.is_empty() || intersection > threshold as u64 {
                     hash_to_color.add_to(&mut colors, dataset_id, matched_hashes);

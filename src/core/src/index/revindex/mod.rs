@@ -478,7 +478,7 @@ impl Datasets {
                     *self = Datasets::Many(o);
                 }
             },
-            Datasets::Many(ref mut v) => v.extend(other),
+            Datasets::Many(v) => v.extend(other),
         }
     }
 
@@ -486,7 +486,7 @@ impl Datasets {
         match self {
             Self::Empty => 0,
             Self::Unique(_) => 1,
-            Self::Many(ref v) => v.len() as usize,
+            Self::Many(v) => v.len() as usize,
         }
     }
 
@@ -494,7 +494,7 @@ impl Datasets {
         match self {
             Self::Empty => false,
             Self::Unique(v) => v == value,
-            Self::Many(ref v) => v.contains(*value),
+            Self::Many(v) => v.contains(*value),
         }
     }
 }
