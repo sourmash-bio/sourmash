@@ -14,17 +14,17 @@ impl ForeignObject for SourmashNodegraph {
     type RustObject = Nodegraph;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_new() -> *mut SourmashNodegraph {
     SourmashNodegraph::from_rust(Nodegraph::default())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_free(ptr: *mut SourmashNodegraph) {
     SourmashNodegraph::drop(ptr);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_buffer_free(ptr: *mut u8, insize: usize) {
     if ptr.is_null() {
         return;
@@ -32,7 +32,7 @@ pub unsafe extern "C" fn nodegraph_buffer_free(ptr: *mut u8, insize: usize) {
     Vec::from_raw_parts(ptr, insize, insize);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_with_tables(
     ksize: usize,
     starting_size: usize,
@@ -42,13 +42,13 @@ pub unsafe extern "C" fn nodegraph_with_tables(
     SourmashNodegraph::from_rust(ng)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_count(ptr: *mut SourmashNodegraph, h: u64) -> bool {
     let ng = SourmashNodegraph::as_rust_mut(ptr);
     ng.count(h)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_count_kmer(
     ptr: *mut SourmashNodegraph,
     kmer: *const c_char,
@@ -65,13 +65,13 @@ pub unsafe extern "C" fn nodegraph_count_kmer(
     ng.count_kmer(c_str.to_bytes())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_get(ptr: *const SourmashNodegraph, h: u64) -> usize {
     let ng = SourmashNodegraph::as_rust(ptr);
     ng.get(h)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_get_kmer(
     ptr: *const SourmashNodegraph,
     kmer: *const c_char,
@@ -88,19 +88,19 @@ pub unsafe extern "C" fn nodegraph_get_kmer(
     ng.get_kmer(c_str.to_bytes())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_expected_collisions(ptr: *const SourmashNodegraph) -> f64 {
     let ng = SourmashNodegraph::as_rust(ptr);
     ng.expected_collisions()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_ksize(ptr: *const SourmashNodegraph) -> usize {
     let ng = SourmashNodegraph::as_rust(ptr);
     ng.ksize()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_hashsizes(
     ptr: *const SourmashNodegraph,
     size: *mut usize,
@@ -115,19 +115,19 @@ pub unsafe extern "C" fn nodegraph_hashsizes(
     Box::into_raw(b) as *const u64
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_ntables(ptr: *const SourmashNodegraph) -> usize {
     let ng = SourmashNodegraph::as_rust(ptr);
     ng.ntables()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_noccupied(ptr: *const SourmashNodegraph) -> usize {
     let ng = SourmashNodegraph::as_rust(ptr);
     ng.noccupied()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_matches(
     ptr: *const SourmashNodegraph,
     mh_ptr: *const SourmashKmerMinHash,
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn nodegraph_matches(
     ng.matches(mh)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_update(
     ptr: *mut SourmashNodegraph,
     optr: *const SourmashNodegraph,
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn nodegraph_update(
     ong.update(ng).unwrap();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nodegraph_update_mh(
     ptr: *mut SourmashNodegraph,
     optr: *const SourmashKmerMinHash,

@@ -29,7 +29,7 @@ pub trait ForeignObject: Sized {
 
     #[inline]
     unsafe fn from_ref(object: &Self::RustObject) -> *const Self {
-        object as *const Self::RustObject as *const Self
+        unsafe { object as *const Self::RustObject as *const Self }
     }
 
     #[inline]
@@ -61,10 +61,10 @@ macro_rules! ffi_fn {
         $(#[$attr:meta])*
         unsafe fn $name:ident($($aname:ident: $aty:ty),* $(,)*) -> Result<$rv:ty> $body:block
     ) => {
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         $(#[$attr])*
         pub unsafe extern "C" fn $name($($aname: $aty,)*) -> $rv {
-            $crate::ffi::utils::landingpad(|| $body)
+            unsafe {$crate::ffi::utils::landingpad(|| $body)}
         }
     };
 
@@ -73,11 +73,11 @@ macro_rules! ffi_fn {
         $(#[$attr:meta])*
         unsafe fn $name:ident($($aname:ident: $aty:ty),* $(,)*) $body:block
     ) => {
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         $(#[$attr])*
         pub unsafe extern "C" fn $name($($aname: $aty,)*) {
             // this silences panics and stuff
-            $crate::ffi::utils::landingpad(|| { $body; Ok(0 as std::os::raw::c_int) });
+            unsafe {$crate::ffi::utils::landingpad(|| { $body; Ok(0 as std::os::raw::c_int) })};
         }
     };
 }
@@ -91,7 +91,7 @@ pub struct Panic(String);
 ///
 /// If there is no error an empty string is returned.  This allocates new memory
 /// that needs to be freed with `sourmash_str_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
     LAST_ERROR.with(|e| {
         if let Some(ref err) = *e.borrow() {
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
 }
 
 /// Returns the panic information as string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
     /* TODO: bring back when backtrace is available in std::error
     LAST_ERROR.with(|e| {
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
 }
 
 /// Clears the last error.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_clear() {
     LAST_ERROR.with(|e| {
         *e.borrow_mut() = None;
@@ -139,15 +139,17 @@ pub unsafe extern "C" fn sourmash_err_clear() {
 }
 
 /// Initializes the library
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_init() {
-    set_panic_hook();
+    unsafe {
+        set_panic_hook();
+    }
 }
 
 /// Returns the last error code.
 ///
 /// If there is no error, 0 is returned.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_get_last_code() -> SourmashErrorCode {
     LAST_ERROR.with(|e| {
         if let Some(ref err) = *e.borrow() {
@@ -308,10 +310,10 @@ ffi_fn! {
 ///
 /// If the string is marked as not owned then this function does not
 /// do anything.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_str_free(s: *mut SourmashStr) {
     if !s.is_null() {
-        (*s).free()
+        unsafe { (*s).free() }
     }
 }
 

@@ -331,6 +331,7 @@ deprecation = ">=2.0.6"
 cachetools = ">=4,<6"
 bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
+uv = "*"
 
 [tool.pixi.feature.dev.tasks.install-tools]
 cmd = "cargo install cargo-binstall@1.17.6 && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack && cargo binstall -y cbindgen --version 0.26.0"
@@ -365,6 +366,9 @@ depends-on = "install-tools"
 
 [tool.pixi.feature.dev.tasks.coverage-rust]
 cmd = "cargo llvm-cov nextest --all-features --lcov --output-path lcov.info"
+
+[tool.pixi.feature.dev.tasks.develop]
+cmd = "maturin develop --uv"
 
 [tool.pixi.feature.wasm.dependencies]
 rust-std-wasm32-unknown-unknown = "*"

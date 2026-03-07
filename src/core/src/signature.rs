@@ -134,15 +134,15 @@ impl SigsTrait for Sketch {
     fn check_compatible(&self, other: &Self) -> Result<(), Error> {
         match *self {
             Sketch::MinHash(ref mh) => match other {
-                Sketch::MinHash(ref ot) => mh.check_compatible(ot),
+                Sketch::MinHash(ot) => mh.check_compatible(ot),
                 _ => Err(Error::MismatchSignatureType),
             },
             Sketch::LargeMinHash(ref mh) => match other {
-                Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
+                Sketch::LargeMinHash(ot) => mh.check_compatible(ot),
                 _ => Err(Error::MismatchSignatureType),
             },
             Sketch::HyperLogLog(ref hll) => match other {
-                Sketch::HyperLogLog(ref ot) => hll.check_compatible(ot),
+                Sketch::HyperLogLog(ot) => hll.check_compatible(ot),
                 _ => Err(Error::MismatchSignatureType),
             },
         }

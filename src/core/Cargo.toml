@@ -7,11 +7,11 @@ repository = "https://github.com/sourmash-bio/sourmash"
 keywords = ["minhash", "bioinformatics"]
 categories = ["science", "algorithms", "data-structures"]
 license = "BSD-3-Clause"
-edition = "2021"
+edition = "2024"
 readme = "README.md"
 autoexamples = false
 autobins = false
-rust-version = "1.74.0"
+rust-version = "1.85.0"
 
 [lib]
 name = "sourmash"
@@ -110,7 +110,7 @@ wasm-bindgen-test = "0.3.42"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.rocksdb]
-version = "0.23.0"
+version = "0.24.0"
 optional = true
 default-features = false
 features = [ "bindgen-runtime", "snappy", "zstd" ]

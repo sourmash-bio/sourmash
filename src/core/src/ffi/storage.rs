@@ -25,7 +25,7 @@ unsafe fn zipstorage_new(ptr: *const c_char, insize: usize) -> Result<*mut Sourm
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn zipstorage_free(ptr: *mut SourmashZipStorage) {
     SourmashZipStorage::drop(ptr);
 }

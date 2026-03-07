@@ -110,12 +110,12 @@ unsafe fn revindex_disk_create(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_free(ptr: *mut SourmashRevIndex) {
     SourmashRevIndex::drop(ptr);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_countergather_free(ptr: *mut SourmashRevIndex_CounterGather) {
     SourmashRevIndex_CounterGather::drop(ptr);
 }
@@ -141,12 +141,12 @@ unsafe fn dataset_picklist_new_from_list(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist) {
     SourmashDatasetPicklist::drop(ptr);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_len(
     ptr: *const SourmashRevIndex,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn revindex_len(
     records.len() as u64
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
     let revindex = SourmashRevIndex::as_rust(ptr);
 
@@ -188,7 +188,7 @@ pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
         .ksize()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
     let revindex = SourmashRevIndex::as_rust(ptr);
 
@@ -200,7 +200,7 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
     *scaled
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> SourmashStr {
     let revindex = SourmashRevIndex::as_rust(ptr);
 
