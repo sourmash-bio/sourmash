@@ -42,9 +42,8 @@
 
         inherit (pkgs) lib;
 
-        python = pkgs.python311Packages;
-
         stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideSDK pkgs.stdenv "11.0" else pkgs.stdenv;
+        python = pkgs.python314Packages;
 
         commonArgs = {
           src = ./.;
@@ -81,7 +80,7 @@
             }
           );
 
-          sourmash = python.buildPythonPackage (
+          sourmash = python.buildPythonPackage.override { stdenv = stdenv; } (
             commonArgs
             // rec {
               pname = "sourmash";
