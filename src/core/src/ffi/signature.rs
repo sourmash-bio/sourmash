@@ -25,25 +25,27 @@ impl ForeignObject for SourmashSignature {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn signature_new() -> *mut SourmashSignature {
-    SourmashSignature::from_rust(Signature::default())
+    unsafe { SourmashSignature::from_rust(Signature::default()) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn signature_from_params(
     ptr: *const SourmashComputeParameters,
 ) -> *mut SourmashSignature {
-    let params = SourmashComputeParameters::as_rust(ptr);
-    SourmashSignature::from_rust(Signature::from_params(params))
+    unsafe {
+        let params = SourmashComputeParameters::as_rust(ptr);
+        SourmashSignature::from_rust(Signature::from_params(params))
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn signature_free(ptr: *mut SourmashSignature) {
-    SourmashSignature::drop(ptr);
+    unsafe { SourmashSignature::drop(ptr) };
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn signature_len(ptr: *const SourmashSignature) -> usize {
-    let sig = SourmashSignature::as_rust(ptr);
+    let sig = unsafe { SourmashSignature::as_rust(ptr) };
     sig.size()
 }
 

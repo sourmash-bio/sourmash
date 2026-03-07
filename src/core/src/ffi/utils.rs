@@ -29,28 +29,28 @@ pub trait ForeignObject: Sized {
 
     #[inline]
     unsafe fn from_ref(object: &Self::RustObject) -> *const Self {
-        unsafe { object as *const Self::RustObject as *const Self }
+        object as *const Self::RustObject as *const Self
     }
 
     #[inline]
     unsafe fn as_rust<'a>(pointer: *const Self) -> &'a Self::RustObject {
-        &*(pointer as *const Self::RustObject)
+        unsafe { &*(pointer as *const Self::RustObject) }
     }
 
     #[inline]
     unsafe fn as_rust_mut<'a>(pointer: *mut Self) -> &'a mut Self::RustObject {
-        &mut *(pointer as *mut Self::RustObject)
+        unsafe { &mut *(pointer as *mut Self::RustObject) }
     }
 
     #[inline]
     unsafe fn into_rust(pointer: *mut Self) -> Box<Self::RustObject> {
-        Box::from_raw(pointer as *mut Self::RustObject)
+        unsafe { Box::from_raw(pointer as *mut Self::RustObject) }
     }
 
     #[inline]
     unsafe fn drop(pointer: *mut Self) {
         if !pointer.is_null() {
-            drop(Self::into_rust(pointer));
+            unsafe { drop(Self::into_rust(pointer)) };
         }
     }
 }
@@ -202,9 +202,9 @@ where
         Ok(Ok(result)) => result,
         Ok(Err(err)) => {
             set_last_error(err);
-            mem::zeroed()
+            unsafe { mem::zeroed() }
         }
-        Err(_) => mem::zeroed(),
+        Err(_) => unsafe { mem::zeroed() },
     }
 }
 
@@ -251,7 +251,7 @@ impl SourmashStr {
 
     pub unsafe fn free(&mut self) {
         if self.owned {
-            String::from_raw_parts(self.data as *mut _, self.len, self.len);
+            unsafe { String::from_raw_parts(self.data as *mut _, self.len, self.len) };
             self.data = ptr::null_mut();
             self.len = 0;
             self.owned = false;

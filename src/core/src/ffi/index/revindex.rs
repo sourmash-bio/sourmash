@@ -50,7 +50,7 @@ pub unsafe fn retrieve_picklist(
     if dataset_picklist_ptr.is_null() {
         None
     } else {
-        let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
+        let x = unsafe { SourmashDatasetPicklist::as_rust(dataset_picklist_ptr) };
         Some(x.clone())
     }
 }
@@ -112,12 +112,12 @@ unsafe fn revindex_disk_create(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_free(ptr: *mut SourmashRevIndex) {
-    SourmashRevIndex::drop(ptr);
+    unsafe { SourmashRevIndex::drop(ptr) };
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_countergather_free(ptr: *mut SourmashRevIndex_CounterGather) {
-    SourmashRevIndex_CounterGather::drop(ptr);
+    unsafe { SourmashRevIndex_CounterGather::drop(ptr) };
 }
 
 // create a DatasetPicklist from a collection of Idx (record references).
@@ -143,7 +143,7 @@ unsafe fn dataset_picklist_new_from_list(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist) {
-    SourmashDatasetPicklist::drop(ptr);
+    unsafe { SourmashDatasetPicklist::drop(ptr) };
 }
 
 #[unsafe(no_mangle)]
@@ -151,8 +151,8 @@ pub unsafe extern "C" fn revindex_len(
     ptr: *const SourmashRevIndex,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> u64 {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
+    let dataset_picklist = unsafe { retrieve_picklist(dataset_picklist_ptr) };
 
     let coll = revindex.collection();
 
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn revindex_len(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
-    let revindex = SourmashRevIndex::as_rust(ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
 
     // note: here 'collection' is a CollectionSet, so all the same ksize.
     revindex
@@ -190,7 +190,7 @@ pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
-    let revindex = SourmashRevIndex::as_rust(ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
 
     // note: here 'collection' is a CollectionSet, so all the same scaled.
     let (_, scaled) = revindex
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> SourmashStr {
-    let revindex = SourmashRevIndex::as_rust(ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
 
     // note: here 'collection' is a CollectionSet, so all the same moltype.
     let moltype = revindex
