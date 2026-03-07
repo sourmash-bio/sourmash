@@ -14,12 +14,12 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::_hash_murmur;
+use crate::Error;
+use crate::ScaledType;
 use crate::encodings::HashFunctions;
 use crate::prelude::ToWriter;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
-use crate::Error;
-use crate::ScaledType;
 
 pub fn max_hash_for_scaled(scaled: ScaledType) -> u64 {
     match scaled {

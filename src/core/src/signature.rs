@@ -16,13 +16,13 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
-use crate::errors::SourmashError;
-use crate::prelude::*;
-use crate::sketch::minhash::KmerMinHash;
-use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
+use crate::encodings::{HashFunctions, VALID, aa_to_dayhoff, aa_to_hp, revcomp, to_aa};
+use crate::errors::SourmashError;
+use crate::prelude::*;
+use crate::sketch::Sketch;
+use crate::sketch::minhash::KmerMinHash;
 
 // TODO: this is the behavior expected from Sketch, but that name is already
 // used. Sketchable?

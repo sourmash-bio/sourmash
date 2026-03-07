@@ -11,8 +11,8 @@ use std::thread;
 
 use thiserror::Error;
 
-use crate::errors::SourmashErrorCode;
 use crate::Error;
+use crate::errors::SourmashErrorCode;
 
 thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = const { RefCell::new(None) };

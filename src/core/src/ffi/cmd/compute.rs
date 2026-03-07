@@ -1,7 +1,7 @@
 use std::slice;
 
-use crate::cmd::ComputeParameters;
 use crate::ScaledType;
+use crate::cmd::ComputeParameters;
 
 use crate::ffi::utils::ForeignObject;
 

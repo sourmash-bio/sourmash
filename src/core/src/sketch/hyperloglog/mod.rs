@@ -15,12 +15,12 @@ use std::path::Path;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Deserialize, Serialize};
 
+use crate::Error;
+use crate::HashIntoType;
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::KmerMinHash;
-use crate::Error;
-use crate::HashIntoType;
 
 pub mod estimators;
 use estimators::CounterType;
@@ -257,7 +257,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::signature::SigsTrait;
-    use needletail::{parse_fastx_file, parse_fastx_reader, Sequence};
+    use needletail::{Sequence, parse_fastx_file, parse_fastx_reader};
 
     use super::HyperLogLog;
 

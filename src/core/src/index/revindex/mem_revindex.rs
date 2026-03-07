@@ -7,6 +7,8 @@ use log::{debug, info};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use crate::Result;
+use crate::ScaledType;
 use crate::collection::Collection;
 use crate::collection::CollectionSet;
 use crate::encodings::{Colors, Idx};
@@ -18,10 +20,8 @@ use crate::index::revindex::{
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::Result;
-use crate::ScaledType;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 
 pub struct MemRevIndex {
     linear: LinearIndex,
@@ -450,8 +450,8 @@ impl Index<'_> for MemRevIndex {
 mod test {
     use super::*;
 
-    use crate::index::revindex::prepare_query;
     use crate::Result;
+    use crate::index::revindex::prepare_query;
 
     #[test]
     fn mem_revindex_new() -> Result<()> {

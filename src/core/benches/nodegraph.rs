@@ -3,7 +3,7 @@ use std::io::{BufWriter, Cursor, Read};
 
 use sourmash::sketch::nodegraph::Nodegraph;
 
-use codspeed_criterion_compat::{black_box, criterion_group, criterion_main, Criterion};
+use codspeed_criterion_compat::{Criterion, black_box, criterion_group, criterion_main};
 
 fn save_load(c: &mut Criterion) {
     let mut data: Vec<u8> = vec![];

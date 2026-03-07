@@ -1,4 +1,4 @@
-use codspeed_criterion_compat::{black_box, criterion_group, criterion_main, Criterion};
+use codspeed_criterion_compat::{Criterion, black_box, criterion_group, criterion_main};
 
 use std::fs::File;
 use std::io::{Cursor, Read};

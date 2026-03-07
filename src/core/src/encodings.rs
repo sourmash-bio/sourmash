@@ -451,7 +451,11 @@ impl Colors {
                     Ok(new_color)
                 }
             } else {
-                unimplemented!("throw error, current_color must exist in order to be updated. current_color: {:?}, colors: {:#?}", current_color, &self.colors);
+                unimplemented!(
+                    "throw error, current_color must exist in order to be updated. current_color: {:?}, colors: {:#?}",
+                    current_color,
+                    &self.colors
+                );
             }
         } else {
             let mut idxs = IdxTracker::default();

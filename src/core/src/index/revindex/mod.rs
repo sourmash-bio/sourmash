@@ -14,17 +14,17 @@ use nohash_hasher::BuildNoHashHasher;
 use roaring::RoaringBitmap;
 use serde::{Deserialize, Serialize};
 
+use crate::HashIntoType;
+use crate::Result;
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
 use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::Signature;
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-use crate::storage::rocksdb::{db_options, COLORS, DB};
-use crate::HashIntoType;
-use crate::Result;
+use crate::sketch::minhash::KmerMinHash;
+use crate::storage::rocksdb::{COLORS, DB, db_options};
 
 type QueryColors = HashMap<Color, Datasets>;
 
@@ -219,11 +219,11 @@ impl CounterGather {
             });
 
         // remove empty
-        let empty_keys =
-            self.counter
-                .clone()
-                .into_iter()
-                .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
+        let empty_keys = self
+            .counter
+            .clone()
+            .into_iter()
+            .filter_map(|(key, val)| if val == 0 { Some(key) } else { None });
 
         for k in empty_keys.into_iter() {
             self.counter.remove(&k);
@@ -561,18 +561,18 @@ mod test {
     use camino::Utf8PathBuf as PathBuf;
     use tempfile::TempDir;
 
+    use crate::Result;
     use crate::collection::Collection;
     use crate::encodings::*;
-    use crate::index::revindex::disk_revindex;
     use crate::index::revindex::DatasetPicklist;
+    use crate::index::revindex::disk_revindex;
     use crate::prelude::*;
     use crate::selection::Selection;
     use crate::signature::SigsTrait;
     use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
-    use crate::Result;
 
-    use super::{prepare_query, RevIndex, RevIndexOps};
+    use super::{RevIndex, RevIndexOps, prepare_query};
 
     #[test]
     fn disk_revindex_index() -> Result<()> {

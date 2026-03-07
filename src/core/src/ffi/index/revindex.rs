@@ -16,8 +16,8 @@ use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, Rev
 use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::sketch::minhash::KmerMinHash;
 use std::collections::HashSet;
 use std::path::Path;
 

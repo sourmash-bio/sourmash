@@ -16,8 +16,8 @@ use typed_builder::TypedBuilder;
 use crate::errors::ReadDataError;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::sketch::minhash::KmerMinHash;
 use crate::{Error, Result};
 
 /// An abstraction for any place where we can store data.
