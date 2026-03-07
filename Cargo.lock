@@ -831,26 +831,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "liblzma"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a631d2b24be269775ba8f7789a6afa1ac228346a20c9e87dbbbe4975a79fd764"
-dependencies = [
- "liblzma-sys",
-]
-
-[[package]]
-name = "liblzma-sys"
-version = "0.3.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efdadf1a99aceff34553de1461674ab6ac7e7f0843ae9875e339f4a14eb43475"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
-]
-
-[[package]]
 name = "libm"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1006,7 +986,6 @@ checksum = "62d3115cc93dac9fabdfd25f7d4fda51ad4a959fb4667d39af20f70bddfb3574"
 dependencies = [
  "cfg-if",
  "flate2",
- "liblzma",
  "thiserror 2.0.17",
  "zstd",
 ]
@@ -1667,7 +1646,6 @@ dependencies = [
  "histogram",
  "itertools 0.14.0",
  "js-sys",
- "liblzma",
  "log",
  "md5",
  "memmap2",
