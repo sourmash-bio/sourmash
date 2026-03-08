@@ -6,7 +6,7 @@ use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::Sketch;
 use sourmash::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 
-use codspeed_criterion_compat::{Criterion, black_box, criterion_group, criterion_main};
+use codspeed_criterion_compat::{Criterion, criterion_group, criterion_main};
 
 fn intersection(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
