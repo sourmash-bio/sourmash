@@ -175,6 +175,11 @@ impl DiskRevIndex {
 
     /// Access to the DB is unsafe because RocksDB allows writing with
     /// a regular Arc<DB> handle; it doesn't have to be mut.
+    ///
+    /// # Safety
+    ///
+    /// this is a escape hatch, avoid modifying the database and only use
+    /// as last resort.
     pub unsafe fn db(&self) -> Arc<DB> {
         self.db.clone()
     }
@@ -371,7 +376,7 @@ impl RevIndexOps for DiskRevIndex {
                         new_vals = Datasets::new(&val_set[..]);
                     }
 
-                    if new_vals.len() > 0 {
+                    if !new_vals.is_empty() {
                         let color = compute_color(&new_vals);
                         query_colors
                             .entry(color)

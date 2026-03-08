@@ -482,6 +482,10 @@ impl Datasets {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty)
+    }
+
     pub fn len(&self) -> usize {
         match self {
             Self::Empty => 0,

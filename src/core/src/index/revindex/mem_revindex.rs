@@ -232,16 +232,11 @@ impl RevIndexOps for MemRevIndex {
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
             .flat_map(|color| self.colors.indices(color))
-            .filter_map(|idx| {
-                if let Some(pl) = &picklist {
-                    if pl.dataset_ids.contains(idx) {
-                        Some(idx)
-                    } else {
-                        None
-                    }
-                } else {
-                    Some(idx)
-                }
+            .filter(|idx| {
+                picklist
+                    .as_ref()
+                    .map(|pl| pl.dataset_ids.contains(idx))
+                    .unwrap_or(true)
             })
             .cloned()
             .collect()

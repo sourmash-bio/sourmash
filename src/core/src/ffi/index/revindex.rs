@@ -401,7 +401,7 @@ unsafe fn revindex_best_containment(
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(query_mh, dataset_picklist);
-    if counter.len() >= 1 {
+    if !counter.is_empty() {
         let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
         if size as u64 >= threshold_bp {

@@ -13,9 +13,9 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
+use crate::_hash_murmur;
 use crate::Error;
 use crate::ScaledType;
-use crate::_hash_murmur;
 use crate::encodings::HashFunctions;
 use crate::prelude::ToWriter;
 use crate::signature::SigsTrait;
