@@ -42,20 +42,13 @@
 
         inherit (pkgs) lib;
 
-        stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideSDK pkgs.stdenv "11.0" else pkgs.stdenv;
         python = pkgs.python314Packages;
 
         commonArgs = {
           src = ./.;
-          stdenv = stdenv;
-          preConfigure = lib.optionalString stdenv.isDarwin ''
+          preConfigure = lib.optionalString pkgs.stdenv.isDarwin ''
             export MACOSX_DEPLOYMENT_TARGET=10.14
           '';
-
-          buildInputs = lib.optionals stdenv.isDarwin [
-            pkgs.libiconv
-            pkgs.darwin.apple_sdk.frameworks.Security
-          ];
 
           nativeBuildInputs = with rustPlatform; [
             cargoSetupHook
@@ -80,7 +73,7 @@
             }
           );
 
-          sourmash = python.buildPythonPackage.override { stdenv = stdenv; } (
+          sourmash = python.buildPythonPackage (
             commonArgs
             // rec {
               pname = "sourmash";
@@ -101,8 +94,6 @@
                 matplotlib
                 screed
               ];
-
-              DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
             }
           );
 
@@ -124,7 +115,7 @@
 
         defaultPackage = self.packages.${system}.sourmash;
 
-        devShells.default = pkgs.mkShell.override { stdenv = stdenv; } (
+        devShells.default = pkgs.mkShell (
           commonArgs
           // {
             nativeBuildInputs = with rustPlatform; [ bindgenHook ];
@@ -135,15 +126,16 @@
               pkg-config
 
               git
-              stdenv.cc.cc.lib
-              #(python313.withPackages (ps: with ps; [ virtualenv ]))
-              (python312.withPackages (
+              pkgs.stdenv.cc.cc.lib
+              (python314.withPackages (
                 ps: with ps; [
                   virtualenv
                   tox
                   cffi
                 ]
               ))
+              (python313.withPackages (ps: with ps; [ virtualenv ]))
+              (python312.withPackages (ps: with ps; [ virtualenv ]))
               (python311.withPackages (ps: with ps; [ virtualenv ]))
 
               #rust-cbindgen
@@ -163,7 +155,7 @@
               cargo-udeps
               cargo-deny
               cargo-nextest
-              #cargo-llvm-cov
+              cargo-llvm-cov
               cargo-component
               cargo-codspeed
               #cargo-semver-checks
