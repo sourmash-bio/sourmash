@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-14]
+        os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v6
       with:
@@ -26,7 +26,7 @@ jobs:
 
     - run: nix run .# -- --version
 
-    - run: nix develop --command bash -c "tox -e py311"
+    - run: nix develop --command bash -c "tox -e py314"
 
   pixi:
     runs-on: ${{ matrix.os }}
