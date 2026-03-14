@@ -296,7 +296,7 @@ run.parallel = true
 run.plugins = ["covdefaults"]
 
 [tool.pixi.workspace]
-channels = ["conda-forge"]
+channels = ["conda-forge", "https://prefix.dev/github-releases"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 requires-pixi = ">=0.65.0"
 
@@ -334,15 +334,13 @@ bitstring = ">=3.1.9,<5"
 make = ">=4.4.1,<5"
 uv = "*"
 
+# install these from octoconda github-releases channel
+cargo-binstall = "~=1.17.7"
+cargo-semver-checks = "~=0.47.0"
+wasm-pack = "~=0.14.0"
+
 [tool.pixi.feature.dev.tasks.install-tools]
-cmd = "cargo install cargo-binstall@1.17.7 && cargo binstall -y cargo-semver-checks && cargo binstall -y cargo-feature-combinations && cargo binstall -y wasm-pack && cargo binstall -y cbindgen --version 0.29.2"
-outputs = [
-  "$CARGO_HOME/bin/cbindgen",
-  "$CARGO_HOME/bin/cargo-semver-checks",
-  "$CARGO_HOME/bin/cargo-binstall",
-  "$CARGO_HOME/bin/cargo-feature-combinations",
-  "$CARGO_HOME/bin/wasm-pack",
-]
+cmd = "cargo binstall -y cargo-feature-combinations && cargo binstall -y cbindgen --version 0.29.2"
 
 [tool.pixi.feature.dev.tasks.semver-check]
 cmd = "cargo semver-checks check-release --default-features --features branchwater"
