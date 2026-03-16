@@ -252,6 +252,14 @@ impl Select for Collection {
     }
 }
 
+impl IntoIterator for Collection {
+    type Item = (Idx, Record);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.manifest.into_iter().enumerate().map(|(i, r)| (i as Idx, r)).collect::<Vec<_>>().into_iter()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use camino::Utf8PathBuf as PathBuf;
@@ -260,8 +268,8 @@ mod test {
 
     use super::Collection;
 
-    use crate::encodings::HashFunctions;
-    use crate::manifest::Manifest;
+    use crate::encodings::{ HashFunctions, Idx };
+    use crate::manifest::{ Manifest, Record };
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
@@ -386,6 +394,25 @@ mod test {
             .unwrap();
         // no sigs should remain
         assert_eq!(cl.len(), 0);
+    }
+
+    // lock down 'into_iter' implementation :sweat_smile:
+    #[test]
+    fn collection_iter() {
+        // load test sigs
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // four num=500 sigs
+        filename.push("../../tests/test-data/genome-s11.fa.gz.sig");
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        assert_eq!(sigs.len(), 4);
+        // load sigs into collection + select compatible signatures
+        let cl = Collection::from_sigs(sigs).unwrap();
+        // all sigs should remain
+        assert_eq!(cl.len(), 4);
+
+        let _v: Vec<(Idx, Record)> = cl.into_iter().into_iter().collect();
     }
 
     #[test]
