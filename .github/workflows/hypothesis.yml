@@ -1,5 +1,8 @@
 name: Hypothesis tests
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [latest]

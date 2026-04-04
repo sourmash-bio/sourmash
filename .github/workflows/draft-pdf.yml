@@ -1,5 +1,8 @@
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   paper:
     runs-on: ubuntu-latest

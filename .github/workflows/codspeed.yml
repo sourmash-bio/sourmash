@@ -1,5 +1,8 @@
 name: codspeed-benchmarks
 
+permissions:
+  contents: read
+
 on:
   # Run on pushes to the main branch
   push:
