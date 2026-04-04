@@ -10,22 +10,22 @@ use log::{info, trace};
 use rayon::prelude::*;
 use rocksdb::MergeOperands;
 
-use crate::Result;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors, RevIndexOps,
-    stats_for_cf,
+    self as module, stats_for_cf, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors,
+    RevIndexOps,
 };
-use crate::index::{GatherResult, SigCounter, calculate_gather_stats};
+use crate::index::{calculate_gather_stats, GatherResult, SigCounter};
 use crate::manifest::Manifest;
 use crate::prelude::*;
-use crate::sketch::Sketch;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
+use crate::sketch::Sketch;
 use crate::storage::{
+    rocksdb::{cf_descriptors, db_options, ALL_CFS, DB, HASHES, METADATA},
     InnerStorage, RocksDBStorage, Storage,
-    rocksdb::{ALL_CFS, DB, HASHES, METADATA, cf_descriptors, db_options},
 };
+use crate::Result;
 
 const DB_VERSION: u8 = 1;
 
@@ -36,7 +36,7 @@ const VERSION: &str = "version";
 const PROCESSED: &str = "processed";
 
 fn compute_color(idxs: &Datasets) -> Color {
-    let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
+    let s = BuildHasherDefault::<crate::encodings::Xxh3Hash128>::default();
     s.hash_one(idxs)
 }
 
