@@ -35,13 +35,13 @@ csv = "1.4.0"
 enum_dispatch = "0.3.13"
 fixedbitset = "0.4.0"
 getset = "0.1.6"
-histogram = "0.11.4"
+histogram = "1.0.0"
 itertools = "0.14.0"
 log = "0.4.29"
 md5 = "0.8.0"
 memmap2 = "0.9.9"
 murmurhash3 = "0.0.5"
-needletail = { version = "0.6.3", default-features = false }
+needletail = { version = "0.7.2", default-features = false }
 niffler = { version = "3.0.0", default-features = false, features = [ "gz", "zstd" ] }
 nohash-hasher = "0.2.0"
 num-iter = "0.1.45"
@@ -64,10 +64,10 @@ typed-builder = "0.22.0"  # 0.23 requires rust 1.88+
 vec-collections = "0.4.3"
 
 [dev-dependencies]
-codspeed-criterion-compat = "4.3.0"
-proptest = { version = "1.9.0", default-features = false, features = ["std"]}
+codspeed-criterion-compat = "4.4.1"
+proptest = { version = "1.11.0", default-features = false, features = ["std"]}
 rand = "0.10.0"
-tempfile = "3.24.0"
+tempfile = "3.27.0"
 
 [[bench]]
 name = "compute"
@@ -104,7 +104,7 @@ getrandom = { version = "0.2", features = ["js"] }
 chrono = { version = "0.4.32", features = ["wasmbind"] }
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.42"
+wasm-bindgen-test = "0.3.67"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.rocksdb]
