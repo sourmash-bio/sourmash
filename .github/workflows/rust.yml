@@ -70,19 +70,21 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@master
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          toolchain: ${{ matrix.rust }}
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
         with:
           lookup-only: true
 
-      - uses: taiki-e/install-action@nextest
-
       - name: Run tests
         run: |
-          cargo nextest run
+          pixi run cargo nextest run
 
   test_all_features:
     runs-on: ubuntu-latest
@@ -152,11 +154,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          toolchain: ${{ matrix.rust }}
-          components: "clippy, rustfmt"
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -164,11 +168,11 @@ jobs:
 
       - name: Run cargo fmt
         run: |
-          cargo fmt --all -- --check
+          pixi run cargo fmt --all -- --check
 
       - name: Run cargo clippy
         run: |
-          cargo clippy --all -- -D warnings
+          pixi run cargo clippy --all -- -D warnings
 
   wasm-pack:
     name: Check if wasm-pack builds a valid package for the sourmash crate
@@ -227,6 +231,7 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
+
       - uses: Swatinem/rust-cache@v2
         with:
           lookup-only: true
