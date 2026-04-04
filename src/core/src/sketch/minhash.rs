@@ -13,12 +13,13 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
+use crate::_hash_murmur;
+use crate::Error;
+use crate::ScaledType;
 use crate::encodings::HashFunctions;
 use crate::prelude::ToWriter;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
-use crate::Error;
-use crate::{ScaledType, _hash_murmur};
 
 pub fn max_hash_for_scaled(scaled: ScaledType) -> u64 {
     match scaled {
@@ -60,7 +61,7 @@ pub struct KmerMinHash {
     abunds: Option<Vec<u64>>,
 
     #[builder(default)]
-    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
+    #[cfg_attr(feature = "rkyv", rkyv(with = rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
 
@@ -1010,7 +1011,7 @@ pub struct KmerMinHashBTree {
     current_max: u64,
 
     #[builder(default)]
-    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
+    #[cfg_attr(feature = "rkyv", rkyv(with = rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
 

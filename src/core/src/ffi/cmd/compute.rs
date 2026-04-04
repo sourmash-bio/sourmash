@@ -1,7 +1,7 @@
 use std::slice;
 
-use crate::cmd::ComputeParameters;
 use crate::ScaledType;
+use crate::cmd::ComputeParameters;
 
 use crate::ffi::utils::ForeignObject;
 
@@ -11,28 +11,28 @@ impl ForeignObject for SourmashComputeParameters {
     type RustObject = ComputeParameters;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_new() -> *mut SourmashComputeParameters {
-    SourmashComputeParameters::from_rust(ComputeParameters::default())
+    unsafe { SourmashComputeParameters::from_rust(ComputeParameters::default()) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_free(ptr: *mut SourmashComputeParameters) {
-    SourmashComputeParameters::drop(ptr);
+    unsafe { SourmashComputeParameters::drop(ptr) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_seed(ptr: *const SourmashComputeParameters) -> u64 {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.seed()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_seed(
     ptr: *mut SourmashComputeParameters,
     new_seed: u64,
 ) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_seed(new_seed);
 }
 
@@ -47,13 +47,13 @@ unsafe fn computeparams_ksizes(ptr: *const SourmashComputeParameters, size: *mut
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_ksizes_free(ptr: *mut u32, insize: usize) {
     // FIXME use a SourmashSlice_u32?
     if ptr.is_null() {
         return;
     }
-    Vec::from_raw_parts(ptr, insize, insize);
+    unsafe { Vec::from_raw_parts(ptr, insize, insize) };
 }
 
 ffi_fn! {
@@ -75,121 +75,121 @@ unsafe fn computeparams_set_ksizes(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_protein(ptr: *const SourmashComputeParameters) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.protein()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_protein(ptr: *mut SourmashComputeParameters, v: bool) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_protein(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_dayhoff(ptr: *const SourmashComputeParameters) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.dayhoff()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_dayhoff(ptr: *mut SourmashComputeParameters, v: bool) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_dayhoff(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_hp(ptr: *const SourmashComputeParameters) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.hp()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_hp(ptr: *mut SourmashComputeParameters, v: bool) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_hp(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_dna(ptr: *const SourmashComputeParameters) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.dna()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_dna(ptr: *mut SourmashComputeParameters, v: bool) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_dna(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_skipm1n3(ptr: *const SourmashComputeParameters) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.skipm1n3()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_skipm1n3(ptr: *mut SourmashComputeParameters, v: bool) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_skipm1n3(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_skipm2n3(ptr: *const SourmashComputeParameters) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.skipm2n3()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_skipm2n3(ptr: *mut SourmashComputeParameters, v: bool) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_skipm2n3(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_track_abundance(
     ptr: *const SourmashComputeParameters,
 ) -> bool {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.track_abundance()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_track_abundance(
     ptr: *mut SourmashComputeParameters,
     v: bool,
 ) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_track_abundance(v);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_num_hashes(ptr: *const SourmashComputeParameters) -> u32 {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.num_hashes()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_num_hashes(
     ptr: *mut SourmashComputeParameters,
     num: u32,
 ) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_num_hashes(num);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> ScaledType {
-    let cp = SourmashComputeParameters::as_rust(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust(ptr) };
     cp.scaled()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn computeparams_set_scaled(
     ptr: *mut SourmashComputeParameters,
     scaled: u32,
 ) {
-    let cp = SourmashComputeParameters::as_rust_mut(ptr);
+    let cp = unsafe { SourmashComputeParameters::as_rust_mut(ptr) };
     cp.set_scaled(scaled);
 }

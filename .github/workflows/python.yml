@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -33,7 +33,7 @@ jobs:
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: pip cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-v4-${{ hashFiles('**/pyproject.toml') }}
@@ -60,12 +60,12 @@ jobs:
 
       - name: Start Redis
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.11')
-        uses: supercharge/redis-github-action@1.8.0
+        uses: supercharge/redis-github-action@v2
         with:
           redis-version: 6
 
       - name: tox cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .tox/
           key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/pyproject.toml') }}

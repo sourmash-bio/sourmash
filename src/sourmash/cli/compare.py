@@ -48,8 +48,7 @@ def subparser(subparsers):
         "-o",
         "--output",
         metavar="F",
-        help="file to which output will be written; default is terminal "
-        "(standard output)",
+        help="save comparison matrix in numpy binary format to this file",
     )
     subparser.add_argument(
         "--ignore-abundance",

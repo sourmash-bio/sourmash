@@ -227,14 +227,14 @@ Identity (ANI) estimates instead of Jaccard or containment index; use
 
 Usage:
 ```
-sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
+sourmash compare <sourmash sketches> [ <sourmash sketches> ... ]
 ```
 
 Options:
 
 * `--output <filename>` -- save the output matrix to this file, as a numpy binary matrix.
 * `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
-* `--ksize <k>` -- do the comparisons at this k-mer size.
+* `--ksize <k>` -- select sketches at this k-mer size
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
 * `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
 * `--from-file <filelist.txt>` -- append the list of files in this text file to the input signatures.
