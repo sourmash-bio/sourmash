@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/latest' }}
 
 env:
-  PIXI_VERSION: "v0.65.0"
+  PIXI_VERSION: "v0.66.0"
 
 jobs:
   nix:
