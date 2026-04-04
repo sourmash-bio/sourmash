@@ -569,4 +569,4 @@ void zipstorage_set_subdir(SourmashZipStorage *ptr, const char *path_ptr, uintpt
 
 SourmashStr zipstorage_subdir(const SourmashZipStorage *ptr);
 
-#endif /* SOURMASH_H_INCLUDED */
+#endif  /* SOURMASH_H_INCLUDED */

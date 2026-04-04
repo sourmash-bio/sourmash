@@ -3,8 +3,8 @@ use typed_builder::TypedBuilder;
 
 use crate::encodings::HashFunctions;
 use crate::signature::Signature;
-use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHashBTree};
 use crate::sketch::Sketch;
+use crate::sketch::minhash::{KmerMinHashBTree, max_hash_for_scaled};
 
 impl Signature {
     pub fn from_params(params: &ComputeParameters) -> Signature {

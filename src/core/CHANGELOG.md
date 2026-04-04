@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.22.0] - 2026-04-04
+
+MSRV: 1.85
+
+Changes/additions:
+
+* Implement Select for Record and CollectionSet (#3800)
+
+Updates:
+
+* Bump edition to 2024
+* Fix FFI to use `unsafe` explicitly (2024 edition requirement)
+* Bump outdated dependencies, now that our MSRV is higher
+* Use debian patch for `twox_hash` compatibility
+* Fix cbindgen to allow more recent versions, by avoiding parsing code that is not FFI-relevant
+* Remove lzma from niffler, it complicates build and we don't have any use reports
+* CI: use octoconda to install dependencies not available in conda-forge
+
 ## [0.21.0] - 2025-06-28
 
 MSRV: 1.74

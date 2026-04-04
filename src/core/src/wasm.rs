@@ -1,13 +1,13 @@
 use needletail::parse_fastx_reader;
 use wasm_bindgen::prelude::*;
 
+use crate::ScaledType;
 use crate::cmd::ComputeParameters as _ComputeParameters;
 use crate::encodings::HashFunctions;
 use crate::prelude::ToWriter;
 use crate::signature::Signature as _Signature;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash as _KmerMinHash;
-use crate::ScaledType;
 
 #[wasm_bindgen]
 pub struct KmerMinHash(_KmerMinHash);

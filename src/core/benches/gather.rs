@@ -4,10 +4,9 @@ use std::path::PathBuf;
 
 use sourmash::collection::Collection;
 use sourmash::signature::Signature;
-use sourmash::sketch::Sketch;
 use sourmash::{index::calculate_gather_stats, storage::SigStore};
 
-use codspeed_criterion_compat::{black_box, criterion_group, criterion_main, Criterion};
+use codspeed_criterion_compat::{Criterion, black_box, criterion_group, criterion_main};
 
 fn gather_stats_benchmarks(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

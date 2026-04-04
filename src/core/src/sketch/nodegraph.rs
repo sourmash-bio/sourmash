@@ -6,10 +6,10 @@ use std::slice;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use fixedbitset::FixedBitSet;
 
-use crate::prelude::*;
-use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::Error;
 use crate::HashIntoType;
+use crate::prelude::*;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 
 #[derive(Debug, Default, Clone)]
 pub struct Nodegraph {
@@ -38,11 +38,7 @@ impl Update<Nodegraph> for Nodegraph {
             .enumerate()
             .map(|(i, (bs, bs_me))| {
                 bs.union_with(bs_me);
-                if i == 0 {
-                    bs.count_ones(..)
-                } else {
-                    0
-                }
+                if i == 0 { bs.count_ones(..) } else { 0 }
             })
             .sum();
         Ok(())
@@ -342,11 +338,7 @@ fn twobit_comp(a: u8) -> HashIntoType {
 }
 
 fn uniqify_rc(f: HashIntoType, r: HashIntoType) -> HashIntoType {
-    if f < r {
-        f
-    } else {
-        r
-    }
+    if f < r { f } else { r }
 }
 
 fn _hash(kmer: &[u8]) -> HashIntoType {
