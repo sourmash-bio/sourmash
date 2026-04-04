@@ -7,6 +7,8 @@ use log::{debug, info};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use crate::Result;
+use crate::ScaledType;
 use crate::collection::Collection;
 use crate::collection::CollectionSet;
 use crate::encodings::{Colors, Idx};
@@ -18,10 +20,8 @@ use crate::index::revindex::{
 use crate::index::{GatherResult, Index, SigCounter};
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::Result;
-use crate::ScaledType;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 
 pub struct MemRevIndex {
     linear: LinearIndex,
@@ -168,7 +168,7 @@ impl MemRevIndex {
         let mut colors = Colors::default();
 
         if let Some(qs) = queries {
-            if let Some(ref merged) = merged_query {
+            if let Some(merged) = merged_query {
                 let (matched_hashes, intersection) = merged.intersection(search_mh).unwrap();
                 if !matched_hashes.is_empty() || intersection > threshold as u64 {
                     hash_to_color.add_to(&mut colors, dataset_id, matched_hashes);
@@ -232,16 +232,11 @@ impl RevIndexOps for MemRevIndex {
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
             .flat_map(|color| self.colors.indices(color))
-            .filter_map(|idx| {
-                if let Some(pl) = &picklist {
-                    if pl.dataset_ids.contains(idx) {
-                        Some(idx)
-                    } else {
-                        None
-                    }
-                } else {
-                    Some(idx)
-                }
+            .filter(|idx| {
+                picklist
+                    .as_ref()
+                    .map(|pl| pl.dataset_ids.contains(idx))
+                    .unwrap_or(true)
             })
             .cloned()
             .collect()
@@ -450,8 +445,8 @@ impl Index<'_> for MemRevIndex {
 mod test {
     use super::*;
 
-    use crate::index::revindex::prepare_query;
     use crate::Result;
+    use crate::index::revindex::prepare_query;
 
     #[test]
     fn mem_revindex_new() -> Result<()> {

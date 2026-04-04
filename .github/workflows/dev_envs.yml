@@ -6,23 +6,27 @@ on:
 concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/latest' }}
+
+env:
+  PIXI_VERSION: "v0.66.0"
+
 jobs:
   nix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-14]
+        os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@v21
+      uses: samueldr/lix-gha-installer-action@7b7f14d320d6aacfb65bd1ef761566b3b69e474c
 
     - run: nix run .# -- --version
 
-    - run: nix develop --command bash -c "tox -e py311"
+    - run: nix develop --command bash -c "tox -e py313"
 
   pixi:
     runs-on: ${{ matrix.os }}
@@ -37,7 +41,7 @@ jobs:
     - name: set up pixi
       uses: prefix-dev/setup-pixi@v0.9.4
       with:
-        pixi-version: v0.63.2
+        pixi-version: ${{ env.PIXI_VERSION }}
         cache: true
         frozen: true
 

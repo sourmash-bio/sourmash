@@ -7,15 +7,15 @@ use log::info;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use crate::Result;
 use crate::collection::CollectionSet;
 use crate::encodings::Idx;
 use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::selection::Select;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::Sketch;
+use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::storage::SigStore;
-use crate::Result;
 
 /// Supports parallel search without a particular index.
 pub struct LinearIndex {

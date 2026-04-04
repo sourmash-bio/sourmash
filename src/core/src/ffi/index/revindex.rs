@@ -16,8 +16,8 @@ use crate::index::revindex::{self as module, CounterGather, DatasetPicklist, Rev
 use crate::manifest::Record;
 use crate::prelude::*;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::sketch::minhash::KmerMinHash;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -50,7 +50,7 @@ pub unsafe fn retrieve_picklist(
     if dataset_picklist_ptr.is_null() {
         None
     } else {
-        let x = SourmashDatasetPicklist::as_rust(dataset_picklist_ptr);
+        let x = unsafe { SourmashDatasetPicklist::as_rust(dataset_picklist_ptr) };
         Some(x.clone())
     }
 }
@@ -110,14 +110,14 @@ unsafe fn revindex_disk_create(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_free(ptr: *mut SourmashRevIndex) {
-    SourmashRevIndex::drop(ptr);
+    unsafe { SourmashRevIndex::drop(ptr) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_countergather_free(ptr: *mut SourmashRevIndex_CounterGather) {
-    SourmashRevIndex_CounterGather::drop(ptr);
+    unsafe { SourmashRevIndex_CounterGather::drop(ptr) };
 }
 
 // create a DatasetPicklist from a collection of Idx (record references).
@@ -141,18 +141,18 @@ unsafe fn dataset_picklist_new_from_list(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dataset_picklist_free(ptr: *mut SourmashDatasetPicklist) {
-    SourmashDatasetPicklist::drop(ptr);
+    unsafe { SourmashDatasetPicklist::drop(ptr) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_len(
     ptr: *const SourmashRevIndex,
     dataset_picklist_ptr: *const SourmashDatasetPicklist,
 ) -> u64 {
-    let revindex = SourmashRevIndex::as_rust(ptr);
-    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
+    let dataset_picklist = unsafe { retrieve_picklist(dataset_picklist_ptr) };
 
     let coll = revindex.collection();
 
@@ -175,9 +175,9 @@ pub unsafe extern "C" fn revindex_len(
     records.len() as u64
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
-    let revindex = SourmashRevIndex::as_rust(ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
 
     // note: here 'collection' is a CollectionSet, so all the same ksize.
     revindex
@@ -188,9 +188,9 @@ pub unsafe extern "C" fn revindex_ksize(ptr: *const SourmashRevIndex) -> u32 {
         .ksize()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
-    let revindex = SourmashRevIndex::as_rust(ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
 
     // note: here 'collection' is a CollectionSet, so all the same scaled.
     let (_, scaled) = revindex
@@ -200,9 +200,9 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u32 {
     *scaled
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn revindex_moltype(ptr: *const SourmashRevIndex) -> SourmashStr {
-    let revindex = SourmashRevIndex::as_rust(ptr);
+    let revindex = unsafe { SourmashRevIndex::as_rust(ptr) };
 
     // note: here 'collection' is a CollectionSet, so all the same moltype.
     let moltype = revindex
@@ -401,7 +401,7 @@ unsafe fn revindex_best_containment(
 
     // do search & get first/best match
     let counter = revindex.counter_for_query(query_mh, dataset_picklist);
-    if counter.len() >= 1 {
+    if !counter.is_empty() {
         let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
         if size as u64 >= threshold_bp {
