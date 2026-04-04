@@ -6,7 +6,7 @@ on:
     tags:
       - 'r*'
   pull_request:
-  merge_queue:
+  merge_group:
   schedule:
     - cron: "0 0 * * *" # daily
 

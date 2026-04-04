@@ -3,7 +3,7 @@ permissions: write-all
 
 on:
   pull_request:        # use for testing modifications to this action
-  merge_queue:
+  merge_group:
   push:
     branches: [latest]
     tags: v*
