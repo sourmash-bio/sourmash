@@ -11,8 +11,7 @@ on:
     - cron: "0 0 * * *" # daily
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 env:
   PIXI_VERSION: "v0.66.0"
@@ -24,6 +23,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
@@ -64,6 +65,8 @@ jobs:
             continue: false
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -81,6 +84,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
@@ -99,6 +104,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
@@ -134,6 +141,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -156,6 +165,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
@@ -187,9 +198,13 @@ jobs:
   publish:
     name: Publish (on tags, dry-run otherwise)
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Checkout sources
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
@@ -220,6 +235,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
@@ -241,6 +258,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: set up pixi
         uses: prefix-dev/setup-pixi@v0.9.4
