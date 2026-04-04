@@ -8,9 +8,11 @@ impl ForeignObject for SourmashManifest {
     type RustObject = Manifest;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn manifest_free(ptr: *mut SourmashManifest) {
-    SourmashManifest::drop(ptr);
+    unsafe {
+        SourmashManifest::drop(ptr);
+    }
 }
 
 pub struct ManifestRowIterator {
@@ -23,26 +25,26 @@ impl ForeignObject for SourmashManifestRowIter {
     type RustObject = ManifestRowIterator;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn manifest_rows_iter_next(
     ptr: *mut SourmashManifestRowIter,
 ) -> *const SourmashManifestRow {
-    let iterator = SourmashManifestRowIter::as_rust_mut(ptr);
+    let iterator = unsafe { SourmashManifestRowIter::as_rust_mut(ptr) };
 
     match iterator.iter.next() {
-        Some(row) => SourmashManifestRow::from_rust(row.into()),
+        Some(row) => unsafe { SourmashManifestRow::from_rust(row.into()) },
         None => std::ptr::null(),
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn manifest_rows(
     ptr: *const SourmashManifest,
 ) -> *mut SourmashManifestRowIter {
-    let manifest = SourmashManifest::as_rust(ptr);
+    let manifest = unsafe { SourmashManifest::as_rust(ptr) };
 
     let iter = Box::new(manifest.iter());
-    SourmashManifestRowIter::from_rust(ManifestRowIterator { iter })
+    unsafe { SourmashManifestRowIter::from_rust(ManifestRowIterator { iter }) }
 }
 
 #[repr(C)]
@@ -63,9 +65,11 @@ impl ForeignObject for SourmashManifestRow {
     type RustObject = SourmashManifestRow;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn manifestrow_free(ptr: *mut SourmashManifestRow) {
-    SourmashManifestRow::drop(ptr);
+    unsafe {
+        SourmashManifestRow::drop(ptr);
+    }
 }
 
 impl From<&Record> for SourmashManifestRow {

@@ -2,7 +2,7 @@
 // Equations based off of: https://github.com/KoslickiLab/mutation-rate-ci-calculator
 // Reference: https://doi.org/10.1101/2022.01.11.475870
 
-use roots::{find_root_brent, SimpleConvergency};
+use roots::{SimpleConvergency, find_root_brent};
 use statrs::distribution::{ContinuousCDF, Normal};
 
 use crate::{Error, ScaledType};

@@ -20,9 +20,9 @@ use std::os::raw::c_char;
 
 use crate::_hash_murmur;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hash_murmur(kmer: *const c_char, seed: u64) -> u64 {
-    let c_str = {
+    let c_str = unsafe {
         assert!(!kmer.is_null());
 
         CStr::from_ptr(kmer)

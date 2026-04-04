@@ -10,7 +10,7 @@ on:
     - cron: "0 0 * * *" # daily
 
 env:
-  PIXI_VERSION: "v0.63.2"
+  PIXI_VERSION: "v0.66.0"
 
 jobs:
   check:
@@ -228,7 +228,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: check if README matches MSRV defined here
-        run: grep '1.74.0' src/core/README.md
+        run: grep '1.85.0' src/core/README.md
 
       - name: Check if it builds properly
         run: pixi run check-msrv

@@ -15,14 +15,14 @@ impl ForeignObject for SourmashHyperLogLog {
     type RustObject = HyperLogLog;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_new() -> *mut SourmashHyperLogLog {
-    SourmashHyperLogLog::from_rust(HyperLogLog::default())
+    unsafe { SourmashHyperLogLog::from_rust(HyperLogLog::default()) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_free(ptr: *mut SourmashHyperLogLog) {
-    SourmashHyperLogLog::drop(ptr);
+    unsafe { SourmashHyperLogLog::drop(ptr) };
 }
 
 ffi_fn! {
@@ -35,38 +35,38 @@ unsafe fn hll_with_error_rate(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_ksize(ptr: *const SourmashHyperLogLog) -> usize {
-    SourmashHyperLogLog::as_rust(ptr).ksize()
+    unsafe { SourmashHyperLogLog::as_rust(ptr) }.ksize()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_cardinality(ptr: *const SourmashHyperLogLog) -> usize {
-    SourmashHyperLogLog::as_rust(ptr).cardinality()
+    unsafe { SourmashHyperLogLog::as_rust(ptr) }.cardinality()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_similarity(
     ptr: *const SourmashHyperLogLog,
     optr: *const SourmashHyperLogLog,
 ) -> f64 {
-    SourmashHyperLogLog::as_rust(ptr).similarity(SourmashHyperLogLog::as_rust(optr))
+    unsafe { SourmashHyperLogLog::as_rust(ptr).similarity(SourmashHyperLogLog::as_rust(optr)) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_containment(
     ptr: *const SourmashHyperLogLog,
     optr: *const SourmashHyperLogLog,
 ) -> f64 {
-    SourmashHyperLogLog::as_rust(ptr).containment(SourmashHyperLogLog::as_rust(optr))
+    unsafe { SourmashHyperLogLog::as_rust(ptr).containment(SourmashHyperLogLog::as_rust(optr)) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_intersection_size(
     ptr: *const SourmashHyperLogLog,
     optr: *const SourmashHyperLogLog,
 ) -> usize {
-    SourmashHyperLogLog::as_rust(ptr).intersection(SourmashHyperLogLog::as_rust(optr))
+    unsafe { SourmashHyperLogLog::as_rust(ptr).intersection(SourmashHyperLogLog::as_rust(optr)) }
 }
 
 ffi_fn! {
@@ -88,9 +88,9 @@ unsafe fn hll_add_sequence(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_add_hash(ptr: *mut SourmashHyperLogLog, hash: u64) {
-    let hll = SourmashHyperLogLog::as_rust_mut(ptr);
+    let hll = unsafe { SourmashHyperLogLog::as_rust_mut(ptr) };
     hll.add_hash(hash);
 }
 
@@ -119,15 +119,17 @@ unsafe fn hll_update_mh(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hll_matches(
     ptr: *const SourmashHyperLogLog,
     mh_ptr: *const SourmashKmerMinHash,
 ) -> usize {
-    let hll = SourmashHyperLogLog::as_rust(ptr);
-    let mh_hll = SourmashKmerMinHash::as_rust(mh_ptr).as_hll();
+    unsafe {
+        let hll = SourmashHyperLogLog::as_rust(ptr);
+        let mh_hll = SourmashKmerMinHash::as_rust(mh_ptr).as_hll();
 
-    hll.intersection(&mh_hll)
+        hll.intersection(&mh_hll)
+    }
 }
 
 ffi_fn! {
