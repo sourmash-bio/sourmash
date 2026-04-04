@@ -366,6 +366,9 @@ depends-on = "install-tools"
 [tool.pixi.feature.dev.tasks.coverage-rust]
 cmd = "cargo llvm-cov nextest --all-features --lcov --output-path lcov.info"
 
+[tool.pixi.feature.dev.tasks.rust-tests]
+cmd = "cargo nextest run --all-features"
+
 [tool.pixi.feature.dev.tasks.develop]
 cmd = "maturin develop --uv"
 

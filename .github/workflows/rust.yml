@@ -84,7 +84,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run cargo nextest run
+          pixi run rust-tests
 
   test_all_features:
     runs-on: ubuntu-latest
