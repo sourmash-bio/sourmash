@@ -1,6 +1,7 @@
 name: "Dev env instructions"
 on:
   pull_request:
+  merge_queue:
   push:
     branches: [latest]
 concurrency:
