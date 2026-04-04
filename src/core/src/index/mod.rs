@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use stats::{median, stddev};
 use typed_builder::TypedBuilder;
 
+use crate::Error::CannotUpsampleScaled;
+use crate::Result;
 use crate::ani_utils::{ani_ci_from_containment, ani_from_containment};
 use crate::encodings::Idx;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
@@ -27,8 +29,6 @@ use crate::selection::Selection;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 use crate::storage::SigStore;
-use crate::Error::CannotUpsampleScaled;
-use crate::Result;
 
 #[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
@@ -359,8 +359,8 @@ mod test_calculate_gather_stats {
     use crate::cmd::ComputeParameters;
     use crate::encodings::HashFunctions;
     use crate::signature::Signature;
-    use crate::sketch::minhash::KmerMinHash;
     use crate::sketch::Sketch;
+    use crate::sketch::minhash::KmerMinHash;
     // use std::f64::EPSILON;
     // TODO: use f64::EPSILON when we bump MSRV
     const EPSILON: f64 = 0.01;

@@ -451,7 +451,11 @@ impl Colors {
                     Ok(new_color)
                 }
             } else {
-                unimplemented!("throw error, current_color must exist in order to be updated. current_color: {:?}, colors: {:#?}", current_color, &self.colors);
+                unimplemented!(
+                    "throw error, current_color must exist in order to be updated. current_color: {:?}, colors: {:#?}",
+                    current_color,
+                    &self.colors
+                );
             }
         } else {
             let mut idxs = IdxTracker::default();
@@ -470,7 +474,7 @@ impl Colors {
     }
 
     fn compute_color(idxs: &IdxTracker) -> Color {
-        let s = BuildHasherDefault::<twox_hash::Xxh3Hash128>::default();
+        let s = BuildHasherDefault::<Xxh3Hash128>::default();
         s.hash_one(&idxs.0)
     }
 
@@ -514,6 +518,24 @@ impl<'a> Iterator for Indices<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
+    }
+}
+
+//compatibility struct to support twox_hash version 2
+#[derive(Default)]
+pub(crate) struct Xxh3Hash128(twox_hash::XxHash3_128);
+
+impl std::hash::Hasher for Xxh3Hash128 {
+    #[inline(always)]
+    fn finish(&self) -> u64 {
+        // this truncates the 128-bit value to 64-bits,
+        // which reflects what xxhash 1.x did.
+        self.0.finish_128() as u64
+    }
+
+    #[inline(always)]
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.write(bytes)
     }
 }
 

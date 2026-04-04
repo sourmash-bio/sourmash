@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use rocksdb::{ColumnFamilyDescriptor, Options};
 
-use crate::storage::{Storage, StorageArgs, StorageError};
 use crate::Result;
+use crate::storage::{Storage, StorageArgs, StorageError};
 
 // Column families
 pub(crate) const HASHES: &str = "hashes";

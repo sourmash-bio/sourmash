@@ -3,8 +3,8 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon};
-use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::ffi::HashFunctions;
+use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
@@ -15,7 +15,7 @@ impl ForeignObject for SourmashKmerMinHash {
     type RustObject = KmerMinHash;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_new(
     scaled: u32,
     k: u32,
@@ -26,21 +26,21 @@ pub unsafe extern "C" fn kmerminhash_new(
 ) -> *mut SourmashKmerMinHash {
     let mh = KmerMinHash::new(scaled, k, hash_function.into(), seed, track_abundance, n);
 
-    SourmashKmerMinHash::from_rust(mh)
+    unsafe { SourmashKmerMinHash::from_rust(mh) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_free(ptr: *mut SourmashKmerMinHash) {
-    SourmashKmerMinHash::drop(ptr);
+    unsafe { SourmashKmerMinHash::drop(ptr) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_slice_free(ptr: *mut u64, insize: usize) {
     // FIXME
     if ptr.is_null() {
         return;
     }
-    Vec::from_raw_parts(ptr, insize, insize);
+    unsafe { Vec::from_raw_parts(ptr, insize, insize) };
 }
 
 ffi_fn! {
@@ -126,40 +126,40 @@ unsafe fn kmerminhash_add_protein(ptr: *mut SourmashKmerMinHash, sequence: *cons
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_clear(ptr: *mut SourmashKmerMinHash) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
 
     mh.clear();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut SourmashKmerMinHash, h: u64) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
 
     mh.add_hash(h);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(
     ptr: *mut SourmashKmerMinHash,
     h: u64,
     abundance: u64,
 ) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
 
     mh.add_hash_with_abundance(h, abundance);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_add_word(ptr: *mut SourmashKmerMinHash, word: *const c_char) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
 
     // FIXME: take buffer and len instead of c_char
     let c_str = {
         assert!(!word.is_null());
 
-        CStr::from_ptr(word)
+        unsafe { CStr::from_ptr(word) }
     };
 
     mh.add_word(c_str.to_bytes());
@@ -178,35 +178,35 @@ unsafe fn sourmash_translate_codon(codon: *const c_char) -> Result<c_char> {
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_aa_to_dayhoff(aa: c_char) -> c_char {
     aa_to_dayhoff(aa as u8) as c_char
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_aa_to_hp(aa: c_char) -> c_char {
     aa_to_hp(aa as u8) as c_char
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_remove_hash(ptr: *mut SourmashKmerMinHash, h: u64) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
 
     mh.remove_hash(h);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_remove_many(
     ptr: *mut SourmashKmerMinHash,
     hashes_ptr: *const u64,
     insize: usize,
 ) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
 
     // FIXME: make a SourmashSlice_u64 type?
     let hashes = {
         assert!(!hashes_ptr.is_null());
-        slice::from_raw_parts(hashes_ptr as *mut u64, insize)
+        unsafe { slice::from_raw_parts(hashes_ptr as *mut u64, insize) }
     };
 
     // FIXME: proper exception here
@@ -270,9 +270,9 @@ unsafe fn kmerminhash_get_abunds(ptr: *mut SourmashKmerMinHash, size: *mut usize
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_get_mins_size(ptr: *const SourmashKmerMinHash) -> usize {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
 
     mh.size()
 }
@@ -313,51 +313,51 @@ unsafe fn kmerminhash_set_abundances(
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_is_protein(ptr: *const SourmashKmerMinHash) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.is_protein()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_dayhoff(ptr: *const SourmashKmerMinHash) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.dayhoff()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_hp(ptr: *const SourmashKmerMinHash) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.hp()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_skipm1n3(ptr: *const SourmashKmerMinHash) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.skipm1n3()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_skipm2n3(ptr: *const SourmashKmerMinHash) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.skipm2n3()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_seed(ptr: *const SourmashKmerMinHash) -> u64 {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.seed()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_track_abundance(ptr: *const SourmashKmerMinHash) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.track_abundance()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_disable_abundance(ptr: *mut SourmashKmerMinHash) {
-    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust_mut(ptr) };
     mh.disable_abundance();
 }
 
@@ -369,29 +369,29 @@ unsafe fn kmerminhash_enable_abundance(ptr: *mut SourmashKmerMinHash) -> Result<
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_num(ptr: *const SourmashKmerMinHash) -> u32 {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.num()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_ksize(ptr: *const SourmashKmerMinHash) -> u32 {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.ksize() as u32
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_max_hash(ptr: *const SourmashKmerMinHash) -> u64 {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.max_hash()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_hash_function(
     ptr: *const SourmashKmerMinHash,
 ) -> HashFunctions {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let mh = unsafe { SourmashKmerMinHash::as_rust(ptr) };
     mh.hash_function().into()
 }
 
@@ -411,14 +411,16 @@ unsafe fn kmerminhash_merge(ptr: *mut SourmashKmerMinHash, other: *const Sourmas
 }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn kmerminhash_is_compatible(
     ptr: *const SourmashKmerMinHash,
     other: *const SourmashKmerMinHash,
 ) -> bool {
-    let mh = SourmashKmerMinHash::as_rust(ptr);
-    let other_mh = SourmashKmerMinHash::as_rust(other);
-    mh.check_compatible(other_mh).is_ok()
+    unsafe {
+        let mh = SourmashKmerMinHash::as_rust(ptr);
+        let other_mh = SourmashKmerMinHash::as_rust(other);
+        mh.check_compatible(other_mh).is_ok()
+    }
 }
 
 ffi_fn! {

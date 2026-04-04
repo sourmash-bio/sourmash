@@ -12,27 +12,29 @@ impl ForeignObject for SourmashSearchResult {
     type RustObject = (f64, Signature, String);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn searchresult_free(ptr: *mut SourmashSearchResult) {
-    SourmashSearchResult::drop(ptr);
+    unsafe { SourmashSearchResult::drop(ptr) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn searchresult_score(ptr: *const SourmashSearchResult) -> f64 {
-    let result = SourmashSearchResult::as_rust(ptr);
+    let result = unsafe { SourmashSearchResult::as_rust(ptr) };
     result.0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn searchresult_filename(ptr: *const SourmashSearchResult) -> SourmashStr {
-    let result = SourmashSearchResult::as_rust(ptr);
+    let result = unsafe { SourmashSearchResult::as_rust(ptr) };
     (result.2).clone().into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn searchresult_signature(
     ptr: *const SourmashSearchResult,
 ) -> *mut SourmashSignature {
-    let result = SourmashSearchResult::as_rust(ptr);
-    SourmashSignature::from_rust((result.1).clone())
+    unsafe {
+        let result = SourmashSearchResult::as_rust(ptr);
+        SourmashSignature::from_rust((result.1).clone())
+    }
 }

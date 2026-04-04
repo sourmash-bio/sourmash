@@ -11,8 +11,8 @@ use std::thread;
 
 use thiserror::Error;
 
-use crate::errors::SourmashErrorCode;
 use crate::Error;
+use crate::errors::SourmashErrorCode;
 
 thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = const { RefCell::new(None) };
@@ -34,23 +34,23 @@ pub trait ForeignObject: Sized {
 
     #[inline]
     unsafe fn as_rust<'a>(pointer: *const Self) -> &'a Self::RustObject {
-        &*(pointer as *const Self::RustObject)
+        unsafe { &*(pointer as *const Self::RustObject) }
     }
 
     #[inline]
     unsafe fn as_rust_mut<'a>(pointer: *mut Self) -> &'a mut Self::RustObject {
-        &mut *(pointer as *mut Self::RustObject)
+        unsafe { &mut *(pointer as *mut Self::RustObject) }
     }
 
     #[inline]
     unsafe fn into_rust(pointer: *mut Self) -> Box<Self::RustObject> {
-        Box::from_raw(pointer as *mut Self::RustObject)
+        unsafe { Box::from_raw(pointer as *mut Self::RustObject) }
     }
 
     #[inline]
     unsafe fn drop(pointer: *mut Self) {
         if !pointer.is_null() {
-            drop(Self::into_rust(pointer));
+            unsafe { drop(Self::into_rust(pointer)) };
         }
     }
 }
@@ -61,10 +61,10 @@ macro_rules! ffi_fn {
         $(#[$attr:meta])*
         unsafe fn $name:ident($($aname:ident: $aty:ty),* $(,)*) -> Result<$rv:ty> $body:block
     ) => {
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         $(#[$attr])*
         pub unsafe extern "C" fn $name($($aname: $aty,)*) -> $rv {
-            $crate::ffi::utils::landingpad(|| $body)
+            unsafe {$crate::ffi::utils::landingpad(|| $body)}
         }
     };
 
@@ -73,11 +73,11 @@ macro_rules! ffi_fn {
         $(#[$attr:meta])*
         unsafe fn $name:ident($($aname:ident: $aty:ty),* $(,)*) $body:block
     ) => {
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         $(#[$attr])*
         pub unsafe extern "C" fn $name($($aname: $aty,)*) {
             // this silences panics and stuff
-            $crate::ffi::utils::landingpad(|| { $body; Ok(0 as std::os::raw::c_int) });
+            unsafe {$crate::ffi::utils::landingpad(|| { $body; Ok(0 as std::os::raw::c_int) })};
         }
     };
 }
@@ -91,7 +91,7 @@ pub struct Panic(String);
 ///
 /// If there is no error an empty string is returned.  This allocates new memory
 /// that needs to be freed with `sourmash_str_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
     LAST_ERROR.with(|e| {
         if let Some(ref err) = *e.borrow() {
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
 }
 
 /// Returns the panic information as string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
     /* TODO: bring back when backtrace is available in std::error
     LAST_ERROR.with(|e| {
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
 }
 
 /// Clears the last error.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_clear() {
     LAST_ERROR.with(|e| {
         *e.borrow_mut() = None;
@@ -139,15 +139,17 @@ pub unsafe extern "C" fn sourmash_err_clear() {
 }
 
 /// Initializes the library
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_init() {
-    set_panic_hook();
+    unsafe {
+        set_panic_hook();
+    }
 }
 
 /// Returns the last error code.
 ///
 /// If there is no error, 0 is returned.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_err_get_last_code() -> SourmashErrorCode {
     LAST_ERROR.with(|e| {
         if let Some(ref err) = *e.borrow() {
@@ -200,9 +202,9 @@ where
         Ok(Ok(result)) => result,
         Ok(Err(err)) => {
             set_last_error(err);
-            mem::zeroed()
+            unsafe { mem::zeroed() }
         }
-        Err(_) => mem::zeroed(),
+        Err(_) => unsafe { mem::zeroed() },
     }
 }
 
@@ -249,7 +251,7 @@ impl SourmashStr {
 
     pub unsafe fn free(&mut self) {
         if self.owned {
-            String::from_raw_parts(self.data as *mut _, self.len, self.len);
+            unsafe { String::from_raw_parts(self.data as *mut _, self.len, self.len) };
             self.data = ptr::null_mut();
             self.len = 0;
             self.owned = false;
@@ -308,10 +310,10 @@ ffi_fn! {
 ///
 /// If the string is marked as not owned then this function does not
 /// do anything.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sourmash_str_free(s: *mut SourmashStr) {
     if !s.is_null() {
-        (*s).free()
+        unsafe { (*s).free() }
     }
 }
 
