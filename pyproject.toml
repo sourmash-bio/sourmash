@@ -409,3 +409,7 @@ macos = "11.0"
 [tool.pixi.activation.env]
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
+
+[tool.pixi.target.win-64.activation.env]
+CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
+PATH = "%PATH%:%CARGO_HOME%/bin"
