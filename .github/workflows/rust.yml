@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   PIXI_VERSION: "v0.66.0"
 
@@ -178,7 +182,7 @@ jobs:
     name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write  # needed to publish to NPM
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -217,7 +221,7 @@ jobs:
     name: Publish (on tags, dry-run otherwise)
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write  # needed to publish to crates.io
     steps:
       - name: Checkout sources
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
