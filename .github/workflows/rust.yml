@@ -39,8 +39,6 @@ jobs:
           frozen: true
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: Run cargo check
         run: |
@@ -83,8 +81,6 @@ jobs:
           frozen: true
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: Run tests
         run: |
@@ -106,8 +102,6 @@ jobs:
           frozen: true
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: Run tests for all feature combinations
         run: pixi run check-features
@@ -126,9 +120,8 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
+
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: Collect coverage data
         run: pixi run coverage-rust
@@ -167,8 +160,6 @@ jobs:
           frozen: true
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: Run cargo fmt
         run: |
@@ -195,9 +186,8 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
+
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: run wasm tests
         continue-on-error: true  ## TODO: remove this when tests works again...
@@ -237,8 +227,6 @@ jobs:
           frozen: true
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: Check semver
         run: pixi run semver-check
@@ -265,9 +253,8 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
+
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - name: check if README matches MSRV defined here
         run: grep '1.85.0' src/core/README.md
@@ -290,9 +277,8 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
+
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          lookup-only: true
 
       - run: pixi run cbindgen-generate
 
