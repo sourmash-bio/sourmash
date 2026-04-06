@@ -84,7 +84,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run rust-tests -j2
+          pixi run rust-tests -j${{ case(matrix.os == 'windows-latest', 1, 4) }}
 
   test_all_features:
     runs-on: ubuntu-latest
