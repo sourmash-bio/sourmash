@@ -84,7 +84,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run rust-tests
+          pixi run rust-tests -j2
 
   test_all_features:
     runs-on: ubuntu-latest
