@@ -109,7 +109,9 @@ jobs:
         run: pixi run coverage-rust
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           flags: rust
           fail_ci_if_error: true
