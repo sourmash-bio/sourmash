@@ -205,6 +205,8 @@ class LCA_Database(Index):
         return len(minhash)
 
     def __repr__(self):
+        if self.filename is None:
+            return "LCA_Database()"
         return f"LCA_Database('{self.filename}')"
 
     def signatures(self):
