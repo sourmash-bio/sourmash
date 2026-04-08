@@ -2047,6 +2047,29 @@ def test_single_summarize(runtmp):
     )
 
 
+def test_single_summarize_query_from_file(runtmp):
+    db1 = utils.get_test_data("lca/delmont-1.lca.json")
+    input_sig = utils.get_test_data("lca/TARA_ASE_MAG_00031.sig")
+
+    # Write the query path to a file, then use --query-from-file
+    query_file = runtmp.output("query-list.txt")
+    with open(query_file, "w") as fp:
+        fp.write(input_sig + "\n")
+
+    cmd = ["lca", "summarize", "--db", db1, "--query-from-file", query_file]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "loaded 1 signatures from 1 files total." in runtmp.last_result.err
+    assert (
+        "100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales"
+        in runtmp.last_result.out
+    )
+
+
 def test_single_summarize_singleton(runtmp):
     db1 = utils.get_test_data("lca/delmont-1.lca.json")
     input_sig = utils.get_test_data("lca/TARA_ASE_MAG_00031.sig")
