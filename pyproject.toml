@@ -276,6 +276,7 @@ norecursedirs = [
 testpaths = [
   "tests",
   "doc",
+  "src/sourmash",
 ]
 
 [tool.coverage]
