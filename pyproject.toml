@@ -264,7 +264,7 @@ LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/rh/gcc-toolset-14/root/usr/lib64"
 C_INCLUDE_PATH="/opt/rh/gcc-toolset-14/root/usr/lib/gcc/x86_64-redhat-linux/14/include/:/opt/rh/gcc-toolset-14/root/usr/lib/gcc/aarch64-redhat-linux/14/include/"
 
 [tool.pytest.ini_options]
-addopts = "--doctest-glob='doc/*.md' -n4"
+addopts = "--doctest-glob='doc/*.md' --doctest-modules -n4"
 norecursedirs = [
   "utils",
   "build",
