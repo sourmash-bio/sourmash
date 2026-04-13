@@ -35,7 +35,7 @@ csv = "1.4.0"
 enum_dispatch = "0.3.13"
 fixedbitset = "0.4.0"
 getset = "0.1.6"
-histogram = "1.0.0"
+histogram = "1.1.0"
 itertools = "0.14.0"
 log = "0.4.29"
 md5 = "0.8.0"
@@ -66,7 +66,7 @@ vec-collections = "0.4.3"
 [dev-dependencies]
 codspeed-criterion-compat = "4.4.1"
 proptest = { version = "1.11.0", default-features = false, features = ["std"]}
-rand = "0.10.0"
+rand = "0.10.1"
 tempfile = "3.27.0"
 
 [[bench]]
