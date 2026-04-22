@@ -153,6 +153,46 @@ fn angular_similarity_btree_requires_abundance() -> Result<(), Box<dyn std::erro
 }
 
 #[test]
+fn braycurtis_similarity_values() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(1, 20, HashFunctions::Murmur64Dna, 42, true, 0);
+    let mut b = KmerMinHash::new(1, 20, HashFunctions::Murmur64Dna, 42, true, 0);
+
+    // a: {1:3, 2:5}, b: {1:1, 3:4}
+    for _ in 0..3 {
+        a.add_hash(1);
+    }
+    for _ in 0..5 {
+        a.add_hash(2);
+    }
+    b.add_hash(1);
+    for _ in 0..4 {
+        b.add_hash(3);
+    }
+
+    // shared = min(3, 1) = 1; total = (3 + 5) + (1 + 4) = 13; 2 * 1 / 13
+    let bc = a.braycurtis_similarity(&b, false)?;
+    assert!((bc - (2.0 / 13.0)).abs() < 1e-9);
+
+    // identical sketches => similarity 1.0
+    assert!((a.braycurtis_similarity(&a, false)? - 1.0).abs() < 1e-9);
+
+    Ok(())
+}
+
+#[test]
+fn braycurtis_similarity_requires_abundance() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(0, 20, HashFunctions::Murmur64Dayhoff, 42, false, 5);
+    let mut b = KmerMinHash::new(0, 20, HashFunctions::Murmur64Dayhoff, 42, false, 5);
+
+    a.add_hash(1);
+    b.add_hash(1);
+
+    assert!(a.braycurtis_similarity(&b, false).is_err());
+
+    Ok(())
+}
+
+#[test]
 fn dayhoff() {
     let mut a = KmerMinHash::new(0, 6, HashFunctions::Murmur64Dayhoff, 42, false, 10);
     let mut b = KmerMinHash::new(0, 6, HashFunctions::Murmur64Protein, 42, false, 10);

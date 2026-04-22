@@ -857,6 +857,21 @@ class MinHash(RustObject):
             lib.kmerminhash_similarity, other._get_objptr(), False, downsample
         )
 
+    def braycurtis_similarity(self, other, downsample=False):
+        "Calculate abundance-aware Bray-Curtis similarity."
+        if not (self.track_abundance and other.track_abundance):
+            raise TypeError(
+                "Error: Bray-Curtis similarity requires both sketches to track hash abundance."
+            )
+        if not (self.scaled and other.scaled):
+            raise TypeError("Error: Bray-Curtis similarity requires scaled sketches.")
+
+        return self._methodcall(
+            lib.kmerminhash_braycurtis,
+            other._get_objptr(),
+            downsample or self.scaled != other.scaled,
+        )
+
     def is_compatible(self, other):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
 

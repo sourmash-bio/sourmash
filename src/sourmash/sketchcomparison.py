@@ -77,6 +77,10 @@ class BaseMinHashComparison:
     def cosine_similarity(self):
         return self.angular_similarity
 
+    @property
+    def braycurtis_similarity(self):
+        return self.mh1_cmp.braycurtis_similarity(self.mh2_cmp)
+
 
 @dataclass
 class NumMinHashComparison(BaseMinHashComparison):
