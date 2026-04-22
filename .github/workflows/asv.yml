@@ -1,5 +1,8 @@
 name: asv benchmarks
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [latest]

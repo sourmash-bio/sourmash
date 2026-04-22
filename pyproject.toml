@@ -366,6 +366,9 @@ depends-on = "install-tools"
 [tool.pixi.feature.dev.tasks.coverage-rust]
 cmd = "cargo llvm-cov nextest --all-features --lcov --output-path lcov.info"
 
+[tool.pixi.feature.dev.tasks.rust-tests]
+cmd = "cargo nextest run --all-features"
+
 [tool.pixi.feature.dev.tasks.develop]
 cmd = "maturin develop --uv"
 
@@ -406,3 +409,7 @@ macos = "11.0"
 [tool.pixi.activation.env]
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
+
+[tool.pixi.target.win-64.activation.env]
+CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
+PATH = "%PATH%:%CARGO_HOME%/bin"
