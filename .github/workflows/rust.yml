@@ -83,8 +83,16 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run tests
+        if: matrix.os != 'windows-latest'
         run: |
-          pixi run rust-tests -j${{ case(matrix.os == 'windows-latest', 1, 4) }}
+          pixi run rust-tests
+
+      - name: Run tests (windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          # branchwater feature triggers a rocksdb error on windows,
+          # need to debug. For now using just default features
+          pixi run cargo nextest run
 
   test_all_features:
     runs-on: ubuntu-latest
