@@ -1,5 +1,8 @@
 name: codspeed-benchmarks
 
+permissions:
+  contents: read
+
 on:
   # Run on pushes to the main branch
   push:
@@ -7,7 +10,8 @@ on:
       - "latest"
   # Run on pull requests
   pull_request:
-  merge_group:
+  # TODO: Disabled temporarily for https://github.com/CodSpeedHQ/runner/issues/55
+  # merge_group:
   # `workflow_dispatch` allows CodSpeed to trigger backtest
   # performance analysis in order to generate initial data.
   workflow_dispatch:

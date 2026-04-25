@@ -8,6 +8,9 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/latest' }}
 
+permissions:
+  contents: read
+
 env:
   PIXI_VERSION: "v0.66.0"
 

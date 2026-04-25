@@ -10,6 +10,13 @@ on:
   schedule:
     - cron: "0 0 * * *" # daily
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   PIXI_VERSION: "v0.66.0"
 
@@ -19,17 +26,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run cargo check
         run: |
@@ -59,34 +68,48 @@ jobs:
             rust: stable
             continue: false
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          toolchain: ${{ matrix.rust }}
-
-      - uses: Swatinem/rust-cache@v2
-
-      - uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: |
-          cargo nextest run
-
-  test_all_features:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Run tests
+        if: matrix.os != 'windows-latest'
+        run: |
+          pixi run rust-tests
+
+      - name: Run tests (windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          # branchwater feature triggers a rocksdb error on windows,
+          # need to debug. For now using just default features
+          pixi run cargo nextest run
+
+  test_all_features:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run tests for all feature combinations
         run: pixi run check-features
@@ -94,22 +117,25 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
-      - uses: Swatinem/rust-cache@v2
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Collect coverage data
         run: pixi run coverage-rust
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           flags: rust
           fail_ci_if_error: true
@@ -129,38 +155,47 @@ jobs:
             rust: stable
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v6
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          toolchain: ${{ matrix.rust }}
-          components: "clippy, rustfmt"
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Run cargo fmt
-        run: |
-          cargo fmt --all -- --check
-
-      - name: Run cargo clippy
-        run: |
-          cargo clippy --all -- -D warnings
-
-  wasm-pack:
-    name: Check if wasm-pack builds a valid package for the sourmash crate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
-      - uses: Swatinem/rust-cache@v2
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Run cargo fmt
+        run: |
+          pixi run cargo fmt --all -- --check
+
+      - name: Run cargo clippy
+        run: |
+          pixi run cargo clippy --all -- -D warnings
+
+  wasm-pack:
+    name: Check if wasm-pack builds a valid package for the sourmash crate
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # needed to publish to NPM
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
+          frozen: true
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: run wasm tests
         continue-on-error: true  ## TODO: remove this when tests works again...
@@ -175,39 +210,37 @@ jobs:
       - name: Publish to NPM
         if: startsWith(github.ref, 'refs/tags/r')
         run: pixi run -e wasm publish-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           path: 'pkg/sourmash*.tgz'
 
   publish:
     name: Publish (on tags, dry-run otherwise)
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # needed to publish to crates.io
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
-      - uses: Swatinem/rust-cache@v2
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Check semver
         run: pixi run semver-check
 
       - name: Make sure we can publish the sourmash crate
         run: pixi run cargo publish --dry-run --manifest-path src/core/Cargo.toml
-
-      # Login to crates.io on tags
-      - name: login to crates.io
-        if: startsWith(github.ref, 'refs/tags/r')
-        run: pixi run cargo login ${{ secrets.CRATES_IO_TOKEN }}
 
       # Publish to crates.io on tags
       - name: Publish to crates.io
@@ -217,16 +250,19 @@ jobs:
   minimum_rust_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
-      - uses: Swatinem/rust-cache@v2
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: check if README matches MSRV defined here
         run: grep '1.85.0' src/core/README.md
@@ -238,16 +274,19 @@ jobs:
     name: "Check if cbindgen runs cleanly for generating the C headers"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'latest' }}
           frozen: true
-      - uses: Swatinem/rust-cache@v2
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - run: pixi run cbindgen-generate
 
