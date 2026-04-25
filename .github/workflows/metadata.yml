@@ -1,5 +1,8 @@
 name: Metadata checks 
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [latest]
