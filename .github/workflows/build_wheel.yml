@@ -92,7 +92,7 @@ jobs:
 
       # if it matches a Python release tag, upload to github releases
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             ${{steps.fetch_artifacts.outputs.download-path}}/wheel-*/*
