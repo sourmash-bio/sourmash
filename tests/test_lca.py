@@ -527,6 +527,13 @@ def test_db_repr():
     assert repr(db) == f"LCA_Database('{filename}')"
 
 
+def test_db_repr_no_filename():
+    # An LCA_Database constructed in memory has no filename; the repr should
+    # not display "None" (see #3923).
+    db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    assert repr(db) == "LCA_Database()"
+
+
 def test_lca_index_signatures_method():
     # test 'signatures' method from base class Index
     filename = utils.get_test_data("lca/47+63.lca.json")
