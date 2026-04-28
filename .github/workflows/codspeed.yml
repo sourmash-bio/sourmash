@@ -35,6 +35,6 @@ jobs:
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v4
         with:
-          mode: walltime
+          mode: simulation
           run: "cd src/core && cargo codspeed run"
           token: ${{ secrets.CODSPEED_TOKEN }}
