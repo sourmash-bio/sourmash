@@ -339,6 +339,7 @@ uv = "*"
 cargo-binstall = "~=1.17.7"
 cargo-semver-checks = "~=0.47.0"
 wasm-pack = "~=0.14.0"
+rocksdb = "~=10.4.0"
 
 [tool.pixi.feature.dev.tasks.install-tools]
 cmd = "cargo binstall -y cargo-feature-combinations && cargo binstall -y cbindgen --version 0.29.2"
@@ -410,7 +411,11 @@ macos = "11.0"
 [tool.pixi.activation.env]
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
+ROCKSDB_INCLUDE_DIR = "$CONDA_PREFIX/include"
+ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
 
 [tool.pixi.target.win-64.activation.env]
 CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
 PATH = "%PATH%:%CARGO_HOME%/bin"
+ROCKSDB_INCLUDE_DIR = "%CONDA_PREFIX%/include"
+ROCKSDB_LIB_DIR = "%{CONDA_PREFIX%/lib"
