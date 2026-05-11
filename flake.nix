@@ -43,6 +43,7 @@
         inherit (pkgs) lib;
 
         python = pkgs.python314Packages;
+        rocksdb = pkgs.rocksdb;
 
         commonArgs = {
           src = ./.;
@@ -50,11 +51,21 @@
             export MACOSX_DEPLOYMENT_TARGET=10.14
           '';
 
-          nativeBuildInputs = with rustPlatform; [
-            cargoSetupHook
-            maturinBuildHook
-            bindgenHook
-          ];
+          nativeBuildInputs =
+            with rustPlatform;
+            [
+              cargoSetupHook
+              maturinBuildHook
+              bindgenHook
+            ]
+            ++ [
+              rocksdb
+            ];
+
+          env = {
+            ROCKSDB_INCLUDE_DIR = "${rocksdb}/include";
+            ROCKSDB_LIB_DIR = "${rocksdb}/lib";
+          };
         };
 
       in
