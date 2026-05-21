@@ -536,14 +536,14 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 
     for result in iter {
         let (key, value) = result.unwrap();
-        let _k = (&key[..]).read_u64::<LittleEndian>().unwrap();
+        let k = (&key[..]).read_u64::<LittleEndian>().unwrap();
         kcount += key.len();
 
         //println!("Saw {} {:?}", k, Datasets::from_slice(&value));
         vcount += value.len();
 
         if !quick && deep_check {
-            let v = Datasets::from_slice(&value).expect("Error with value");
+            let v = Datasets::from_slice(&value).expect(format!("Error for key {k} for value").as_str());
             vcounts.increment(v.len() as u64).unwrap();
             datasets.union(v);
         }
