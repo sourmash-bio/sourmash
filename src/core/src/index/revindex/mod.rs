@@ -430,9 +430,7 @@ impl Datasets {
 
         if slice.len() == 8 {
             // Unique
-            Ok(Self::Unique(
-                (&slice[..]).read_u32::<LittleEndian>()?
-            ))
+            Ok(Self::Unique((&slice[..]).read_u32::<LittleEndian>()?))
         } else if slice.len() == 1 {
             // Empty
             Ok(Self::Empty)
@@ -544,12 +542,15 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 
         if !quick && deep_check {
             match Datasets::from_slice(&value) {
-                Err(e) => {dbg!(format!("Error for key {k} for value: {e}"));},
+                Err(e) => {
+                    eprintln!("key {k} error for value: {e}");
+                }
 
                 Ok(v) => {
-            vcounts.increment(v.len() as u64).unwrap();
-            datasets.union(v);}
+                    vcounts.increment(v.len() as u64).unwrap();
+                    datasets.union(v);
                 }
+            }
         }
         //println!("Saw {} {:?}", k, value);
     }
