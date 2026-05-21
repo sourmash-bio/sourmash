@@ -431,14 +431,14 @@ impl Datasets {
         if slice.len() == 8 {
             // Unique
             Ok(Self::Unique(
-                (&slice[..]).read_u32::<LittleEndian>().unwrap(),
+                (&slice[..]).read_u32::<LittleEndian>()?
             ))
         } else if slice.len() == 1 {
             // Empty
             Ok(Self::Empty)
         } else {
             // Many
-            Ok(Self::Many(RoaringBitmap::deserialize_from(slice).unwrap()))
+            Ok(Self::Many(RoaringBitmap::deserialize_from(slice)?))
         }
     }
 
