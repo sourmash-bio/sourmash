@@ -219,6 +219,7 @@ class RevIndex(RustObject, Index):
         pass
 
     def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
+        # @CTB threhsold_bp is ignored!
         """
         Return a CounterGather object that holds interim results for a
         'gather', and can be used to get iterative results.
@@ -350,6 +351,35 @@ class SearchResult(RustObject):
     @property
     def location(self):
         result = decode_str(self._methodcall(lib.searchresult_filename))
+        if result == "":
+            return None
+        return result
+
+
+class MatchResult(RustObject):
+    """
+    Hold MatchResults from Rust.
+    """
+
+    __dealloc_func__ = lib.matchresult_free
+
+    def __repr__(self):
+        return f"MatchResult({self.matches}, {self.name})"
+
+    def __iter__(self):
+        return iter((self.matches, self.name))
+
+    def __getitem__(self, i):
+        return list(self)[i]
+
+    @property
+    def matches(self):
+        x = self._methodcall(lib.matchresult_matches)
+        return x
+
+    @property
+    def name(self):
+        result = decode_str(self._methodcall(lib.matchresult_name))
         if result == "":
             return None
         return result
@@ -680,6 +710,21 @@ class RevIndex_CounterGather_Colors(RustObject):
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
             yield sig
+
+    def matches(self, *, threshold_hashes=0):
+        "Return (overlap, name)"
+        size = ffi.new("uintptr_t *")
+        matches_ptr = self._methodcall(
+            lib.revindex_countergather_matches_from_counter,
+            self.db._objptr,
+            threshold_hashes,
+            size,
+        )
+        size = size[0]
+
+        for i in range(size):
+            match = MatchResult._from_objptr(matches_ptr[i])
+            yield match
 
 
 class RevIndex_DatasetPicklist(RustObject):

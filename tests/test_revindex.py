@@ -842,6 +842,25 @@ def test_disk_revindex_prefetch_to_cg_colors_8():
     assert len(siglist) == 3
 
 
+def test_disk_revindex_prefetch_to_cg_colors_9():
+    # try out matches
+    metag_path = utils.get_test_data("SRR606249.sig.gz")
+    metag = load_one_signature_from_json(metag_path, ksize=31)
+
+    rocksdb_path = utils.get_test_data("3sigs.branch_0913.rocksdb")
+    db = DiskRevIndex(rocksdb_path)
+
+    cg = db.counter_gather(metag, threshold_bp=0)
+
+    x = list(cg.matches())
+    assert x[0].matches == 44
+    assert x[0].name.startswith("NC_011663.1")
+    assert x[1][0] == 41
+    assert x[1].name.startswith("NC_009665.1")
+    assert x[2][0] == 22
+    assert x[2].name.startswith("CP001071.1")
+
+
 def test_disk_revindex_union_found():
     # test union_found on db that contains 63 and 2, but not 47
     sig47 = utils.get_test_data("47.fa.sig")

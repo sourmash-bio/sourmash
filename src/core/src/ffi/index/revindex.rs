@@ -4,7 +4,7 @@ use std::slice;
 
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::*;
-use crate::ffi::index::SourmashSearchResult;
+use crate::ffi::index::{SourmashMatchResult, SourmashSearchResult};
 use crate::ffi::index::SourmashStr;
 use crate::ffi::manifest::SourmashManifest;
 use crate::ffi::minhash::SourmashKmerMinHash;
@@ -467,12 +467,12 @@ ffi_fn! {
 unsafe fn revindex_countergather_peek(
     cg_ptr: *const SourmashRevIndex_CounterGather,
     db_ptr: *const SourmashRevIndex,
-    threshold_bp: u64,
+    threshold_hashes: u64,
 ) -> Result<*mut SourmashSignature> {
     let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
     let revindex = &SourmashRevIndex::as_rust(db_ptr);
 
-    let result = cg.peek(threshold_bp as usize);
+    let result = cg.peek(threshold_hashes as usize);
 
     if let Some((dataset_id, _match_size)) = result {
         let match_sig = revindex
@@ -518,6 +518,37 @@ unsafe fn revindex_countergather_signatures(
     *size = b.len();
 
     Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
+}
+}
+
+ffi_fn! {
+unsafe fn revindex_countergather_matches_from_counter(
+    cg_ptr: *const SourmashRevIndex_CounterGather,
+    db_ptr: *const SourmashRevIndex,
+    threshold_hashes: usize,
+    size: *mut usize,
+) -> Result<*const *const SourmashMatchResult> {
+    let cg: &CounterGather = SourmashRevIndex_CounterGather::as_rust(cg_ptr);
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
+
+    let matches = revindex.matches_from_counter(cg.counter.clone(), threshold_hashes);
+
+    let matches2: Vec<(usize, String)> = matches
+        .into_iter()
+        .map(|(name, size)| {
+            (size, name.to_owned())
+        })
+        .collect();   
+
+    let ptr_results: Vec<*const SourmashMatchResult> = matches2
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashMatchResult)
+        .collect();
+
+    let b = ptr_results.into_boxed_slice();
+    *size = b.len();
+
+    Ok(Box::into_raw(b) as *const *const SourmashMatchResult)
 }
 }
 

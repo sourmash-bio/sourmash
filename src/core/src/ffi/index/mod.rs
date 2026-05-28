@@ -38,3 +38,26 @@ pub unsafe extern "C" fn searchresult_signature(
         SourmashSignature::from_rust((result.1).clone())
     }
 }
+
+pub struct SourmashMatchResult;
+
+impl ForeignObject for SourmashMatchResult {
+    type RustObject = (usize, String);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn matchresult_free(ptr: *mut SourmashMatchResult) {
+    SourmashMatchResult::drop(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn matchresult_matches(ptr: *const SourmashMatchResult) -> usize {
+    let result = SourmashMatchResult::as_rust(ptr);
+    result.0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn matchresult_name(ptr: *const SourmashMatchResult) -> SourmashStr {
+    let result = SourmashMatchResult::as_rust(ptr);
+    (result.1).clone().into()
+}
