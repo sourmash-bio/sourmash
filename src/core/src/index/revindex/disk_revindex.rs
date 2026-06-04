@@ -10,12 +10,13 @@ use log::{info, trace};
 use rayon::prelude::*;
 use rocksdb::MergeOperands;
 
+use crate::HashIntoType;
 use crate::Result;
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::{Color, Idx};
 use crate::index::revindex::{
-    self as module, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors, RevIndexOps,
-    stats_for_cf,
+    self as module, CounterGather, DatasetPicklist, Datasets, DbStats, QueryColors, RevIndex,
+    RevIndexOps, stats_for_cf,
 };
 use crate::index::{GatherResult, SigCounter, calculate_gather_stats};
 use crate::manifest::Manifest;
@@ -65,14 +66,6 @@ pub(crate) fn merge_datasets(
     // TODO: optimization! if nothing changed, skip as_bytes()
     datasets.as_bytes()
 }
-
-/* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-pub fn repair(path: &Path) {
-    let opts = db_options();
-
-    DB::repair(&opts, path).unwrap()
-}
-*/
 
 impl DiskRevIndex {
     pub fn create(path: &Path, collection: CollectionSet) -> Result<module::RevIndex> {
@@ -184,6 +177,86 @@ impl DiskRevIndex {
         self.db.clone()
     }
 
+    pub fn repair<P: AsRef<Path>>(path: P, storage_spec: Option<&str>) -> Result<()> {
+        /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
+            let opts = db_options();
+
+            DB::repair_cf(&opts, path).unwrap()
+        */
+
+        let db = Self::open(path.as_ref(), false, storage_spec)?;
+        if let RevIndex::Disk(db) = db {
+            // iterate over all sigs to reconstruct values for each failing hash
+
+            // try to parse all values, in case any error is found
+            // record what is the key (hash)
+            info!("Iterating over DB to collect failing hashes");
+            let stats = stats_for_cf(db.db.clone(), HASHES, true, false);
+
+            // pre-allocate a {hash, datasets} map to populate later
+            let failed_hashes = dashmap::DashMap::<HashIntoType, Datasets>::from_iter(
+                stats
+                    .failed_keys
+                    .into_iter()
+                    .map(|h| (h, Datasets::new(&[]))),
+            );
+
+            if failed_hashes.is_empty() {
+                info!("No failed hashes found, finishing");
+                return Ok(())
+            }
+
+            info!("{} failed hashes to process", failed_hashes.len());
+
+            // iterate over all sigs to reconstruct values for each failing hash
+            info!("Iterating over all sigs to reconstruct dataset lists");
+
+            let processed_sigs = AtomicUsize::new(0);
+
+            db.collection().par_iter().for_each(|(dataset_id, _)| {
+                let all_hashes = db.load_hashes(dataset_id);
+                all_hashes.for_each(|hash| {
+                    failed_hashes
+                        .entry(hash)
+                        .and_modify(|v| v.union(Datasets::new(&[dataset_id])));
+                });
+
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 {
+                    info!("Processed {} reference sigs", i);
+                }
+            });
+
+            let cf_hashes = db.db.cf_handle(HASHES).unwrap();
+
+            // iterate over failed hashes and update values in the DB
+            info!("Updating values in DB for {} failed hashes", failed_hashes.len());
+
+            let processed_hashes = AtomicUsize::new(0);
+
+            failed_hashes.into_par_iter().for_each(|(hash, value)| {
+                let mut hash_bytes = [0u8; 8];
+                (&mut hash_bytes[..])
+                    .write_u64::<LittleEndian>(hash)
+                    .expect("error writing bytes");
+                db.db
+                    .put_cf(&cf_hashes, &hash_bytes[..], value.as_bytes().unwrap())
+                    .expect("error putting new value");
+
+                let i = processed_hashes.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 {
+                    info!("Processed {} failed hashes", i);
+                }
+            });
+
+            info!("Triggering compaction");
+            db.compact();
+            db.flush()?;
+        }
+
+        Ok(())
+    }
+
     fn load_processed(
         db: Arc<DB>,
         collection: Arc<CollectionSet>,
@@ -256,22 +329,28 @@ impl DiskRevIndex {
         Ok(())
     }
 
-    fn map_hashes_colors(&self, dataset_id: Idx) {
+    fn load_hashes(&self, dataset_id: Idx) -> impl Iterator<Item = HashIntoType> {
         let search_sig = self
             .collection
             .sig_for_dataset(dataset_id)
             .expect("Couldn't find a compatible Signature");
         let search_mh = &search_sig.sketches()[0];
 
-        let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
-
-        let cf_hashes = self.db.cf_handle(HASHES).unwrap();
-
         let hashes = match search_mh {
             Sketch::MinHash(mh) => mh.mins(),
             Sketch::LargeMinHash(mh) => mh.mins(),
             _ => unimplemented!(),
         };
+
+        hashes.into_iter()
+    }
+
+    fn map_hashes_colors(&self, dataset_id: Idx) {
+        let colors = Datasets::new(&[dataset_id]).as_bytes().unwrap();
+
+        let cf_hashes = self.db.cf_handle(HASHES).unwrap();
+
+        let hashes = self.load_hashes(dataset_id);
 
         let mut hash_bytes = [0u8; 8];
         for hash in hashes {

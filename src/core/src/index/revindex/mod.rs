@@ -55,10 +55,6 @@ pub struct DatasetPicklist {
 
 #[enum_dispatch]
 pub trait RevIndexOps {
-    /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-      pub fn repair(index: &Path, colors: bool);
-    */
-
     fn location(&self) -> &str;
 
     fn len(&self) -> usize {
@@ -309,15 +305,14 @@ impl FromIterator<(HashIntoType, Color)> for HashToColor {
 }
 
 impl RevIndex {
-    /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-         pub fn repair(index: &Path, colors: bool) {
-            if colors {
-                color_revindex::repair(index);
-            } else {
-                disk_revindex::repair(index);
-            }
-        }
-    */
+    pub fn repair<P: AsRef<Path>>(
+        index: P,
+        storage_spec: Option<&str>,
+        _colors: bool,
+    ) -> Result<()> {
+        disk_revindex::DiskRevIndex::repair(index, storage_spec)
+    }
+
     pub fn create<P: AsRef<Path>>(index: P, collection: CollectionSet) -> Result<Self> {
         disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
     }
@@ -517,6 +512,9 @@ pub struct DbStats {
 
     #[getset(get = "pub")]
     vcounts: histogram::Histogram,
+
+    #[getset(get = "pub")]
+    failed_keys: HashSet<HashIntoType>,
 }
 
 fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> DbStats {
@@ -531,6 +529,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
     // Using power values from https://docs.rs/histogram/0.8.3/histogram/struct.Config.html#resulting-size
     let mut vcounts = Histogram::new(12, 64).expect("Error initializing histogram");
     let mut datasets: Datasets = Default::default();
+    let mut failed_keys = HashSet::new();
 
     for result in iter {
         let (key, value) = result.unwrap();
@@ -542,8 +541,8 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 
         if !quick && deep_check {
             match Datasets::from_slice(&value) {
-                Err(e) => {
-                    eprintln!("key {k} error for value: {e}");
+                Err(_) => {
+                    failed_keys.insert(k);
                 }
 
                 Ok(v) => {
@@ -561,6 +560,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
         kcount,
         vcount,
         vcounts,
+        failed_keys,
     }
 }
 
