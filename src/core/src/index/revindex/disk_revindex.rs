@@ -213,19 +213,23 @@ impl DiskRevIndex {
 
             let processed_sigs = AtomicUsize::new(0);
 
-            db.collection().par_iter().for_each(|(dataset_id, _)| {
-                let all_hashes = db.load_hashes(dataset_id);
-                all_hashes.for_each(|hash| {
-                    failed_hashes
-                        .entry(hash)
-                        .and_modify(|v| v.union(Datasets::new(&[dataset_id])));
-                });
+            db.collection()
+                .par_iter()
+                .try_for_each(|(dataset_id, _)| -> Result<()> {
+                    let all_hashes = db.load_hashes(dataset_id)?;
+                    all_hashes.for_each(|hash| {
+                        failed_hashes
+                            .entry(hash)
+                            .and_modify(|v| v.union(Datasets::new(&[dataset_id])));
+                    });
 
-                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                if i % 1000 == 0 {
-                    info!("Processed {} reference sigs", i);
-                }
-            });
+                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                    if i % 1000 == 0 {
+                        info!("Processed {} reference sigs", i);
+                    }
+
+                    Ok(())
+                })?;
 
             let cf_hashes = db.db.cf_handle(HASHES).unwrap();
 
@@ -237,20 +241,21 @@ impl DiskRevIndex {
 
             let processed_hashes = AtomicUsize::new(0);
 
-            failed_hashes.into_par_iter().for_each(|(hash, value)| {
-                let mut hash_bytes = [0u8; 8];
-                (&mut hash_bytes[..])
-                    .write_u64::<LittleEndian>(hash)
-                    .expect("error writing bytes");
-                db.db
-                    .put_cf(&cf_hashes, &hash_bytes[..], value.as_bytes().unwrap())
-                    .expect("error putting new value");
+            failed_hashes
+                .into_par_iter()
+                .try_for_each(|(hash, value)| -> Result<()> {
+                    let mut hash_bytes = [0u8; 8];
+                    (&mut hash_bytes[..]).write_u64::<LittleEndian>(hash)?;
+                    if let Some(v) = value.as_bytes() {
+                        db.db.put_cf(&cf_hashes, &hash_bytes[..], v)?;
+                    };
 
-                let i = processed_hashes.fetch_add(1, Ordering::SeqCst);
-                if i % 1000 == 0 {
-                    info!("Processed {} failed hashes", i);
-                }
-            });
+                    let i = processed_hashes.fetch_add(1, Ordering::SeqCst);
+                    if i % 1000 == 0 {
+                        info!("Processed {} failed hashes", i);
+                    }
+                    Ok(())
+                })?;
 
             info!("Triggering compaction");
             db.compact();
@@ -332,11 +337,8 @@ impl DiskRevIndex {
         Ok(())
     }
 
-    fn load_hashes(&self, dataset_id: Idx) -> impl Iterator<Item = HashIntoType> {
-        let search_sig = self
-            .collection
-            .sig_for_dataset(dataset_id)
-            .expect("Couldn't find a compatible Signature");
+    fn load_hashes(&self, dataset_id: Idx) -> Result<impl Iterator<Item = HashIntoType>> {
+        let search_sig = self.collection.sig_for_dataset(dataset_id)?;
         let search_mh = &search_sig.sketches()[0];
 
         let hashes = match search_mh {
@@ -345,7 +347,7 @@ impl DiskRevIndex {
             _ => unimplemented!(),
         };
 
-        hashes.into_iter()
+        Ok(hashes.into_iter())
     }
 
     fn map_hashes_colors(&self, dataset_id: Idx) {
@@ -353,7 +355,7 @@ impl DiskRevIndex {
 
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
 
-        let hashes = self.load_hashes(dataset_id);
+        let hashes = self.load_hashes(dataset_id).unwrap();
 
         let mut hash_bytes = [0u8; 8];
         for hash in hashes {
