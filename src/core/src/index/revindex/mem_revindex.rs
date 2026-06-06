@@ -227,8 +227,8 @@ impl RevIndexOps for MemRevIndex {
         &self,
         query: &KmerMinHash,
         picklist: Option<DatasetPicklist>,
-    ) -> SigCounter {
-        query
+    ) -> Result<SigCounter> {
+        Ok(query
             .iter_mins()
             .filter_map(|hash| self.hash_to_color.get(hash))
             .flat_map(|color| self.colors.indices(color))
@@ -239,7 +239,7 @@ impl RevIndexOps for MemRevIndex {
                     .unwrap_or(true)
             })
             .cloned()
-            .collect()
+            .collect())
     }
 
     /// build a CounterGather struct for a particular query
@@ -247,8 +247,8 @@ impl RevIndexOps for MemRevIndex {
         &self,
         query: &KmerMinHash,
         picklist: Option<DatasetPicklist>,
-    ) -> CounterGather {
-        let counter = self.counter_for_query(query, picklist);
+    ) -> Result<CounterGather> {
+        let counter = self.counter_for_query(query, picklist)?;
         let hash_to_color = self.hash_to_color.clone();
 
         // restrict hash_to_color to hashes contained in query
@@ -272,11 +272,11 @@ impl RevIndexOps for MemRevIndex {
 
         //eprintln!("query_colors: {:?}", query_colors);
 
-        CounterGather {
+        Ok(CounterGather {
             counter,
             query_colors,
             hash_to_color,
-        }
+        })
     }
 
     fn gather(
@@ -370,7 +370,7 @@ impl RevIndexOps for MemRevIndex {
 
         let threshold: usize = (threshold * (query_mh.size() as f64)) as _;
 
-        let counter = self.counter_for_query(&query_mh, picklist);
+        let counter = self.counter_for_query(&query_mh, picklist)?;
 
         debug!(
             "number of matching signatures for hashes: {}",
@@ -571,14 +571,14 @@ mod test {
         }
         let query_mh = query_mh.expect("Couldn't find a compatible MinHash");
 
-        let counter_rev = index.counter_for_query(&query_mh, None);
+        let counter_rev = index.counter_for_query(&query_mh, None)?;
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
         let results_rev = index.search(counter_rev, false, 0).unwrap();
         let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
         assert_eq!(results_rev, results_linear);
 
-        let counter_rev = index.prepare_gather_counters(&query_mh, None);
+        let counter_rev = index.prepare_gather_counters(&query_mh, None)?;
         let counter_lin = index.linear.counter_for_query(&query_mh);
 
         let results_rev = index.gather(counter_rev, 0, &query_mh, None).unwrap();
@@ -615,7 +615,7 @@ mod test {
             _ => unimplemented!(),
         };
 
-        let gather_cg = index.prepare_gather_counters(&query_mh, None);
+        let gather_cg = index.prepare_gather_counters(&query_mh, None)?;
         // eprintln!("gather_cg: {:?}", gather_cg);
         let results = index.gather(gather_cg, 0, &query_mh, None).unwrap();
 
@@ -652,7 +652,7 @@ mod test {
         };
 
         // run the CounterGather-style gather:
-        let gather_cg = index.prepare_gather_counters(&query_mh, None);
+        let gather_cg = index.prepare_gather_counters(&query_mh, None)?;
         // eprintln!("gather_cg: {:?}", gather_cg);
         let results = index.gather(gather_cg, 0, &query_mh, None).unwrap();
         assert_eq!(results.len(), 3);
@@ -711,7 +711,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
 
         let matches = index.gather(
             cg,
@@ -862,7 +862,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
 
         let idxlist = cg.dataset_ids();
         assert_eq!(idxlist.len(), 12);
@@ -923,7 +923,7 @@ mod test {
             dataset_ids: vec![0].into_iter().collect(),
         };
 
-        let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
+        let cg = index.prepare_gather_counters(&query, Some(pl.clone()))?;
 
         let matches = index.gather(
             cg,
@@ -936,11 +936,11 @@ mod test {
         assert_eq!(matches.len(), 1);
 
         // also do a basic test of containment with picklists -
-        let counter = index.counter_for_query(&query, Some(pl.clone()));
+        let counter = index.counter_for_query(&query, Some(pl.clone()))?;
         let matches = index.matches_from_counter(counter, 0);
         assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
 
-        let counter = index.counter_for_query(&query, Some(pl));
+        let counter = index.counter_for_query(&query, Some(pl))?;
         let records = index.records_from_counter(counter, 0);
         assert_eq!(records.len(), 1);
 

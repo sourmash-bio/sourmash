@@ -295,7 +295,7 @@ unsafe fn revindex_prefetch(
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
     // do search & get matches
-    let counter = revindex.counter_for_query(&query_mh, dataset_picklist);
+    let counter = revindex.counter_for_query(&query_mh, dataset_picklist)?;
 
     // right now this iterates over all matches from 'counter.most_common()'.
     // we could probably truncate the search here in some way, yes?
@@ -400,7 +400,7 @@ unsafe fn revindex_best_containment(
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
     // do search & get first/best match
-    let counter = revindex.counter_for_query(query_mh, dataset_picklist);
+    let counter = revindex.counter_for_query(query_mh, dataset_picklist)?;
     if !counter.is_empty() {
         let (dataset_id, size) = counter.k_most_common_ordered(1)[0];
 
@@ -439,7 +439,7 @@ unsafe fn revindex_prefetch_to_countergather(
     let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
 
     // do search & get matches
-    let counter = revindex.prepare_gather_counters(&query_mh, dataset_picklist);
+    let counter = revindex.prepare_gather_counters(&query_mh, dataset_picklist)?;
 
     Ok(SourmashRevIndex_CounterGather::from_rust(counter))
 }

@@ -384,7 +384,7 @@ impl RevIndexOps for DiskRevIndex {
         &self,
         query: &KmerMinHash,
         picklist: Option<DatasetPicklist>,
-    ) -> SigCounter {
+    ) -> Result<SigCounter> {
         info!("Collecting hashes");
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
@@ -396,12 +396,13 @@ impl RevIndexOps for DiskRevIndex {
         });
 
         info!("Multi get");
-        self.db
+        Ok(self
+            .db
             .multi_get_cf(hashes_iter)
             .into_iter()
             .filter_map(|r| r.ok().unwrap_or(None))
-            .flat_map(|raw_datasets| {
-                let new_vals = Datasets::from_slice(&raw_datasets).unwrap();
+            .map(|raw_datasets| {
+                let new_vals = Datasets::from_slice(&raw_datasets)?;
 
                 // filter against picklist if need be.
                 if let Some(pl) = &picklist {
@@ -409,19 +410,22 @@ impl RevIndexOps for DiskRevIndex {
                         .into_iter()
                         .filter(|&i| pl.dataset_ids.contains(&i))
                         .collect();
-                    Box::new(new_vals.into_iter())
+                    Ok(new_vals.into_iter().collect::<Vec<u32>>())
                 } else {
-                    new_vals.into_iter()
+                    Ok(new_vals.into_iter().collect::<Vec<u32>>())
                 }
             })
-            .collect()
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect())
     }
 
     fn prepare_gather_counters(
         &self,
         query: &KmerMinHash,
         picklist: Option<DatasetPicklist>,
-    ) -> CounterGather {
+    ) -> Result<CounterGather> {
         let cf_hashes = self.db.cf_handle(HASHES).unwrap();
         let hashes_iter = query.iter_mins().map(|hash| {
             let mut v = vec![0_u8; 8];
@@ -474,11 +478,11 @@ impl RevIndexOps for DiskRevIndex {
             })
             .collect();
 
-        CounterGather {
+        Ok(CounterGather {
             counter,
             query_colors,
             hash_to_color,
-        }
+        })
     }
 
     fn gather(
@@ -730,7 +734,7 @@ impl RevIndexOps for DiskRevIndex {
         picklist: Option<DatasetPicklist>,
     ) -> Result<Vec<(f64, Signature, String)>> {
         // do search
-        let counter = self.counter_for_query(query_mh, picklist);
+        let counter = self.counter_for_query(query_mh, picklist)?;
 
         // retrieve/convert matches. I don't think there's a simple way to
         // truncate this without going through all the matches, so it's
