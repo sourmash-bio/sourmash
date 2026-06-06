@@ -203,7 +203,7 @@ impl DiskRevIndex {
 
             if failed_hashes.is_empty() {
                 info!("No failed hashes found, finishing");
-                return Ok(())
+                return Ok(());
             }
 
             info!("{} failed hashes to process", failed_hashes.len());
@@ -230,7 +230,10 @@ impl DiskRevIndex {
             let cf_hashes = db.db.cf_handle(HASHES).unwrap();
 
             // iterate over failed hashes and update values in the DB
-            info!("Updating values in DB for {} failed hashes", failed_hashes.len());
+            info!(
+                "Updating values in DB for {} failed hashes",
+                failed_hashes.len()
+            );
 
             let processed_hashes = AtomicUsize::new(0);
 
