@@ -408,12 +408,17 @@ wasm = { features = ["dev", "build", "wasm"], solve-group = "default", no-defaul
 [tool.pixi.system-requirements]
 macos = "11.0"
 
+[tool.pixi.target.linux-64.activation.env]
+ROCKSDB_INCLUDE_DIR = "$CONDA_PREFIX/include"
+ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
+
+[tool.pixi.target.linux-aarch64.activation.env]
+ROCKSDB_INCLUDE_DIR = "$CONDA_PREFIX/include"
+ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
+
 [tool.pixi.activation.env]
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
-ROCKSDB_INCLUDE_DIR = "$CONDA_PREFIX/include"
-ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
-DYLD_LIBRARY_PATH= "${CONDA_PREFIX}/lib"
 
 [tool.pixi.target.win-64.activation.env]
 CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
