@@ -1360,4 +1360,79 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn disk_revindex_repair() -> Result<()> {
+        use crate::index::revindex::disk_revindex::DiskRevIndex;
+        use crate::storage::rocksdb::HASHES;
+        use byteorder::{LittleEndian, WriteBytesExt};
+
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/scaled/");
+
+        let siglist: Vec<_> = (10..=12)
+            .map(|i| {
+                let mut filename = basedir.clone();
+                filename.push(format!("genome-s{}.fa.gz.sig", i));
+                filename
+            })
+            .collect();
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let output = TempDir::new()?;
+
+        let mut query = None;
+        let query_sig = Signature::from_path(&siglist[0])?
+            .swap_remove(0)
+            .select(&selection)?;
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        // Extract one hash to corrupt
+        let failed_hash = query.mins()[0];
+
+        let collection = Collection::from_paths(&siglist)?.select(&selection)?;
+        {
+            let index = RevIndex::create(output.path(), collection.try_into()?)?;
+            assert_eq!(
+                index.location(),
+                output.path().to_str().expect("cannot convert")
+            );
+
+            if let RevIndex::Disk(ref index) = index {
+                let mut hash_bytes = [0u8; 8];
+                (&mut hash_bytes[..])
+                    .write_u64::<LittleEndian>(failed_hash)
+                    .expect("error writing bytes");
+                unsafe {
+                    let db = index.db();
+                    let cf_hashes = db.cf_handle(HASHES).unwrap();
+                    db.put_cf(&cf_hashes, &hash_bytes[..], b"0xbadda7a")
+                        .expect("error putting new value");
+                }
+            }
+        }
+        // TODO: trigger error here
+        /*
+        {
+        let index = RevIndex::open(output.path(), true, None)?;
+        let counter = index.counter_for_query(&query, None);
+        }
+        */
+
+        // Repair DB
+        {
+            DiskRevIndex::repair(output.path(), None)?;
+        }
+
+        let index = RevIndex::open(output.path(), true, None)?;
+        let counter = index.counter_for_query(&query, None);
+        let matches = index.matches_from_counter(counter, 0);
+
+        assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
+
+        Ok(())
+    }
 }
