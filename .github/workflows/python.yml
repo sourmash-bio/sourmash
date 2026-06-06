@@ -87,3 +87,4 @@ jobs:
           flags: python
           fail_ci_if_error: true
           files: .tox/coverage.xml
+          use_pypi: true

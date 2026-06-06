@@ -140,6 +140,7 @@ jobs:
           flags: rust
           fail_ci_if_error: true
           files: lcov.info
+          use_pypi: true
 
   lints:
     name: Lints
