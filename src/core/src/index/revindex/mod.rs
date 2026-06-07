@@ -55,10 +55,6 @@ pub struct DatasetPicklist {
 
 #[enum_dispatch]
 pub trait RevIndexOps {
-    /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-      pub fn repair(index: &Path, colors: bool);
-    */
-
     fn location(&self) -> &str;
 
     fn len(&self) -> usize {
@@ -83,7 +79,7 @@ pub trait RevIndexOps {
         &self,
         query: &KmerMinHash,
         picklist: Option<DatasetPicklist>,
-    ) -> SigCounter;
+    ) -> Result<SigCounter>;
 
     fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
         counter
@@ -131,7 +127,7 @@ pub trait RevIndexOps {
         &self,
         query: &KmerMinHash,
         picklist: Option<DatasetPicklist>,
-    ) -> CounterGather;
+    ) -> Result<CounterGather>;
 
     fn update(self, collection: CollectionSet) -> Result<RevIndex>
     where
@@ -309,15 +305,14 @@ impl FromIterator<(HashIntoType, Color)> for HashToColor {
 }
 
 impl RevIndex {
-    /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
-         pub fn repair(index: &Path, colors: bool) {
-            if colors {
-                color_revindex::repair(index);
-            } else {
-                disk_revindex::repair(index);
-            }
-        }
-    */
+    pub fn repair<P: AsRef<Path>>(
+        index: P,
+        storage_spec: Option<&str>,
+        _colors: bool,
+    ) -> Result<()> {
+        disk_revindex::DiskRevIndex::repair(index, storage_spec)
+    }
+
     pub fn create<P: AsRef<Path>>(index: P, collection: CollectionSet) -> Result<Self> {
         disk_revindex::DiskRevIndex::create(index.as_ref(), collection)
     }
@@ -430,15 +425,13 @@ impl Datasets {
 
         if slice.len() == 8 {
             // Unique
-            Ok(Self::Unique(
-                (&slice[..]).read_u32::<LittleEndian>().unwrap(),
-            ))
+            Ok(Self::Unique((&slice[..]).read_u32::<LittleEndian>()?))
         } else if slice.len() == 1 {
             // Empty
             Ok(Self::Empty)
         } else {
             // Many
-            Ok(Self::Many(RoaringBitmap::deserialize_from(slice).unwrap()))
+            Ok(Self::Many(RoaringBitmap::deserialize_from(slice)?))
         }
     }
 
@@ -519,6 +512,9 @@ pub struct DbStats {
 
     #[getset(get = "pub")]
     vcounts: histogram::Histogram,
+
+    #[getset(get = "pub")]
+    failed_keys: HashSet<HashIntoType>,
 }
 
 fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> DbStats {
@@ -533,19 +529,27 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
     // Using power values from https://docs.rs/histogram/0.8.3/histogram/struct.Config.html#resulting-size
     let mut vcounts = Histogram::new(12, 64).expect("Error initializing histogram");
     let mut datasets: Datasets = Default::default();
+    let mut failed_keys = HashSet::new();
 
     for result in iter {
         let (key, value) = result.unwrap();
-        let _k = (&key[..]).read_u64::<LittleEndian>().unwrap();
+        let k = (&key[..]).read_u64::<LittleEndian>().unwrap();
         kcount += key.len();
 
         //println!("Saw {} {:?}", k, Datasets::from_slice(&value));
         vcount += value.len();
 
         if !quick && deep_check {
-            let v = Datasets::from_slice(&value).expect("Error with value");
-            vcounts.increment(v.len() as u64).unwrap();
-            datasets.union(v);
+            match Datasets::from_slice(&value) {
+                Err(_) => {
+                    failed_keys.insert(k);
+                }
+
+                Ok(v) => {
+                    vcounts.increment(v.len() as u64).unwrap();
+                    datasets.union(v);
+                }
+            }
         }
         //println!("Saw {} {:?}", k, value);
     }
@@ -556,6 +560,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
         kcount,
         vcount,
         vcounts,
+        failed_keys,
     }
 }
 
@@ -610,7 +615,7 @@ mod test {
             output.path().to_str().expect("cannot convert")
         );
 
-        let counter = index.counter_for_query(&query, None);
+        let counter = index.counter_for_query(&query, None)?;
         let matches = index.matches_from_counter(counter, 0);
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
@@ -657,7 +662,7 @@ mod test {
         let index =
             RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
-        let counter = index.counter_for_query(&q, None);
+        let counter = index.counter_for_query(&q, None)?;
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
@@ -698,7 +703,7 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
         assert_eq!(cg.len(), 1);
         assert_eq!(cg.is_empty(), false);
 
@@ -760,7 +765,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
 
         let matches = index.gather(
             cg,
@@ -908,7 +913,7 @@ mod test {
         }
         let query = query.unwrap();
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
 
         let matches = index.gather(cg, 0, &query, Some(selection))?;
 
@@ -1005,7 +1010,7 @@ mod test {
             dataset_ids: vec![0].into_iter().collect(),
         };
 
-        let cg = index.prepare_gather_counters(&query, Some(pl.clone()));
+        let cg = index.prepare_gather_counters(&query, Some(pl.clone()))?;
 
         let matches = index.gather(
             cg,
@@ -1018,11 +1023,11 @@ mod test {
         assert_eq!(matches.len(), 1);
 
         // also do a basic test of containment with picklists -
-        let counter = index.counter_for_query(&query, Some(pl.clone()));
+        let counter = index.counter_for_query(&query, Some(pl.clone()))?;
         let matches = index.matches_from_counter(counter, 0);
         assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
 
-        let counter = index.counter_for_query(&query, Some(pl));
+        let counter = index.counter_for_query(&query, Some(pl))?;
         let records = index.records_from_counter(counter, 0);
         assert_eq!(records.len(), 1);
 
@@ -1110,7 +1115,7 @@ mod test {
         {
             let index = RevIndex::open(output.as_path(), false, None)?;
 
-            let counter = index.counter_for_query(&query, None);
+            let counter = index.counter_for_query(&query, None)?;
             let matches = index.matches_from_counter(counter, 0);
 
             assert!(matches[0].0.starts_with("NC_009665.1"));
@@ -1130,7 +1135,7 @@ mod test {
 
         let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
 
-        let counter = index.counter_for_query(&query, None);
+        let counter = index.counter_for_query(&query, None)?;
         let matches = index.matches_from_counter(counter, 0);
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
@@ -1166,7 +1171,7 @@ mod test {
 
         let index = RevIndex::create(output.as_path(), collection.try_into()?)?;
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
 
         let matches_external = index
             .gather(cg, 0, &query, Some(selection.clone()))
@@ -1178,7 +1183,7 @@ mod test {
                 .internalize_storage()
                 .expect("Error internalizing storage");
 
-            let cg = index.prepare_gather_counters(&query, None);
+            let cg = index.prepare_gather_counters(&query, None)?;
 
             let matches_internal = index.gather(cg, 0, &query, Some(selection.clone()))?;
             assert_eq!(matches_external, matches_internal);
@@ -1188,7 +1193,7 @@ mod test {
 
         let index = RevIndex::open(new_path, false, None)?;
 
-        let cg = index.prepare_gather_counters(&query, None);
+        let cg = index.prepare_gather_counters(&query, None)?;
 
         let matches_moved = index.gather(cg, 0, &query, Some(selection.clone()))?;
         assert_eq!(matches_external, matches_moved);
@@ -1315,7 +1320,7 @@ mod test {
             m1.try_into().expect("cannot extract minhash")
         };
 
-        let mut cg = db.prepare_gather_counters(&query_mh, None);
+        let mut cg = db.prepare_gather_counters(&query_mh, None)?;
 
         let (dataset_id, size) = cg.peek(0).unwrap();
 
@@ -1352,6 +1357,82 @@ mod test {
 
         let r4 = cg.peek(0);
         assert_eq!(r4, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn disk_revindex_repair() -> Result<()> {
+        use crate::errors::SourmashError;
+        use crate::index::revindex::disk_revindex::DiskRevIndex;
+        use crate::storage::rocksdb::HASHES;
+        use byteorder::{LittleEndian, WriteBytesExt};
+
+        let mut basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        basedir.push("../../tests/test-data/scaled/");
+
+        let siglist: Vec<_> = (10..=12)
+            .map(|i| {
+                let mut filename = basedir.clone();
+                filename.push(format!("genome-s{}.fa.gz.sig", i));
+                filename
+            })
+            .collect();
+
+        let selection = Selection::builder().ksize(31).scaled(10000).build();
+        let output = TempDir::new()?;
+
+        let mut query = None;
+        let query_sig = Signature::from_path(&siglist[0])?
+            .swap_remove(0)
+            .select(&selection)?;
+        if let Some(q) = prepare_query(query_sig, &selection) {
+            query = Some(q);
+        }
+        let query = query.unwrap();
+
+        // Extract one hash to corrupt
+        let failed_hash = query.mins()[0];
+
+        let collection = Collection::from_paths(&siglist)?.select(&selection)?;
+        {
+            let index = RevIndex::create(output.path(), collection.try_into()?)?;
+            assert_eq!(
+                index.location(),
+                output.path().to_str().expect("cannot convert")
+            );
+
+            if let RevIndex::Disk(ref index) = index {
+                let mut hash_bytes = [0u8; 8];
+                (&mut hash_bytes[..])
+                    .write_u64::<LittleEndian>(failed_hash)
+                    .expect("error writing bytes");
+                unsafe {
+                    let db = index.db();
+                    let cf_hashes = db.cf_handle(HASHES).unwrap();
+                    db.put_cf(&cf_hashes, &hash_bytes[..], b"0xbadda7a")
+                        .expect("error putting new value");
+                }
+            }
+        }
+        // trigger error here and verify it
+        {
+            let index = RevIndex::open(output.path(), true, None)?;
+            let res = index.counter_for_query(&query, None);
+            // Custom { kind: Other, error: "unknown cookie value" }
+            assert!(matches!(res, Err(SourmashError::IOError(_))));
+        }
+
+        // Repair DB
+        {
+            DiskRevIndex::repair(output.path(), None)?;
+        }
+
+        let index = RevIndex::open(output.path(), true, None)?;
+        let counter = index.counter_for_query(&query, None)?;
+        let matches = index.matches_from_counter(counter, 0);
+
+        assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
 
         Ok(())
     }

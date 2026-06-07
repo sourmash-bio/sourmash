@@ -1,6 +1,6 @@
 [package]
 name = "sourmash"
-version = "0.22.0"
+version = "0.23.0"
 authors = ["Luiz Irber <luiz@sourmash.bio>", "N. Tessa Pierce-Ward <tessa@sourmash.bio>", "C. Titus Brown <titus@idyll.org>"]
 description = "tools for comparing biological sequences with k-mer sketches"
 repository = "https://github.com/sourmash-bio/sourmash"
@@ -32,6 +32,7 @@ camino = { version = "1.2.2", features = ["serde1"] }
 cfg-if = "1.0"
 counter = "0.6.0"
 csv = "1.4.0"
+dashmap = { version = "6.2.1", features = ["rayon"] }
 enum_dispatch = "0.3.13"
 fixedbitset = "0.4.0"
 getset = "0.1.6"

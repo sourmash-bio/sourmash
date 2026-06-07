@@ -33,8 +33,9 @@ jobs:
         run: tox -e hypothesis,coverage
 
       - name: Upload Python coverage to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           flags: hypothesis-py
           fail_ci_if_error: true
           files: .tox/coverage.xml
+          use_pypi: true
