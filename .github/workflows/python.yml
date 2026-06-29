@@ -37,7 +37,7 @@ jobs:
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: pip cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-v4-${{ hashFiles('**/pyproject.toml') }}
@@ -69,7 +69,7 @@ jobs:
           redis-version: 6
 
       - name: tox cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .tox/
           key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/pyproject.toml') }}
