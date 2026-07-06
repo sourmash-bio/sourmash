@@ -749,9 +749,9 @@ checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
 
 [[package]]
 name = "histogram"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78dbc692bf02314a491f06bb95ae039fe842c1e1179f0036df08800fba0fb29b"
+checksum = "8ebb5d42df947561c11a73414c53d14c4a0e3193e761a4cdca16ca3d941a2302"
 dependencies = [
  "thiserror 2.0.18",
 ]
@@ -1432,9 +1432,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
+checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
 dependencies = [
  "chacha20",
  "getrandom 0.4.2",
@@ -1826,7 +1826,7 @@ dependencies = [
  "piz",
  "primal-check",
  "proptest",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rayon",
  "replace_with",
  "rkyv",
