@@ -229,6 +229,14 @@ def _execute_sketch(args, signatures_factory):
         error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
+    if args.merge and args.singleton:
+        error(
+            "ERROR: --singleton cannot be used with --merge/--name/--set-name; "
+            "--merge produces a single sketch, while --singleton produces one "
+            "sketch per sequence record."
+        )
+        sys.exit(-1)
+
     if args.output and args.output_dir:
         error("ERROR: --output-dir doesn't make sense with -o/--output")
         sys.exit(-1)
