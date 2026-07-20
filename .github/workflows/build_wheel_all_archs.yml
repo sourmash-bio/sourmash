@@ -22,7 +22,7 @@ jobs:
         #target: [aarch64, ppc64le]
         #target: [aarch64, s390x, ppc64le]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -48,7 +48,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - uses: actions/setup-python@v6
         with:

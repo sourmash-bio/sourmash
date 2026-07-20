@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     if: false  # disable for now, need to fix emsdk with Rust: https://github.com/emscripten-core/emscripten/pull/24359
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v4.1.0
