@@ -689,6 +689,66 @@ impl KmerMinHash {
         Ok(1. - distance)
     }
 
+    // compare two minhashes, with abundance;
+    // calculate the abundance-weighted Bray-Curtis similarity,
+    // 2 * sum(min(a_i, b_i)) / (sum(a) + sum(b)).
+    pub fn braycurtis_similarity(
+        &self,
+        other: &KmerMinHash,
+        downsample: bool,
+    ) -> Result<f64, Error> {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to the larger of the two scaled values
+            let (first, second) = if self.scaled() > other.scaled() {
+                (self, other)
+            } else {
+                (other, self)
+            };
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
+            first.braycurtis_similarity(&downsampled_mh, false)
+        } else {
+            self.check_compatible(other)?;
+
+            if self.abunds.is_none() || other.abunds.is_none() {
+                return Err(Error::NeedsAbundanceTracking);
+            }
+
+            let abunds = self.abunds.as_ref().unwrap();
+            let other_abunds = other.abunds.as_ref().unwrap();
+
+            let total_abundance: u64 =
+                abunds.iter().sum::<u64>() + other_abunds.iter().sum::<u64>();
+            if total_abundance == 0 {
+                return Ok(0.0);
+            }
+
+            let mut shared: u64 = 0;
+            let mut other_iter = other.mins.iter().enumerate();
+            let mut next_hash = other_iter.next();
+
+            for (i, hash) in self.mins.iter().enumerate() {
+                while let Some((j, k)) = next_hash {
+                    match k.cmp(hash) {
+                        Ordering::Less => next_hash = other_iter.next(),
+                        Ordering::Equal => {
+                            // safe: i and j are valid indices from the iterators
+                            unsafe {
+                                shared += u64::min(
+                                    *abunds.get_unchecked(i),
+                                    *other_abunds.get_unchecked(j),
+                                );
+                            }
+                            break;
+                        }
+                        Ordering::Greater => break,
+                    }
+                }
+            }
+
+            Ok(2. * shared as f64 / total_abundance as f64)
+        }
+    }
+
     pub fn similarity(
         &self,
         other: &KmerMinHash,
@@ -1527,6 +1587,50 @@ impl KmerMinHashBTree {
         let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
         let distance = 2. * prod.acos() / PI;
         Ok(1. - distance)
+    }
+
+    // compare two minhashes, with abundance;
+    // calculate the abundance-weighted Bray-Curtis similarity,
+    // 2 * sum(min(a_i, b_i)) / (sum(a) + sum(b)).
+    pub fn braycurtis_similarity(
+        &self,
+        other: &KmerMinHashBTree,
+        downsample: bool,
+    ) -> Result<f64, Error> {
+        if downsample && self.scaled() != other.scaled() {
+            // downsample to the larger of the two scaled values
+            let (first, second) = if self.scaled() > other.scaled() {
+                (self, other)
+            } else {
+                (other, self)
+            };
+            let downsampled_mh = second.clone().downsample_scaled(first.scaled())?;
+            first.braycurtis_similarity(&downsampled_mh, false)
+        } else {
+            self.check_compatible(other)?;
+
+            if self.abunds.is_none() || other.abunds.is_none() {
+                return Err(Error::NeedsAbundanceTracking);
+            }
+
+            let abunds = self.abunds.as_ref().unwrap();
+            let other_abunds = other.abunds.as_ref().unwrap();
+
+            let total_abundance: u64 =
+                abunds.values().sum::<u64>() + other_abunds.values().sum::<u64>();
+            if total_abundance == 0 {
+                return Ok(0.0);
+            }
+
+            let mut shared: u64 = 0;
+            for (hash, value) in abunds.iter() {
+                if let Some(oa) = other_abunds.get(hash) {
+                    shared += u64::min(*value, *oa);
+                }
+            }
+
+            Ok(2. * shared as f64 / total_abundance as f64)
+        }
     }
 
     pub fn similarity(

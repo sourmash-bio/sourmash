@@ -182,6 +182,10 @@ class SourmashSignature(RustObject):
         "Compute angular similarity with the other signature."
         return self.minhash.angular_similarity(other.minhash, downsample=downsample)
 
+    def braycurtis_similarity(self, other, downsample=False):
+        "Compute abundance-aware Bray-Curtis similarity with the other signature."
+        return self.minhash.braycurtis_similarity(other.minhash, downsample=downsample)
+
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample=downsample)

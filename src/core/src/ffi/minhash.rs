@@ -506,3 +506,11 @@ unsafe fn kmerminhash_angular_similarity(ptr: *const SourmashKmerMinHash, other:
     mh.angular_similarity(other_mh)
 }
 }
+ffi_fn! {
+unsafe fn kmerminhash_braycurtis(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash, downsample: bool)
+                                 -> Result<f64> {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let other_mh = SourmashKmerMinHash::as_rust(other);
+    mh.braycurtis_similarity(other_mh, downsample)
+}
+}
