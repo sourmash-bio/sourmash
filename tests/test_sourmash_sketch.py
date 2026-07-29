@@ -904,6 +904,34 @@ def test_do_sourmash_sketchdna_name_fail_no_output(runtmp):
     assert runtmp.last_result.status == -1
 
 
+@pytest.mark.parametrize("moltype", ["dna", "translate"])
+@pytest.mark.parametrize("name_arg", ["--merge", "--name", "--set-name"])
+def test_do_sourmash_sketch_singleton_and_merge_fail(runtmp, moltype, name_arg):
+    # --merge asks for one sketch across all records, while --singleton asks
+    # for one sketch per record; previously --merge silently won and
+    # --singleton was ignored. See #3817.
+    testdata1 = utils.get_test_data("short.fa")
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(
+            "sketch",
+            moltype,
+            name_arg,
+            "foo",
+            "--singleton",
+            testdata1,
+            "-o",
+            "foo.sig",
+        )
+
+    assert runtmp.last_result.status == -1
+    assert (
+        "ERROR: --singleton cannot be used with --merge/--name/--set-name"
+        in runtmp.last_result.err
+    )
+    assert not os.path.exists(runtmp.output("foo.sig"))
+
+
 def test_do_sourmash_sketchdna_fail_no_output(runtmp):
     testdata1 = utils.get_test_data("short.fa")
 
