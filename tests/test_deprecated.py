@@ -1,5 +1,6 @@
-from sourmash import signature
 import sourmash_tst_utils as utils
+
+from sourmash import signature
 
 
 def test_load_textmode(track_abundance):
