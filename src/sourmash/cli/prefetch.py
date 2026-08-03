@@ -3,9 +3,9 @@
 from sourmash.cli.utils import (
     add_ksize_arg,
     add_moltype_args,
+    add_pattern_args,
     add_picklist_args,
     add_scaled_arg,
-    add_pattern_args,
 )
 
 
