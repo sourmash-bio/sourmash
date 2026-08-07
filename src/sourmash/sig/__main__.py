@@ -1603,6 +1603,7 @@ def check(args):
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     set_quiet(False, args.debug)
+    picklist = sourmash_args.load_picklist(args)
 
     if args.cli_version == "v5":
         if args.abspath is None:  # not set by user
@@ -1707,6 +1708,10 @@ def collect(args):
 
         for row in mf.rows:
             row["internal_location"] = new_iloc
+
+            if picklist and not picklist.matches_manifest_row(row):
+                continue
+
             collected_mf.add_row(row)
 
     if args.manifest_format == "csv":
@@ -1717,6 +1722,8 @@ def collect(args):
         collected_mf.close()
 
     notify(f"saved {len(collected_mf)} manifest rows to '{args.output}'")
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     return 0
 
