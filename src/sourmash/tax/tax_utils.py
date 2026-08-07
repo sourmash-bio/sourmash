@@ -147,6 +147,12 @@ class BaseLineageInfo:
             return None
         return self.filled_ranks[-1]
 
+    @property
+    def highest_rank(self):
+        if not self.filled_ranks:
+            return None
+        return self.filled_ranks[0]
+
     def rank_index(self, rank):
         self.check_rank_availability(rank)
         return self.ranks.index(rank)
@@ -174,6 +180,13 @@ class BaseLineageInfo:
         if not self.filled_ranks:
             return None
         return self.filled_lineage[-1].name
+
+    @property
+    def highest_lineage_name(self):
+        "Return the name of the highest filled lineage"
+        if not self.filled_ranks:
+            return None
+        return self.filled_lineage[0].name
 
     @property
     def lowest_lineage_taxid(self):
@@ -331,6 +344,34 @@ class BaseLineageInfo:
         # if not, return lineage tuples down to desired rank
         rank_idx = self.rank_index(rank)
         return self.filled_lineage[: rank_idx + 1]
+
+    def lineage_above_rank(self, rank):
+        """
+        Return tuple of LineagePairs *above* the specified rank.
+        """
+        if rank == self.highest_rank:
+            return ()
+
+        self.check_rank_availability(rank)
+        if not self.rank_is_filled(rank):
+            return self.filled_lineage
+        rank_idx = self.rank_index(rank)
+        return self.filled_lineage[:rank_idx]
+
+    def lineage_below_rank(self, rank):
+        """
+        Return tuple of LineagePairs *below* the specified rank.
+        """
+        if rank == self.lowest_rank:
+            return ()
+
+        self.check_rank_availability(rank)
+        rank_idx = self.rank_index(rank)
+        lower_rank_idx = rank_idx + 1
+        lower_rank = self.filled_lineage[lower_rank_idx].rank
+        if not self.rank_is_filled(lower_rank):
+            return self.filled_lineage
+        return self.filled_lineage[: lower_rank_idx + 1]
 
     def find_lca(self, other):
         """
