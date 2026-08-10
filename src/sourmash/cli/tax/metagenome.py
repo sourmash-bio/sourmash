@@ -22,13 +22,13 @@ Please see the 'tax metagenome' documentation for more details:
 """
 
 import sourmash
-from sourmash.logging import notify, print_results, error
 from sourmash.cli.utils import (
     add_rank_arg,
+    add_v5_args,
     check_rank,
     check_tax_outputs,
-    add_v5_args,
 )
+from sourmash.logging import error, notify, print_results
 
 
 def subparser(subparsers):
@@ -164,7 +164,7 @@ def main(args):
         )
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         import sys
 
         sys.exit(-1)

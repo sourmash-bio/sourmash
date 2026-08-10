@@ -3,9 +3,10 @@ Code for searching collections of signatures.
 """
 
 import csv
-import numpy as np
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+
+import numpy as np
 
 from .minhash import MinHash
 from .signature import SourmashSignature
@@ -117,9 +118,8 @@ class JaccardSearch:
         Is this query compatible with this type of search? Raise TypeError
         if not.
         """
-        if self.require_scaled:
-            if not sig.minhash.scaled:
-                raise TypeError("this search requires a scaled signature")
+        if self.require_scaled and not sig.minhash.scaled:
+            raise TypeError("this search requires a scaled signature")
 
         if sig.minhash.track_abundance:
             raise TypeError("this search cannot be done with an abund signature")
@@ -132,9 +132,7 @@ class JaccardSearch:
         whether a particular signature should be collected, and/or can
         update the threshold (used for BestOnly behavior).
         """
-        if score and score >= self.threshold:
-            return True
-        return False
+        return bool(score and score >= self.threshold)
 
     def collect(self, score, match_sig):
         "Return True if this match should be collected."
@@ -250,9 +248,11 @@ class BaseResult:
     def shorten_md5(self, md5):
         return md5[:8]
 
-    def to_write(self, columns=[]):
+    def to_write(self, columns=None):
         # convert comparison attrs into a dictionary
         # that can be used by csv dictwriter
+        if columns is None:
+            columns = []
         info = {
             k: v for k, v in self.__dict__.items() if k in columns and v is not None
         }
@@ -887,7 +887,7 @@ class GatherDatabases:
         orig_query_abunds = self.orig_query_abunds
 
         # find the best match!
-        best_result, intersect_mh = _find_best(counters, query, threshold_bp)
+        best_result, _intersect_mh = _find_best(counters, query, threshold_bp)
 
         if not best_result:  # no matches at all for this cutoff!
             raise StopIteration

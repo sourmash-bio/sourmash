@@ -1,20 +1,18 @@
 import os
 
 import pytest
+import sourmash_tst_utils as utils
+from sourmash_tst_utils import SourmashCommandFailed
 
 import sourmash
+from sourmash.minhash import FrozenMinHash, MinHash
 from sourmash.signature import (
-    SourmashSignature,
     FrozenSourmashSignature,
-)
-from sourmash.signature import (
-    save_signatures_to_json,
-    load_signatures_from_json,
+    SourmashSignature,
     load_one_signature_from_json,
+    load_signatures_from_json,
+    save_signatures_to_json,
 )
-import sourmash_tst_utils as utils
-from sourmash.minhash import MinHash, FrozenMinHash
-from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_minhash_copy(track_abundance):

@@ -14,7 +14,7 @@ Please see the 'tax summarize' documentation for more details:
 """
 
 import sourmash
-from sourmash.logging import notify, print_results, error
+from sourmash.logging import error, notify, print_results
 
 
 def subparser(subparsers):
