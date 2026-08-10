@@ -6,7 +6,7 @@ Summarize rank-specific information from LCAs in one or more databases.
 import sys
 from collections import defaultdict
 
-from ..logging import error, debug, set_quiet, notify
+from ..logging import debug, error, notify, set_quiet
 from . import lca_utils
 
 
@@ -35,7 +35,7 @@ def make_lca_counts(dblist, min_num=0):
 
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
-        lca, reason = lca_utils.find_lca(tree)
+        lca, _reason = lca_utils.find_lca(tree)
         counts[lca] += 1
 
     return counts
@@ -55,7 +55,7 @@ def rankinfo_main(args):
         args.scaled = int(args.scaled)
 
     # load all the databases
-    dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
+    dblist, _ksize, _scaled = lca_utils.load_databases(args.db, args.scaled)
 
     # count all the LCAs across these databases
     counts = make_lca_counts(dblist, args.minimum_num)

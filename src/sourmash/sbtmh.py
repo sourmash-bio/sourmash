@@ -1,8 +1,8 @@
-from io import BytesIO
 import sys
+from io import BytesIO
 
-from .sbt import Leaf, SBT, GraphFactory
 from . import signature
+from .sbt import SBT, GraphFactory, Leaf
 
 
 def load_sbt_index(filename, *, print_version_warning=True, cache_size=None):
