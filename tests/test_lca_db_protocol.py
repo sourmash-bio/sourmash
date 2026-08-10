@@ -7,9 +7,9 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
+from sourmash.lca.lca_db import LCA_Database, load_single_database
 from sourmash.sourmash_args import load_one_signature
 from sourmash.tax.tax_utils import MultiLineageDB
-from sourmash.lca.lca_db import LCA_Database, load_single_database
 
 
 def build_inmem_lca_db(runtmp):
