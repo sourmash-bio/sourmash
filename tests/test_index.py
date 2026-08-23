@@ -2,33 +2,32 @@
 Tests for Index classes and subclasses.
 """
 
-import pytest
 import glob
 import os
-import zipfile
 import shutil
+import zipfile
+
+import pytest
+import sourmash_tst_utils as utils
+from sourmash_tst_utils import SourmashCommandFailed
 
 import sourmash
-from sourmash import SourmashSignature
-from sourmash.sourmash_args import load_one_signature
+from sourmash import SourmashSignature, sourmash_args
 from sourmash.index import (
-    LinearIndex,
-    ZipFileLinearIndex,
-    make_jaccard_search_query,
     CounterGather,
     LazyLinearIndex,
+    LinearIndex,
     MultiIndex,
     StandaloneManifestIndex,
+    ZipFileLinearIndex,
+    make_jaccard_search_query,
 )
-from sourmash.signature import load_one_signature_from_json, save_signatures_to_json
-from sourmash.sbt import SBT, GraphFactory
-from sourmash import sourmash_args
-from sourmash.search import JaccardSearch, SearchType
-from sourmash.picklist import SignaturePicklist, PickStyle
-from sourmash_tst_utils import SourmashCommandFailed
 from sourmash.manifest import CollectionManifest
-
-import sourmash_tst_utils as utils
+from sourmash.picklist import PickStyle, SignaturePicklist
+from sourmash.sbt import SBT, GraphFactory
+from sourmash.search import JaccardSearch, SearchType
+from sourmash.signature import load_one_signature_from_json, save_signatures_to_json
+from sourmash.sourmash_args import load_one_signature
 
 
 def test_simple_index(n_children):
@@ -467,7 +466,7 @@ def test_linear_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
+    mins = sorted(sig2.minhash.hashes.keys())
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -525,7 +524,7 @@ def test_linear_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
+    mins = sorted(sig2.minhash.hashes.keys())
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes
@@ -619,7 +618,7 @@ def test_linear_index_picklist_select():
     # select on picklist
     linear2 = linear.select(picklist=picklist)
     assert len(linear2) == 1
-    ss = list(linear2.signatures())[0]
+    ss = next(iter(linear2.signatures()))
     assert ss.minhash.ksize == 31
     assert ss.md5sum().startswith("f3a90d4e55")
 
@@ -647,10 +646,11 @@ def test_linear_index_picklist_select_exclude():
     for ss in list(linear2.signatures()):
         md5s.add(ss.md5sum())
         ksizes.add(ss.minhash.ksize)
-    assert md5s == set(
-        ["f372e47893edd349e5956f8b0d8dcbf7", "43f3b48e59443092850964d355a20ac0"]
-    )
-    assert ksizes == set([21, 51])
+    assert md5s == {
+        "f372e47893edd349e5956f8b0d8dcbf7",
+        "43f3b48e59443092850964d355a20ac0",
+    }
+    assert ksizes == {21, 51}
 
 
 def test_index_same_md5sum_fsstorage(runtmp):
@@ -1314,7 +1314,7 @@ def test_multi_index_load_from_directory_3_yield_all_true_subdir(runtmp):
 
     mi = MultiIndex.load_from_directory(c.location, force=True)
 
-    locations = set([row["internal_location"] for row in mi.manifest.rows])
+    locations = {row["internal_location"] for row in mi.manifest.rows}
     print(locations)
 
     sigs = list(mi.signatures())
@@ -1582,11 +1582,11 @@ def test_counter_gather_test_consume():
     # open-box testing of CounterGather.consume(...)
     # (see test_index_protocol.py for generic CounterGather tests.)
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
@@ -1610,8 +1610,8 @@ def test_counter_gather_test_consume():
     pprint.pprint(list(counter.signatures()))
     pprint.pprint(counter.locations)
 
-    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
-    assert list(sorted(counter.locations.values())) == ["loc a", "loc b", "loc c"]
+    assert set(counter.signatures()) == {match_ss_1, match_ss_2, match_ss_3}
+    assert sorted(counter.locations.values()) == ["loc a", "loc b", "loc c"]
     pprint.pprint(counter.counter.most_common())
     assert list(counter.counter.most_common()) == [
         ("26d4943627b33c446f37be1f5baf8d46", 10),
@@ -1628,8 +1628,8 @@ def test_counter_gather_test_consume():
     assert cur_query == query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
-    assert list(sorted(counter.locations.values())) == ["loc a", "loc b", "loc c"]
+    assert set(counter.signatures()) == {match_ss_1, match_ss_2, match_ss_3}
+    assert sorted(counter.locations.values()) == ["loc a", "loc b", "loc c"]
     pprint.pprint(counter.counter.most_common())
     assert list(counter.counter.most_common()) == [
         ("f51cedec90ea666e0ebc11aa274eca61", 5),
@@ -1645,8 +1645,8 @@ def test_counter_gather_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
-    assert list(sorted(counter.locations.values())) == ["loc a", "loc b", "loc c"]
+    assert set(counter.signatures()) == {match_ss_1, match_ss_2, match_ss_3}
+    assert sorted(counter.locations.values()) == ["loc a", "loc b", "loc c"]
 
     pprint.pprint(counter.counter.most_common())
     assert list(counter.counter.most_common()) == [
@@ -1662,8 +1662,8 @@ def test_counter_gather_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
-    assert list(sorted(counter.locations.values())) == ["loc a", "loc b", "loc c"]
+    assert set(counter.signatures()) == {match_ss_1, match_ss_2, match_ss_3}
+    assert sorted(counter.locations.values()) == ["loc a", "loc b", "loc c"]
     pprint.pprint(counter.counter.most_common())
     assert list(counter.counter.most_common()) == []
 
@@ -1674,8 +1674,8 @@ def test_counter_gather_test_consume():
     assert not results
 
     counter.consume(intersect_mh)
-    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
-    assert list(sorted(counter.locations.values())) == ["loc a", "loc b", "loc c"]
+    assert set(counter.signatures()) == {match_ss_1, match_ss_2, match_ss_3}
+    assert sorted(counter.locations.values()) == ["loc a", "loc b", "loc c"]
     assert list(counter.counter.most_common()) == []
 
 
@@ -1683,16 +1683,16 @@ def test_counter_gather_identical_md5sum():
     # open-box testing of CounterGather.consume(...)
     # check what happens with identical matches w/different names
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     # same as match_mh_1
     match_mh_2 = query_mh.copy_and_clear()
-    match_mh_2.add_many(range(0, 10))
+    match_mh_2.add_many(range(10))
     match_ss_2 = SourmashSignature(match_mh_2, name="match2")
 
     # identical md5sum

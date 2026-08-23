@@ -35,24 +35,23 @@ CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
 
 import os
+from abc import ABC, abstractmethod
+from collections import Counter, namedtuple
+
 import sourmash
-from abc import abstractmethod, ABC
-from collections import namedtuple, Counter
-
-from sourmash.search import (
-    make_jaccard_search_query,
-    make_containment_query,
-    calc_threshold_from_bp,
-)
-from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
-from sourmash.signature import load_signatures_from_json, save_signatures_to_json
-
+from sourmash.manifest import CollectionManifest
 from sourmash.minhash import (
-    flatten_and_downsample_scaled,
     flatten_and_downsample_num,
+    flatten_and_downsample_scaled,
     flatten_and_intersect_scaled,
 )
+from sourmash.search import (
+    calc_threshold_from_bp,
+    make_containment_query,
+    make_jaccard_search_query,
+)
+from sourmash.signature import load_signatures_from_json, save_signatures_to_json
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple("Result", "score, signature, location")
@@ -297,7 +296,6 @@ class Index(ABC):
 
     def consume(self, intersect_mh):
         "Mimic CounterGather.consume on top of Index. Yes, this is backwards."
-        pass
 
     def counter_gather(self, query, threshold_bp, **kwargs):
         """Returns an object that permits 'gather' on top of the
@@ -374,9 +372,8 @@ def select_signature(
             return False
 
     # 'scaled' and 'num' are incompatible
-    if scaled:
-        if ss.minhash.num:
-            return False
+    if scaled and ss.minhash.num:
+        return False
     if num:
         # note, here we check if 'num' is identical; this can be
         # changed later.
@@ -388,10 +385,7 @@ def select_signature(
         if not ss.minhash.track_abundance:
             return False
 
-    if picklist is not None and ss not in picklist:
-        return False
-
-    return True
+    return not (picklist is not None and ss not in picklist)
 
 
 class LinearIndex(Index):
@@ -474,7 +468,9 @@ class LazyLinearIndex(Index):
       MultiIndex (signatures in memory).
     """
 
-    def __init__(self, db, selection_dict={}):
+    def __init__(self, db, selection_dict=None):
+        if selection_dict is None:
+            selection_dict = {}
         self.db = db
         self.selection_dict = dict(selection_dict)
 
@@ -518,9 +514,8 @@ class LazyLinearIndex(Index):
 
         selection_dict = dict(self.selection_dict)
         for k, v in kwargs.items():
-            if k in selection_dict:
-                if selection_dict[k] != v:
-                    raise ValueError(f"cannot select on two different values for {k}")
+            if k in selection_dict and selection_dict[k] != v:
+                raise ValueError(f"cannot select on two different values for {k}")
             selection_dict[k] = v
 
         return LazyLinearIndex(self.db, selection_dict)
@@ -638,11 +633,7 @@ class ZipFileLinearIndex(Index):
         # 'Storage' does not provide a way to list all the files, so :shrug:.
         for filename in self.storage._filenames():
             # should we load this file? if it ends in .sig OR we are forcing:
-            if (
-                filename.endswith(".sig")
-                or filename.endswith(".sig.gz")
-                or self.traverse_yield_all
-            ):
+            if filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all:
                 sig_data = self.storage.load(filename)
                 for ss in load_signatures_from_json(sig_data):
                     yield ss, filename
@@ -672,11 +663,7 @@ class ZipFileLinearIndex(Index):
             # ad-hoc zipfiles that have no manifests.)
             for filename in storage._filenames():
                 # should we load this file? if it ends in .sig OR force:
-                if (
-                    filename.endswith(".sig")
-                    or filename.endswith(".sig.gz")
-                    or self.traverse_yield_all
-                ):
+                if filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all:
                     if selection_dict:
 
                         def select(x):
@@ -717,9 +704,8 @@ class ZipFileLinearIndex(Index):
                 # combine selects...
                 d = dict(self.selection_dict)
                 for k, v in kwargs.items():
-                    if k in d:
-                        if d[k] is not None and d[k] != v:
-                            raise ValueError(f"incompatible select on '{k}'")
+                    if k in d and d[k] is not None and d[k] != v:
+                        raise ValueError(f"incompatible select on '{k}'")
                     d[k] = v
                 kwargs = d
 
@@ -795,8 +781,7 @@ class CounterGather:
 
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
-        if scaled > self.scaled:
-            self.scaled = scaled
+        self.scaled = max(self.scaled, scaled)
         return self.scaled
 
     def __len__(self):
@@ -1089,7 +1074,7 @@ class MultiIndex(Index):
         including zip collections, etc; it uses 'load_file_as_index'
         underneath.
         """
-        from ..sourmash_args import load_pathlist_from_file, load_file_as_index
+        from ..sourmash_args import load_file_as_index, load_pathlist_from_file
 
         idx_list = []
         src_list = []
@@ -1237,11 +1222,8 @@ def _check_select_parameters(**kw):
         raise ValueError(f"unknown 'select' parameters: {params}")
 
     ksize = kw.get("ksize")
-    if ksize is not None:
-        if not isinstance(ksize, int):
-            raise ValueError(
-                f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
-            )
+    if ksize is not None and not isinstance(ksize, int):
+        raise ValueError(f"ksize value '{ksize}' must be an integer, is: {type(ksize)}")
 
     moltype = kw.get("moltype")
     if moltype is not None:
@@ -1249,25 +1231,21 @@ def _check_select_parameters(**kw):
             raise ValueError(f"unknown moltype: {moltype}")
 
     scaled = kw.get("scaled")
-    if scaled is not None:
-        if not isinstance(scaled, int):
-            raise ValueError(
-                f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
-            )
+    if scaled is not None and not isinstance(scaled, int):
+        raise ValueError(
+            f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
+        )
 
     containment = kw.get("containment")
-    if containment is not None:
-        if not isinstance(containment, bool):
-            raise ValueError(
-                f"containment value '{containment}' must be a bool, is: {type(containment)}"
-            )
+    if containment is not None and not isinstance(containment, bool):
+        raise ValueError(
+            f"containment value '{containment}' must be a bool, is: {type(containment)}"
+        )
 
     abund = kw.get("abund")
-    if abund is not None:
-        if not isinstance(abund, bool):
-            raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
+    if abund is not None and not isinstance(abund, bool):
+        raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
 
     num = kw.get("num")
-    if num is not None:
-        if not isinstance(num, int):
-            raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")
+    if num is not None and not isinstance(num, int):
+        raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")

@@ -3,17 +3,17 @@
 Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
 
-import sys
 import csv
 import os
+import sys
 from collections import defaultdict
 
 from sourmash import sourmash_args
-from sourmash.sourmash_args import load_file_as_signatures
-from sourmash.logging import notify, error, debug, set_quiet
+from sourmash.logging import debug, error, notify, set_quiet
+from sourmash.sourmash_args import DEFAULT_LOAD_K, load_file_as_signatures
+
 from . import lca_utils
 from .lca_db import LCA_Database
-from sourmash.sourmash_args import DEFAULT_LOAD_K
 
 
 def load_taxonomy_assignments(
@@ -112,17 +112,16 @@ def load_taxonomy_assignments(
 
     # this is to guard against a bug that happened once and I can't find
     # any more, when building a large GTDB-based database :) --CTB
-    if len(assignments) * 0.2 > n_species and len(assignments) > 50:
-        if not force:
-            error("")
-            error("ERROR: fewer than 20% of lineages have species-level resolution!?")
-            error(
-                "({} species assignments found, of {} assignments total)",
-                n_species,
-                len(assignments),
-            )
-            error("** If this is intentional, re-run the command with -f.")
-            sys.exit(-1)
+    if len(assignments) * 0.2 > n_species and len(assignments) > 50 and not force:
+        error("")
+        error("ERROR: fewer than 20% of lineages have species-level resolution!?")
+        error(
+            "({} species assignments found, of {} assignments total)",
+            n_species,
+            len(assignments),
+        )
+        error("** If this is intentional, re-run the command with -f.")
+        sys.exit(-1)
 
     return assignments, num_rows
 
@@ -183,9 +182,7 @@ def index(args):
 
     db_outfile = args.lca_db_out
     if args.database_format == "json":
-        if not (
-            db_outfile.endswith(".lca.json") or db_outfile.endswith(".lca.json.gz")
-        ):  # logic -> db.save
+        if not (db_outfile.endswith((".lca.json", ".lca.json.gz"))):  # logic -> db.save
             db_outfile += ".lca.json"
     else:
         assert args.database_format == "sql"

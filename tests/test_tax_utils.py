@@ -2,45 +2,45 @@
 Tests for functions in taxonomy submodule.
 """
 
-import pytest
-from pytest import approx
+import gzip
 import os
 from os.path import basename
-import gzip
 from pathlib import Path
 
+import pytest
 import sourmash_tst_utils as utils
+from pytest import approx
 
 from sourmash.tax.tax_utils import (
-    ascending_taxlist,
-    get_ident,
-    load_gather_results,
-    collect_gather_csvs,
-    check_and_load_gather_csvs,
-    LineagePair,
-    QueryInfo,
-    GatherRow,
-    TaxResult,
-    QueryTaxResult,
-    SummarizedGatherResult,
-    ClassificationResult,
+    ICTV_RANKS,
+    NCBI_RANKS,
     AnnotateTaxResult,
     BaseLineageInfo,
-    RankLineageInfo,
-    LINLineageInfo,
+    ClassificationResult,
+    GatherRow,
     ICTVRankLineageInfo,
-    aggregate_by_lineage_at_rank,
-    format_for_krona,
-    write_krona,
-    write_lineage_sample_frac,
-    read_lingroups,
-    LineageTree,
     LineageDB,
     LineageDB_Sqlite,
+    LineagePair,
+    LineageTree,
+    LINLineageInfo,
     MultiLineageDB,
+    QueryInfo,
+    QueryTaxResult,
+    RankLineageInfo,
+    SummarizedGatherResult,
+    TaxResult,
+    aggregate_by_lineage_at_rank,
+    ascending_taxlist,
+    check_and_load_gather_csvs,
+    collect_gather_csvs,
     filter_row,
-    NCBI_RANKS,
-    ICTV_RANKS,
+    format_for_krona,
+    get_ident,
+    load_gather_results,
+    read_lingroups,
+    write_krona,
+    write_lineage_sample_frac,
 )
 
 
@@ -77,9 +77,11 @@ def make_mini_taxonomy_with_taxids(tax_info, LIN=False):
     return taxD
 
 
-def make_GatherRow(gather_dict=None, exclude_cols=[]):
+def make_GatherRow(gather_dict=None, exclude_cols=None):
     """Load artificial gather row (dict) into GatherRow class"""
     # default contains just the essential cols
+    if exclude_cols is None:
+        exclude_cols = []
     gatherD = {
         "query_name": "q1",
         "query_md5": "md5",
@@ -1056,8 +1058,7 @@ def test_check_and_load_gather_lineage_csvs_match_name(runtmp):
         first_line = f_in.readline().replace("name", "match_name")
         with open(out_lins, "w") as f_out:
             f_out.write(first_line)
-            for line in f_in:
-                f_out.write(line)
+            f_out.writelines(f_in)
 
     lins = LineageDB.load_from_gather_with_lineages(out_lins)
     assert len(lins) == 4
@@ -1094,7 +1095,9 @@ def test_load_gather_results():
         [taxonomy_csv], keep_full_identifiers=False, keep_identifier_versions=False
     )
     gather_csv = utils.get_test_data("tax/test1.gather.csv")
-    gather_results, header = load_gather_results(gather_csv, tax_assignments=tax_assign)
+    gather_results, _header = load_gather_results(
+        gather_csv, tax_assignments=tax_assign
+    )
     assert len(gather_results) == 1
     for query_name, res in gather_results.items():
         assert query_name == "test1"
@@ -1114,7 +1117,7 @@ def test_load_gather_results_gzipped(runtmp):
     with open(gather_csv, "rb") as f_in, gzip.open(gz_gather, "wb") as f_out:
         f_out.writelines(f_in)
     # gather_results, header, seen_queries = load_gather_results(gz_gather)
-    gather_results, header = load_gather_results(gz_gather, tax_assignments=tax_assign)
+    gather_results, _header = load_gather_results(gz_gather, tax_assignments=tax_assign)
     assert len(gather_results) == 1
     for query_name, res in gather_results.items():
         assert query_name == "test1"
@@ -1140,7 +1143,7 @@ def test_load_gather_results_bad_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = load_gather_results(
+        _gather_results, _header = load_gather_results(
             bad_g_csv, tax_assignments=tax_assign
         )
     assert (
@@ -1161,7 +1164,7 @@ def test_load_gather_results_empty(runtmp):
         fp.write("")
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = load_gather_results(
+        _gather_results, _header = load_gather_results(
             empty_csv, tax_assignments=tax_assign
         )
     assert f"Cannot read gather results from '{empty_csv}'. Is file empty?" in str(
@@ -1199,7 +1202,7 @@ def test_load_taxonomy_csv_LIN():
     # assert list(tax_assign.keys()) == ["GCF_000010525.1", "GCF_000007365.1", "GCF_000007725.1", "GCF_000009605.1", "GCF_000021065.1", "GCF_000021085.1"]
     assert len(tax_assign) == 6  # should have read 6 rows
     print(tax_assign.available_ranks)
-    assert tax_assign.available_ranks == {str(x) for x in range(0, 20)}
+    assert tax_assign.available_ranks == {str(x) for x in range(20)}
 
 
 def test_load_taxonomy_csv_LIN_fail():
@@ -1688,9 +1691,8 @@ def test_tax_multi_save_files(runtmp, keep_identifiers, keep_versions):
     out2_csv = runtmp.output("out2.csv")
 
     # can't save to fp with sql
-    with open(out_csv, "w") as fp:
-        with pytest.raises(ValueError):
-            db.save(fp, "sql")
+    with open(out_csv, "w") as fp, pytest.raises(ValueError):
+        db.save(fp, "sql")
 
     # these should all work...
     with open(out_csv, "w") as fp:
@@ -4295,7 +4297,7 @@ def test_make_kreport_results():
     q_res = make_QueryTaxResults(
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
-    header, krepD = q_res.make_kreport_results()
+    _header, krepD = q_res.make_kreport_results()
     print(krepD)
     assert krepD == [
         {
@@ -4378,7 +4380,7 @@ def test_make_kreport_results_with_taxids():
     q_res = make_QueryTaxResults(
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
-    header, krepD = q_res.make_kreport_results()
+    _header, krepD = q_res.make_kreport_results()
     print(krepD)
     assert krepD == [
         {
@@ -4488,7 +4490,7 @@ def test_make_cami_results_with_taxids():
     q_res = make_QueryTaxResults(
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
-    header, camires = q_res.make_cami_bioboxes()
+    _header, camires = q_res.make_cami_bioboxes()
     print(camires)
     assert camires == [
         ["1", "superkingdom", "1", "a", "40.00"],
@@ -4514,7 +4516,7 @@ def test_make_cami_results_with_taxids_missing_ranks():
     q_res = make_QueryTaxResults(
         gather_info=gather_results, taxD=taxD, single_query=True, summarize=True
     )
-    header, camires = q_res.make_cami_bioboxes()
+    _header, camires = q_res.make_cami_bioboxes()
     print(camires)
     assert camires == [
         ["1", "superkingdom", "1", "a", "40.00"],
@@ -4867,7 +4869,7 @@ def test_find_lca_3():
     lin2 = RankLineageInfo(lineage_str="a;b")
 
     tree = LineageTree([lin1, lin2])
-    lca, reason = tree.find_lca()
+    lca, _reason = tree.find_lca()
     assert lca == lin1.filled_lineage  # find most specific leaf node
     print(lca)
 

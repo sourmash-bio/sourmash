@@ -3,19 +3,18 @@ Test the plugin framework in sourmash.plugins, which uses importlib.metadata
 entrypoints.
 """
 
-import sys
-import pytest
 import collections
+import sys
+
+import pytest
+import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash.logging import set_quiet
-
-import sourmash_tst_utils as utils
 from sourmash import plugins
-from sourmash.signature import load_one_signature_from_json
 from sourmash.index import LinearIndex
+from sourmash.logging import set_quiet
 from sourmash.save_load import Base_SaveSignaturesToLocation, SaveSignaturesToLocation
-
+from sourmash.signature import load_one_signature_from_json
 
 _Dist = collections.namedtuple("_Dist", ["version"])
 
@@ -116,16 +115,12 @@ class Test_EntryPoint_LoadFrom_Priority:
         print("setting flag 2")
         self.was_called_flag_2 = True
 
-        return None
-
     set_called_flag_2.priority = 2
 
     def set_called_flag_3(self, location, *args, **kwargs):
         # lower priority 10, should not be called
         print("setting flag 3")
         self.was_called_flag_3 = True
-
-        return None
 
     set_called_flag_3.priority = 10
 
