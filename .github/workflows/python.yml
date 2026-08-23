@@ -72,9 +72,9 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .tox/
-          key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/pyproject.toml') }}
+          key: ${{ runner.os }}-tox-v5-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-tox-v4-
+            ${{ runner.os }}-tox-v5-
 
       - name: Test with tox
         run: tox
