@@ -115,14 +115,12 @@ class Test_EntryPoint_LoadFrom_Priority:
         print("setting flag 2")
         self.was_called_flag_2 = True
 
-
     set_called_flag_2.priority = 2
 
     def set_called_flag_3(self, location, *args, **kwargs):
         # lower priority 10, should not be called
         print("setting flag 3")
         self.was_called_flag_3 = True
-
 
     set_called_flag_3.priority = 10
 

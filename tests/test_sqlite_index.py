@@ -253,7 +253,10 @@ def test_sqlite_index_picklist_select_exclude():
     for ss in list(sqlidx2.signatures()):
         md5s.add(ss.md5sum())
         ksizes.add(ss.minhash.ksize)
-    assert md5s == {"f372e47893edd349e5956f8b0d8dcbf7", "43f3b48e59443092850964d355a20ac0"}
+    assert md5s == {
+        "f372e47893edd349e5956f8b0d8dcbf7",
+        "43f3b48e59443092850964d355a20ac0",
+    }
     assert ksizes == {21, 51}
 
 

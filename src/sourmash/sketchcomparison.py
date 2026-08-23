@@ -122,7 +122,9 @@ class FracMinHashComparison(BaseMinHashComparison):
     def size_may_be_inaccurate(self):
         # if either size estimation may be inaccurate
         # NOTE: do we want to do this at original scaled instead?
-        return bool(not self.mh1_cmp.size_is_accurate() or not self.mh2_cmp.size_is_accurate())
+        return bool(
+            not self.mh1_cmp.size_is_accurate() or not self.mh2_cmp.size_is_accurate()
+        )
 
     @property
     def total_unique_intersect_hashes(self):

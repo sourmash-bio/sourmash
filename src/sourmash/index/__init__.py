@@ -633,9 +633,7 @@ class ZipFileLinearIndex(Index):
         # 'Storage' does not provide a way to list all the files, so :shrug:.
         for filename in self.storage._filenames():
             # should we load this file? if it ends in .sig OR we are forcing:
-            if (
-                filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all
-            ):
+            if filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all:
                 sig_data = self.storage.load(filename)
                 for ss in load_signatures_from_json(sig_data):
                     yield ss, filename
@@ -665,9 +663,7 @@ class ZipFileLinearIndex(Index):
             # ad-hoc zipfiles that have no manifests.)
             for filename in storage._filenames():
                 # should we load this file? if it ends in .sig OR force:
-                if (
-                    filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all
-                ):
+                if filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all:
                     if selection_dict:
 
                         def select(x):
@@ -1227,9 +1223,7 @@ def _check_select_parameters(**kw):
 
     ksize = kw.get("ksize")
     if ksize is not None and not isinstance(ksize, int):
-        raise ValueError(
-            f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
-        )
+        raise ValueError(f"ksize value '{ksize}' must be an integer, is: {type(ksize)}")
 
     moltype = kw.get("moltype")
     if moltype is not None:
