@@ -729,9 +729,12 @@ def test_fileinput_csv_3_load_manifest_zipfile_obj():
     # FileInputCSV.
     testfile = utils.get_test_data("prot/all.zip")
 
-    with zipfile.ZipFile(testfile, "r") as zf, sourmash_args.FileInputCSV(
-        testfile, default_csv_name="SOURMASH-MANIFEST.csv", zipfile_obj=zf
-    ) as r:
+    with (
+        zipfile.ZipFile(testfile, "r") as zf,
+        sourmash_args.FileInputCSV(
+            testfile, default_csv_name="SOURMASH-MANIFEST.csv", zipfile_obj=zf
+        ) as r,
+    ):
         rows = list(r)
         assert len(rows) == 8
 

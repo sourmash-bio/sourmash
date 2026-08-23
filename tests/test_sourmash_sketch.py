@@ -500,7 +500,13 @@ def test_manifest_row_to_compute_parameters_1():
 
 def test_manifest_row_to_compute_parameters_2():
     # test ComputeParameters.from_manifest_row with moltype 'protein'
-    row = {"moltype": "protein", "ksize": 10, "num": 0, "scaled": 200, "with_abundance": 1}
+    row = {
+        "moltype": "protein",
+        "ksize": 10,
+        "num": 0,
+        "scaled": 200,
+        "with_abundance": 1,
+    }
     p = ComputeParameters.from_manifest_row(row)
     assert not p.dna
     assert p.protein
@@ -516,7 +522,13 @@ def test_manifest_row_to_compute_parameters_2():
 
 def test_manifest_row_to_compute_parameters_3():
     # test ComputeParameters.from_manifest_row with moltype 'dayhoff'
-    row = {"moltype": "dayhoff", "ksize": 12, "num": 0, "scaled": 200, "with_abundance": 0}
+    row = {
+        "moltype": "dayhoff",
+        "ksize": 12,
+        "num": 0,
+        "scaled": 200,
+        "with_abundance": 0,
+    }
     p = ComputeParameters.from_manifest_row(row)
     assert not p.dna
     assert not p.protein
@@ -1456,7 +1468,9 @@ def test_do_sourmash_singleton_multiple_files_output(runtmp):
 
     idents = [ss.name.split()[0] for ss in x]
     print(idents)
-    assert {"NP_414543.1", "NP_414544.1", "WP_006079348.1", "WP_006079351.1"} == set(idents)
+    assert {"NP_414543.1", "NP_414544.1", "WP_006079348.1", "WP_006079351.1"} == set(
+        idents
+    )
 
 
 def test_do_sourmash_singleton_multiple_files_output_zip(runtmp):
@@ -1493,7 +1507,9 @@ def test_do_sourmash_singleton_multiple_files_output_zip(runtmp):
 
     idents = [ss.name.split()[0] for ss in x]
     print(idents)
-    assert {"NP_414543.1", "NP_414544.1", "WP_006079348.1", "WP_006079351.1"} == set(idents)
+    assert {"NP_414543.1", "NP_414544.1", "WP_006079348.1", "WP_006079351.1"} == set(
+        idents
+    )
 
 
 def test_protein_with_stop_codons(runtmp):

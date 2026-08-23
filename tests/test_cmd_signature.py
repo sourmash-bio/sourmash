@@ -4498,7 +4498,9 @@ def test_sig_kmers_1_dna_more_in_query(runtmp):
     # make a new sequence for query, with more k-mers
     query_seqfile = runtmp.output("query.fa")
     with open(query_seqfile, "w") as fp, screed.open(seqfile) as screed_iter:
-        fp.writelines(f">{record.name}\n{record.sequence}AGTTACGATC\n" for record in screed_iter)
+        fp.writelines(
+            f">{record.name}\n{record.sequence}AGTTACGATC\n" for record in screed_iter
+        )
 
     runtmp.sourmash("sig", "kmers", "--sig", "short.fa.sig", "--seq", query_seqfile)
 
