@@ -1,19 +1,19 @@
 "Tests for search.py code."
 
-import pytest
 import numpy as np
+import pytest
 import sourmash_tst_utils as utils
 
-from sourmash import search, SourmashSignature, MinHash
-from sourmash.sourmash_args import load_one_signature
-from sourmash.search import (
-    make_jaccard_search_query,
-    make_containment_query,
-    SearchResult,
-    PrefetchResult,
-    GatherResult,
-)
+from sourmash import MinHash, SourmashSignature, search
 from sourmash.index import LinearIndex
+from sourmash.search import (
+    GatherResult,
+    PrefetchResult,
+    SearchResult,
+    make_containment_query,
+    make_jaccard_search_query,
+)
+from sourmash.sourmash_args import load_one_signature
 
 
 def test_make_jaccard_search_query():
