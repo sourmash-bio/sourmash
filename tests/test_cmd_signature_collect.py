@@ -2,16 +2,16 @@
 Tests for 'sourmash sig collect'
 """
 
-import pytest
-import shutil
-import os.path
 import gzip
+import os.path
+import shutil
+
+import pytest
+import sourmash_tst_utils as utils
+from sourmash_tst_utils import SourmashCommandFailed
 
 import sourmash
 from sourmash.manifest import BaseCollectionManifest
-
-import sourmash_tst_utils as utils
-from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_sig_collect_0_nothing(runtmp, manifest_db_format, abspath_relpath_v4):
@@ -315,7 +315,7 @@ def test_sig_collect_3_multiple(runtmp, manifest_db_format):
     assert "fbca5e5211e4d58427997fd5c8343e9a" in md5_list
     assert "1cbd888bf910f83ad8f1715509183223" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     assert protzip in locations
     assert hpzip in locations
     assert dayzip in locations
@@ -359,7 +359,7 @@ def test_sig_collect_3_multiple_use_fromfile(runtmp, manifest_db_format):
     assert "fbca5e5211e4d58427997fd5c8343e9a" in md5_list
     assert "1cbd888bf910f83ad8f1715509183223" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     assert protzip in locations
     assert hpzip in locations
     assert dayzip in locations
@@ -385,7 +385,7 @@ def test_sig_collect_4_multiple_from_sig(runtmp, manifest_db_format):
     assert "09a08691ce52952152f0e866a59f6261" in md5_list
     assert "38729c6374925585db28916b82a6f513" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     assert sig43 in locations
     assert sig63 in locations
     assert len(locations) == 2, locations
@@ -424,7 +424,7 @@ def test_sig_collect_4_multiple_from_sig_abspath(runtmp, manifest_db_format):
     assert "09a08691ce52952152f0e866a59f6261" in md5_list
     assert "38729c6374925585db28916b82a6f513" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     print(locations)
     assert len(locations) == 2, locations
 
@@ -462,7 +462,7 @@ def test_sig_collect_4_multiple_no_abspath(runtmp, manifest_db_format):
     assert "09a08691ce52952152f0e866a59f6261" in md5_list
     assert "38729c6374925585db28916b82a6f513" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     print(locations)
     assert len(locations) == 2, locations
     assert "47.fa.sig" in locations
@@ -507,7 +507,7 @@ def test_sig_collect_4_multiple_subdir_subdir_relpath(runtmp, manifest_db_format
     assert "09a08691ce52952152f0e866a59f6261" in md5_list
     assert "38729c6374925585db28916b82a6f513" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     print(locations)
     assert len(locations) == 2, locations
     assert "../sigs_dir/47.fa.sig" in locations
@@ -554,7 +554,7 @@ def test_sig_collect_4_multiple_subdir_subdir_default_is_relpath(
     assert "09a08691ce52952152f0e866a59f6261" in md5_list
     assert "38729c6374925585db28916b82a6f513" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     print(locations)
     assert len(locations) == 2, locations
     assert "../sigs_dir/47.fa.sig" in locations
@@ -595,7 +595,7 @@ def test_sig_collect_4_multiple_cwd_subdir_no_abspath(runtmp, manifest_db_format
     assert "09a08691ce52952152f0e866a59f6261" in md5_list
     assert "38729c6374925585db28916b82a6f513" in md5_list
 
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     print(locations)
     assert len(locations) == 2, locations
     assert "sigs_dir/47.fa.sig" in locations
@@ -640,7 +640,7 @@ def test_sig_collect_5_no_manifest_sbt_succeed(
     manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
 
     assert len(manifest) == 7
-    locations = set([row["internal_location"] for row in manifest.rows])
+    locations = {row["internal_location"] for row in manifest.rows}
     assert len(locations) == 1, locations
     assert sbt_zip in locations
 
