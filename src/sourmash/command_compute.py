@@ -4,25 +4,24 @@ Functions implementing the 'compute' command and related functions.
 
 import os
 import os.path
-import sys
 import random
+import sys
+
 import screed
 
 from . import sourmash_args
-from .signature import SourmashSignature
-from .logging import notify, error, set_quiet
-from .utils import RustObject
 from ._lowlevel import ffi, lib
-
-
 from .command_sketch import (
+    DEFAULT_MMHASH_SEED,
+    ComputeParameters,
     _compute_individual,
     _compute_merged,
-    ComputeParameters,
     add_seq,
     set_sig_name,
-    DEFAULT_MMHASH_SEED,
 )
+from .logging import error, notify, set_quiet
+from .signature import SourmashSignature
+from .utils import RustObject
 
 
 def compute(args):

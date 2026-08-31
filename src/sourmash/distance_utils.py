@@ -5,11 +5,12 @@ Reference: https://doi.org/10.1101/2022.01.11.475870
 """
 
 from dataclasses import dataclass, field
-from scipy.optimize import brentq
-from scipy.stats import norm as scipy_norm
-from scipy.stats import binom
+from math import exp, log
+
 import numpy as np
-from math import log, exp
+from scipy.optimize import brentq
+from scipy.stats import binom
+from scipy.stats import norm as scipy_norm
 
 from .logging import notify
 

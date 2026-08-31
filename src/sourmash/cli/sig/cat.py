@@ -16,10 +16,10 @@ in the file `all.sig`.
 """
 
 from sourmash.cli.utils import (
-    add_moltype_args,
     add_ksize_arg,
-    add_picklist_args,
+    add_moltype_args,
     add_pattern_args,
+    add_picklist_args,
 )
 
 

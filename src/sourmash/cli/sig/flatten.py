@@ -18,7 +18,7 @@ The `flatten` command accepts the same selectors as `extract`.
 
 """
 
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg, add_picklist_args
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_picklist_args
 
 
 def subparser(subparsers):

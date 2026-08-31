@@ -34,27 +34,25 @@
 # pylint: disable=missing-docstring,protected-access
 
 import itertools
-import pickle
 import math
+import pickle
+
 import numpy as np
-
 import pytest
-
 import screed
+import sourmash_tst_utils as utils
 
 import sourmash
+from sourmash import signature
 from sourmash.minhash import (
-    MinHash,
     FrozenMinHash,
-    hash_murmur,
-    _get_scaled_for_max_hash,
+    MinHash,
     _get_max_hash_for_scaled,
+    _get_scaled_for_max_hash,
+    hash_murmur,
     translate_codon,
 )
-from sourmash import signature
 from sourmash.sourmash_args import load_one_signature
-
-import sourmash_tst_utils as utils
 
 # add:
 # * get default params from Python
@@ -113,7 +111,7 @@ def test_basic_dna(track_abundance):
     print(a, b)
     assert list(a) == list(b)
     assert len(b) == 1
-    assert list(a)[0] == list(b)[0] == 12415348535738636339
+    assert next(iter(a)) == next(iter(b)) == 12415348535738636339
 
 
 def test_div_zero(track_abundance):
@@ -397,7 +395,7 @@ def test_dayhoff_2(track_abundance):
     # first, check protein -> dayhoff hashes via minhash
     mh.add_protein("CADHIFC")
     assert len(mh) == 1
-    hashval = list(mh.hashes)[0]
+    hashval = next(iter(mh.hashes))
     assert hashval == hash_murmur("abcdefa")
 
     # also check seq_to_hashes
@@ -408,7 +406,7 @@ def test_dayhoff_2(track_abundance):
     mh = mh.copy_and_clear()
     mh.add_protein("CADHIF*")
     assert len(mh) == 1
-    hashval = list(mh.hashes)[0]
+    hashval = next(iter(mh.hashes))
     assert hashval == hash_murmur("abcdef*")
 
     # again, check seq_to_hashes
@@ -439,7 +437,7 @@ def test_hp_2(track_abundance):
 
     mh.add_protein("ANA")
     assert len(mh) == 1
-    hashval = list(mh.hashes)[0]
+    hashval = next(iter(mh.hashes))
     assert hashval == hash_murmur("hph")
 
     # also check seq_to_hashes
@@ -449,7 +447,7 @@ def test_hp_2(track_abundance):
     mh = mh.copy_and_clear()
     mh.add_protein("AN*")
     assert len(mh) == 1
-    hashval = list(mh.hashes)[0]
+    hashval = next(iter(mh.hashes))
     assert hashval == hash_murmur("hp*")
 
     # also check seq_to_hashes
@@ -471,9 +469,9 @@ def test_size_limit(track_abundance):
     mh.add_hash(10)
     mh.add_hash(20)
     mh.add_hash(30)
-    assert list(sorted(mh.hashes)) == [10, 20, 30]
+    assert sorted(mh.hashes) == [10, 20, 30]
     mh.add_hash(5)  # -> should push 30 off end
-    assert list(sorted(mh.hashes)) == [5, 10, 20]
+    assert sorted(mh.hashes) == [5, 10, 20]
 
 
 def test_scaled(track_abundance):
@@ -487,11 +485,11 @@ def test_scaled(track_abundance):
     mh.add_hash(20)
     mh.add_hash(30)
 
-    assert list(sorted(mh.hashes)) == [10, 20, 30]
+    assert sorted(mh.hashes) == [10, 20, 30]
     mh.add_hash(2**62)
-    assert list(sorted(mh.hashes)) == [10, 20, 30]
+    assert sorted(mh.hashes) == [10, 20, 30]
     mh.add_hash(2**63)
-    assert list(sorted(mh.hashes)) == [10, 20, 30]
+    assert sorted(mh.hashes) == [10, 20, 30]
 
 
 def test_no_scaled(track_abundance):
@@ -837,7 +835,7 @@ def test_mh_len_2(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    assert list(sorted(a.hashes)) == list(range(0, 40, 2))
+    assert sorted(a.hashes) == list(range(0, 40, 2))
 
 
 def test_mh_unsigned_long_long(track_abundance):
@@ -963,7 +961,7 @@ def test_mh_merge(track_abundance):
     d.merge(a)
 
     assert len(c) == len(d)
-    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
+    assert sorted(c.hashes.items()) == sorted(d.hashes.items())
 
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
@@ -986,7 +984,7 @@ def test_mh_merge_empty_num(track_abundance):
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
+    assert sorted(c.hashes.items()) == sorted(d.hashes.items())
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
@@ -1008,7 +1006,7 @@ def test_mh_merge_empty_scaled(track_abundance):
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
+    assert sorted(c.hashes.items()) == sorted(d.hashes.items())
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
@@ -1344,7 +1342,7 @@ def test_abundance_count_common():
     assert a.count_common(b) == 1
     assert a.count_common(b) == b.count_common(a)
 
-    assert list(sorted(b.hashes)) == [2110480117637990133, 10798773792509008305]
+    assert sorted(b.hashes) == [2110480117637990133, 10798773792509008305]
 
 
 def test_abundance_similarity():
@@ -1405,7 +1403,7 @@ def test_set_abundance_clear():
     a.set_abundances({1: 3, 2: 4}, clear=True)
     b.set_abundances({1: 3, 2: 4}, clear=False)
 
-    assert list(sorted(a.hashes)) == list(sorted(b.hashes))
+    assert sorted(a.hashes) == sorted(b.hashes)
 
 
 def test_set_abundance_clear_2():
@@ -2017,13 +2015,13 @@ def test_downsample_num(track_abundance):
     assert mh.num == 10
     assert len(mh) == 10
 
-    assert list(sorted(mh.hashes)) == list(range(10))
+    assert sorted(mh.hashes) == list(range(10))
 
     mh2 = mh.downsample(num=5)
     assert mh2.num == 5
     assert len(mh2) == 5
 
-    assert list(sorted(mh2.hashes)) == list(range(5))
+    assert sorted(mh2.hashes) == list(range(5))
 
 
 def test_downsample_scaled(track_abundance):
@@ -2041,13 +2039,13 @@ def test_downsample_scaled(track_abundance):
     mh.add_many(mins)
 
     assert len(mh) == 6
-    assert list(sorted(mh.hashes)) == list(mins)
+    assert sorted(mh.hashes) == list(mins)
 
     mh2 = mh.downsample(scaled=2)
     print(mh._max_hash, mh2._max_hash)
 
     assert len(mh2) == 3
-    assert list(sorted(mh2.hashes)) == list(mins[:3])
+    assert sorted(mh2.hashes) == list(mins[:3])
 
 
 def test_is_molecule_type_1(track_abundance):
@@ -2548,7 +2546,7 @@ def test_dna_kmers():
     assert set(hashes) == set(mh.hashes)
 
     # k-mer by k-mer?
-    for i in range(0, len(seq) - 31 + 1):
+    for i in range(len(seq) - 31 + 1):
         # calculate each k-mer
         kmer = seq[i : i + 31]
 
@@ -2563,7 +2561,7 @@ def test_dna_kmers():
         hashval = hashvals[0]
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
         assert hashval == hashes[i]
 
 
@@ -2580,7 +2578,7 @@ def test_dna_kmers_2():
         assert len(single_mh) == 1
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
 
 
 def test_dna_kmers_3_bad_dna():
@@ -2614,7 +2612,7 @@ def test_dna_kmers_4_bad_dna():
         # 'if' statement was not triggered (but should have been :)
         single_mh.add_sequence(kmer)
         assert len(single_mh) == 1
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
 
     assert found_bad_kmer, "there is one bad k-mer in here"
 
@@ -2634,7 +2632,7 @@ def test_protein_kmers():
     assert set(hashes) == set(mh.hashes)
 
     # k-mer by k-mer?
-    for i in range(0, len(seq) - 7 + 1):
+    for i in range(len(seq) - 7 + 1):
         # calculate each k-mer
         kmer = seq[i : i + 7]
 
@@ -2649,7 +2647,7 @@ def test_protein_kmers():
         hashval = hashvals[0]
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
         assert hashval == hashes[i]
 
 
@@ -2666,7 +2664,7 @@ def test_protein_kmers_2():
         assert len(single_mh) == 1
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
 
 
 def test_dayhoff_kmers():
@@ -2684,7 +2682,7 @@ def test_dayhoff_kmers():
     assert set(hashes) == set(mh.hashes)
 
     # k-mer by k-mer?
-    for i in range(0, len(seq) - 7 + 1):
+    for i in range(len(seq) - 7 + 1):
         # calculate each k-mer
         kmer = seq[i : i + 7]
 
@@ -2699,7 +2697,7 @@ def test_dayhoff_kmers():
         hashval = hashvals[0]
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
         assert hashval == hashes[i]
 
 
@@ -2716,7 +2714,7 @@ def test_dayhoff_kmers_2():
         assert len(single_mh) == 1
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
 
 
 def test_hp_kmers():
@@ -2734,7 +2732,7 @@ def test_hp_kmers():
     assert set(hashes) == set(mh.hashes)
 
     # k-mer by k-mer?
-    for i in range(0, len(seq) - 7 + 1):
+    for i in range(len(seq) - 7 + 1):
         # calculate each k-mer
         kmer = seq[i : i + 7]
 
@@ -2749,7 +2747,7 @@ def test_hp_kmers():
         hashval = hashvals[0]
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
         assert hashval == hashes[i]
 
 
@@ -2766,7 +2764,7 @@ def test_hp_kmers_2():
         assert len(single_mh) == 1
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == next(iter(single_mh.hashes))
 
 
 def test_translate_protein_hashes():
