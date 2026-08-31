@@ -1,7 +1,7 @@
 import weakref
 
 from ._lowlevel import ffi, lib
-from .exceptions import exceptions_by_code, SourmashError
+from .exceptions import SourmashError, exceptions_by_code
 
 attached_refs = weakref.WeakKeyDictionary()
 

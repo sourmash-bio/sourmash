@@ -2,26 +2,25 @@
 Utility functions for lowest-common-ancestor analysis tools.
 """
 
+from collections import Counter, defaultdict, namedtuple
 from os.path import exists
-from collections import namedtuple, defaultdict, Counter
 
-from .lca_db import LCA_Database, load_single_database, load_databases
-
+from .lca_db import LCA_Database, load_databases, load_single_database
 
 __all__ = [
-    "taxlist",
-    "zip_lineage",
-    "build_tree",
-    "find_lca",
-    "load_single_database",
-    "load_databases",
-    "gather_assignments",
-    "count_lca_for_assignments",
     "LineagePair",
+    "build_tree",
+    "count_lca_for_assignments",
     "display_lineage",
+    "find_lca",
+    "gather_assignments",
+    "is_lineage_match",
+    "load_databases",
+    "load_single_database",
     "make_lineage",
     "pop_to_rank",
-    "is_lineage_match",
+    "taxlist",
+    "zip_lineage",
 ]
 
 try:  # py2/py3 compat
@@ -29,7 +28,7 @@ try:  # py2/py3 compat
 except ImportError:
     from itertools import izip_longest as zip_longest
 
-from sourmash.logging import notify, error, debug
+from sourmash.logging import debug, error, notify
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple("LineagePair", ["rank", "name"])
@@ -131,7 +130,7 @@ def filter_null(x):
     )
 
 
-null_names = set(["[Blank]", "na", "null"])
+null_names = {"[Blank]", "na", "null"}
 
 
 def build_tree(assignments, initial=None):
@@ -215,7 +214,7 @@ def count_lca_for_assignments(assignments, hashval_counts=None):
 
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
-        lca, reason = find_lca(tree)
+        lca, _reason = find_lca(tree)
 
         if hashval_counts:
             counts[lca] += hashval_counts[hashval]
@@ -231,9 +230,8 @@ def is_lineage_match(lin_a, lin_b, rank):
     """
     for a, b in zip(lin_a, lin_b):
         assert a.rank == b.rank
-        if a.rank == rank:
-            if a == b:
-                return 1
+        if a.rank == rank and a == b:
+            return 1
         if a != b:
             return 0
 

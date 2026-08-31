@@ -9,7 +9,7 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash import sourmash_args, SourmashSignature
+from sourmash import SourmashSignature, sourmash_args
 from sourmash.sourmash_args import load_one_signature
 
 
@@ -625,7 +625,7 @@ def test_index_best_containment_threshold_1(runtmp, disk_index_type):
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(ss2.minhash.hashes.keys()))
+    mins = sorted(ss2.minhash.hashes.keys())
     new_mh = ss2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -655,7 +655,7 @@ def test_index_best_containment_threshold_1(runtmp, disk_index_type):
 
     result = db.best_containment(SourmashSignature(new_mh))
     assert result
-    containment, match_sig, name = result
+    containment, match_sig, _name = result
     assert containment == 1.0
     assert match_sig == ss2
 
@@ -680,7 +680,7 @@ def test_index_best_containment_threshold_5(runtmp, disk_index_type):
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(ss2.minhash.hashes.keys()))
+    mins = sorted(ss2.minhash.hashes.keys())
     new_mh = ss2.minhash.copy_and_clear()
 
     # add five hashes
@@ -701,7 +701,7 @@ def test_index_best_containment_threshold_5(runtmp, disk_index_type):
     # now, check with a threshold_bp that should be meet-able.
     db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
     assert result
-    containment, match_sig, name = result
+    containment, match_sig, _name = result
     assert containment == 1.0
     assert match_sig == ss2
 

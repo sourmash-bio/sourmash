@@ -27,10 +27,10 @@ will try to convert a scaled MinHash to a num MinHash.
 """
 
 from sourmash.cli.utils import (
-    add_moltype_args,
     add_ksize_arg,
-    add_picklist_args,
+    add_moltype_args,
     add_num_arg,
+    add_picklist_args,
 )
 
 

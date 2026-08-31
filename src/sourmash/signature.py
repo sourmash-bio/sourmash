@@ -3,18 +3,17 @@
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 
-import sys
+import contextlib
 import os
+import sys
 import weakref
 from enum import Enum
-import contextlib
 
-from .logging import error
 from . import MinHash
-from .minhash import to_bytes, FrozenMinHash
 from ._lowlevel import ffi, lib
-from .utils import RustObject, rustcall, decode_str
-
+from .logging import error
+from .minhash import FrozenMinHash, to_bytes
+from .utils import RustObject, decode_str, rustcall
 
 SIGNATURE_VERSION = 0.4
 
@@ -392,9 +391,7 @@ def _detect_input_type(data):
             if data.find("sourmash_signature") > 0:
                 return SigInput.BUFFER
         except TypeError:
-            if data.find(b"sourmash_signature") > 0:
-                return SigInput.BUFFER
-            elif data.startswith(b"\x1f\x8b"):  # gzip compressed
+            if data.find(b"sourmash_signature") > 0 or data.startswith(b"\x1f\x8b"):
                 return SigInput.BUFFER
 
     try:

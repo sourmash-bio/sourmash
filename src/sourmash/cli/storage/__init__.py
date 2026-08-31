@@ -4,11 +4,12 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash storage` operations.
 """
 
-from . import convert
-from ..utils import command_list
-from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os
 import sys
+from argparse import SUPPRESS, RawDescriptionHelpFormatter
+
+from ..utils import command_list
+from . import convert
 
 
 def subparser(subparsers):
