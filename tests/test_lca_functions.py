@@ -8,14 +8,14 @@ from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (
     LineagePair,
     build_tree,
-    find_lca,
-    taxlist,
     count_lca_for_assignments,
-    zip_lineage,
     display_lineage,
-    make_lineage,
+    find_lca,
     is_lineage_match,
+    make_lineage,
     pop_to_rank,
+    taxlist,
+    zip_lineage,
 )
 
 
@@ -191,7 +191,7 @@ def test_find_lca_3():
     lin2 = lca_utils.make_lineage("a;b")
 
     tree = build_tree([lin1, lin2])
-    lca, reason = find_lca(tree)
+    lca, _reason = find_lca(tree)
     assert lca == lin1  # find most specific leaf node
 
 
@@ -201,12 +201,12 @@ def test_gather_assignments_1():
     lin = lca_utils.make_lineage("a;b;c")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin]))
+    db._set_lineage_assignment(hashval, {lin})
 
     assignments = lca_utils.gather_assignments([hashval], [db])
     print(assignments)
 
-    assert assignments[hashval] == set([lin])
+    assert assignments[hashval] == {lin}
 
 
 def test_gather_assignments_2():
@@ -216,12 +216,12 @@ def test_gather_assignments_2():
     lin2 = lca_utils.make_lineage("a;b;d")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
 
     assignments = lca_utils.gather_assignments([hashval], [db])
     print(assignments)
 
-    assert assignments[hashval] == set([lin, lin2])
+    assert assignments[hashval] == {lin, lin2}
 
 
 def test_gather_assignments_3():
@@ -233,14 +233,14 @@ def test_gather_assignments_3():
     lin2 = lca_utils.make_lineage("a;b;d")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
-    db._set_lineage_assignment(hashval2, set([lin]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
+    db._set_lineage_assignment(hashval2, {lin})
 
     assignments = lca_utils.gather_assignments([hashval, hashval2], [db])
     print(assignments)
 
-    assert assignments[hashval] == set([lin, lin2])
-    assert assignments[hashval2] == set([lin])
+    assert assignments[hashval] == {lin, lin2}
+    assert assignments[hashval2] == {lin}
 
 
 def test_count_lca_for_assignments_1():
@@ -249,7 +249,7 @@ def test_count_lca_for_assignments_1():
     lin = lca_utils.make_lineage("a;b;c")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin]))
+    db._set_lineage_assignment(hashval, {lin})
 
     assignments = lca_utils.gather_assignments([hashval], [db])
     counts = count_lca_for_assignments(assignments)
@@ -266,7 +266,7 @@ def test_count_lca_for_assignments_2():
     lin2 = lca_utils.make_lineage("a;b;d")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
 
     assignments = lca_utils.gather_assignments([hashval], [db])
     counts = count_lca_for_assignments(assignments)
@@ -289,8 +289,8 @@ def test_count_lca_for_assignments_3():
     lin2 = lca_utils.make_lineage("a;b;d")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
-    db._set_lineage_assignment(hashval2, set([lin]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
+    db._set_lineage_assignment(hashval2, {lin})
 
     assignments = lca_utils.gather_assignments([hashval, hashval2], [db])
     counts = count_lca_for_assignments(assignments)
@@ -313,7 +313,7 @@ def test_count_lca_for_assignments_abund_1():
     lin = lca_utils.make_lineage("a;b;c")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin]))
+    db._set_lineage_assignment(hashval, {lin})
 
     assignments = lca_utils.gather_assignments(hashval_counts.keys(), [db])
     counts = count_lca_for_assignments(assignments, hashval_counts)
@@ -333,7 +333,7 @@ def test_count_lca_for_assignments_abund_2():
     lin2 = lca_utils.make_lineage("a;b;d")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
     counts = count_lca_for_assignments(assignments, hashval_counts)
@@ -360,8 +360,8 @@ def test_count_lca_for_assignments_abund_3():
     lin2 = lca_utils.make_lineage("a;b;d")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
-    db._set_lineage_assignment(hashval2, set([lin]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
+    db._set_lineage_assignment(hashval2, {lin})
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
     counts = count_lca_for_assignments(assignments, hashval_counts)
@@ -391,9 +391,9 @@ def test_count_lca_for_assignments_abund_4():
     lin3 = lca_utils.make_lineage("a;b;d;e")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))  # lca: a;b
-    db._set_lineage_assignment(hashval2, set([lin]))  # lca: a;b;c
-    db._set_lineage_assignment(hashval3, set([lin2, lin3]))  # a;b;d;e
+    db._set_lineage_assignment(hashval, {lin, lin2})  # lca: a;b
+    db._set_lineage_assignment(hashval2, {lin})  # lca: a;b;c
+    db._set_lineage_assignment(hashval3, {lin2, lin3})  # a;b;d;e
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
     counts = count_lca_for_assignments(assignments, hashval_counts)
@@ -421,8 +421,8 @@ def test_count_lca_for_assignments_abund_5():
     lin2 = lca_utils.make_lineage("a;b;d;e")
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([lin, lin2]))
-    db._set_lineage_assignment(hashval2, set([lin]))
+    db._set_lineage_assignment(hashval, {lin, lin2})
+    db._set_lineage_assignment(hashval2, {lin})
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
     counts = count_lca_for_assignments(assignments, hashval_counts)
