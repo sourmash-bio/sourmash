@@ -7,38 +7,38 @@ using the `sourmash <subcmd> <subsubcmd>` pattern, and these are organized in
 their own CLI submodules, each with a dedicated directory.
 """
 
-from argparse import ArgumentParser, RawDescriptionHelpFormatter, SUPPRESS
 import os
 import sys
+from argparse import SUPPRESS, ArgumentParser, RawDescriptionHelpFormatter
 
 import sourmash
 
-from . import utils
-
 # Commands
-from . import categorize
-from . import compare
-from . import compute
-from . import gather
-from . import import_csv
-from . import info
-from . import index
-from . import migrate
-from . import multigather
-from . import plot
-from . import prefetch
-from . import sbt_combine
-from . import search
-from . import watch
-
 # Subcommand groups
-from . import lca
-from . import sig
+from . import (
+    categorize,
+    compare,
+    compute,
+    gather,
+    import_csv,
+    index,
+    info,
+    lca,
+    migrate,
+    multigather,
+    plot,
+    prefetch,
+    sbt_combine,
+    scripts,
+    search,
+    sig,
+    sketch,
+    storage,
+    tax,
+    utils,
+    watch,
+)
 from . import sig as signature
-from . import sketch
-from . import storage
-from . import tax
-from . import scripts
 
 
 class SourmashParser(ArgumentParser):
@@ -107,9 +107,7 @@ def get_parser():
         "sig": "signature",
         "ext": "scripts",
     }
-    expert = set(
-        ["categorize", "import_csv", "migrate", "multigather", "sbt_combine", "watch"]
-    )
+    expert = {"categorize", "import_csv", "migrate", "multigather", "sbt_combine", "watch"}
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)

@@ -1,7 +1,9 @@
 """display sourmash version and other information"""
 
 import os
+
 import screed
+
 import sourmash
 from sourmash.logging import notify
 from sourmash.plugins import list_all_plugins
