@@ -4,32 +4,35 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash sig` operations.
 """
 
-from . import cat
-from . import split
-from . import describe
-from . import downsample
-from . import extract
-from . import filter
-from . import flatten
-from . import fileinfo
-from . import fileinfo as summarize
-from . import grep
-from . import kmers
-from . import check
-from . import collect
-from . import intersect
-from . import inflate
-from . import manifest
-from . import merge
-from . import rename
-from . import subtract
-from . import ingest
-from . import export
-from . import overlap
-from ..utils import command_list
-from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os
 import sys
+from argparse import SUPPRESS, RawDescriptionHelpFormatter
+
+from ..utils import command_list
+from . import (
+    cat,
+    check,
+    collect,
+    describe,
+    downsample,
+    export,
+    extract,
+    fileinfo,
+    filter,
+    flatten,
+    grep,
+    inflate,
+    ingest,
+    intersect,
+    kmers,
+    manifest,
+    merge,
+    overlap,
+    rename,
+    split,
+    subtract,
+)
+from . import fileinfo as summarize
 
 
 def subparser(subparsers):

@@ -4,17 +4,15 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash sketch` operations.
 """
 
-from . import dna
-from . import dna as rna
-from . import protein
-from . import protein as aa
-from . import protein as prot
-from . import translate
-from . import fromfile
-from ..utils import command_list
-from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os
 import sys
+from argparse import SUPPRESS, RawDescriptionHelpFormatter
+
+from ..utils import command_list
+from . import dna, fromfile, protein, translate
+from . import dna as rna
+from . import protein as aa
+from . import protein as prot
 
 
 def subparser(subparsers):

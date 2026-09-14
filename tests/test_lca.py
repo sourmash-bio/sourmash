@@ -2,23 +2,23 @@
 Tests for the 'sourmash lca' command line and high level API.
 """
 
+import csv
+import glob
 import os
 import shutil
-import csv
-import pytest
-import glob
 from pathlib import Path
 
+import pytest
 import sourmash_tst_utils as utils
+from sourmash_tst_utils import SourmashCommandFailed
+
 import sourmash
 from sourmash import SourmashSignature, sourmash_args
-from sourmash.signature import save_signatures_to_json, load_one_signature_from_json
-
-from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
-from sourmash.picklist import SignaturePicklist, PickStyle
-from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.picklist import PickStyle, SignaturePicklist
+from sourmash.search import make_jaccard_search_query
+from sourmash.signature import load_one_signature_from_json, save_signatures_to_json
 
 
 def test_api_create_search():
@@ -38,7 +38,7 @@ def test_api_create_search():
     results = lca_db.search(ss, threshold=0.0)
     print(results)
     assert len(results) == 1
-    (similarity, match, filename) = results[0]
+    (_similarity, match, _filename) = results[0]
     assert match.minhash == ss.minhash
 
 
@@ -324,7 +324,7 @@ def test_api_create_gather():
     result = lca_db.best_containment(ss, threshold_bp=0)
     print(result)
     assert result
-    (similarity, match, filename) = result
+    (_similarity, match, _filename) = result
     assert match.minhash == ss.minhash
 
 
@@ -471,7 +471,7 @@ def test_load_single_db_empty(runtmp):
         pass
 
     with pytest.raises(ValueError) as exc:
-        db, ksize, scaled = lca_utils.load_single_database(empty)
+        _db, _ksize, _scaled = lca_utils.load_single_database(empty)
 
     assert f"'{empty}' is not an LCA database file." in str(exc.value)
 
@@ -491,7 +491,7 @@ def test_databases():
 def test_databases_load_fail_on_no_JSON():
     filename1 = utils.get_test_data("prot/protein.zip")
     with pytest.raises(ValueError) as exc:
-        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+        _dblist, _ksize, _scaled = lca_utils.load_databases([filename1])
 
     err = str(exc.value)
     print(err)
@@ -501,7 +501,7 @@ def test_databases_load_fail_on_no_JSON():
 def test_databases_load_fail_on_dir():
     filename1 = utils.get_test_data("lca")
     with pytest.raises(ValueError) as exc:
-        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+        _dblist, _ksize, _scaled = lca_utils.load_databases([filename1])
 
     err = str(exc.value)
     print(err)
@@ -512,7 +512,7 @@ def test_databases_load_fail_on_dir():
 def test_databases_load_fail_on_not_exist():
     filename1 = utils.get_test_data("does-not-exist")
     with pytest.raises(ValueError) as exc:
-        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+        _dblist, _ksize, _scaled = lca_utils.load_databases([filename1])
 
     err = str(exc.value)
     print(err)
@@ -522,7 +522,7 @@ def test_databases_load_fail_on_not_exist():
 
 def test_db_repr():
     filename = utils.get_test_data("lca/delmont-1.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(filename)
 
     assert repr(db) == f"LCA_Database('{filename}')"
 
@@ -537,7 +537,7 @@ def test_db_repr_no_filename():
 def test_lca_index_signatures_method():
     # test 'signatures' method from base class Index
     filename = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(filename)
 
     siglist = list(db.signatures())
     assert len(siglist) == 2
@@ -547,7 +547,7 @@ def test_lca_index_select():
     # test 'select' method from Index base class.
 
     filename = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(filename)
 
     xx = db.select(ksize=31)
     assert xx == db
@@ -572,7 +572,7 @@ def test_lca_index_select_picklist():
     # test 'select' method from Index base class with a picklist.
 
     filename = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(filename)
 
     # construct a picklist...
     picklist = SignaturePicklist("md5prefix8")
@@ -595,7 +595,7 @@ def test_lca_index_find_picklist_check_overlap():
     query_fn = utils.get_test_data("47.fa.sig")
     query_sig = load_one_signature_from_json(query_fn, ksize=31)
     db_fn = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(db_fn)
+    db, _ksize, _scaled = lca_utils.load_single_database(db_fn)
 
     # construct a picklist...
     picklist = SignaturePicklist("ident")
@@ -612,7 +612,7 @@ def test_lca_index_select_picklist_exclude():
     # test 'select' method from Index base class with a picklist.
 
     filename = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(filename)
 
     # construct a picklist...
     picklist = SignaturePicklist("md5prefix8", pickstyle=PickStyle.EXCLUDE)
@@ -632,7 +632,7 @@ def test_lca_index_select_picklist_twice():
     # test 'select' method from Index base class with a picklist.
 
     filename = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(filename)
 
     # construct a picklist...
     picklist = SignaturePicklist("md5prefix8")
@@ -649,7 +649,7 @@ def test_lca_index_select_picklist_twice():
 
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
     sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
 
     results = db.search(sig, threshold=0.01, ignore_abundance=True)
@@ -661,7 +661,7 @@ def test_search_db_scaled_gt_sig_scaled():
 
 def test_search_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
     sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
 
     sig = sig.to_mutable()
@@ -678,7 +678,7 @@ def test_search_db_scaled_lt_sig_scaled():
 
 def test_gather_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
     sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
 
     result = db.best_containment(sig, threshold=0.01, ignore_abundance=True)
@@ -690,7 +690,7 @@ def test_gather_db_scaled_gt_sig_scaled():
 
 def test_gather_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
     sig = load_one_signature_from_json(utils.get_test_data("47.fa.sig"))
     sig_minhash = sig.minhash.downsample(scaled=100000)
 
@@ -703,7 +703,7 @@ def test_gather_db_scaled_lt_sig_scaled():
 
 def test_db_lineage_to_lid():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
 
     d = db._lineage_to_lid
     items = list(d.items())
@@ -722,7 +722,7 @@ def test_db_lineage_to_lid():
 
 def test_db_lid_to_idx():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
 
     d = db._lid_to_idx
     items = list(d.items())
@@ -735,7 +735,7 @@ def test_db_lid_to_idx():
 
 def test_db_idx_to_ident():
     dbfile = utils.get_test_data("lca/47+63.lca.json")
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    db, _ksize, _scaled = lca_utils.load_single_database(dbfile)
 
     d = db._idx_to_ident
     items = list(d.items())
@@ -750,7 +750,7 @@ def test_db_idx_to_ident():
 
 
 def test_run_sourmash_lca():
-    status, out, err = utils.runscript("sourmash", ["lca"], fail_ok=True)
+    status, _out, _err = utils.runscript("sourmash", ["lca"], fail_ok=True)
     assert status != 0  # no args provided, ok ;)
 
 
@@ -2948,7 +2948,7 @@ def test_lca_index_empty(runtmp, lca_db_format):
 
     # can we load and search?
     lca_db_filename = c.output(f"xxx.lca.{lca_db_format}")
-    db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+    db, _ksize, _scaled = lca_utils.load_single_database(lca_db_filename)
 
     result = db.best_containment(sig63)
     assert result
@@ -2977,7 +2977,7 @@ def test_lca_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
+    mins = sorted(sig2.minhash.hashes.keys())
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -3037,7 +3037,7 @@ def test_lca_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures both have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
+    mins = sorted(sig2.minhash.hashes.keys())
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes

@@ -3,25 +3,24 @@ Tests for the 'sourmash signature' command line.
 """
 
 import csv
-import shutil
-import os
 import glob
 import gzip
+import os
+import shutil
 
 import pytest
 import screed
-
 import sourmash_tst_utils as utils
+from sourmash_tst_utils import SourmashCommandFailed
+
 import sourmash
+from sourmash.manifest import CollectionManifest
 from sourmash.signature import (
+    load_one_signature_from_json,
     load_signatures_from_json,
     save_signatures_to_json,
-    load_one_signature_from_json,
 )
-from sourmash.manifest import CollectionManifest
-from sourmash_tst_utils import SourmashCommandFailed
 from sourmash.sourmash_args import load_one_signature
-
 
 ## command line tests
 
@@ -54,8 +53,8 @@ def test_run_sourmash_sig_cmd():
 
 def test_run_cat_via_parse_args():
     # run a command ('sourmash.sig.cat') with args constructed via parse_args
-    import sourmash.sig
     import sourmash.cli
+    import sourmash.sig
 
     sig47 = utils.get_test_data("47.fa.sig")
 
@@ -1296,7 +1295,7 @@ def test_sig_cat_3_filelist(c):
 
     filelist = c.output("filelist")
     with open(filelist, "w") as f:
-        f.write("\n".join((sig47, sig47abund, multisig)))
+        f.write(f"{sig47}\n{sig47abund}\n{multisig}")
 
     c.run_sourmash("sig", "cat", filelist, "-o", "out.sig")
 
@@ -1335,7 +1334,7 @@ def test_sig_cat_4_filelist_with_dbs(c):
 
     filelist = c.output("filelist")
     with open(filelist, "w") as f:
-        f.write("\n".join((sig47, sig47abund, sbt)))
+        f.write(f"{sig47}\n{sig47abund}\n{sbt}")
 
     c.run_sourmash("sig", "cat", filelist, "-o", "out.sig")
 
@@ -1374,7 +1373,7 @@ def test_sig_cat_5_from_file(c):
 
     filelist = c.output("filelist")
     with open(filelist, "w") as f:
-        f.write("\n".join((sig47, sig47abund, sbt)))
+        f.write(f"{sig47}\n{sig47abund}\n{sbt}")
 
     c.run_sourmash("sig", "cat", "--from-file", filelist, "-o", "out.sig")
 
@@ -1413,7 +1412,7 @@ def test_sig_cat_5_from_file_picklist(runtmp):
 
     filelist = c.output("filelist")
     with open(filelist, "w") as f:
-        f.write("\n".join((sig47, sbt)))
+        f.write(f"{sig47}\n{sbt}")
 
     picklist = _write_file(runtmp, "pl.csv", ["md5short", "09a08691"])
 
@@ -1962,13 +1961,13 @@ def test_sig_extract_8_picklist_md5(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2004,13 +2003,13 @@ def test_sig_extract_8_picklist_md5_zipfile(runtmp):
     utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2045,13 +2044,13 @@ def test_sig_extract_8_picklist_md5_lca_fail(runtmp):
     allzip = utils.get_test_data("lca/47+63.lca.json")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="50a9274021e43eda8b2e77f8fa60ae8e",
-        md5short="50a9274021e43eda8b2e77f8fa60ae8e"[:8],
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "50a9274021e43eda8b2e77f8fa60ae8e",
+        "md5short": "50a9274021e43eda8b2e77f8fa60ae8e"[:8],
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2087,13 +2086,13 @@ def test_sig_extract_8_picklist_md5_include(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2128,13 +2127,13 @@ def test_sig_extract_8_picklist_md5_exclude(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2170,13 +2169,13 @@ def test_sig_extract_8_picklist_md5_require_all(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2185,13 +2184,13 @@ def test_sig_extract_8_picklist_md5_require_all(runtmp):
         w.writeheader()
         w.writerow(row)
         w.writerow(
-            dict(
-                exactName="",
-                md5full="BAD MD5",
-                md5short="",
-                fullIdent="",
-                nodotIdent="",
-            )
+            {
+                "exactName": "",
+                "md5full": "BAD MD5",
+                "md5short": "",
+                "fullIdent": "",
+                "nodotIdent": "",
+            }
         )
 
     picklist_arg = f"{picklist_csv}:md5full:md5"
@@ -2231,13 +2230,13 @@ def test_sig_extract_8_picklist_name(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2264,13 +2263,13 @@ def test_sig_extract_8_picklist_name_exclude(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2297,13 +2296,13 @@ def test_sig_extract_8_picklist_ident(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2330,13 +2329,13 @@ def test_sig_extract_8_picklist_ident_exclude(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2363,13 +2362,13 @@ def test_sig_extract_8_picklist_ident_dot(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2396,13 +2395,13 @@ def test_sig_extract_8_picklist_ident_dot_exclude(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2429,13 +2428,13 @@ def test_sig_extract_8_picklist_md5_short(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2462,13 +2461,13 @@ def test_sig_extract_8_picklist_md5_short_exclude(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2495,13 +2494,13 @@ def test_sig_extract_8_picklist_md5_short_alias(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2528,13 +2527,13 @@ def test_sig_extract_8_picklist_md5_short_alias_exclude(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2561,13 +2560,13 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch(runtmp
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2594,13 +2593,13 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch_exclud
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2625,13 +2624,13 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector(runtmp):
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2667,13 +2666,13 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_exclude(runtmp
     sig63 = utils.get_test_data("63.fa.sig")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="09a08691ce52952152f0e866a59f6261",
-        md5short="09a08691ce5295215",
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "09a08691ce52952152f0e866a59f6261",
+        "md5short": "09a08691ce5295215",
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -2771,7 +2770,7 @@ def test_sig_extract_9_picklist_md5_ksize_hp_select(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:md5:md5"
 
@@ -2799,7 +2798,7 @@ def test_sig_extract_9_picklist_md5_ksize_hp_select_exclude(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:md5:md5:exclude"
 
@@ -2827,9 +2826,9 @@ def test_sig_extract_10_picklist_md5_dups_and_empty(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
-        w.writerow(dict(md5=""))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
+        w.writerow({"md5": ""})
 
     picklist_arg = f"{picklist_csv}:md5:md5"
 
@@ -2861,9 +2860,9 @@ def test_sig_extract_10_picklist_md5_dups_and_empty_exclude(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
-        w.writerow(dict(md5=""))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
+        w.writerow({"md5": ""})
 
     picklist_arg = f"{picklist_csv}:md5:md5:exclude"
 
@@ -2895,7 +2894,7 @@ def test_sig_extract_11_picklist_bad_coltype(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:md5:BADCOLTYPE"
 
@@ -2918,7 +2917,7 @@ def test_sig_extract_11_picklist_bad_coltype_exclude(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:md5:BADCOLTYPE:exclude"
 
@@ -2941,7 +2940,7 @@ def test_sig_extract_12_picklist_bad_argstr(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}"
 
@@ -2964,7 +2963,7 @@ def test_sig_extract_12_picklist_bad_pickstyle(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:md5:md5:XXX"
 
@@ -2990,7 +2989,7 @@ def test_sig_extract_12_picklist_bad_colname(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:BADCOLNAME:md5"
 
@@ -3013,7 +3012,7 @@ def test_sig_extract_12_picklist_bad_colname_exclude(runtmp):
     with open(picklist_csv, "w", newline="") as csvfp:
         w = csv.DictWriter(csvfp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="ea2a1ad233c2908529d124a330bcb672"))
+        w.writerow({"md5": "ea2a1ad233c2908529d124a330bcb672"})
 
     picklist_arg = f"{picklist_csv}:BADCOLNAME:md5:exclude"
 
@@ -3061,7 +3060,7 @@ def test_sig_extract_identical_md5s(runtmp):
     # test that we properly handle different signatures with identical md5s
     sig47 = utils.get_test_data("47.fa.sig")
     ss = load_signatures_from_json(sig47)
-    sig = list(ss)[0]
+    sig = next(iter(ss))
     new_sig = sig.to_mutable()
     new_sig.name = "foo"
     sig47foo = runtmp.output("foo.sig")
@@ -4325,7 +4324,7 @@ def test_sig_manifest_7_allzip_1(runtmp, cli_v4_only):
         manifest = CollectionManifest.load_from_csv(csvfp)
 
     assert len(manifest) == 7
-    filenames = set(row["internal_location"] for row in manifest.rows)
+    filenames = {row["internal_location"] for row in manifest.rows}
     assert "dna-sig.noext" not in filenames
 
 
@@ -4339,7 +4338,7 @@ def test_sig_manifest_7_allzip_2(runtmp):
         manifest = CollectionManifest.load_from_csv(csvfp)
 
     assert len(manifest) == 8
-    filenames = set(row["internal_location"] for row in manifest.rows)
+    filenames = {row["internal_location"] for row in manifest.rows}
     assert "dna-sig.noext" in filenames
 
 
@@ -4356,7 +4355,7 @@ def test_sig_manifest_7_allzip_3_no_rebuild(runtmp, cli_v4_only):
         manifest = CollectionManifest.load_from_csv(csvfp)
 
     assert len(manifest) == 8
-    filenames = set(row["internal_location"] for row in manifest.rows)
+    filenames = {row["internal_location"] for row in manifest.rows}
     assert "dna-sig.noext" in filenames
 
 
@@ -4371,7 +4370,7 @@ def test_sig_manifest_7_allzip_3_no_rebuild_is_default_v5(runtmp, cli_v5_only):
         manifest = CollectionManifest.load_from_csv(csvfp)
 
     assert len(manifest) == 8
-    filenames = set(row["internal_location"] for row in manifest.rows)
+    filenames = {row["internal_location"] for row in manifest.rows}
     assert "dna-sig.noext" in filenames
 
 
@@ -4498,10 +4497,8 @@ def test_sig_kmers_1_dna_more_in_query(runtmp):
 
     # make a new sequence for query, with more k-mers
     query_seqfile = runtmp.output("query.fa")
-    with open(query_seqfile, "w") as fp:
-        with screed.open(seqfile) as screed_iter:
-            for record in screed_iter:
-                fp.write(f">{record.name}\n{record.sequence}AGTTACGATC\n")
+    with open(query_seqfile, "w") as fp, screed.open(seqfile) as screed_iter:
+        fp.writelines(f">{record.name}\n{record.sequence}AGTTACGATC\n" for record in screed_iter)
 
     runtmp.sourmash("sig", "kmers", "--sig", "short.fa.sig", "--seq", query_seqfile)
 
@@ -5078,7 +5075,7 @@ def test_sig_check_1(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5155,7 +5152,7 @@ def test_sig_check_1_mf_csv_gz(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5168,9 +5165,8 @@ def test_sig_check_1_gz(runtmp, abspath_relpath_v4):
     picklist = utils.get_test_data("gather/salmonella-picklist.csv")
     picklist_gz = runtmp.output("salmonella.csv.gz")
 
-    with gzip.open(picklist_gz, "w") as outfp:
-        with open(picklist, "rb") as infp:
-            outfp.write(infp.read())
+    with gzip.open(picklist_gz, "w") as outfp, open(picklist, "rb") as infp:
+        outfp.write(infp.read())
 
     runtmp.sourmash(
         "sig",
@@ -5194,7 +5190,7 @@ def test_sig_check_1_gz(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5229,7 +5225,7 @@ def test_sig_check_1_nofail(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5286,7 +5282,7 @@ def test_sig_check_1_column(runtmp, column, coltype, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5330,7 +5326,7 @@ def test_sig_check_1_diff_col_name(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5377,14 +5373,14 @@ def test_sig_check_1_diff_col_name_zip(runtmp, abspath_relpath_v4):
     assert len(mf) == 24
 
     # internal locations should all point to zip
-    ilocs = set(row["internal_location"] for row in mf.rows)
+    ilocs = {row["internal_location"] for row in mf.rows}
     assert len(ilocs) == 1
 
     # can we get 'em?
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5424,7 +5420,7 @@ def test_sig_check_1_diff_col_name_exclude(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 12
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 3
     assert 11 in ksizes
     assert 21 in ksizes
@@ -5460,7 +5456,7 @@ def test_sig_check_1_ksize(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 8
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 1
     assert 31 in ksizes
 
@@ -5496,7 +5492,7 @@ def test_sig_check_1_ksize_output_sql(runtmp, abspath_relpath_v4):
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 8
-    ksizes = set([ss.minhash.ksize for ss in siglist])
+    ksizes = {ss.minhash.ksize for ss in siglist}
     assert len(ksizes) == 1
     assert 31 in ksizes
 
