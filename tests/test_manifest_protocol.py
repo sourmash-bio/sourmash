@@ -7,8 +7,8 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash.manifest import BaseCollectionManifest, CollectionManifest
 from sourmash.index.sqlite_index import SqliteCollectionManifest
+from sourmash.manifest import BaseCollectionManifest, CollectionManifest
 from sourmash.sourmash_args import load_one_signature
 
 
@@ -109,7 +109,7 @@ def test_manifest_create_manifest(manifest_obj):
 
     new_mf = manifest_obj.create_manifest(yield_sigs(), include_signature=False)
     assert len(new_mf) == 1
-    new_row = list(new_mf.rows)[0]
+    new_row = next(iter(new_mf.rows))
 
     row = manifest_obj.make_manifest_row(ss, "fiz", include_signature=False)
 
@@ -126,8 +126,7 @@ def test_manifest_select_to_manifest(manifest_obj):
 
 def test_manifest_locations(manifest_obj):
     # check the 'locations' method
-    locs = set(
-        [
+    locs = {
             "dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
             "dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
             "hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
@@ -136,8 +135,7 @@ def test_manifest_locations(manifest_obj):
             "protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
             "dna-sig.noext",
             "dna-sig.sig.gz",
-        ]
-    )
+        }
     assert set(manifest_obj.locations()) == locs
 
 
@@ -171,7 +169,7 @@ def test_manifest_filter_rows(manifest_obj):
     mf = manifest_obj.filter_rows(filter_fn)
 
     assert len(mf) == 1
-    row = list(mf.rows)[0]
+    row = next(iter(mf.rows))
     assert row["name"] == "NC_011663.1 Shewanella baltica OS223, complete genome"
 
 
@@ -183,7 +181,7 @@ def test_manifest_filter_cols(manifest_obj):
     mf = manifest_obj.filter_on_columns(col_filter_fn, ["name"])
 
     assert len(mf) == 1
-    row = list(mf.rows)[0]
+    row = next(iter(mf.rows))
     assert row["name"] == "NC_011663.1 Shewanella baltica OS223, complete genome"
 
 
