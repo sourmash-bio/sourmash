@@ -16,20 +16,20 @@ The sourmash code is available at github.com/sourmash-bio/sourmash/ under the
 BSD 3-Clause license.
 """
 
-from deprecation import deprecated
 from importlib.metadata import version
+
+from deprecation import deprecated
 
 __all__ = [
     "MinHash",
     "SourmashSignature",
-    "load_one_signature",
-    "SourmashSignature",
+    "create_sbt_index",
     "load_file_as_index",
     "load_file_as_signatures",
-    "save_signatures",
-    "create_sbt_index",
-    "load_signatures",  # deprecated - remove in 5.0
+    "load_one_signature",
     "load_sbt_index",  # deprecated - remove in 5.0
+    "load_signatures",  # deprecated - remove in 5.0
+    "save_signatures",
     "search_sbt_index",  # deprecated - remove in 5.0
 ]
 
@@ -45,9 +45,9 @@ DEFAULT_SEED = get_minhash_default_seed()
 MAX_HASH = get_minhash_max_hash()
 
 from .signature import (
-    load_signatures_from_json,
-    load_one_signature_from_json,
     SourmashSignature,
+    load_one_signature_from_json,
+    load_signatures_from_json,
     save_signatures_to_json,
 )
 
@@ -140,15 +140,6 @@ def search_sbt_index(*args, **kwargs):
     return search_sbt_index_private(*args, **kwargs)
 
 
+from . import cli, commands, lca, sbt, sbt_storage, sbtmh, sig, signature, tax
 from .sbtmh import create_sbt_index
-from . import lca
-from . import tax
-from . import sbt
-from . import sbtmh
-from . import sbt_storage
-from . import signature
-from . import sig
-from . import cli
-from . import commands
-from .sourmash_args import load_file_as_index
-from .sourmash_args import load_file_as_signatures
+from .sourmash_args import load_file_as_index, load_file_as_signatures

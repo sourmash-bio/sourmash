@@ -24,7 +24,7 @@ will display the detailed comparison of `file1.sig` and `file2.sig`.
 
 """
 
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
 def subparser(subparsers):

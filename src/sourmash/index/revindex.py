@@ -5,14 +5,13 @@ RevIndex and DiskRevIndex - Rust-based reverse indexes by hashes.
 import os
 import weakref
 
+import sourmash._lowlevel
+from sourmash._lowlevel import ffi, lib
 from sourmash.index import Index, IndexSearchResult, _check_select_parameters
+from sourmash.manifest import CollectionManifest
 from sourmash.minhash import MinHash, flatten_and_intersect_scaled
 from sourmash.signature import SourmashSignature
-from sourmash._lowlevel import ffi, lib
-from sourmash.utils import RustObject, rustcall, decode_str, encode_str
-import sourmash._lowlevel
-from sourmash.minhash import flatten_and_intersect_scaled
-from sourmash.manifest import CollectionManifest
+from sourmash.utils import RustObject, decode_str, encode_str, rustcall
 
 
 class RevIndex(RustObject, Index):
@@ -127,7 +126,7 @@ class RevIndex(RustObject, Index):
         if do_containment:
             # calculate threshold_bp from threshold
             query_mh = query_ss.minhash
-            threshold_bp = int(round(threshold * len(query_mh) * query_mh.scaled))
+            threshold_bp = round(threshold * len(query_mh) * query_mh.scaled)
             results_ptr = self._methodcall(
                 lib.revindex_prefetch,
                 query_ss._get_objptr(),
@@ -216,7 +215,6 @@ class RevIndex(RustObject, Index):
         """
         Provide CounterGather API - does nothing, in this case.
         """
-        pass
 
     def counter_gather(self, query_ss, threshold_bp=0, **kwargs):
         """
@@ -301,9 +299,8 @@ class RevIndex(RustObject, Index):
         my_scaled = self._methodcall(lib.revindex_scaled)
         my_moltype = decode_str(self._methodcall(lib.revindex_moltype))
 
-        if ksize is not None:
-            if ksize != my_ksize:
-                raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
+        if ksize is not None and ksize != my_ksize:
+            raise ValueError(f"revindex ksize is {my_ksize}, not {ksize}")
         if scaled is not None and scaled < my_scaled:
             raise ValueError(f"revindex scaled is {my_scaled}, not {scaled}")
         if moltype is not None and moltype != my_moltype:
@@ -426,8 +423,7 @@ class MemRevIndex(RevIndex):
         "Add signature to internal list, tracking max scaled along way."
         self._check_not_init()
 
-        if sig.minhash.scaled > self._scaled:
-            self._scaled = sig.minhash.scaled
+        self._scaled = max(self._scaled, sig.minhash.scaled)
         self._signatures.append(sig)
 
     def search(self, *args, **kwargs):

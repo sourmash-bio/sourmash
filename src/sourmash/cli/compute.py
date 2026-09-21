@@ -29,8 +29,8 @@ Please see -h for all of the options as well as more detailed help.
 ---
 """
 
-from sourmash.minhash import get_minhash_default_seed
 from sourmash.cli.utils import add_construct_moltype_args, add_num_arg
+from sourmash.minhash import get_minhash_default_seed
 
 
 def ksize_parser(ksizes):

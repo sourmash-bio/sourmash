@@ -37,23 +37,21 @@ misc support:
 * FileInputCSV - context manager for reading CSVs
 """
 
-import sys
-import os
+import argparse
+import contextlib
 import csv
 import gzip
-from io import TextIOWrapper
+import os
 import re
+import sys
 import zipfile
-import contextlib
-import argparse
-
-from .logging import notify, error, debug_literal
+from io import TextIOWrapper
 
 from .index import LinearIndex
-from .picklist import SignaturePicklist, PickStyle
+from .logging import debug_literal, error, notify
 from .manifest import CollectionManifest
-from .save_load import SaveSignaturesToLocation, load_file_as_index, _load_database
-
+from .picklist import PickStyle, SignaturePicklist
+from .save_load import SaveSignaturesToLocation, _load_database, load_file_as_index
 
 DEFAULT_LOAD_K = 31
 
@@ -253,7 +251,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
             sl = [found_sig]
 
     if len(sl) and ksize is None:
-        ksizes = set([ss.minhash.ksize for ss in sl])
+        ksizes = {ss.minhash.ksize for ss in sl}
         if len(ksizes) == 1:
             ksize = ksizes.pop()
             sl = [ss for ss in sl if ss.minhash.ksize == ksize]
@@ -380,7 +378,7 @@ def load_dbs_and_sigs(
     notify(
         f"after selecting signatures compatible with search, {sum_signatures_after_select} remain."
     )
-    print("")
+    print()
 
     return databases
 
@@ -718,11 +716,11 @@ def load_many_signatures(
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
             if force:
-                notify(f"ERROR: {str(exc)}")
+                notify(f"ERROR: {exc!s}")
                 notify("(continuing)")
                 continue
             else:
-                notify(f"ERROR: {str(exc)}")
+                notify(f"ERROR: {exc!s}")
                 sys.exit(-1)
         except KeyboardInterrupt:
             notify("Received CTRL-C - exiting.")
