@@ -1,9 +1,9 @@
 #! /usr/bin/env python
-import sys
 import argparse
-import tomllib
-import pprint
 import json
+import pprint
+import sys
+import tomllib
 
 
 def main():

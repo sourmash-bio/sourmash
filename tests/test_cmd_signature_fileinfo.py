@@ -2,13 +2,12 @@
 Tests for the 'sourmash signature fileinfo' command line.
 """
 
-import shutil
-import os
 import glob
 import json
+import os
+import shutil
 
 import pytest
-
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 

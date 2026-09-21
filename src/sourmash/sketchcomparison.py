@@ -2,8 +2,9 @@
 Sketch Comparison Classes
 """
 
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 from .minhash import MinHash
 
@@ -121,9 +122,7 @@ class FracMinHashComparison(BaseMinHashComparison):
     def size_may_be_inaccurate(self):
         # if either size estimation may be inaccurate
         # NOTE: do we want to do this at original scaled instead?
-        if not self.mh1_cmp.size_is_accurate() or not self.mh2_cmp.size_is_accurate():
-            return True
-        return False
+        return bool(not self.mh1_cmp.size_is_accurate() or not self.mh2_cmp.size_is_accurate())
 
     @property
     def total_unique_intersect_hashes(self):
@@ -239,8 +238,10 @@ class FracMinHashComparison(BaseMinHashComparison):
                 ]
             )
 
-    def weighted_intersection(self, from_mh=None, from_abundD={}):
+    def weighted_intersection(self, from_mh=None, from_abundD=None):
         # map abundances to all intersection hashes.
+        if from_abundD is None:
+            from_abundD = {}
         abund_mh = self.intersect_mh.copy_and_clear()
         abund_mh.track_abundance = True
         # if from_mh is provided, it takes precedence over from_abund dict

@@ -1,8 +1,9 @@
-from glob import glob
-import os
 import argparse
+import os
+from glob import glob
+
 from sourmash.logging import notify
-from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
+from sourmash.sourmash_args import check_num_bounds, check_scaled_bounds
 
 
 def add_moltype_args(parser):
@@ -154,7 +155,7 @@ def range_limited_float_type(arg):
         raise argparse.ArgumentTypeError("\n\tERROR: Must be a floating point number.")
     if f < min_val or f > max_val:
         raise argparse.ArgumentTypeError(
-            f"\n\tERROR: Argument must be >{str(min_val)} and <{str(max_val)}."
+            f"\n\tERROR: Argument must be >{min_val!s} and <{max_val!s}."
         )
     return f
 
@@ -278,17 +279,18 @@ def add_rank_arg(parser):
 
 def check_tax_outputs(
     args,
-    rank_required=["krona"],
+    rank_required=None,
     incompatible_with_lins=None,
     use_lingroup_format=False,
 ):
     "Handle ouput format combinations"
     # check that rank is passed for formats requiring rank.
-    if not args.rank:
-        if any(x in rank_required for x in args.output_format):
-            raise ValueError(
-                f"Rank (--rank) is required for {', '.join(rank_required)} output formats."
-            )
+    if rank_required is None:
+        rank_required = ["krona"]
+    if not args.rank and any(x in rank_required for x in args.output_format):
+        raise ValueError(
+            f"Rank (--rank) is required for {', '.join(rank_required)} output formats."
+        )
 
     if args.lins:
         # check for outputs incompatible with lins

@@ -2,37 +2,35 @@
 Utility functions for taxonomy analysis tools.
 """
 
-import os
 import csv
+import gzip
+import os
+import sqlite3
 from collections import abc, defaultdict
+from dataclasses import asdict, dataclass, field, fields, replace
 from itertools import zip_longest
 from typing import NamedTuple
-from dataclasses import dataclass, field, replace, asdict, fields
-import gzip
 
-from sourmash import sqlite_utils, sourmash_args
-from sourmash.exceptions import IndexNotSupported
+from sourmash import sourmash_args, sqlite_utils
 from sourmash.distance_utils import containment_to_distance
-
-import sqlite3
-
+from sourmash.exceptions import IndexNotSupported
 
 __all__ = [
-    "get_ident",
-    "ascending_taxlist",
-    "collect_gather_csvs",
-    "load_gather_results",
-    "check_and_load_gather_csvsreport_missing_and_skipped_identities",
-    "aggregate_by_lineage_at_rank",
-    "format_for_krona",
-    "write_output",
-    "write_bioboxes",
-    "parse_lingroups",
-    "combine_sumgather_csvs_by_lineage",
-    "write_lineage_sample_frac",
+    "LINLineageInfo",
     "MultiLineageDB",
     "RankLineageInfo",
-    "LINLineageInfo",
+    "aggregate_by_lineage_at_rank",
+    "ascending_taxlist",
+    "check_and_load_gather_csvsreport_missing_and_skipped_identities",
+    "collect_gather_csvs",
+    "combine_sumgather_csvs_by_lineage",
+    "format_for_krona",
+    "get_ident",
+    "load_gather_results",
+    "parse_lingroups",
+    "write_bioboxes",
+    "write_lineage_sample_frac",
+    "write_output",
 ]
 
 from sourmash.logging import notify
@@ -287,9 +285,7 @@ class BaseLineageInfo:
         return False
 
     def is_compatible(self, other):
-        if self.ranks == other.ranks:
-            return True
-        return False
+        return self.ranks == other.ranks
 
     def is_lineage_match(self, other, rank):
         """
@@ -387,7 +383,7 @@ class RankLineageInfo(BaseLineageInfo):
         Use NCBI taxids if available as '|'-separated 'taxpath' column.
         Allows empty ranks/extra columns and reordering if necessary
         """
-        null_names = set(["[Blank]", "na", "null", "NA", ""])
+        null_names = {"[Blank]", "na", "null", "NA", ""}
         if not isinstance(self.lineage_dict, (dict)):
             raise ValueError(f"{self.lineage_dict} is not dictionary")
         new_lineage = []
@@ -475,7 +471,7 @@ class ICTVRankLineageInfo(RankLineageInfo):
         Initialize from lineage dict, e.g. from lineages csv.
         Allows empty ranks/extra columns and reordering if necessary
         """
-        null_names = set(["[Blank]", "na", "null", "NA", ""])
+        null_names = {"[Blank]", "na", "null", "NA", ""}
         if not isinstance(self.lineage_dict, (dict)):
             raise ValueError(f"{self.lineage_dict} is not dictionary")
         new_lineage = []
@@ -554,7 +550,7 @@ class LINLineageInfo(BaseLineageInfo):
         return self.filled_lineage == other.filled_lineage
 
     def _init_ranks_from_n_lin_positions(self):
-        new_ranks = [str(x) for x in range(0, self.n_lin_positions)]
+        new_ranks = [str(x) for x in range(self.n_lin_positions)]
         object.__setattr__(self, "ranks", new_ranks)
 
     def _init_empty(self):
@@ -633,9 +629,7 @@ class LINLineageInfo(BaseLineageInfo):
         other LineageInfo instances and LINLineageInfo.
         """
         # do self and other share any ranks?
-        if any(x in self.ranks for x in other.ranks):
-            return True
-        return False
+        return bool(any(x in self.ranks for x in other.ranks))
 
 
 @dataclass
@@ -802,7 +796,7 @@ def parse_lingroups(lingroupD):
     # find the ranks we need to consider
     all_lgs = set()
     lg_ranks = set()
-    for lg_prefix in lingroupD.keys():
+    for lg_prefix in lingroupD:
         # store lineage info for LCA pathfinding
         lg_info = LINLineageInfo(lineage_str=lg_prefix)
         all_lgs.add(lg_info)
@@ -907,12 +901,11 @@ def check_and_load_gather_csvs(
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
     gather_results = {}
-    header = []
     n_ignored = 0
     for n, gather_csv in enumerate(gather_csvs):
         these_results = {}
         try:
-            these_results, header = load_gather_results(
+            these_results, _header = load_gather_results(
                 gather_csv,
                 tax_assign,
                 seen_queries=gather_results.keys(),
@@ -946,7 +939,7 @@ def check_and_load_gather_csvs(
     # some reporting
     num_gather_csvs_loaded = n + 1 - n_ignored
     notify(
-        f"loaded results for {len(gather_results)} queries from {str(num_gather_csvs_loaded)} gather CSVs"
+        f"loaded results for {len(gather_results)} queries from {num_gather_csvs_loaded!s} gather CSVs"
     )
     # count and report missing and skipped idents
     report_missing_and_skipped_identities(gather_results)
@@ -1665,7 +1658,7 @@ class MultiLineageDB(abc.Mapping):
         seen = set()
         dups = set()
         for db in self.lineage_dbs:
-            for k, v in db.items():
+            for k in db:
                 if k in seen:
                     dups.add(k)
                 else:
@@ -1826,7 +1819,7 @@ class MultiLineageDB(abc.Mapping):
                     # for the last loader, just pass along ValueError...
                     if not force:
                         raise ValueError(
-                            f"cannot read taxonomy assignments from '{location}': {str(exc)}"
+                            f"cannot read taxonomy assignments from '{location}': {exc!s}"
                         )
 
             # nothing loaded, goodbye!
@@ -1848,7 +1841,7 @@ def filter_row(row, dataclass_type):
     """
     valid_keys = {field.name for field in fields(dataclass_type)}
     # 'match_name' and 'name' should be interchangeable (sourmash 4.x)
-    if "match_name" in row.keys() and "name" not in row.keys():
+    if "match_name" in row and "name" not in row:
         row["name"] = row.pop("match_name")
     return {k: v for k, v in row.items() if k in valid_keys}
 
@@ -1983,7 +1976,7 @@ class AnnotateTaxResult(BaseTaxResult):
     id_col: str = "name"
 
     def __post_init__(self):
-        if self.id_col not in self.raw.keys():
+        if self.id_col not in self.raw:
             raise ValueError(f"ID column '{self.id_col}' not found.")
         self.get_ident(id_col=self.id_col)
         if self.lins:
@@ -2112,12 +2105,12 @@ class SummarizedGatherResult:
         sD = asdict(self)
         sD["lineage"] = self.lineage.display_lineage(null_as_unclassified=True)
         # if lingroups, add 'lingroup' column linking lingroup number to lingroup name
-        if lingroups is not None and sD["lineage"] in lingroups.keys():
+        if lingroups is not None and sD["lineage"] in lingroups:
             sD["lingroup"] = lingroups[sD["lineage"]]
         elif (
             lingroups
             and sD["lineage"] != "unclassified"
-            and sD["lineage"] not in lingroups.keys()
+            and sD["lineage"] not in lingroups
         ):
             return None
         sD["query_name"] = query_info.query_name
@@ -2411,7 +2404,7 @@ class QueryTaxResult:
                         )
         # reset ranks levels to the ones that were actually summarized + that we can access for summarized result
         self.summarized_ranks = [
-            x for x in self.summarized_ranks if x in self.sum_uniq_bp.keys()
+            x for x in self.summarized_ranks if x in self.sum_uniq_bp
         ]
         if single_rank and single_rank not in self.summarized_ranks:
             raise ValueError(
@@ -2652,16 +2645,15 @@ class QueryTaxResult:
             lingroup_ranks = set()
             if lingroups is not None:
                 header.append("lingroup")
-                for lin in lingroups.keys():
+                for lin in lingroups:
                     # e.g. "14;1;0;0;0;0;0;0;0;0" => 9
                     lin_rank = len(lin.split(";")) - 1
                     lingroup_ranks.add(lin_rank)
 
             for rank in self.summarized_ranks[::-1]:  # descending
                 # if lingroups are provided, only report summary for specified lingroups
-                if lingroup_ranks:
-                    if int(rank) not in lingroup_ranks:
-                        continue
+                if lingroup_ranks and int(rank) not in lingroup_ranks:
+                    continue
                 unclassified = []
                 rank_results = self.summarized_lineage_results[rank]
                 if use_abund:

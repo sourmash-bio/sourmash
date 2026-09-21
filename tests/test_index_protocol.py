@@ -3,29 +3,29 @@ Tests for the 'Index' class and protocol. All Index classes should support
 this functionality.
 """
 
-import pytest
 import glob
+
+import pytest
+import sourmash_tst_utils as utils
 
 import sourmash
 from sourmash import SourmashSignature
 from sourmash.index import (
-    LinearIndex,
-    ZipFileLinearIndex,
+    CounterGather,
+    IndexSearchResult,
     LazyLinearIndex,
+    LinearIndex,
     MultiIndex,
     StandaloneManifestIndex,
-    IndexSearchResult,
+    ZipFileLinearIndex,
 )
-from sourmash.index import CounterGather
+from sourmash.index.revindex import DiskRevIndex, MemRevIndex
 from sourmash.index.sqlite_index import SqliteIndex
-from sourmash.index.revindex import MemRevIndex, DiskRevIndex
-from sourmash.sbt import SBT, GraphFactory
-from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
-from sourmash.minhash import flatten_and_intersect_scaled, flatten_and_downsample_scaled
+from sourmash.manifest import BaseCollectionManifest, CollectionManifest
+from sourmash.minhash import flatten_and_downsample_scaled, flatten_and_intersect_scaled
+from sourmash.sbt import SBT, GraphFactory
 from sourmash.sourmash_args import load_one_signature
-
-import sourmash_tst_utils as utils
 
 
 def _load_three_sigs():
@@ -213,7 +213,7 @@ def index_obj(request, runtmp):
 
 def test_index_search_exact_match(index_obj):
     # search for an exact match
-    ss2, ss47, ss63 = _load_three_sigs()
+    ss2, _ss47, _ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss2, threshold=1.0)
     print([s[1].name for s in sr])
@@ -224,7 +224,7 @@ def test_index_search_exact_match(index_obj):
 
 def test_index_search_lower_threshold(index_obj):
     # search at a lower threshold/multiple results with ss47
-    ss2, ss47, ss63 = _load_three_sigs()
+    _ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss47, threshold=0.1)
     print([s[1].name for s in sr])
@@ -238,7 +238,7 @@ def test_index_search_lower_threshold(index_obj):
 
 def test_index_search_lower_threshold_2(index_obj):
     # search at a lower threshold/multiple results with ss63
-    ss2, ss47, ss63 = _load_three_sigs()
+    _ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss63, threshold=0.1)
     print([s[1].name for s in sr])
@@ -252,7 +252,7 @@ def test_index_search_lower_threshold_2(index_obj):
 
 def test_index_search_higher_threshold_2(index_obj):
     # search at a higher threshold/one match
-    ss2, ss47, ss63 = _load_three_sigs()
+    _ss2, _ss47, ss63 = _load_three_sigs()
 
     # search for sig63 with high threshold => 1 match
     sr = index_obj.search(ss63, threshold=0.8)
@@ -265,7 +265,7 @@ def test_index_search_higher_threshold_2(index_obj):
 
 def test_index_search_containment(index_obj):
     # search for containment at a low threshold/multiple results with ss63
-    ss2, ss47, ss63 = _load_three_sigs()
+    _ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss63, do_containment=True, threshold=0.1)
     print([s[1].name for s in sr])
@@ -285,7 +285,7 @@ def test_index_signatures(index_obj):
     assert len(siglist) == 3
 
     # check md5sums, since 'in' doesn't always work
-    md5s = set(ss.md5sum() for ss in siglist)
+    md5s = {ss.md5sum() for ss in siglist}
     assert ss2.md5sum() in md5s
     assert ss47.md5sum() in md5s
     assert ss63.md5sum() in md5s
@@ -299,7 +299,7 @@ def test_index_signatures_with_location(index_obj):
     assert len(siglist) == 3
 
     # check md5sums, since 'in' doesn't always work
-    md5s = set((ss.md5sum() for ss, loc in siglist))
+    md5s = {ss.md5sum() for ss, loc in siglist}
     assert ss2.md5sum() in md5s
     assert ss47.md5sum() in md5s
     assert ss63.md5sum() in md5s
@@ -344,7 +344,7 @@ def test_index_select_basic(index_obj):
     assert len(siglist) == 3
 
     # check md5sums, since 'in' doesn't always work
-    md5s = set(ss.md5sum() for ss in siglist)
+    md5s = {ss.md5sum() for ss in siglist}
     ss2, ss47, ss63 = _load_three_sigs()
     assert ss2.md5sum() in md5s
     assert ss47.md5sum() in md5s
@@ -425,7 +425,7 @@ def test_index_prefetch(index_obj):
 
 def test_index_best_containment(index_obj):
     # test basic containment search
-    ss2, ss47, ss63 = _load_three_sigs()
+    ss2, ss47, _ss63 = _load_three_sigs()
 
     match = index_obj.best_containment(ss2)
     assert match
@@ -440,12 +440,12 @@ def test_index_best_containment(index_obj):
 
 def test_index_best_containment_threshold_1(index_obj):
     # test best_containment() method, in some detail
-    ss2, ss47, ss63 = _load_three_sigs()
+    ss2, _ss47, _ss63 = _load_three_sigs()
 
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(ss2.minhash.hashes))
+    mins = sorted(ss2.minhash.hashes)
     new_mh = ss2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -475,7 +475,7 @@ def test_index_best_containment_threshold_1(index_obj):
 
     result = index_obj.best_containment(SourmashSignature(new_mh))
     assert result
-    containment, match_sig, name = result
+    containment, match_sig, _name = result
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
@@ -486,12 +486,12 @@ def test_index_best_containment_threshold_1(index_obj):
 
 def test_best_containment_threshold_5(index_obj):
     # test gather() method, in some detail
-    ss2, ss47, ss63 = _load_three_sigs()
+    ss2, _ss47, _ss63 = _load_three_sigs()
 
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(ss2.minhash.hashes.keys()))
+    mins = sorted(ss2.minhash.hashes.keys())
     new_mh = ss2.minhash.copy_and_clear()
 
     # add five hashes
@@ -512,7 +512,7 @@ def test_best_containment_threshold_5(index_obj):
     # now, check with a threshold_bp that should be meet-able.
     result = index_obj.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
     assert result
-    containment, match_sig, name = result
+    containment, match_sig, _name = result
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
@@ -576,8 +576,7 @@ class CounterGather_LinearIndex:
 
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
-        if scaled > self.scaled:
-            self.scaled = scaled
+        self.scaled = max(self.scaled, scaled)
         return self.scaled
 
     def peek(self, cur_query_mh, *, threshold_bp=0):
@@ -728,11 +727,11 @@ def counter_gather_constructor(request):
 def test_counter_get_signatures(counter_gather_constructor):
     # test .signatures() method
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
@@ -785,11 +784,11 @@ def test_counter_gather_1(counter_gather_constructor):
     # check a contrived set of non-overlapping gather results,
     # generated via CounterGather
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
@@ -829,11 +828,11 @@ def test_counter_gather_1_b(counter_gather_constructor):
     # test_counter_gather_1(), even though the overlaps themselves are
     # larger.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
@@ -875,11 +874,11 @@ def test_counter_gather_1_c_with_threshold(counter_gather_constructor):
     # use a threshold, here.
 
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
@@ -911,11 +910,11 @@ def test_counter_gather_1_c_with_threshold(counter_gather_constructor):
 def test_counter_gather_1_d_diff_scaled(counter_gather_constructor):
     # test as above, but with different scaled.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
@@ -951,10 +950,10 @@ def test_counter_gather_1_d_diff_scaled(counter_gather_constructor):
 def test_counter_gather_1_d_diff_scaled_query(counter_gather_constructor):
     # test as above, but with different scaled for QUERY.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
 
     match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
@@ -993,11 +992,11 @@ def test_counter_gather_1_d_diff_scaled_query(counter_gather_constructor):
 def test_counter_gather_1_e_abund_query(counter_gather_constructor):
     # test as above, but abund query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear().flatten()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear().flatten()
@@ -1034,11 +1033,11 @@ def test_counter_gather_1_e_abund_query(counter_gather_constructor):
 def test_counter_gather_1_f_abund_match(counter_gather_constructor):
     # test as above, but abund query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh.flatten(), name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     match_mh_2 = query_mh.copy_and_clear()
@@ -1116,7 +1115,7 @@ def test_counter_gather_2(counter_gather_constructor):
 def test_counter_gather_exact_match(counter_gather_constructor):
     # query == match
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter; provide a location override, too.
@@ -1125,7 +1124,7 @@ def test_counter_gather_exact_match(counter_gather_constructor):
 
     results = _consume_all(query_ss.minhash, counter)
     assert len(results) == 1
-    (sr, intersect_mh) = results[0]
+    (sr, _intersect_mh) = results[0]
 
     assert sr.score == 1.0
     assert sr.signature == query_ss
@@ -1135,7 +1134,7 @@ def test_counter_gather_exact_match(counter_gather_constructor):
 def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
     # test multiple identical matches being inserted, with only one return
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # create counter...
@@ -1164,7 +1163,7 @@ def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
 def test_counter_gather_add_after_peek(counter_gather_constructor):
     # cannot add after peek or consume
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
@@ -1180,7 +1179,7 @@ def test_counter_gather_add_after_peek(counter_gather_constructor):
 def test_counter_gather_add_after_consume(counter_gather_constructor):
     # cannot add after peek or consume
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
@@ -1198,7 +1197,7 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
 def test_counter_gather_consume_empty_intersect(counter_gather_constructor):
     # check that consume works fine when there is an empty signature.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
@@ -1215,7 +1214,7 @@ def test_counter_gather_empty_initial_query(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     # load up the counter
@@ -1228,7 +1227,7 @@ def test_counter_gather_empty_initial_query(counter_gather_constructor):
 def test_counter_gather_num_query(counter_gather_constructor):
     # check num query
     query_mh = sourmash.MinHash(n=500, ksize=31)
-    query_mh.add_many(range(0, 10))
+    query_mh.add_many(range(10))
     query_ss = SourmashSignature(query_mh, name="query")
 
     with pytest.raises(ValueError):
@@ -1238,7 +1237,7 @@ def test_counter_gather_num_query(counter_gather_constructor):
 def test_counter_gather_empty_cur_query(counter_gather_constructor):
     # test empty cur query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
@@ -1253,11 +1252,11 @@ def test_counter_gather_empty_cur_query(counter_gather_constructor):
 def test_counter_gather_add_num_matchy(counter_gather_constructor):
     # test add num query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh = sourmash.MinHash(n=500, ksize=31)
-    match_mh.add_many(range(0, 20))
+    match_mh.add_many(range(20))
     match_ss = SourmashSignature(match_mh, name="query")
 
     # load up the counter
@@ -1269,7 +1268,7 @@ def test_counter_gather_add_num_matchy(counter_gather_constructor):
 def test_counter_gather_bad_cur_query(counter_gather_constructor):
     # test cur query that is not subset of original query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     # load up the counter
@@ -1285,7 +1284,7 @@ def test_counter_gather_bad_cur_query(counter_gather_constructor):
 def test_counter_gather_add_no_overlap(counter_gather_constructor):
     # check adding match with no overlap w/query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 10))
+    query_mh.add_many(range(10))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
@@ -1303,11 +1302,11 @@ def test_counter_gather_add_no_overlap(counter_gather_constructor):
 def test_counter_gather_big_threshold(counter_gather_constructor):
     # check 'peek' with a huge threshold
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
+    query_mh.add_many(range(20))
     query_ss = SourmashSignature(query_mh, name="query")
 
     match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
+    match_mh_1.add_many(range(10))
     match_ss_1 = SourmashSignature(match_mh_1, name="match1")
 
     # load up the counter
