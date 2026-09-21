@@ -33,10 +33,7 @@ def set_size_estimate_is_accurate(
 ):
     set_size = get_set_size(scale, num_sketches)
     probability = set_size_chernoff(set_size, scale, relative_error)
-    if probability >= confidence:
-        return True
-    else:
-        return False
+    return probability >= confidence
 
 
 def test_set_size_chernoff():

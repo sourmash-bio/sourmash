@@ -32,15 +32,16 @@ Please see the 'tax genome' documentation for more details:
 """
 
 import argparse
+
 import sourmash
-from sourmash.logging import notify, print_results, error
 from sourmash.cli.utils import (
+    add_rank_arg,
     add_tax_threshold_arg,
+    add_v5_args,
     check_rank,
     check_tax_outputs,
-    add_rank_arg,
-    add_v5_args,
 )
+from sourmash.logging import error, notify, print_results
 
 
 def subparser(subparsers):
@@ -148,7 +149,7 @@ def main(args):
         args.output_format = check_tax_outputs(args, rank_required=["krona"])
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         import sys
 
         sys.exit(-1)
