@@ -2,19 +2,20 @@
 Tests for distance utils.
 """
 
-import pytest
 import numpy as np
+import pytest
+
 from sourmash.distance_utils import (
+    ANIResult,
+    ciANIResult,
     containment_to_distance,
     get_exp_probability_nothing_common,
     handle_seqlen_nkmers,
     jaccard_to_distance,
-    ANIResult,
-    ciANIResult,
     jaccardANIResult,
-    var_n_mutated,
     set_size_chernoff,
     set_size_exact_prob,
+    var_n_mutated,
 )
 
 

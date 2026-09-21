@@ -2,22 +2,23 @@
 Tests for `sourmash prefetch` command-line and API functionality.
 """
 
-import os
 import csv
-import gzip
-import pytest
 import glob
+import gzip
+import os
 import random
-from sourmash.search import PrefetchResult
 
+import pytest
 import sourmash_tst_utils as utils
-import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
+
+import sourmash
 from sourmash import SourmashSignature, sourmash_args
+from sourmash.search import PrefetchResult
 from sourmash.signature import (
-    save_signatures_to_json,
-    load_signatures_from_json,
     load_one_signature_from_json,
+    load_signatures_from_json,
+    save_signatures_to_json,
 )
 
 
@@ -169,7 +170,7 @@ def test_prefetch_subject_scaled_is_larger_outsigs(runtmp, linear_gather):
 
     # make sure non-downsampled sketches were saved.
     matches = sourmash.load_file_as_signatures(runtmp.output("matches.sig"))
-    scaled_vals = set([match.minhash.scaled for match in matches])
+    scaled_vals = {match.minhash.scaled for match in matches}
     assert 1000 in scaled_vals
     assert 10000 in scaled_vals
     assert len(scaled_vals) == 2
@@ -967,11 +968,11 @@ def test_prefetch_output_with_abundance(runtmp, prefetch_gather, linear_gather):
     print(c.last_result.out)
 
     assert os.path.exists(c.output("match-hash.sig"))
-    ss = list(sourmash.load_file_as_signatures(c.output("match-hash.sig")))[0]
+    ss = next(iter(sourmash.load_file_as_signatures(c.output("match-hash.sig"))))
     assert ss.minhash.track_abundance
 
     assert os.path.exists(c.output("nomatch-hash.sig"))
-    ss = list(sourmash.load_file_as_signatures(c.output("nomatch-hash.sig")))[0]
+    ss = next(iter(sourmash.load_file_as_signatures(c.output("nomatch-hash.sig"))))
     assert ss.minhash.track_abundance
 
 
@@ -1103,10 +1104,10 @@ def test_prefetch_ani_containment_asymmetry(runtmp):
     runtmp.sourmash("prefetch", merged_sig, query_sig, "-o", "merged-in-query.csv")
 
     with sourmash_args.FileInputCSV(runtmp.output("query-in-merged.csv")) as r:
-        query_in_merged = list(r)[0]
+        query_in_merged = next(iter(r))
 
     with sourmash_args.FileInputCSV(runtmp.output("merged-in-query.csv")) as r:
-        merged_in_query = list(r)[0]
+        merged_in_query = next(iter(r))
 
     assert query_in_merged["query_containment_ani"] == "1.0"
     assert query_in_merged["match_containment_ani"] == "0.9865155060423993"
