@@ -6,10 +6,10 @@ Compare two taxonomy spreadsheets.
 import sys
 from collections import defaultdict
 
-from ..logging import notify, error, print_results, set_quiet
+from ..logging import error, notify, print_results, set_quiet
 from . import lca_utils
-from .lca_utils import zip_lineage
 from .command_index import load_taxonomy_assignments
+from .lca_utils import zip_lineage
 
 
 def compare_csv(args):

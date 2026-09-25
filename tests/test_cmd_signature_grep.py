@@ -2,16 +2,16 @@
 Tests for the 'sourmash signature grep' command line.
 """
 
-import shutil
-import os
 import csv
 import gzip
+import os
+import shutil
 
 import pytest
-
 import sourmash_tst_utils as utils
-import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
+
+import sourmash
 from sourmash.signature import load_signatures_from_json, save_signatures_to_json
 
 ## command line tests
@@ -181,8 +181,8 @@ def test_grep_5_zip_include_picklist(runtmp):
     with open(pickfile, "w", newline="") as fp:
         w = csv.DictWriter(fp, fieldnames=["md5"])
         w.writeheader()
-        w.writerow(dict(md5="09a08691ce52952152f0e866a59f6261"))
-        w.writerow(dict(md5="38729c6374925585db28916b82a6f513"))
+        w.writerow({"md5": "09a08691ce52952152f0e866a59f6261"})
+        w.writerow({"md5": "38729c6374925585db28916b82a6f513"})
 
     runtmp.run_sourmash(
         "sig", "grep", "--dna", "OS223", allzip, "--picklist", f"{pickfile}:md5:md5"
@@ -321,10 +321,10 @@ def test_sig_grep_7_lca(runtmp):
     )
 
     match = sourmash.load_file_as_signatures(runtmp.output("matches.sig"))
-    match = list(match)[0]
+    match = next(iter(match))
 
     ss47 = sourmash.load_file_as_signatures(sig47)
-    ss47 = list(ss47)[0]
+    ss47 = next(iter(ss47))
 
     ss47 = ss47.to_mutable()
     ss47.minhash = ss47.minhash.downsample(scaled=10000)
@@ -337,13 +337,13 @@ def test_sig_grep_7_picklist_md5_lca_fail(runtmp):
     allzip = utils.get_test_data("lca/47+63.lca.json")
 
     # select on any of these attributes
-    row = dict(
-        exactName="NC_009665.1 Shewanella baltica OS185, complete genome",
-        md5full="50a9274021e43eda8b2e77f8fa60ae8e",
-        md5short="50a9274021e43eda8b2e77f8fa60ae8e"[:8],
-        fullIdent="NC_009665.1",
-        nodotIdent="NC_009665",
-    )
+    row = {
+        "exactName": "NC_009665.1 Shewanella baltica OS185, complete genome",
+        "md5full": "50a9274021e43eda8b2e77f8fa60ae8e",
+        "md5short": "50a9274021e43eda8b2e77f8fa60ae8e"[:8],
+        "fullIdent": "NC_009665.1",
+        "nodotIdent": "NC_009665",
+    }
 
     # make picklist
     picklist_csv = runtmp.output("pick.csv")
@@ -452,7 +452,7 @@ def test_sig_grep_identical_md5s(runtmp):
     # test that we properly handle different signatures with identical md5s
     sig47 = utils.get_test_data("47.fa.sig")
     ss = load_signatures_from_json(sig47)
-    sig = list(ss)[0]
+    sig = next(iter(ss))
     new_sig = sig.to_mutable()
     new_sig.name = "foo"
     sig47foo = runtmp.output("foo.sig")

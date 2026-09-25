@@ -1,13 +1,13 @@
 import os
-import pytest
 from collections import namedtuple
+
 import numpy
+import pytest
+import sourmash_tst_utils as utils
 
 import sourmash
-import sourmash_tst_utils as utils
+from sourmash.command_sketch import ComputeParameters, _signatures_for_sketch_factory
 from sourmash.sourmash_args import load_one_signature
-from sourmash.command_sketch import _signatures_for_sketch_factory, ComputeParameters
-
 
 MoltypeHolder = namedtuple(
     "MoltypeHolder",
@@ -154,7 +154,7 @@ def test_manifest_row_to_compute_parameters(moltype, moltype2):
     else:
         moltype_str = moltype
 
-    row = dict(moltype=moltype_str, ksize=21, num=0, scaled=1000, with_abundance=1)
+    row = {"moltype": moltype_str, "ksize": 21, "num": 0, "scaled": 1000, "with_abundance": 1}
     p = ComputeParameters.from_manifest_row(row)
     assert getattr(p, moltype)
     assert not getattr(p, moltype2)
@@ -167,7 +167,7 @@ def test_manifest_row_to_compute_parameters(moltype, moltype2):
 
 def test_api_load(moltype_sketches):
     # can we load exactly one sketch? yay.
-    mt, rts = moltype_sketches
+    mt, _rts = moltype_sketches
 
     gsig = load_one_signature(mt.genome_sketch, select_moltype=mt.molecule)
     msig = load_one_signature(mt.metag_sketch, select_moltype=mt.molecule)
@@ -178,7 +178,7 @@ def test_api_load(moltype_sketches):
 
 def test_api_overlap(moltype_sketches):
     # test basic overlap calculations
-    mt, rts = moltype_sketches
+    mt, _rts = moltype_sketches
 
     gsig = load_one_signature(mt.genome_sketch, select_moltype=mt.molecule)
     msig = load_one_signature(mt.metag_sketch, select_moltype=mt.molecule)
