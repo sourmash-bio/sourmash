@@ -1,22 +1,21 @@
 "Test SBT code."
 
 import json
-import shutil
 import os
+import shutil
 
 import pytest
+import sourmash_tst_utils as utils
 
 import sourmash
 from sourmash import SourmashSignature, load_file_as_signatures
-from sourmash.sourmash_args import load_one_signature
 from sourmash.exceptions import IndexNotSupported
+from sourmash.picklist import PickStyle, SignaturePicklist
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
+from sourmash.sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from sourmash.sbtmh import SigLeaf, load_sbt_index
-from sourmash.sbt_storage import FSStorage, RedisStorage, IPFSStorage, ZipStorage
 from sourmash.search import make_jaccard_search_query
-from sourmash.picklist import SignaturePicklist, PickStyle
-
-import sourmash_tst_utils as utils
+from sourmash.sourmash_args import load_one_signature
 
 
 def test_simple(runtmp, n_children):
@@ -140,13 +139,13 @@ def test_longer_search(n_children):
         return 0
 
     try1 = [x.metadata for x in root._find_nodes(search_transcript, "AAAAT", 1.0)]
-    assert set(try1) == set(["a", "b", "c", "e"]), try1  # no 'd'
+    assert set(try1) == {"a", "b", "c", "e"}, try1  # no 'd'
 
     try2 = [x.metadata for x in root._find_nodes(search_transcript, "GAAAAAT", 0.6)]
-    assert set(try2) == set(["a", "b", "c", "d", "e"])
+    assert set(try2) == {"a", "b", "c", "d", "e"}
 
     try3 = [x.metadata for x in root._find_nodes(search_transcript, "GAAAA", 1.0)]
-    assert set(try3) == set(["d", "e"]), try3
+    assert set(try3) == {"d", "e"}, try3
 
 
 # @pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
@@ -252,7 +251,7 @@ def test_binary_nary_tree():
         to_search = leaf
         n_leaves += 1
 
-    assert all([len(list(t.leaves())) == n_leaves for t in trees.values()])
+    assert all(len(list(t.leaves())) == n_leaves for t in trees.values())
 
     results = {}
     print("*" * 60)
@@ -825,7 +824,7 @@ def test_sbt_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
+    mins = sorted(sig2.minhash.hashes.keys())
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -883,7 +882,7 @@ def test_sbt_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.hashes.keys()))
+    mins = sorted(sig2.minhash.hashes.keys())
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes

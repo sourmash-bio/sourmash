@@ -4,12 +4,11 @@ Tests for the 'SketchComparison' classes.
 
 import numpy as np
 import pytest
+import sourmash_tst_utils as utils
 
-from sourmash.sourmash_args import load_one_signature
 from sourmash.minhash import MinHash
 from sourmash.sketchcomparison import FracMinHashComparison, NumMinHashComparison
-
-import sourmash_tst_utils as utils
+from sourmash.sourmash_args import load_one_signature
 
 
 # can we parameterize scaled too (so don't need separate downsample tests?)

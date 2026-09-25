@@ -1,14 +1,13 @@
 from tempfile import NamedTemporaryFile
 
 import pytest
+import sourmash_tst_utils as utils
 
 from sourmash.nodegraph import (
     Nodegraph,
-    extract_nodegraph_info,
     calc_expected_collisions,
+    extract_nodegraph_info,
 )
-
-import sourmash_tst_utils as utils
 
 
 def test_nodegraph_to_khmer_basic():

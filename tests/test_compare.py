@@ -3,17 +3,17 @@ import os
 
 import numpy as np
 import pytest
+import sourmash_tst_utils as utils
 
 import sourmash
 from sourmash.compare import (
     compare_all_pairs,
     compare_parallel,
     compare_serial,
+    compare_serial_avg_containment,
     compare_serial_containment,
     compare_serial_max_containment,
-    compare_serial_avg_containment,
 )
-import sourmash_tst_utils as utils
 
 
 @pytest.fixture()
