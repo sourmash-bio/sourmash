@@ -1,8 +1,8 @@
 import pytest
-import sourmash
-
 import sourmash_tst_utils as utils
-from sourmash.sourmash_args import load_one_signature, SaveSignaturesToLocation
+
+import sourmash
+from sourmash.sourmash_args import SaveSignaturesToLocation, load_one_signature
 
 
 @utils.in_tempdir
@@ -14,7 +14,7 @@ def test_sourmash_signature_api(c):
         save_sigs.add(sig)
 
     sig_x1 = load_one_signature(c.output("xxx.sig"))
-    sig_x2 = list(sourmash.load_file_as_signatures(c.output("xxx.sig")))[0]
+    sig_x2 = next(iter(sourmash.load_file_as_signatures(c.output("xxx.sig"))))
 
     assert sig_x1 == sig
     assert sig_x2 == sig

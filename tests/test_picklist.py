@@ -2,16 +2,16 @@
 Tests for the picklist API.
 """
 
-import pytest
-import sourmash
-
 import copy
 
+import pytest
 import sourmash_tst_utils as utils
+
+import sourmash
 from sourmash import picklist
-from sourmash.picklist import SignaturePicklist
 from sourmash.index import LinearIndex, MultiIndex
 from sourmash.index.sqlite_index import SqliteIndex
+from sourmash.picklist import SignaturePicklist
 
 
 def test_load_empty_picklist_fail():
@@ -33,7 +33,7 @@ def test_dup_md5_picked(runtmp):
     # load a sig, duplicate, and see if a picklist gets the right one
     sig47 = utils.get_test_data("47.fa.sig")
     ss = sourmash.load_file_as_signatures(sig47)
-    sig = list(ss)[0]
+    sig = next(iter(ss))
 
     # save a manifest with one entry
     xl = LinearIndex([sig])
@@ -71,7 +71,7 @@ def test_dup_md5_picked_mf_to_picklist(runtmp):
     # uses an in memory picklist
     sig47 = utils.get_test_data("47.fa.sig")
     ss = sourmash.load_file_as_signatures(sig47)
-    sig = list(ss)[0]
+    sig = next(iter(ss))
 
     # save a manifest with one entry
     xl = LinearIndex([sig])
@@ -103,7 +103,7 @@ def test_dup_md5_picked_mf_to_picklist_sqlite(runtmp):
     # use a sqlite db with its own to_picklist behavior.
     sig47 = utils.get_test_data("47.fa.sig")
     ss = sourmash.load_file_as_signatures(sig47)
-    sig = list(ss)[0]
+    sig = next(iter(ss))
 
     # save a manifest with one entry
     xl = SqliteIndex.create(":memory:")

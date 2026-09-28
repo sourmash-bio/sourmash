@@ -4,51 +4,50 @@ Command-line entry point for 'python -m sourmash.sig'
 
 __all__ = [
     "cat",
-    "split",
-    "describe",
-    "manifest",
-    "overlap",
-    "merge",
-    "intersect",
-    "inflate",
-    "subtract",
-    "rename",
-    "extract",
-    "filter",
-    "flatten",
-    "downsample",
-    "ingest",
-    "export",
-    "kmers",
-    "fileinfo",
     "check",
     "collect",
+    "describe",
+    "downsample",
+    "export",
+    "extract",
+    "fileinfo",
+    "filter",
+    "flatten",
+    "inflate",
+    "ingest",
+    "intersect",
+    "kmers",
+    "manifest",
+    "merge",
+    "overlap",
+    "rename",
+    "split",
+    "subtract",
 ]
 
-import sys
 import csv
 import json
 import os
-from collections import defaultdict, namedtuple, Counter
 import re
+import sys
+from collections import Counter, defaultdict, namedtuple
 
 import screed
-import sourmash
-from sourmash.sourmash_args import FileOutput
 
+import sourmash
+from sourmash import sourmash_args
 from sourmash.logging import (
-    set_quiet,
+    _debug,
+    debug,
+    debug_literal,
     error,
     notify,
     print_results,
-    debug,
-    debug_literal,
-    _debug,
+    set_quiet,
 )
-from sourmash import sourmash_args
-from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
-
+from sourmash.minhash import _get_max_hash_for_scaled
+from sourmash.sourmash_args import FileOutput
 
 usage = """
 sourmash signature <command> [<args>] - manipulate/work with signature files.
@@ -181,10 +180,9 @@ def split(args):
         "{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}" + args.extension
     )
 
-    if args.output_dir:
-        if not os.path.exists(args.output_dir):
-            notify(f"Creating --output-dir {args.output_dir}")
-            os.mkdir(args.output_dir)
+    if args.output_dir and not os.path.exists(args.output_dir):
+        notify(f"Creating --output-dir {args.output_dir}")
+        os.mkdir(args.output_dir)
 
     progress = sourmash_args.SignatureLoadingProgress()
     loader = sourmash_args.load_many_signatures(
@@ -205,14 +203,14 @@ def split(args):
         if not basename or basename == "-":
             basename = "none"
 
-        params = dict(
-            basename=basename,
-            md5sum=md5sum,
-            scaled=minhash.scaled,
-            ksize=minhash.ksize,
-            num=minhash.num,
-            moltype=minhash.moltype,
-        )
+        params = {
+            "basename": basename,
+            "md5sum": md5sum,
+            "scaled": minhash.scaled,
+            "ksize": minhash.ksize,
+            "num": minhash.num,
+            "moltype": minhash.moltype,
+        }
 
         if minhash.scaled:
             output_template = output_scaled_template
@@ -949,13 +947,11 @@ def flatten(args):
     )
     for ss, sigloc in loader:
         # select!
-        if args.md5 is not None:
-            if args.md5 not in ss.md5sum():
-                continue  #  skip
+        if args.md5 is not None and args.md5 not in ss.md5sum():
+            continue  #  skip
 
-        if args.name is not None:
-            if args.name not in ss.name:
-                continue  # skip
+        if args.name is not None and args.name not in ss.name:
+            continue  # skip
 
         ss = ss.to_mutable()
         ss.minhash = ss.minhash.flatten()
@@ -1232,9 +1228,8 @@ def kmers(args):
 
     # figure out protein vs dna
     is_protein = False
-    if query_mh.moltype != "DNA":
-        if not args.translate:
-            is_protein = True
+    if query_mh.moltype != "DNA" and not args.translate:
+        is_protein = True
 
     n_files_searched = 0
     n_sequences_searched = 0
@@ -1290,12 +1285,12 @@ def kmers(args):
                             if hashval in query_mh.hashes:
                                 found_mh.add_hash(hashval)
                                 n_kmers_found += 1
-                                d = dict(
-                                    sequence_file=filename,
-                                    sequence_name=record.name,
-                                    kmer=kmer,
-                                    hashval=hashval,
-                                )
+                                d = {
+                                    "sequence_file": filename,
+                                    "sequence_name": record.name,
+                                    "kmer": kmer,
+                                    "hashval": hashval,
+                                }
                                 kmer_w.writerow(d)
 
                     # add seq_mh to found_mh
@@ -1461,9 +1456,8 @@ def check(args):
     """
     from sourmash.picklist import PickStyle
 
-    if args.cli_version == "v5":
-        if args.abspath is None:  # not set by user
-            args.relpath = True
+    if args.cli_version == "v5" and args.abspath is None:  # not set by user
+        args.relpath = True
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
@@ -1604,9 +1598,8 @@ def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     set_quiet(False, args.debug)
 
-    if args.cli_version == "v5":
-        if args.abspath is None:  # not set by user
-            args.relpath = True
+    if args.cli_version == "v5" and args.abspath is None:  # not set by user
+        args.relpath = True
 
     if os.path.exists(args.output):
         if args.merge_previous:
@@ -1724,7 +1717,7 @@ def collect(args):
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, "main")
+    mainmethod = submod.main
     return mainmethod(args)
 
 

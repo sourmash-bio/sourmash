@@ -2,13 +2,13 @@
 Tests for manifest code in databases, etc.
 """
 
-import pytest
 from io import StringIO
+
+import pytest
+import sourmash_tst_utils as utils
 
 import sourmash
 from sourmash import index, sourmash_args
-
-import sourmash_tst_utils as utils
 
 
 def test_generate_manifest():

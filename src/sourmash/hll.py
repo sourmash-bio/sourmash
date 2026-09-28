@@ -4,9 +4,9 @@ import sys
 from tempfile import NamedTemporaryFile
 
 from ._lowlevel import ffi, lib
-from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
-from .minhash import to_bytes, MinHash
+from .minhash import MinHash, to_bytes
+from .utils import RustObject, decode_str, rustcall
 
 
 class HLL(RustObject):

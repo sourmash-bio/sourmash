@@ -2,27 +2,26 @@
 Tests for the 'sourmash tax' command line and high level API.
 """
 
-import os
 import csv
-import pytest
 import gzip
+import os
 from collections import Counter
 from pathlib import Path
 
-import sourmash
+import pytest
 import sourmash_tst_utils as utils
-from sourmash.tax import tax_utils
-from sourmash.lca import lca_utils
 from sourmash_tst_utils import SourmashCommandFailed
 
-from sourmash import sqlite_utils
+import sourmash
+from sourmash import sourmash_args, sqlite_utils
 from sourmash.exceptions import IndexNotSupported
-from sourmash import sourmash_args
+from sourmash.lca import lca_utils
+from sourmash.tax import tax_utils
 
 
 ## command line tests
 def test_run_sourmash_tax():
-    status, out, err = utils.runscript("sourmash", ["tax"], fail_ok=True)
+    status, _out, _err = utils.runscript("sourmash", ["tax"], fail_ok=True)
     assert status != 0  # no args provided, ok ;)
 
 
@@ -4277,11 +4276,10 @@ def test_genome_gather_ictv_fail(runtmp):
     taxonomy_csv = utils.get_test_data("tax/test.ictv-taxonomy.csv")
     tax2_csv = runtmp.output("ictv-taxfail")
     # copy taxonomy csv to new file, but remove one of the columns
-    with open(taxonomy_csv) as inF:
-        with open(tax2_csv, "w") as outF:
-            for line in inF.readlines():
-                line = line.rsplit(",", 1)[0]
-                outF.write(f"{line}\n")
+    with open(taxonomy_csv) as inF, open(tax2_csv, "w") as outF:
+        for line in inF:
+            line = line.rsplit(",", 1)[0]
+            outF.write(f"{line}\n")
 
     g_res = utils.get_test_data("tax/47+63_x_gtdb-rs202.gather.csv")
 
@@ -6579,7 +6577,7 @@ def test_tax_grep_search_shew_invert(runtmp):
     assert "searching 1 taxonomy files for 'Shew'" in err
     assert "found 4 matches; saved identifiers to picklist" in err
 
-    all_names = set([x[0] for x in lines])
+    all_names = {x[0] for x in lines}
     assert "GCF_000017325.1" not in all_names
     assert "GCF_000021665.1" not in all_names
 
@@ -6606,7 +6604,7 @@ def test_tax_grep_search_shew_invert_select_phylum(runtmp):
     assert "searching 1 taxonomy files for 'Shew'" in err
     assert "found 6 matches; saved identifiers to picklist" in err
 
-    all_names = set([x[0] for x in lines])
+    all_names = {x[0] for x in lines}
     assert "GCF_000017325.1" in all_names
     assert "GCF_000021665.1" in all_names
 
@@ -6657,7 +6655,7 @@ def test_tax_grep_multiple_csv(runtmp):
     lines = Path(taxout).read_text().splitlines()
     assert len(lines) == 5
 
-    names = set([x.split(",")[0] for x in lines])
+    names = {x.split(",")[0] for x in lines}
     assert "GCA_000256725" in names
     assert "GCF_000017325.1" in names
     assert "GCF_000021665.1" in names
@@ -6698,7 +6696,7 @@ def test_tax_grep_multiple_csv_empty_force(runtmp):
     lines = Path(taxout).read_text().splitlines()
     assert len(lines) == 5
 
-    names = set([x.split(",")[0] for x in lines])
+    names = {x.split(",")[0] for x in lines}
     assert "GCA_000256725" in names
     assert "GCF_000017325.1" in names
     assert "GCF_000021665.1" in names
@@ -6722,7 +6720,7 @@ def test_tax_grep_duplicate_csv(runtmp):
     lines = Path(taxout).read_text().splitlines()
     assert len(lines) == 4
 
-    names = set([x.split(",")[0] for x in lines])
+    names = {x.split(",")[0] for x in lines}
     assert "GCF_000017325.1" in names
     assert "GCF_000021665.1" in names
     assert "GCF_001881345.1" in names

@@ -5,6 +5,7 @@ sure we can find it.
 """
 
 import argparse
+
 import sourmash
 from sourmash.sbtmh import search_minhashes
 
@@ -22,7 +23,7 @@ def main():
     for leaf in db.leaves():
         query = leaf.data
         matches = db.find(search_minhashes, query, threshold)
-        matches = list([x.data for x in matches])
+        matches = [x.data for x in matches]
         if query not in matches:
             print(query)
             assert 0

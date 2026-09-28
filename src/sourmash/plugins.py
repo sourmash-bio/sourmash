@@ -15,14 +15,14 @@ CTB TODO:
 DEFAULT_LOAD_FROM_PRIORITY = 99
 DEFAULT_SAVE_TO_PRIORITY = 99
 
-import itertools
 import argparse
-
-from .logging import debug_literal, error, notify, set_quiet
+import itertools
 
 # cover for older versions of Python that don't support selection on load
 # (the 'group=' below).
 from importlib.metadata import entry_points
+
+from .logging import debug_literal, error, notify, set_quiet
 
 # load 'load_from' entry points. NOTE: this executes on import of this module.
 try:
@@ -52,7 +52,7 @@ def get_load_from_functions():
             loader_fn = plugin.load()
         except (ModuleNotFoundError, AttributeError) as e:
             debug_literal(
-                f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}"
+                f"plugins.load_from_functions: got error loading {plugin.name}: {e!s}"
             )
             continue
 
@@ -75,7 +75,7 @@ def get_save_to_functions():
             save_cls = plugin.load()
         except (ModuleNotFoundError, AttributeError) as e:
             debug_literal(
-                f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}"
+                f"plugins.load_from_functions: got error loading {plugin.name}: {e!s}"
             )
             continue
 
@@ -146,7 +146,7 @@ def get_cli_scripts_descriptions():
         name = plugin.name
         script_cls = plugin.load()
 
-        command = getattr(script_cls, "command")
+        command = script_cls.command
         description = getattr(script_cls, "description", "")
         if description:
             description = description.splitlines()[0]

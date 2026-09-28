@@ -1,6 +1,7 @@
 import numpy as np
-from sourmash import SourmashSignature
+
 import sourmash
+from sourmash import SourmashSignature
 from sourmash.np_utils import to_memmap
 
 

@@ -22,9 +22,8 @@ Please see the 'sketch' documentation for more details:
 """
 
 import sourmash
-from sourmash.logging import notify, print_results, error
-
 from sourmash import command_sketch
+from sourmash.logging import error, notify, print_results
 
 assert command_sketch.DEFAULTS["dna"] == "k=31,scaled=1000,noabund"
 

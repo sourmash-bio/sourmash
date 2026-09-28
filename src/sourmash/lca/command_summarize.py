@@ -3,16 +3,16 @@
 Summarize the taxonomic content of the given signatures, combined.
 """
 
-import sys
 import csv
+import sys
 from collections import defaultdict
 
-from .. import sourmash_args
-from ..logging import notify, error, print_results, set_quiet, debug
-from . import lca_utils
-from .lca_utils import check_files_exist
 from sourmash.index import MultiIndex
 
+from .. import sourmash_args
+from ..logging import debug, error, notify, print_results, set_quiet
+from . import lca_utils
+from .lca_utils import check_files_exist
 
 DEFAULT_THRESHOLD = 5
 

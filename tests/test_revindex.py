@@ -2,16 +2,17 @@
 Tests of the MemRevIndex and DiskRevIndex classes.
 """
 
-import pytest
-import sourmash_tst_utils as utils
 import shutil
 
-from sourmash.index import revindex
-from sourmash.index.revindex import MemRevIndex, DiskRevIndex
-from sourmash.signature import load_one_signature_from_json
-from sourmash.search import JaccardSearch, SearchType
+import pytest
+import sourmash_tst_utils as utils
+
 from sourmash import SourmashSignature, minhash
+from sourmash.index import revindex
+from sourmash.index.revindex import DiskRevIndex, MemRevIndex
 from sourmash.picklist import SignaturePicklist
+from sourmash.search import JaccardSearch, SearchType
+from sourmash.signature import load_one_signature_from_json
 
 ##
 ## test a slightly outre version of JaccardSearch - this is a test of the
@@ -693,7 +694,7 @@ def test_disk_revindex_prefetch_to_cg_colors_1():
     db = DiskRevIndex(rocksdb_path)
 
     cg = db.counter_gather(ss63, threshold_bp=0)
-    sr, isect_mh = cg.peek(ss63.minhash)
+    sr, _isect_mh = cg.peek(ss63.minhash)
     assert sr.score == 1.0
 
 

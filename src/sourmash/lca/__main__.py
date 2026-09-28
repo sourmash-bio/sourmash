@@ -2,12 +2,12 @@
 Command-line entry point for 'python -m sourmash.lca'
 """
 
-import sys
 import argparse
+import sys
 
-from . import classify, index, summarize_main, rankinfo_main
+from ..logging import error, set_quiet
+from . import classify, index, rankinfo_main, summarize_main
 from .command_compare_csv import compare_csv
-from ..logging import set_quiet, error
 
 usage = """
 sourmash lca <command> [<args>] - work with taxonomic information.
@@ -29,7 +29,7 @@ sourmash lca index -h
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, "main")
+    mainmethod = submod.main
     return mainmethod(args)
 
 

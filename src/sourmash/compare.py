@@ -1,14 +1,14 @@
 """Functionality for comparing many signatures, used in sourmash compare."""
 
 import itertools
-from functools import partial
-import time
 import multiprocessing
+import time
+from functools import partial
 
+from sourmash.np_utils import to_memmap
 from sourmash.sketchcomparison import FracMinHashComparison
 
 from .logging import notify
-from sourmash.np_utils import to_memmap
 
 
 def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=False):

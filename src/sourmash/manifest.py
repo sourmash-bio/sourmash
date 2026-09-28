@@ -2,14 +2,14 @@
 Manifests for collections of signatures.
 """
 
-import csv
 import ast
+import csv
 import gzip
+import itertools
 import os.path
 from abc import abstractmethod
-import itertools
 
-from sourmash import picklist, index
+from sourmash import index, picklist
 
 
 class BaseCollectionManifest:
@@ -246,8 +246,10 @@ class CollectionManifest(BaseCollectionManifest):
     An in-memory manifest that simply stores the rows in a list.
     """
 
-    def __init__(self, rows=[]):
+    def __init__(self, rows=None):
         "Initialize from an iterable of metadata dictionaries."
+        if rows is None:
+            rows = []
         self.rows = []
         self._md5_set = set()
 
@@ -261,7 +263,7 @@ class CollectionManifest(BaseCollectionManifest):
     @staticmethod
     def _from_rust(value):
         from ._lowlevel import ffi, lib
-        from .utils import rustcall, decode_str
+        from .utils import decode_str, rustcall
 
         iterator = rustcall(lib.manifest_rows, value)
 

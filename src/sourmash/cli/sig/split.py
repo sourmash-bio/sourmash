@@ -36,7 +36,7 @@ Note: `split` only saves files in the JSON `.sig` format.
 
 """
 
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg, add_picklist_args
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_picklist_args
 
 
 def subparser(subparsers):

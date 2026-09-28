@@ -1,13 +1,13 @@
 # -*- coding: UTF-8 -*-
 
-from struct import pack, unpack
 import sys
+from struct import pack, unpack
 from tempfile import NamedTemporaryFile
 
 from ._lowlevel import ffi, lib
-from .minhash import to_bytes, MinHash
-from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
+from .minhash import MinHash, to_bytes
+from .utils import RustObject, decode_str, rustcall
 
 
 class Nodegraph(RustObject):

@@ -2,12 +2,13 @@
 Command-line entry point for 'python -m sourmash.sig grep'
 """
 
-import sys
 import re
+import sys
 
 from sourmash import logging, sourmash_args
-from sourmash.logging import notify, error, debug, print_results
+from sourmash.logging import debug, error, notify, print_results
 from sourmash.manifest import CollectionManifest
+
 from .__main__ import _extend_signatures_with_from_file
 
 

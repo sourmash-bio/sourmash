@@ -1,18 +1,18 @@
 import abc
-from io import BytesIO
 import os
 import shutil
 import sys
 import tarfile
-from tempfile import NamedTemporaryFile
+import warnings
 import zipfile
 from abc import ABC
+from io import BytesIO
 from pathlib import Path
-import warnings
+from tempfile import NamedTemporaryFile
 
 from ._lowlevel import ffi, lib
-from .utils import RustObject, rustcall, decode_str
 from .minhash import to_bytes
+from .utils import RustObject, decode_str, rustcall
 
 
 class Storage(ABC):
@@ -235,9 +235,7 @@ class _RwZipStorage(Storage):
     def _content_matches(self, zf, path, content):
         info = zf.getinfo(path)
         entry_content = zf.read(info)
-        if entry_content == content:
-            return True
-        return False
+        return entry_content == content
 
     def _generate_filename(self, zf, path, content):
         try:

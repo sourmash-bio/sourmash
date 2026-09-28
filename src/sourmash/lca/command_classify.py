@@ -3,12 +3,12 @@
 Classify individual signature files down to deepest possible node.
 """
 
-import sys
 import csv
+import sys
 
 from .. import sourmash_args
+from ..logging import debug, error, notify, set_quiet
 from ..sourmash_args import load_file_as_signatures
-from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
 

@@ -2,24 +2,24 @@
 Command-line entry point for 'python -m sourmash.tax'
 """
 
-import sys
 import csv
 import os
-from collections import defaultdict, Counter
-from dataclasses import asdict, fields
 import re
+import sys
+from collections import Counter, defaultdict
+from dataclasses import asdict, fields
 
 import sourmash
-from ..sourmash_args import FileOutputCSV, FileInputCSV, FileOutput
-from sourmash.logging import set_quiet, error, notify, print_results
+from sourmash.logging import error, notify, print_results, set_quiet
 
+from ..sourmash_args import FileInputCSV, FileOutput, FileOutputCSV
 from . import tax_utils
 from .tax_utils import (
-    MultiLineageDB,
-    RankLineageInfo,
-    LINLineageInfo,
     AnnotateTaxResult,
     ICTVRankLineageInfo,
+    LINLineageInfo,
+    MultiLineageDB,
+    RankLineageInfo,
 )
 
 usage = """
@@ -88,7 +88,7 @@ def metagenome(args):
         )
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         sys.exit(-1)
 
     if not tax_assign:
@@ -119,7 +119,7 @@ def metagenome(args):
             ictv=args.ictv,
         )
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         sys.exit(-1)
 
     if not query_gather_results:
@@ -206,7 +206,7 @@ def metagenome(args):
         try:
             queryResult.build_summarized_result()
         except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
+            error(f"ERROR: {exc!s}")
             sys.exit(-1)
 
     # if lingroup file is passed in, read it
@@ -215,7 +215,7 @@ def metagenome(args):
         try:
             lingroups = tax_utils.read_lingroups(args.lingroup)
         except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
+            error(f"ERROR: {exc!s}")
             sys.exit(-1)
 
     # write summarized output in human-readable format
@@ -345,7 +345,7 @@ def genome(args):
             lg_ranks, all_lgs = tax_utils.parse_lingroups(lingroups)
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         sys.exit(-1)
 
     if not tax_assign:
@@ -378,7 +378,7 @@ def genome(args):
         )
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         sys.exit(-1)
 
     if not query_gather_results:
@@ -402,7 +402,7 @@ def genome(args):
 
         except ValueError as exc:
             found_error = True
-            notify(f"ERROR: {str(exc)}")
+            notify(f"ERROR: {exc!s}")
 
     n_classified = len(classified_results)
     if n_classified == 0:
@@ -478,9 +478,8 @@ def genome(args):
             tax_utils.write_output(header, lineage_results, out_fp)
 
     # if there was a classification error, exit with err code
-    if found_error:
-        if not args.force:
-            sys.exit(-1)
+    if found_error and not args.force:
+        sys.exit(-1)
 
 
 def annotate(args):
@@ -504,7 +503,7 @@ def annotate(args):
         )
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         sys.exit(-1)
 
     if not tax_assign:
@@ -593,7 +592,7 @@ def annotate(args):
                 notify(str(exc))
                 notify("--force is set. Attempting to continue to next file.")
             else:
-                error(f"ERROR: {str(exc)}")
+                error(f"ERROR: {exc!s}")
                 sys.exit(-1)
 
 
@@ -752,7 +751,7 @@ def summarize(args):
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, "main")
+    mainmethod = submod.main
     return mainmethod(args)
 
 

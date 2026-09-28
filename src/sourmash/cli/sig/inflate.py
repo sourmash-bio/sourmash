@@ -1,6 +1,6 @@
 """borrow abundances from one signature => one or more other signatures"""
 
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg, add_picklist_args
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_picklist_args
 
 
 def subparser(subparsers):

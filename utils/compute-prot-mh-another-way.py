@@ -120,8 +120,10 @@ def kmers(seq, k):
 K = 21
 
 import sys
-import screed
+
 import mmh3
+import screed
+
 import sourmash
 
 print("imported sourmash:", sourmash, file=sys.stderr)

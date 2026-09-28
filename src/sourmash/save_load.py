@@ -25,28 +25,28 @@ CTB TODO:
 * consider replacing ValueError with IndexNotLoaded in the future.
 """
 
-import sys
-import os
 import gzip
-from io import StringIO
-import zipfile
 import itertools
+import os
+import sys
 import traceback
+import zipfile
+from io import StringIO
 
 import screed
+
 import sourmash
 
 from . import plugins as sourmash_plugins
-from .logging import notify, debug_literal
-from .exceptions import IndexNotLoaded
-
-from .index.sqlite_index import load_sqlite_index, SqliteIndex
-from .index.revindex import DiskRevIndex
-from .sbtmh import load_sbt_index
-from .lca.lca_db import load_single_database
 from . import signature as sigmod
-from .index import LinearIndex, ZipFileLinearIndex, MultiIndex
+from .exceptions import IndexNotLoaded
+from .index import LinearIndex, MultiIndex, ZipFileLinearIndex
+from .index.revindex import DiskRevIndex
+from .index.sqlite_index import SqliteIndex, load_sqlite_index
+from .lca.lca_db import load_single_database
+from .logging import debug_literal, notify
 from .manifest import CollectionManifest
+from .sbtmh import load_sbt_index
 
 
 def load_file_as_index(filename, *, yield_all_files=False):

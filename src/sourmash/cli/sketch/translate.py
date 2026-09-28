@@ -28,7 +28,7 @@ from sourmash import command_sketch
 assert command_sketch.DEFAULTS["protein"] == "k=10,scaled=200,noabund"
 
 import sourmash
-from sourmash.logging import notify, print_results, error
+from sourmash.logging import error, notify, print_results
 
 
 def subparser(subparsers):

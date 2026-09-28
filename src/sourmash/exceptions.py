@@ -1,6 +1,5 @@
 from ._lowlevel import lib
 
-
 __all__ = ["SourmashError"]
 exceptions_by_code = {}
 
@@ -29,7 +28,7 @@ class IndexNotSupported(SourmashError):
 
 class IndexNotLoaded(SourmashError):
     def __init__(self, msg):
-        SourmashError.__init__(self, f"Cannot load sourmash index: {str(msg)}")
+        SourmashError.__init__(self, f"Cannot load sourmash index: {msg!s}")
 
 
 def _make_error(error_name, base=SourmashError, code=None):

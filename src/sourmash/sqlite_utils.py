@@ -4,6 +4,7 @@ Common utility functions for handling sqlite3 databases.
 
 import os
 import sqlite3
+
 from .logging import debug_literal
 
 

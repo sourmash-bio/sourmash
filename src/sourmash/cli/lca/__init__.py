@@ -4,15 +4,12 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash lca` operations.
 """
 
-from . import classify
-from . import compare_csv
-from . import index
-from . import rankinfo
-from . import summarize
-from ..utils import command_list
-from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os
 import sys
+from argparse import SUPPRESS, RawDescriptionHelpFormatter
+
+from ..utils import command_list
+from . import classify, compare_csv, index, rankinfo, summarize
 
 
 def subparser(subparsers):

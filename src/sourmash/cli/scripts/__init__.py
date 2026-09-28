@@ -12,6 +12,7 @@ for making new plugins.
 #   (minimal testing regime: sourmash scripts, look for description etc.)
 
 import argparse
+
 import sourmash
 
 # Here, we decorate this module with the various extension objects

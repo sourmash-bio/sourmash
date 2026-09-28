@@ -1,7 +1,6 @@
-import pytest
-
-from hypothesis import given, example
 import hypothesis.strategies as st
+import pytest
+from hypothesis import example, given
 
 from sourmash import MinHash
 from sourmash.minhash import _get_max_hash_for_scaled

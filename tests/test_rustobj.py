@@ -1,7 +1,7 @@
 import pytest
 
-from sourmash.utils import RustObject
 from sourmash.minhash import to_bytes
+from sourmash.utils import RustObject
 
 
 def test_rustobj_init():
