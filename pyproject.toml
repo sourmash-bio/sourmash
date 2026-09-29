@@ -213,7 +213,7 @@ extend-exclude = ["*.ipynb"]
 extend-select = [
   "UP",  # pyupgrade
 ]
-ignore = ["F401", "E712", "E402", "F821", "E722", "E741", "F811", "F403", "F822"]
+ignore = ["F401", "E712", "E402", "F821", "E722", "E741", "F811", "F403", "F822", "I001"]
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
