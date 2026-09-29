@@ -293,10 +293,11 @@ def check_tax_outputs(
 
     if args.lins:
         # check for outputs incompatible with lins
-        if incompatible_with_lins:
-            if any(x in args.output_format for x in incompatible_with_lins):
-                raise ValueError(
-                    f"The following outputs are incompatible with '--lins': : {', '.join(incompatible_with_lins)}"
+        if incompatible_with_lins and any(
+                x in args.output_format for x in incompatible_with_lins
+        ):
+            raise ValueError(
+                f"The following outputs are incompatible with '--lins': : {', '.join(incompatible_with_lins)}"
                 )
         # check that lingroup file exists if needed
         if args.lingroup:

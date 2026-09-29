@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Make plots using the distance matrix+labels output by `sourmash compare`.
 """
@@ -18,8 +17,11 @@ def load_matrix_and_labels(basefile):
 
     Returns a square numpy matrix & list of labels.
     """
-    D = numpy.load(open(basefile, "rb"))
-    labeltext = [x.strip() for x in open(basefile + ".labels.txt")]
+    with open(basefile, "rb") as fp:
+        D = numpy.load(fp)
+
+    with open(basefile + '.labels.txt') as fp:
+        labeltext = [x.strip() for x in fp]
     return (D, labeltext)
 
 
