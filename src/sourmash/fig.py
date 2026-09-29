@@ -20,7 +20,7 @@ def load_matrix_and_labels(basefile):
     with open(basefile, "rb") as fp:
         D = numpy.load(fp)
 
-    with open(basefile + '.labels.txt') as fp:
+    with open(basefile + ".labels.txt") as fp:
         labeltext = [x.strip() for x in fp]
     return (D, labeltext)
 

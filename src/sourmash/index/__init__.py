@@ -1224,8 +1224,14 @@ def _check_select_parameters(**kw):
         raise ValueError(f"ksize value '{ksize}' must be an integer, is: {type(ksize)}")
 
     moltype = kw.get("moltype")
-    if moltype is not None and \
-       moltype not in ["DNA", "protein", "dayhoff", "hp", "skipm1n3", "skipm2n3"]:
+    if moltype is not None and moltype not in [
+        "DNA",
+        "protein",
+        "dayhoff",
+        "hp",
+        "skipm1n3",
+        "skipm2n3",
+    ]:
         raise ValueError(f"unknown moltype: {moltype}")
 
     scaled = kw.get("scaled")

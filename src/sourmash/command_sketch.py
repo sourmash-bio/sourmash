@@ -170,23 +170,25 @@ class _signatures_for_sketch_factory:
             if self.mult_ksize_by_3 and not def_dna:
                 ksizes = [k * 3 for k in ksizes]
 
-            def make_param(ksizes,
-                           params_d=params_d,
-                           def_seed=def_seed,
-                           def_num=def_num,
-                           def_abund=def_abund,
-                           def_scaled=def_scaled,
-                           def_protein=def_protein,
-                           def_dayhoff=def_dayhoff,
-                           def_hp=def_hp,
-                           def_skipm1n3=def_skipm1n3,
-                           def_skipm2n3=def_skipm2n3,
-                           def_dna=def_dna):
-                seed=params_d.get("seed", def_seed)
-                num_hashes=params_d.get("num", def_num)
-                track_abundance=params_d.get("track_abundance", def_abund)
-                scaled=params_d.get("scaled", def_scaled)
-                
+            def make_param(
+                ksizes,
+                params_d=params_d,
+                def_seed=def_seed,
+                def_num=def_num,
+                def_abund=def_abund,
+                def_scaled=def_scaled,
+                def_protein=def_protein,
+                def_dayhoff=def_dayhoff,
+                def_hp=def_hp,
+                def_skipm1n3=def_skipm1n3,
+                def_skipm2n3=def_skipm2n3,
+                def_dna=def_dna,
+            ):
+                seed = params_d.get("seed", def_seed)
+                num_hashes = params_d.get("num", def_num)
+                track_abundance = params_d.get("track_abundance", def_abund)
+                scaled = params_d.get("scaled", def_scaled)
+
                 return ComputeParameters(
                     ksizes=ksizes,
                     seed=seed,
@@ -436,15 +438,14 @@ def fromfile(args):
         error("error: sourmash only supports CC0-licensed signatures. sorry!")
         sys.exit(-1)
 
-    if args.output_signatures and os.path.exists(args.output_signatures) and \
-       not args.force_output_already_exists:
-        error(
-            f"** ERROR: output location '{args.output_signatures}' already exists!"
-        )
+    if (
+        args.output_signatures
+        and os.path.exists(args.output_signatures)
+        and not args.force_output_already_exists
+    ):
+        error(f"** ERROR: output location '{args.output_signatures}' already exists!")
         error("** Not overwriting/appending.")
-        error(
-            "** Use --force-output-already-exists if you want to overwrite/append."
-        )
+        error("** Use --force-output-already-exists if you want to overwrite/append.")
         sys.exit(-1)
 
     # now, create the set of desired sketch specs.

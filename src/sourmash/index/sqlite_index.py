@@ -424,8 +424,9 @@ class SqliteIndex(Index):
 
             if search_fn.passes(score):
                 subj = self._load_sketch(c2, sketch_id)
-                if search_fn.collect(score, subj) and \
-                   (picklist is None or subj in picklist):
+                if search_fn.collect(score, subj) and (
+                    picklist is None or subj in picklist
+                ):
                     yield IndexSearchResult(score, subj, self.location)
 
     def _select(self, *, num=0, track_abundance=False, **kwargs):
@@ -734,7 +735,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         # check - is this manifest managed by SqliteIndex? If so, prevent
         # insertions unless SqliteIndex is the one calling it.
         if self.managed_by_index and not call_is_from_index:
-            raise Exception("must use SqliteIndex.insert to add to this manifest") # noqa: TRY002
+            raise Exception("must use SqliteIndex.insert to add to this manifest")  # noqa: TRY002
 
         row = dict(row)
         if "seed" not in row:
