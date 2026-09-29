@@ -12,10 +12,10 @@ def main(arglist=None):
     if hasattr(args, "subcmd"):
         mod = getattr(sourmash.cli, args.cmd)
         submod = getattr(mod, args.subcmd)
-        mainmethod = getattr(submod, "main")
+        mainmethod = submod.main
     else:
         mod = getattr(sourmash.cli, args.cmd)
-        mainmethod = getattr(mod, "main")
+        mainmethod = mod.main
 
     retval = mainmethod(args)
     raise SystemExit(retval)

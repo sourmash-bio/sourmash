@@ -253,7 +253,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
             sl = [found_sig]
 
     if len(sl) and ksize is None:
-        ksizes = set([ss.minhash.ksize for ss in sl])
+        ksizes = {ss.minhash.ksize for ss in sl}
         if len(ksizes) == 1:
             ksize = ksizes.pop()
             sl = [ss for ss in sl if ss.minhash.ksize == ksize]
@@ -380,7 +380,7 @@ def load_dbs_and_sigs(
     notify(
         f"after selecting signatures compatible with search, {sum_signatures_after_select} remain."
     )
-    print("")
+    print()
 
     return databases
 
@@ -718,11 +718,11 @@ def load_many_signatures(
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
             if force:
-                notify(f"ERROR: {str(exc)}")
+                notify(f"ERROR: {exc!s}")
                 notify("(continuing)")
                 continue
             else:
-                notify(f"ERROR: {str(exc)}")
+                notify(f"ERROR: {exc!s}")
                 sys.exit(-1)
         except KeyboardInterrupt:
             notify("Received CTRL-C - exiting.")

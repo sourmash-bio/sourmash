@@ -27,7 +27,7 @@ def test_hll_add_python():
         for n, record in enumerate(fasta_iter(f)):
             sequence = record["sequence"]
             seq_len = len(sequence)
-            for n in range(0, seq_len + 1 - K):
+            for n in range(seq_len + 1 - K):
                 kmer = sequence[n : n + K]
                 rc = "".join(TRANSLATE[c] for c in kmer[::-1])
 
@@ -76,7 +76,7 @@ def test_hll_similarity_containment():
         for n, record in enumerate(fasta_iter(f)):
             sequence = record["sequence"]
             seq_len = len(sequence)
-            for n in range(0, seq_len + 1 - K):
+            for n in range(seq_len + 1 - K):
                 kmer = sequence[n : n + K]
                 hll1.add(kmer)
                 hllu.add(kmer)
@@ -86,7 +86,7 @@ def test_hll_similarity_containment():
         for n, record in enumerate(fasta_iter(f)):
             sequence = record["sequence"]
             seq_len = len(sequence)
-            for n in range(0, seq_len + 1 - K):
+            for n in range(seq_len + 1 - K):
                 kmer = sequence[n : n + K]
                 hll2.add(kmer)
                 hllu.add(kmer)

@@ -586,7 +586,7 @@ class SBT(Index):
 
         if pos == 0:
             return None
-        p = int(math.floor((pos - 1) / self.d))
+        p = math.floor((pos - 1) / self.d)
         if p in self._leaves:
             return NodePos(p, self._leaves[p])
 
@@ -700,7 +700,7 @@ class SBT(Index):
                 storage = FSStorage(location, subdir)
                 index_filename = os.path.join(location, index_filename)
 
-            backend = [k for (k, v) in STORAGES.items() if v is type(storage)][0]
+            backend = next(k for (k, v) in STORAGES.items() if v is type(storage))
             storage_args = storage.init_args()
 
         info["storage"] = {"backend": backend, "args": storage_args}
@@ -720,9 +720,8 @@ class SBT(Index):
             if node is None:
                 continue
 
-            if isinstance(node, Node):
-                if random() - sparseness <= 0:
-                    continue
+            if isinstance(node, Node) and random() - sparseness <= 0:
+                continue
 
             data = {
                 # TODO: start using md5sum instead?
@@ -877,8 +876,7 @@ class SBT(Index):
         if sbt_name is None:
             dirname = os.path.dirname(os.path.abspath(location))
             sbt_name = os.path.basename(location)
-            if sbt_name.endswith(".sbt.json"):
-                sbt_name = sbt_name[:-9]
+            sbt_name = sbt_name.removesuffix(".sbt.json")
 
         sbt_fn = os.path.join(dirname, sbt_name)
         if not sbt_fn.endswith(".sbt.json") and tempfile is None:
@@ -1270,7 +1268,7 @@ class SBT(Index):
         self._fill_up(fill_nodegraphs)
 
     def _fill_up(self, search_fn, *args, **kwargs):
-        visited, queue = set(), list(reversed(sorted(self._leaves.keys())))
+        visited, queue = set(), sorted(self._leaves.keys(), reverse=True)
         debug("started filling up")
         processed = 0
         while queue:
@@ -1339,7 +1337,7 @@ class SBT(Index):
             node_g = self._nodes.get(node_p, None)
             if node_p not in visited and node_g is not None:
                 visited.add(node_p)
-                depth = int(math.floor(math.log(node_p + 1, self.d)))
+                depth = math.floor(math.log(node_p + 1, self.d))
                 print(" " * 4 * depth, node_g)
                 if isinstance(node_g, Node):
                     stack.extend(
@@ -1383,7 +1381,7 @@ class SBT(Index):
 
         new_leaves = {}
 
-        levels = int(math.ceil(math.log(len(larger), self.d))) + 1
+        levels = math.ceil(math.log(len(larger), self.d)) + 1
         current_pos = 1
         n_previous = 0
         n_next = 1
@@ -1540,7 +1538,7 @@ def filter_distance(filter_a, filter_b, n=1000):
     for q, p in zip(A, B):
         a = array(q, copy=False)
         b = array(p, copy=False)
-        for i in map(lambda x: randint(0, len(a)), range(n)):
+        for i in (randint(0, len(a)) for x in range(n)):
             distance += sum(
                 map(
                     int,
@@ -1585,8 +1583,7 @@ def convert_cmd(name, backend):
         else:
             # this is the default for SBT v2
             tag = ".sbt." + os.path.basename(name)
-            if tag.endswith(".sbt.json"):
-                tag = tag[:-9]
+            tag = tag.removesuffix(".sbt.json")
             path = os.path.dirname(name)
             options = [path, tag]
 

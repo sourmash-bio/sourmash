@@ -227,7 +227,7 @@ def test_sqlite_index_picklist_select():
     # select on picklist
     sqlidx2 = sqlidx.select(picklist=picklist)
     assert len(sqlidx2) == 1
-    ss = list(sqlidx2.signatures())[0]
+    ss = next(iter(sqlidx2.signatures()))
     assert ss.minhash.ksize == 31
     assert ss.md5sum().startswith("f3a90d4e55")
 
@@ -255,10 +255,8 @@ def test_sqlite_index_picklist_select_exclude():
     for ss in list(sqlidx2.signatures()):
         md5s.add(ss.md5sum())
         ksizes.add(ss.minhash.ksize)
-    assert md5s == set(
-        ["f372e47893edd349e5956f8b0d8dcbf7", "43f3b48e59443092850964d355a20ac0"]
-    )
-    assert ksizes == set([21, 51])
+    assert md5s == {"f372e47893edd349e5956f8b0d8dcbf7", "43f3b48e59443092850964d355a20ac0"}
+    assert ksizes == {21, 51}
 
 
 def test_sqlite_jaccard_ordering():
@@ -624,11 +622,11 @@ def test_sqlite_manifest_locations(runtmp):
     idx = sourmash.load_file_as_index(runtmp.output("mf.sqlmf"))
 
     picklist = SignaturePicklist("identprefix")
-    picklist.pickset = set(["GCA_001593925"])
+    picklist.pickset = {"GCA_001593925"}
     idx = idx.select(picklist=picklist)
 
     sql_locations = set(idx.manifest.locations())
-    row_locations = set(row["internal_location"] for row in idx.manifest.rows)
+    row_locations = {row["internal_location"] for row in idx.manifest.rows}
 
     assert sql_locations.issuperset(row_locations)
 

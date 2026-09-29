@@ -39,7 +39,7 @@ class EnumIndexType(enum.StrEnum):  # used in 'index'
 
 def _get_screen_width():
     # default fallback is 80x24
-    (col, rows) = shutil.get_terminal_size()
+    (col, _rows) = shutil.get_terminal_size()
 
     return col
 
@@ -241,7 +241,7 @@ def compare(args):
     if len(siglist) < 30:
         for i, (ss, filename) in enumerate(siglist):
             # for small matrices, pretty-print some output
-            name_num = f"{i}-{str(ss)}"
+            name_num = f"{i}-{ss!s}"
             if len(name_num) > 20:
                 name_num = name_num[:17] + "..."
             print_results(
@@ -688,10 +688,9 @@ def search(args):
 
     # set up the search databases
     is_containment = args.containment or args.max_containment
-    if is_containment:
-        if args.containment and args.max_containment:
-            notify("ERROR: cannot specify both --containment and --max-containment!")
-            sys.exit(-1)
+    if is_containment and args.containment and args.max_containment:
+        notify("ERROR: cannot specify both --containment and --max-containment!")
+        sys.exit(-1)
 
     databases = sourmash_args.load_dbs_and_sigs(
         args.databases,
@@ -732,7 +731,7 @@ def search(args):
                 unload_data=True,
             )
         except TypeError as exc:
-            error(f"ERROR: {str(exc)}")
+            error(f"ERROR: {exc!s}")
             sys.exit(-1)
     else:
         results = search_databases_with_flat_query(

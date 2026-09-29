@@ -27,7 +27,7 @@ def load_sequences():
     sequences = []
     for i in range(10):
         random_seq = random.sample(
-            "A,C,G,T".split(",") * RANDOM_SEQ_SIZE, RANDOM_SEQ_NUMBER
+            ["A", "C", "G", "T"] * RANDOM_SEQ_SIZE, RANDOM_SEQ_NUMBER
         )
         sequences.append("".join(random_seq))
     return sequences

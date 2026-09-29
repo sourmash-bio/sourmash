@@ -206,8 +206,10 @@ class SignaturePicklist:
 
         return q
 
-    def init(self, values=[]):
+    def init(self, values=None):
         "initialize a Picklist object with given values."
+        if values is None:
+            values = []
         if self.pickset is not None:
             raise ValueError("already initialized?")
         self.pickset = set(values)
@@ -278,10 +280,9 @@ class SignaturePicklist:
             if q in self.pickset:
                 self.found.add(q)
                 return True
-        elif self.pickstyle == PickStyle.EXCLUDE:
-            if q not in self.pickset:
-                self.found.add(q)
-                return True
+        elif self.pickstyle == PickStyle.EXCLUDE and q not in self.pickset:
+            self.found.add(q)
+            return True
         return False
 
     def matches_manifest_row(self, row):
@@ -293,10 +294,9 @@ class SignaturePicklist:
             if q in self.pickset:
                 self.found.add(q)
                 return True
-        elif self.pickstyle == PickStyle.EXCLUDE:
-            if q not in self.pickset:
-                self.found.add(q)
-                return True
+        elif self.pickstyle == PickStyle.EXCLUDE and q not in self.pickset:
+            self.found.add(q)
+            return True
         return False
 
     def matched_csv_row(self, row):
@@ -307,9 +307,7 @@ class SignaturePicklist:
         q = self._get_value_for_csv_row(row)
         self.n_queries += 1
 
-        if q in self.found:
-            return True
-        return False
+        return q in self.found
 
     def filter(self, it):
         "yield all signatures in the given iterator that are in the picklist"

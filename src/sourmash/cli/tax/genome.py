@@ -148,7 +148,7 @@ def main(args):
         args.output_format = check_tax_outputs(args, rank_required=["krona"])
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         import sys
 
         sys.exit(-1)

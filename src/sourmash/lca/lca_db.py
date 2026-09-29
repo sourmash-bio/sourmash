@@ -371,7 +371,7 @@ class LCA_Database(Index):
             lid_to_lineage = {}
             lineage_to_lid = {}
             for k, v in lid_to_lineage_2.items():
-                v = dict((x[0], x[1]) for x in v)
+                v = {x[0]: x[1] for x in v}
                 vv = []
                 for rank in taxlist():
                     name = v.get(rank, "")
@@ -451,13 +451,13 @@ class LCA_Database(Index):
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
             for k, v in self._lid_to_lineage.items():
-                d[k] = dict([(vv.rank, vv.name) for vv in v])
+                d[k] = {vv.rank: vv.name for vv in v}
             save_d["lid_to_lineage"] = d
 
             # convert values from sets to lists, so that JSON knows how to save
-            save_d["hashval_to_idx"] = dict(
-                (k, list(v)) for (k, v) in self._hashval_to_idx.items()
-            )
+            save_d["hashval_to_idx"] = {
+                k: list(v) for (k, v) in self._hashval_to_idx.items()
+            }
 
             save_d["ident_to_name"] = self._ident_to_name
             save_d["ident_to_idx"] = self._ident_to_idx
@@ -685,10 +685,9 @@ class LCA_Database(Index):
             # For example, see test_lca_jaccard_ordering, where
             # for containment we could be done early, but for Jaccard we
             # cannot.
-            if search_fn.passes(score):
-                if search_fn.collect(score, subj):
-                    if passes_all_picklists(subj, self.picklists):
-                        yield IndexSearchResult(score, subj, self.location)
+            if search_fn.passes(score) and search_fn.collect(score, subj):
+                if passes_all_picklists(subj, self.picklists):
+                    yield IndexSearchResult(score, subj, self.location)
 
     @cached_property
     def _lid_to_idx(self):

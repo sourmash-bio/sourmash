@@ -283,9 +283,8 @@ def test_save_signatures_to_location_3_zip_add_fail(runtmp):
 
     # add only ss2, using zipfile API
     outloc = runtmp.output("foo.zip")
-    with zipfile.ZipFile(outloc, "x") as zf:
-        with zf.open("xyz.sig", "w") as fp:
-            save_signatures_to_json([ss2], fp=fp, compression=1)
+    with zipfile.ZipFile(outloc, "x") as zf, zf.open("xyz.sig", "w") as fp:
+        save_signatures_to_json([ss2], fp=fp, compression=1)
 
     # verify it can be loaded, yada yada
     saved = list(sourmash.load_file_as_signatures(outloc))
@@ -641,9 +640,8 @@ def test_fileinput_csv_1_no_such_file(runtmp):
 
     noexistfile = runtmp.output("does-not-exist.csv")
 
-    with pytest.raises(FileNotFoundError):
-        with sourmash_args.FileInputCSV(noexistfile):
-            pass
+    with pytest.raises(FileNotFoundError), sourmash_args.FileInputCSV(noexistfile):
+        pass
 
 
 def test_fileinput_csv_2_gz(runtmp):
@@ -652,9 +650,8 @@ def test_fileinput_csv_2_gz(runtmp):
     testfile = utils.get_test_data("tax/test.taxonomy.csv")
     gzfile = runtmp.output("test.csv.gz")
 
-    with gzip.open(gzfile, "wt") as outfp:
-        with open(testfile, newline="") as infp:
-            outfp.write(infp.read())
+    with gzip.open(gzfile, "wt") as outfp, open(testfile, newline="") as infp:
+        outfp.write(infp.read())
 
     with sourmash_args.FileInputCSV(gzfile) as r:
         rows = list(r)
@@ -694,10 +691,9 @@ def test_fileinput_csv_2_zip(runtmp):
     testfile = utils.get_test_data("tax/test.taxonomy.csv")
     zf_file = runtmp.output("test.zip")
 
-    with zipfile.ZipFile(zf_file, "w") as outzip:
-        with open(testfile, "rb") as infp:
-            with outzip.open("XYZ.csv", "w") as outfp:
-                outfp.write(infp.read())
+    with zipfile.ZipFile(zf_file, "w") as outzip, open(testfile, "rb") as infp:
+        with outzip.open("XYZ.csv", "w") as outfp:
+            outfp.write(infp.read())
 
     with sourmash_args.FileInputCSV(zf_file, default_csv_name="XYZ.csv") as r:
         rows = list(r)
@@ -724,9 +720,8 @@ def test_fileinput_csv_3_load_manifest_no_default():
     # FileInputCSV, but with no default_csv_name - should fail
     testfile = utils.get_test_data("prot/all.zip")
 
-    with pytest.raises(csv.Error):
-        with sourmash_args.FileInputCSV(testfile) as r:
-            print(r.fieldnames)
+    with pytest.raises(csv.Error), sourmash_args.FileInputCSV(testfile) as r:
+        print(r.fieldnames)
 
 
 def test_fileinput_csv_3_load_manifest_zipfile_obj():
@@ -734,14 +729,13 @@ def test_fileinput_csv_3_load_manifest_zipfile_obj():
     # FileInputCSV.
     testfile = utils.get_test_data("prot/all.zip")
 
-    with zipfile.ZipFile(testfile, "r") as zf:
-        with sourmash_args.FileInputCSV(
-            testfile, default_csv_name="SOURMASH-MANIFEST.csv", zipfile_obj=zf
-        ) as r:
-            rows = list(r)
-            assert len(rows) == 8
+    with zipfile.ZipFile(testfile, "r") as zf, sourmash_args.FileInputCSV(
+        testfile, default_csv_name="SOURMASH-MANIFEST.csv", zipfile_obj=zf
+    ) as r:
+        rows = list(r)
+        assert len(rows) == 8
 
-            assert r.version_info == ["SOURMASH-MANIFEST-VERSION", "1.0"]
+        assert r.version_info == ["SOURMASH-MANIFEST-VERSION", "1.0"]
 
 
 def test_fileinput_csv_3_load_manifest_zipfile_obj_no_defualt():
@@ -749,10 +743,9 @@ def test_fileinput_csv_3_load_manifest_zipfile_obj_no_defualt():
     # FileInputCSV, but with no default csv name => should fail.
     testfile = utils.get_test_data("prot/all.zip")
 
-    with zipfile.ZipFile(testfile, "r") as zf:
-        with pytest.raises(ValueError):
-            with sourmash_args.FileInputCSV(testfile, zipfile_obj=zf):
-                pass
+    with zipfile.ZipFile(testfile, "r") as zf, pytest.raises(ValueError):
+        with sourmash_args.FileInputCSV(testfile, zipfile_obj=zf):
+            pass
 
 
 def test_fileoutput_csv_1(runtmp):

@@ -246,8 +246,10 @@ class CollectionManifest(BaseCollectionManifest):
     An in-memory manifest that simply stores the rows in a list.
     """
 
-    def __init__(self, rows=[]):
+    def __init__(self, rows=None):
         "Initialize from an iterable of metadata dictionaries."
+        if rows is None:
+            rows = []
         self.rows = []
         self._md5_set = set()
 
