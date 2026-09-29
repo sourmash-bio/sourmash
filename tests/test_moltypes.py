@@ -154,7 +154,13 @@ def test_manifest_row_to_compute_parameters(moltype, moltype2):
     else:
         moltype_str = moltype
 
-    row = {"moltype": moltype_str, "ksize": 21, "num": 0, "scaled": 1000, "with_abundance": 1}
+    row = {
+        "moltype": moltype_str,
+        "ksize": 21,
+        "num": 0,
+        "scaled": 1000,
+        "with_abundance": 1,
+    }
     p = ComputeParameters.from_manifest_row(row)
     assert getattr(p, moltype)
     assert not getattr(p, moltype2)

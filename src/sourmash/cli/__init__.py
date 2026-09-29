@@ -107,7 +107,14 @@ def get_parser():
         "sig": "signature",
         "ext": "scripts",
     }
-    expert = {"categorize", "import_csv", "migrate", "multigather", "sbt_combine", "watch"}
+    expert = {
+        "categorize",
+        "import_csv",
+        "migrate",
+        "multigather",
+        "sbt_combine",
+        "watch",
+    }
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)

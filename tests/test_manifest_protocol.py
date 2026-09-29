@@ -127,15 +127,15 @@ def test_manifest_select_to_manifest(manifest_obj):
 def test_manifest_locations(manifest_obj):
     # check the 'locations' method
     locs = {
-            "dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
-            "dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
-            "hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
-            "hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
-            "protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
-            "protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
-            "dna-sig.noext",
-            "dna-sig.sig.gz",
-        }
+        "dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        "dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
+        "hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        "hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
+        "protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        "protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig",
+        "dna-sig.noext",
+        "dna-sig.sig.gz",
+    }
     assert set(manifest_obj.locations()) == locs
 
 

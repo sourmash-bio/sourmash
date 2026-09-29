@@ -1095,7 +1095,9 @@ def test_load_gather_results():
         [taxonomy_csv], keep_full_identifiers=False, keep_identifier_versions=False
     )
     gather_csv = utils.get_test_data("tax/test1.gather.csv")
-    gather_results, _header = load_gather_results(gather_csv, tax_assignments=tax_assign)
+    gather_results, _header = load_gather_results(
+        gather_csv, tax_assignments=tax_assign
+    )
     assert len(gather_results) == 1
     for query_name, res in gather_results.items():
         assert query_name == "test1"
