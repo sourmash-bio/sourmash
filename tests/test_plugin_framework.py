@@ -116,7 +116,6 @@ class Test_EntryPoint_LoadFrom_Priority:
         print("setting flag 2")
         self.was_called_flag_2 = True
 
-        return None
 
     set_called_flag_2.priority = 2
 
@@ -125,7 +124,6 @@ class Test_EntryPoint_LoadFrom_Priority:
         print("setting flag 3")
         self.was_called_flag_3 = True
 
-        return None
 
     set_called_flag_3.priority = 10
 

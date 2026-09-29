@@ -22,14 +22,13 @@ from importlib.metadata import version
 __all__ = [
     "MinHash",
     "SourmashSignature",
-    "load_one_signature",
-    "SourmashSignature",
+    "create_sbt_index",
     "load_file_as_index",
     "load_file_as_signatures",
-    "save_signatures",
-    "create_sbt_index",
-    "load_signatures",  # deprecated - remove in 5.0
+    "load_one_signature",
     "load_sbt_index",  # deprecated - remove in 5.0
+    "load_signatures",  # deprecated - remove in 5.0
+    "save_signatures",
     "search_sbt_index",  # deprecated - remove in 5.0
 ]
 

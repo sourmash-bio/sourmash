@@ -29,7 +29,7 @@ sourmash lca index -h
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, "main")
+    mainmethod = submod.main
     return mainmethod(args)
 
 

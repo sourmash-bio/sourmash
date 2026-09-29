@@ -62,12 +62,11 @@ def _runscript(scriptname):
     path = scriptpath()
 
     scriptfile = os.path.join(path, scriptname)
-    if os.path.isfile(scriptfile):
-        if os.path.isfile(scriptfile):
-            exec(  # pylint: disable=exec-used
-                compile(Path(scriptfile).read_text(), scriptfile, "exec"), namespace
-            )
-            return 0
+    if os.path.isfile(scriptfile) and os.path.isfile(scriptfile):
+        exec(  # pylint: disable=exec-used
+            compile(Path(scriptfile).read_text(), scriptfile, "exec"), namespace
+        )
+        return 0
 
     return -1
 
@@ -231,7 +230,7 @@ class RunnerContext:
     def __str__(self):
         s = ""
         if self.last_command:
-            s += f"Last command run:\n{repr(self.last_command)}\n"
+            s += f"Last command run:\n{self.last_command!r}\n"
             if self.last_result:
                 s += "\nLAST RESULT:\n"
                 s += f"- exit code: {self.last_result.status}\n\n"

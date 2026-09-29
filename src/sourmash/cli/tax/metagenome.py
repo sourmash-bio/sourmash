@@ -164,7 +164,7 @@ def main(args):
         )
 
     except ValueError as exc:
-        error(f"ERROR: {str(exc)}")
+        error(f"ERROR: {exc!s}")
         import sys
 
         sys.exit(-1)

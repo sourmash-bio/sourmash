@@ -815,14 +815,14 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         picklist = None
         if self.selection_dict:
             select_d = self.selection_dict
-            if "ksize" in select_d and select_d["ksize"]:
+            if select_d.get("ksize"):
                 conditions.append("sourmash_sketches.ksize = ?")
                 values.append(select_d["ksize"])
             if "num" in select_d and select_d["num"] > 0:
                 conditions.append("sourmash_sketches.num > 0")
             if "scaled" in select_d and select_d["scaled"] and select_d["scaled"] > 0:
                 conditions.append("sourmash_sketches.scaled > 0")
-            if "containment" in select_d and select_d["containment"]:
+            if select_d.get("containment"):
                 conditions.append("sourmash_sketches.scaled > 0")
             if "moltype" in select_d and select_d["moltype"] is not None:
                 moltype = select_d["moltype"]
@@ -841,9 +841,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             # combine selects...
             d = dict(self.selection_dict)
             for k, v in kwargs.items():
-                if k in d:
-                    if d[k] is not None and d[k] != v:
-                        raise ValueError(f"incompatible select on '{k}'")
+                if k in d and d[k] is not None and d[k] != v:
+                    raise ValueError(f"incompatible select on '{k}'")
                 d[k] = v
             kwargs = d
 
@@ -891,21 +890,21 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             n_hashes,
             iloc,
         ) in c1:
-            row = dict(
-                num=num,
-                scaled=scaled,
-                name=name,
-                filename=filename,
-                n_hashes=n_hashes,
-                with_abundance=False,
-                ksize=ksize,
-                md5=md5sum,
-                internal_location=iloc,
-                moltype=moltype,
-                md5short=md5sum[:8],
-                seed=seed,
-                _id=_id,
-            )
+            row = {
+                "num": num,
+                "scaled": scaled,
+                "name": name,
+                "filename": filename,
+                "n_hashes": n_hashes,
+                "with_abundance": False,
+                "ksize": ksize,
+                "md5": md5sum,
+                "internal_location": iloc,
+                "moltype": moltype,
+                "md5short": md5sum[:8],
+                "seed": seed,
+                "_id": _id,
+            }
             if picklist is None or picklist.matches_manifest_row(row):
                 yield row
 
@@ -943,7 +942,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         """
         c1 = self.conn.cursor()
 
-        conditions, values, picklist = self._make_select()
+        conditions, values, _picklist = self._make_select()
         if conditions:
             conditions = conditions = "WHERE " + " AND ".join(conditions)
         else:
@@ -1000,7 +999,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
             if not append:
                 raise Exception(
-                    f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}"
+                    f"cannot create sqlite3 db at '{location}'; exception: {exc!s}"
                 )
             db = load_sqlite_index(location, request_manifest=True)
             mf = db.manifest

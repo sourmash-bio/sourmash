@@ -16,11 +16,11 @@ import numpy as np
 
 
 __all__ = [
+    "FrozenMinHash",
+    "MinHash",
     "get_minhash_default_seed",
     "get_minhash_max_hash",
     "hash_murmur",
-    "MinHash",
-    "FrozenMinHash",
 ]
 
 from collections.abc import Mapping
@@ -446,9 +446,7 @@ class MinHash(RustObject):
 
         ksize = self.ksize
         translate = False
-        if self.moltype == "DNA":
-            pass
-        elif is_protein:
+        if self.moltype == "DNA" or is_protein:
             pass
         else:  # translate input DNA sequence => aa
             assert self.moltype in ("protein", "dayhoff", "hp")
@@ -481,7 +479,7 @@ class MinHash(RustObject):
             # otherwise, all very straightforward :)
             n_kmers = len(sequence) - ksize + 1
             assert n_kmers == len(hashvals)
-            for i, hashval in zip(range(0, n_kmers), hashvals):
+            for i, hashval in zip(range(n_kmers), hashvals):
                 kmer = sequence[i : i + ksize]
                 yield kmer, hashval
 
@@ -1043,11 +1041,10 @@ class MinHash(RustObject):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
 
-        if self.num and other.num:
-            if self.num != other.num:
-                raise TypeError(
-                    f"incompatible num values: self={self.num} other={other.num}"
-                )
+        if self.num and other.num and self.num != other.num:
+            raise TypeError(
+                f"incompatible num values: self={self.num} other={other.num}"
+            )
 
         new_obj = self.to_mutable()
         new_obj += other
@@ -1282,7 +1279,6 @@ class FrozenMinHash(MinHash):
 
     def into_frozen(self):
         "Freeze this MinHash, preventing any changes."
-        pass
 
     def __setstate__(self, tup):
         "support pickling via __getstate__/__setstate__"

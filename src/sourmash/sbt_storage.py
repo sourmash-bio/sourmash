@@ -235,9 +235,7 @@ class _RwZipStorage(Storage):
     def _content_matches(self, zf, path, content):
         info = zf.getinfo(path)
         entry_content = zf.read(info)
-        if entry_content == content:
-            return True
-        return False
+        return entry_content == content
 
     def _generate_filename(self, zf, path, content):
         try:

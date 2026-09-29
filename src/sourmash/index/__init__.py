@@ -297,7 +297,6 @@ class Index(ABC):
 
     def consume(self, intersect_mh):
         "Mimic CounterGather.consume on top of Index. Yes, this is backwards."
-        pass
 
     def counter_gather(self, query, threshold_bp, **kwargs):
         """Returns an object that permits 'gather' on top of the
@@ -374,9 +373,8 @@ def select_signature(
             return False
 
     # 'scaled' and 'num' are incompatible
-    if scaled:
-        if ss.minhash.num:
-            return False
+    if scaled and ss.minhash.num:
+        return False
     if num:
         # note, here we check if 'num' is identical; this can be
         # changed later.
@@ -388,10 +386,7 @@ def select_signature(
         if not ss.minhash.track_abundance:
             return False
 
-    if picklist is not None and ss not in picklist:
-        return False
-
-    return True
+    return not (picklist is not None and ss not in picklist)
 
 
 class LinearIndex(Index):
@@ -474,7 +469,9 @@ class LazyLinearIndex(Index):
       MultiIndex (signatures in memory).
     """
 
-    def __init__(self, db, selection_dict={}):
+    def __init__(self, db, selection_dict=None):
+        if selection_dict is None:
+            selection_dict = {}
         self.db = db
         self.selection_dict = dict(selection_dict)
 
@@ -518,9 +515,8 @@ class LazyLinearIndex(Index):
 
         selection_dict = dict(self.selection_dict)
         for k, v in kwargs.items():
-            if k in selection_dict:
-                if selection_dict[k] != v:
-                    raise ValueError(f"cannot select on two different values for {k}")
+            if k in selection_dict and selection_dict[k] != v:
+                raise ValueError(f"cannot select on two different values for {k}")
             selection_dict[k] = v
 
         return LazyLinearIndex(self.db, selection_dict)
@@ -639,9 +635,7 @@ class ZipFileLinearIndex(Index):
         for filename in self.storage._filenames():
             # should we load this file? if it ends in .sig OR we are forcing:
             if (
-                filename.endswith(".sig")
-                or filename.endswith(".sig.gz")
-                or self.traverse_yield_all
+                filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all
             ):
                 sig_data = self.storage.load(filename)
                 for ss in load_signatures_from_json(sig_data):
@@ -673,9 +667,7 @@ class ZipFileLinearIndex(Index):
             for filename in storage._filenames():
                 # should we load this file? if it ends in .sig OR force:
                 if (
-                    filename.endswith(".sig")
-                    or filename.endswith(".sig.gz")
-                    or self.traverse_yield_all
+                    filename.endswith((".sig", ".sig.gz")) or self.traverse_yield_all
                 ):
                     if selection_dict:
 
@@ -717,9 +709,8 @@ class ZipFileLinearIndex(Index):
                 # combine selects...
                 d = dict(self.selection_dict)
                 for k, v in kwargs.items():
-                    if k in d:
-                        if d[k] is not None and d[k] != v:
-                            raise ValueError(f"incompatible select on '{k}'")
+                    if k in d and d[k] is not None and d[k] != v:
+                        raise ValueError(f"incompatible select on '{k}'")
                     d[k] = v
                 kwargs = d
 
@@ -795,8 +786,7 @@ class CounterGather:
 
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
-        if scaled > self.scaled:
-            self.scaled = scaled
+        self.scaled = max(self.scaled, scaled)
         return self.scaled
 
     def __len__(self):
@@ -1237,11 +1227,10 @@ def _check_select_parameters(**kw):
         raise ValueError(f"unknown 'select' parameters: {params}")
 
     ksize = kw.get("ksize")
-    if ksize is not None:
-        if not isinstance(ksize, int):
-            raise ValueError(
-                f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
-            )
+    if ksize is not None and not isinstance(ksize, int):
+        raise ValueError(
+            f"ksize value '{ksize}' must be an integer, is: {type(ksize)}"
+        )
 
     moltype = kw.get("moltype")
     if moltype is not None:
@@ -1249,25 +1238,21 @@ def _check_select_parameters(**kw):
             raise ValueError(f"unknown moltype: {moltype}")
 
     scaled = kw.get("scaled")
-    if scaled is not None:
-        if not isinstance(scaled, int):
-            raise ValueError(
-                f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
-            )
+    if scaled is not None and not isinstance(scaled, int):
+        raise ValueError(
+            f"scaled value '{scaled}' must be an integer, is: {type(scaled)}"
+        )
 
     containment = kw.get("containment")
-    if containment is not None:
-        if not isinstance(containment, bool):
-            raise ValueError(
-                f"containment value '{containment}' must be a bool, is: {type(containment)}"
-            )
+    if containment is not None and not isinstance(containment, bool):
+        raise ValueError(
+            f"containment value '{containment}' must be a bool, is: {type(containment)}"
+        )
 
     abund = kw.get("abund")
-    if abund is not None:
-        if not isinstance(abund, bool):
-            raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
+    if abund is not None and not isinstance(abund, bool):
+        raise ValueError(f"abund value '{abund}' must be a bool, is: {type(abund)}")
 
     num = kw.get("num")
-    if num is not None:
-        if not isinstance(num, int):
-            raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")
+    if num is not None and not isinstance(num, int):
+        raise ValueError(f"num value '{num}' must be an integer, is: {type(num)}")

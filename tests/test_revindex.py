@@ -693,7 +693,7 @@ def test_disk_revindex_prefetch_to_cg_colors_1():
     db = DiskRevIndex(rocksdb_path)
 
     cg = db.counter_gather(ss63, threshold_bp=0)
-    sr, isect_mh = cg.peek(ss63.minhash)
+    sr, _isect_mh = cg.peek(ss63.minhash)
     assert sr.score == 1.0
 
 

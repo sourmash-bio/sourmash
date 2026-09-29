@@ -57,12 +57,12 @@ def test_citation_file():
 
 
 def test_run_sourmash():
-    status, out, err = utils.runscript("sourmash", [], fail_ok=True)
+    status, _out, _err = utils.runscript("sourmash", [], fail_ok=True)
     assert status != 0  # no args provided, ok ;)
 
 
 def test_run_sourmash_badcmd():
-    status, out, err = utils.runscript("sourmash", ["foobarbaz"], fail_ok=True)
+    status, _out, err = utils.runscript("sourmash", ["foobarbaz"], fail_ok=True)
     assert status != 0  # bad arg!
     assert "cmd: invalid choice" in err
 
@@ -81,7 +81,7 @@ def test_run_sourmash_subcmd_help():
 
 
 def test_sourmash_info():
-    status, out, err = utils.runscript("sourmash", ["info"], fail_ok=False)
+    _status, out, err = utils.runscript("sourmash", ["info"], fail_ok=False)
 
     # no output to stdout
     assert not out
@@ -91,7 +91,7 @@ def test_sourmash_info():
 
 
 def test_sourmash_info_verbose():
-    status, out, err = utils.runscript("sourmash", ["info", "-v"])
+    _status, out, err = utils.runscript("sourmash", ["info", "-v"])
 
     # no output to stdout
     assert not out
@@ -2090,7 +2090,7 @@ def test_do_sourmash_sbt_move_and_search_output(runtmp):
     shutil.move(runtmp.output("zzz.sbt.json"), newpath)
     shutil.move(runtmp.output(".sbt.zzz"), newpath)
 
-    status, out, err = utils.runscript(
+    _status, _out, _err = utils.runscript(
         "sourmash",
         ["search", "../short.fa.sig", "zzz.sbt.json", "-o", "foo"],
         in_directory=newpath,
@@ -5969,7 +5969,7 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     against_list = ["gather-abund/" + i + ".fa.gz.sig" for i in against_list]
     against_list = [utils.get_test_data(i) for i in against_list]
 
-    status, out, err = c.run_sourmash(
+    _status, out, err = c.run_sourmash(
         "gather", query, *against_list, linear_gather, prefetch_gather
     )
 
@@ -6006,7 +6006,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     against_list = ["gather-abund/" + i + ".fa.gz.sig" for i in against_list]
     against_list = [utils.get_test_data(i) for i in against_list]
 
-    status, out, err = c.run_sourmash(
+    _status, out, err = c.run_sourmash(
         "gather", query, "-o", "xxx.csv", *against_list, linear_gather, prefetch_gather
     )
 
@@ -6118,7 +6118,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
     against_list = ["gather-abund/" + i + ".fa.gz.sig" for i in against_list]
     against_list = [utils.get_test_data(i) for i in against_list]
 
-    status, out, err = c.run_sourmash(
+    _status, out, err = c.run_sourmash(
         "gather",
         query,
         "--ignore-abundance",
@@ -6271,7 +6271,7 @@ def test_multigather_output_unassigned_with_abundance(runtmp, sig_save_extension
     nomatch = sourmash.load_file_as_signatures(
         c.output(f"r3.fa.unassigned{sig_save_extension_abund}")
     )
-    nomatch = list(nomatch)[0]
+    nomatch = next(iter(nomatch))
     assert nomatch.minhash.track_abundance
 
     query_ss = load_one_signature(query)
@@ -6637,9 +6637,8 @@ def test_watch_coverage(runtmp):
     runtmp.sourmash(*args)
 
     with open(runtmp.output("query.fa"), "w") as fp:
-        record = list(screed.open(testdata0))[0]
-        for start in range(0, len(record), 100):
-            fp.write(f">{start}\n{record.sequence[start : start + 500]}\n")
+        record = next(iter(screed.open(testdata0)))
+        fp.writelines(f">{start}\n{record.sequence[start : start + 500]}\n" for start in range(0, len(record), 100))
 
     args = ["watch", "--ksize", "21", "--dna", "zzz", "query.fa"]
     runtmp.sourmash(*args)
@@ -6659,9 +6658,8 @@ def test_watch_output_sig(runtmp):
     runtmp.sourmash(*args)
 
     with open(runtmp.output("query.fa"), "w") as fp:
-        record = list(screed.open(testdata0))[0]
-        for start in range(0, len(record), 100):
-            fp.write(f">{start}\n{record.sequence[start : start + 500]}\n")
+        record = next(iter(screed.open(testdata0)))
+        fp.writelines(f">{start}\n{record.sequence[start : start + 500]}\n" for start in range(0, len(record), 100))
 
     args = [
         "watch",
@@ -7599,10 +7597,10 @@ def test_search_ani_containment_asymmetry(runtmp):
     )
 
     with sourmash_args.FileInputCSV(runtmp.output("query-in-merged.csv")) as r:
-        query_in_merged = list(r)[0]
+        query_in_merged = next(iter(r))
 
     with sourmash_args.FileInputCSV(runtmp.output("merged-in-query.csv")) as r:
-        merged_in_query = list(r)[0]
+        merged_in_query = next(iter(r))
 
     assert query_in_merged["ani"] == "1.0"
     assert merged_in_query["ani"] == "0.9865155060423993"
@@ -7794,7 +7792,6 @@ def test_search_jaccard_ani_downsample(runtmp):
     ds_sig47 = c.output("ds_sig47.sig")
     c.run_sourmash("sig", "downsample", sig47, "--scaled", "2000", "-o", ds_sig47)
     c.run_sourmash("search", ds_sig47, sig4763, "-o", "xxx.csv")
-    #
     csv_file = c.output("xxx.csv")
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)

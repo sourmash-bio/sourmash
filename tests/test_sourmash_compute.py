@@ -31,7 +31,7 @@ from sourmash.signature import load_signatures_from_json
 def test_do_sourmash_compute():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash", ["compute", "-k", "31", testdata1], in_directory=location
         )
 
@@ -123,7 +123,7 @@ def test_do_sourmash_compute_check_num_bounds_more_than_maximum(runtmp):
 @utils.in_tempdir
 def test_do_sourmash_compute_outdir(c):
     testdata1 = utils.get_test_data("short.fa")
-    status, out, err = utils.runscript(
+    _status, _out, _err = utils.runscript(
         "sourmash", ["compute", "-k", "31", testdata1, "--outdir", c.location]
     )
 
@@ -142,7 +142,7 @@ def test_do_sourmash_compute_output_valid_file():
         testdata3 = utils.get_test_data("short3.fa")
         sigfile = os.path.join(location, "short.fa.sig")
 
-        status, out, err = utils.runscript(
+        _status, out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "-o", sigfile, testdata1, testdata2, testdata3],
             in_directory=location,
@@ -167,7 +167,7 @@ def test_do_sourmash_compute_output_stdout_valid():
         testdata2 = utils.get_test_data("short2.fa")
         testdata3 = utils.get_test_data("short3.fa")
 
-        status, out, err = utils.runscript(
+        _status, out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "-o", "-", testdata1, testdata2, testdata3],
             in_directory=location,
@@ -263,7 +263,7 @@ def test_do_sourmash_compute_output_and_name_valid_file_outdir(c):
 def test_do_sourmash_compute_singleton():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "--singleton", testdata1],
             in_directory=location,
@@ -291,7 +291,7 @@ def test_do_sourmash_compute_name():
         sig = next(load_signatures_from_json(sigfile))
         assert sig.name == "foo"
 
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "--name", "foo", testdata1, "-o", "foo2.sig"],
             in_directory=location,
@@ -308,7 +308,7 @@ def test_do_sourmash_compute_name():
 def test_do_sourmash_compute_name_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "--merge", "foo", testdata1],
             in_directory=location,
@@ -328,7 +328,7 @@ def test_do_sourmash_compute_merge_fail_no_output():
         )
         assert status == -1
 
-        status, out, err = utils.runscript(
+        status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "--name", "foo", testdata1],
             in_directory=location,
@@ -340,7 +340,7 @@ def test_do_sourmash_compute_merge_fail_no_output():
 def test_do_sourmash_compute_name_from_first():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short3.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "31", "--name-from-first", testdata1],
             in_directory=location,
@@ -356,7 +356,7 @@ def test_do_sourmash_compute_name_from_first():
 def test_do_sourmash_compute_multik():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash", ["compute", "-k", "21,31", testdata1], in_directory=location
         )
         outfile = os.path.join(location, "short.fa.sig")
@@ -364,7 +364,7 @@ def test_do_sourmash_compute_multik():
 
         siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
-        ksizes = set([x.minhash.ksize for x in siglist])
+        ksizes = {x.minhash.ksize for x in siglist}
         assert 21 in ksizes
         assert 31 in ksizes
         assert len(ksizes) == 2
@@ -373,7 +373,7 @@ def test_do_sourmash_compute_multik():
 def test_do_sourmash_compute_multik_with_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--protein", testdata1],
             in_directory=location,
@@ -385,7 +385,7 @@ def test_do_sourmash_compute_multik_with_protein():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 4
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 21 in ksizes
             assert 30 in ksizes
             assert 7 in ksizes
@@ -396,7 +396,7 @@ def test_do_sourmash_compute_multik_with_protein():
 def test_do_sourmash_compute_multik_with_dayhoff():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--dayhoff", "--no-dna", testdata1],
             in_directory=location,
@@ -412,7 +412,7 @@ def test_do_sourmash_compute_multik_with_dayhoff():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 7 in ksizes
             assert 10 in ksizes
             assert all(x.minhash.dayhoff for x in siglist)
@@ -422,7 +422,7 @@ def test_do_sourmash_compute_multik_with_dayhoff():
 def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--dayhoff", testdata1],
             in_directory=location,
@@ -434,7 +434,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 4
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 21 in ksizes
             assert 30 in ksizes
             assert 7 in ksizes
@@ -447,7 +447,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
 def test_do_sourmash_compute_multik_with_hp():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--hp", "--no-dna", testdata1],
             in_directory=location,
@@ -462,7 +462,7 @@ def test_do_sourmash_compute_multik_with_hp():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 7 in ksizes
             assert 10 in ksizes
             assert all(x.minhash.hp for x in siglist)
@@ -472,7 +472,7 @@ def test_do_sourmash_compute_multik_with_hp():
 def test_do_sourmash_compute_multik_with_hp_and_dna():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--hp", testdata1],
             in_directory=location,
@@ -484,7 +484,7 @@ def test_do_sourmash_compute_multik_with_hp_and_dna():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 4
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 7 in ksizes
             assert 10 in ksizes
             assert 21 in ksizes
@@ -495,7 +495,7 @@ def test_do_sourmash_compute_multik_with_hp_and_dna():
 def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--dayhoff", "--protein", testdata1],
             in_directory=location,
@@ -507,7 +507,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 6
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 21 in ksizes
             assert 30 in ksizes
             assert 7 in ksizes
@@ -521,7 +521,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
 def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--dayhoff", "--hp", "--protein", testdata1],
             in_directory=location,
@@ -533,7 +533,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 8
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 7 in ksizes
             assert 10 in ksizes
             assert 21 in ksizes
@@ -549,7 +549,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
 def test_do_sourmash_compute_multik_with_nothing():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", "--no-protein", "--no-dna", testdata1],
             in_directory=location,
@@ -562,7 +562,7 @@ def test_do_sourmash_compute_multik_with_nothing():
 def test_do_sourmash_compute_multik_protein_bad_ksize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
-        status, out, err = utils.runscript(
+        _status, _out, err = utils.runscript(
             "sourmash",
             ["compute", "-k", "20,32", "--protein", "--no-dna", testdata1],
             in_directory=location,
@@ -585,7 +585,7 @@ def test_do_sourmash_compute_multik_only_protein(c):
         sigdata = fp.read()
         siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
-        ksizes = set([x.minhash.ksize for x in siglist])
+        ksizes = {x.minhash.ksize for x in siglist}
         assert 7 in ksizes
         assert 10 in ksizes
         assert len(ksizes) == 2
@@ -594,7 +594,7 @@ def test_do_sourmash_compute_multik_only_protein(c):
 def test_do_sourmash_compute_multik_protein_input_bad_ksize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short-protein.fa")
-        status, out, err = utils.runscript(
+        status, _out, err = utils.runscript(
             "sourmash",
             [
                 "compute",
@@ -626,7 +626,7 @@ def test_do_sourmash_compute_multik_only_protein_no_rna(c):
         sigdata = fp.read()
         siglist = list(load_signatures_from_json(sigdata))
         assert len(siglist) == 2
-        ksizes = set([x.minhash.ksize for x in siglist])
+        ksizes = {x.minhash.ksize for x in siglist}
         assert 7 in ksizes
         assert 10 in ksizes
         assert len(ksizes) == 2
@@ -636,7 +636,7 @@ def test_do_sourmash_compute_protein_bad_sequences():
     """Proper error handling when Ns in dna sequence"""
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.bad.fa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--protein", "--no-dna", testdata1],
             in_directory=location,
@@ -648,7 +648,7 @@ def test_do_sourmash_compute_protein_bad_sequences():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 7 in ksizes
             assert 10 in ksizes
             assert len(ksizes) == 2
@@ -657,7 +657,7 @@ def test_do_sourmash_compute_protein_bad_sequences():
 def test_do_sourmash_compute_multik_input_is_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("ecoli.faa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,30", "--input-is-protein", testdata1],
             in_directory=location,
@@ -669,12 +669,12 @@ def test_do_sourmash_compute_multik_input_is_protein():
             sigdata = fp.read()
             siglist = list(load_signatures_from_json(sigdata))
             assert len(siglist) == 2
-            ksizes = set([x.minhash.ksize for x in siglist])
+            ksizes = {x.minhash.ksize for x in siglist}
             assert 7 in ksizes
             assert 10 in ksizes
             assert len(ksizes) == 2
 
-            moltype = set([x.minhash.moltype == "protein" for x in siglist])
+            moltype = {x.minhash.moltype == "protein" for x in siglist}
             assert len(moltype) == 1
             assert True in moltype
 
@@ -683,7 +683,7 @@ def test_do_sourmash_compute_multik_outfile():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
         outfile = os.path.join(location, "FOO.xxx")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", testdata1, "-o", outfile],
             in_directory=location,
@@ -692,7 +692,7 @@ def test_do_sourmash_compute_multik_outfile():
 
         siglist = list(load_signatures_from_json(outfile))
         assert len(siglist) == 2
-        ksizes = set([x.minhash.ksize for x in siglist])
+        ksizes = {x.minhash.ksize for x in siglist}
         assert 21 in ksizes
         assert 31 in ksizes
 
@@ -701,7 +701,7 @@ def test_do_sourmash_compute_with_scaled_1():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
         outfile = os.path.join(location, "FOO.xxx")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", "--scaled", "1", testdata1, "-o", outfile],
             in_directory=location,
@@ -720,7 +720,7 @@ def test_do_sourmash_compute_with_scaled_2():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
         outfile = os.path.join(location, "FOO.xxx")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", "--scaled", "2", testdata1, "-o", outfile],
             in_directory=location,
@@ -732,14 +732,14 @@ def test_do_sourmash_compute_with_scaled_2():
 
         max_hashes = [x.minhash._max_hash for x in siglist]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == set([int(2**64 / 2.0)])
+        assert set(max_hashes) == {int(2**64 / 2.0)}
 
 
 def test_do_sourmash_compute_with_scaled():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
         outfile = os.path.join(location, "FOO.xxx")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", "--scaled", "100", testdata1, "-o", outfile],
             in_directory=location,
@@ -751,7 +751,7 @@ def test_do_sourmash_compute_with_scaled():
 
         max_hashes = [x.minhash._max_hash for x in siglist]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == set([int(2**64 / 100.0)])
+        assert set(max_hashes) == {int(2**64 / 100.0)}
 
 
 def test_do_sourmash_compute_with_bad_scaled():
@@ -778,7 +778,7 @@ def test_do_sourmash_compute_with_bad_scaled():
         assert status != 0
         assert "--scaled value must be integer value" in err
 
-        status, out, err = utils.runscript(
+        status, _out, err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", "--scaled", "1e9", testdata1, "-o", outfile],
             in_directory=location,
@@ -792,7 +792,7 @@ def test_do_sourmash_compute_with_seed():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("short.fa")
         outfile = os.path.join(location, "FOO.xxx")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21,31", "--seed", "43", testdata1, "-o", outfile],
             in_directory=location,
@@ -804,7 +804,7 @@ def test_do_sourmash_compute_with_seed():
 
         seeds = [x.minhash.seed for x in siglist]
         assert len(seeds) == 2
-        assert set(seeds) == set([43])
+        assert set(seeds) == {43}
 
 
 def test_do_sourmash_check_protein_comparisons():
@@ -820,7 +820,7 @@ def test_do_sourmash_check_protein_comparisons():
         assert os.path.exists(sig1)
 
         testdata2 = utils.get_test_data("ecoli.genes.fna")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21", "--protein", "--no-dna", "--singleton", testdata2],
             in_directory=location,
@@ -870,7 +870,7 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
     print(sig2.name)
 
     knowngood = utils.get_test_data("benchmark.dna.sig")
-    good = list(load_signatures_from_json(knowngood))[0]
+    good = next(iter(load_signatures_from_json(knowngood)))
 
     assert sig2.similarity(good) == 1.0
 
@@ -887,7 +887,7 @@ def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
     sig1, sig2 = sorted(x, key=lambda x: x.name)
 
     knowngood = utils.get_test_data("benchmark.dna.sig")
-    good = list(load_signatures_from_json(knowngood))[0]
+    good = next(iter(load_signatures_from_json(knowngood)))
 
     assert sig2.similarity(good) == 1.0
 
@@ -897,7 +897,7 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons():
     # by utils/compute-input-prot-another-way.py
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("ecoli.faa")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21", "--input-is-protein", "--singleton", testdata1],
             in_directory=location,
@@ -906,10 +906,10 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons():
         assert os.path.exists(sig1)
 
         x = list(load_signatures_from_json(sig1))
-        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
+        sig1_aa, _sig2_aa = sorted(x, key=lambda x: x.name)
 
         knowngood = utils.get_test_data("benchmark.input_prot.sig")
-        good_aa = list(load_signatures_from_json(knowngood))[0]
+        good_aa = next(iter(load_signatures_from_json(knowngood)))
 
         assert sig1_aa.similarity(good_aa) == 1.0
 
@@ -919,7 +919,7 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
     # by utils/compute-prot-mh-another-way.py
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data("ecoli.genes.fna")
-        status, out, err = utils.runscript(
+        _status, _out, _err = utils.runscript(
             "sourmash",
             ["compute", "-k", "21", "--singleton", "--protein", "--no-dna", testdata1],
             in_directory=location,
@@ -928,10 +928,10 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert os.path.exists(sig1)
 
         x = list(load_signatures_from_json(sig1))
-        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
+        _sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
         knowngood = utils.get_test_data("benchmark.prot.sig")
-        good_trans = list(load_signatures_from_json(knowngood))[0]
+        good_trans = next(iter(load_signatures_from_json(knowngood)))
 
         assert sig2_trans.similarity(good_trans) == 1.0
 

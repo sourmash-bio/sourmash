@@ -22,14 +22,14 @@ from ._lowlevel import ffi, lib
 
 DEFAULT_MMHASH_SEED = 42
 
-DEFAULTS = dict(
-    dna="k=31,scaled=1000,noabund",
-    protein="k=10,scaled=200,noabund",
-    dayhoff="k=16,scaled=200,noabund",
-    hp="k=42,scaled=200,noabund",
-    skipm1n3="k=21,scaled=1000,noabund",
-    skipm2n3="k=21,scaled=1000,noabund",
-)
+DEFAULTS = {
+    "dna": "k=31,scaled=1000,noabund",
+    "protein": "k=10,scaled=200,noabund",
+    "dayhoff": "k=16,scaled=200,noabund",
+    "hp": "k=42,scaled=200,noabund",
+    "skipm1n3": "k=21,scaled=1000,noabund",
+    "skipm2n3": "k=21,scaled=1000,noabund",
+}
 
 
 def _parse_params_str(params_str):
@@ -81,9 +81,7 @@ def _parse_params_str(params_str):
             if len(item) < 6 or item[4] != "=":
                 raise ValueError("seed takes a parameter, e.g. 'seed=42'")
             params["seed"] = int(item[5:])
-        elif item in ("protein", "dayhoff", "hp", "dna"):
-            moltype = item
-        elif item in ("skipm1n3", "skipm2n3"):
+        elif item in ("protein", "dayhoff", "hp", "dna") or item in ("skipm1n3", "skipm2n3"):
             moltype = item
         else:
             raise ValueError(f"unknown component '{item}' in params string")
@@ -258,7 +256,7 @@ def dna(args):
     try:
         signatures_factory = _signatures_for_sketch_factory(args.param_string, "dna")
     except ValueError as e:
-        error(f"Error creating signatures: {str(e)}")
+        error(f"Error creating signatures: {e!s}")
         sys.exit(-1)
 
     _add_from_file_to_filenames(args)
@@ -287,7 +285,7 @@ def protein(args):
     try:
         signatures_factory = _signatures_for_sketch_factory(args.param_string, moltype)
     except ValueError as e:
-        error(f"Error creating signatures: {str(e)}")
+        error(f"Error creating signatures: {e!s}")
         sys.exit(-1)
 
     _add_from_file_to_filenames(args)
@@ -315,7 +313,7 @@ def translate(args):
     try:
         signatures_factory = _signatures_for_sketch_factory(args.param_string, moltype)
     except ValueError as e:
-        error(f"Error creating signatures: {str(e)}")
+        error(f"Error creating signatures: {e!s}")
         sys.exit(-1)
 
     _add_from_file_to_filenames(args)
@@ -351,9 +349,8 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
             # read sequence records & sketch
             notify(f"... reading sequences from {filename}")
             for n, record in enumerate(screed_iter):
-                if n % 10000 == 0:
-                    if n:
-                        notify("\r...{} {}", filename, n, end="")
+                if n % 10000 == 0 and n:
+                    notify("\r...{} {}", filename, n, end="")
 
                 try:
                     add_seq(sigs, record.sequence, input_is_protein, check_sequence)
@@ -403,13 +400,13 @@ def _output_csv_info(filename, sigs_to_build):
             for p in param_objs:
                 param_strs.append(p.to_param_str())
 
-            row = dict(
-                filename=filename,
-                sketchtype=sketchtype,
-                param_strs="-p " + " -p ".join(param_strs),
-                name=name,
-                output_index=output_n,
-            )
+            row = {
+                "filename": filename,
+                "sketchtype": sketchtype,
+                "param_strs": "-p " + " -p ".join(param_strs),
+                "name": name,
+                "output_index": output_n,
+            }
 
             w.writerow(row)
 
@@ -437,7 +434,7 @@ def fromfile(args):
         # omit a default moltype - must be provided in param string.
         sig_factory = _signatures_for_sketch_factory(args.param_string, None)
     except ValueError as e:
-        error(f"Error creating signatures: {str(e)}")
+        error(f"Error creating signatures: {e!s}")
         sys.exit(-1)
 
     # take the signatures factory => convert into a bunch of ComputeParameters
@@ -517,9 +514,8 @@ def fromfile(args):
                 already_done[name].append(p)
 
                 # matching name? check if we already have sig. if so, store!
-                if name in all_names:
-                    if p in build_params:
-                        already_done_rows.append(row)
+                if name in all_names and p in build_params:
+                    already_done_rows.append(row)
 
     already_done_manifest = CollectionManifest(already_done_rows)
     if args.already_done:
