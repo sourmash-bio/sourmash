@@ -6638,7 +6638,10 @@ def test_watch_coverage(runtmp):
 
     with open(runtmp.output("query.fa"), "w") as fp:
         record = next(iter(screed.open(testdata0)))
-        fp.writelines(f">{start}\n{record.sequence[start : start + 500]}\n" for start in range(0, len(record), 100))
+        fp.writelines(
+            f">{start}\n{record.sequence[start : start + 500]}\n"
+            for start in range(0, len(record), 100)
+        )
 
     args = ["watch", "--ksize", "21", "--dna", "zzz", "query.fa"]
     runtmp.sourmash(*args)
@@ -6659,7 +6662,10 @@ def test_watch_output_sig(runtmp):
 
     with open(runtmp.output("query.fa"), "w") as fp:
         record = next(iter(screed.open(testdata0)))
-        fp.writelines(f">{start}\n{record.sequence[start : start + 500]}\n" for start in range(0, len(record), 100))
+        fp.writelines(
+            f">{start}\n{record.sequence[start : start + 500]}\n"
+            for start in range(0, len(record), 100)
+        )
 
     args = [
         "watch",

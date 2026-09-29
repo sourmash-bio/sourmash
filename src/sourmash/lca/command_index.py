@@ -182,9 +182,7 @@ def index(args):
 
     db_outfile = args.lca_db_out
     if args.database_format == "json":
-        if not (
-            db_outfile.endswith((".lca.json", ".lca.json.gz"))
-        ):  # logic -> db.save
+        if not (db_outfile.endswith((".lca.json", ".lca.json.gz"))):  # logic -> db.save
             db_outfile += ".lca.json"
     else:
         assert args.database_format == "sql"
