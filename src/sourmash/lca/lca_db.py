@@ -685,9 +685,9 @@ class LCA_Database(Index):
             # For example, see test_lca_jaccard_ordering, where
             # for containment we could be done early, but for Jaccard we
             # cannot.
-            if search_fn.passes(score) and search_fn.collect(score, subj):
-                if passes_all_picklists(subj, self.picklists):
-                    yield IndexSearchResult(score, subj, self.location)
+            if search_fn.passes(score) and search_fn.collect(score, subj) and \
+               passes_all_picklists(subj, self.picklists):
+                yield IndexSearchResult(score, subj, self.location)
 
     @cached_property
     def _lid_to_idx(self):
@@ -736,7 +736,7 @@ def load_databases(filenames, scaled=None, verbose=True):
 
         ksize_vals.add(lca_db.ksize)
         if len(ksize_vals) > 1:
-            raise Exception("multiple ksizes, quitting")
+            raise Exception("multiple ksizes, quitting") # noqa: TRY002
 
         if scaled and scaled > lca_db.scaled:
             lca_db.downsample_scaled(scaled)
@@ -744,7 +744,7 @@ def load_databases(filenames, scaled=None, verbose=True):
 
         moltype_vals.add(lca_db.moltype)
         if len(moltype_vals) > 1:
-            raise Exception("multiple moltypes, quitting")
+            raise Exception("multiple moltypes, quitting") # noqa: TRY002 
 
         dblist.append(lca_db)
 

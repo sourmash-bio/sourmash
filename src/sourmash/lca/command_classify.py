@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Classify individual signature files down to deepest possible node.
 """
@@ -123,13 +122,11 @@ def classify(args):
 
         # for each query, gather all the matches across databases
         total_count = 0
-        n = 0
         total_n = len(inp_files)
-        for query_filename in inp_files:
-            n += 1
+        for n, query_filename in enumerate(inp_files):
             for query_sig in load_file_as_signatures(query_filename, ksize=ksize):
                 notify("\r\033[K", end="")
-                notify(f"... classifying {query_sig} (file {n} of {total_n})", end="\r")
+                notify(f"... classifying {query_sig} (file {n+1} of {total_n})", end="\r")
                 debug("classifying", query_sig)
                 total_count += 1
 

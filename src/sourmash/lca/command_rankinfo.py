@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Summarize rank-specific information from LCAs in one or more databases.
 """

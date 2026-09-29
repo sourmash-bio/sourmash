@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
@@ -37,7 +36,7 @@ def load_taxonomy_assignments(
     # parse spreadsheet!
     # CTB note: can't easily switch to FileInputCSV, because of
     # janky way we do/don't handle headers here. See issue #2198.
-    fp = open(filename, newline="")
+    fp = open(filename, newline="") # noqa: SIM115
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ["identifiers"]
     row_headers += ["_skip_"] * (start_column - 2)
@@ -96,9 +95,9 @@ def load_taxonomy_assignments(
             if lineage:
                 # check duplicates
                 if ident in assignments:
-                    if assignments[ident] != tuple(lineage):
+                    if assignments[ident] != tuple(lineage): # noqa: SIM102
                         if not force:
-                            raise Exception(f"multiple lineages for identifier {ident}")
+                            raise Exception(f"multiple lineages for identifier {ident}") # noqa: TRY002
                 else:
                     assignments[ident] = tuple(lineage)
 

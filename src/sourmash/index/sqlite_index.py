@@ -864,7 +864,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         conditions, values, picklist = self._make_select()
         if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
+            conditions = "WHERE " + " AND ".join(conditions)
         else:
             conditions = ""
 
@@ -945,7 +945,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         conditions, values, _picklist = self._make_select()
         if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
+            conditions = "WHERE " + " AND ".join(conditions)
         else:
             conditions = ""
 
@@ -999,7 +999,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             mf = cls.create(location)
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
             if not append:
-                raise Exception(
+                raise Exception( # noqa: TRY002
                     f"cannot create sqlite3 db at '{location}'; exception: {exc!s}"
                 )
             db = load_sqlite_index(location, request_manifest=True)
