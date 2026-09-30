@@ -18,10 +18,7 @@ def main():
     # pprint.pprint(d)
     out_d = {}
 
-    creators = []
-    for author_d in d["project"]["authors"]:
-        creators.append(author_d)
-
+    creators.extend(list(d["project"]["authors"]))
     out_d["creators"] = creators
 
     with open(args.output_json, "w") as fp:
