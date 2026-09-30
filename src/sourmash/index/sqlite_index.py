@@ -999,7 +999,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             mf = cls.create(location)
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
             if not append:
-                raise Exception( # noqa: TRY002
+                raise Exception(  # noqa: TRY002
                     f"cannot create sqlite3 db at '{location}'; exception: {exc!s}"
                 )
             db = load_sqlite_index(location, request_manifest=True)

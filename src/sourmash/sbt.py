@@ -862,7 +862,7 @@ class SBT(Index):
             if len(sbts) == 1:
                 tree_data = storage.load(sbts[0])
 
-                tempfile = NamedTemporaryFile() # noqa: SIM115
+                tempfile = NamedTemporaryFile()  # noqa: SIM115
 
                 tempfile.write(tree_data)
                 tempfile.flush()
@@ -1297,7 +1297,7 @@ class SBT(Index):
                     except ValueError:
                         pass
 
-                if search_fn(parent.node, children=siblings, *args) or was_missing: # noqa: B026
+                if search_fn(parent.node, children=siblings, *args) or was_missing:  # noqa: B026
                     queue.append(parent.pos)
 
             processed += 1
