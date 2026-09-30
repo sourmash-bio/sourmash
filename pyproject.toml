@@ -420,6 +420,9 @@ ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
 
+[tool.pixi.dependencies]
+pip = ">=26.2.1,<27"
+
 [tool.pixi.target.win-64.activation.env]
 CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
 PATH = "%PATH%:%CARGO_HOME%/bin"
