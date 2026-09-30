@@ -8,7 +8,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum HashFunctions {
+enum HashFunctions
+#if __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // __STDC_VERSION__ >= 202311L
+ {
   HASH_FUNCTIONS_MURMUR64_DNA = 1,
   HASH_FUNCTIONS_MURMUR64_PROTEIN = 2,
   HASH_FUNCTIONS_MURMUR64_DAYHOFF = 3,
@@ -16,9 +20,17 @@ enum HashFunctions {
   HASH_FUNCTIONS_MURMUR64_SKIPM1N3 = 5,
   HASH_FUNCTIONS_MURMUR64_SKIPM2N3 = 6,
 };
+#if __STDC_VERSION__ >= 202311L
+typedef enum HashFunctions HashFunctions;
+#else
 typedef uint32_t HashFunctions;
+#endif // __STDC_VERSION__ >= 202311L
 
-enum SourmashErrorCode {
+enum SourmashErrorCode
+#if __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // __STDC_VERSION__ >= 202311L
+ {
   SOURMASH_ERROR_CODE_NO_ERROR = 0,
   SOURMASH_ERROR_CODE_PANIC = 1,
   SOURMASH_ERROR_CODE_INTERNAL = 2,
@@ -57,7 +69,11 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_ROCKS_DB_ERROR = 100007,
   SOURMASH_ERROR_CODE_ZIP_ERROR = 100008,
 };
+#if __STDC_VERSION__ >= 202311L
+typedef enum SourmashErrorCode SourmashErrorCode;
+#else
 typedef uint32_t SourmashErrorCode;
+#endif // __STDC_VERSION__ >= 202311L
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
