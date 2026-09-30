@@ -400,8 +400,6 @@ def load_pathlist_from_file(filename):
                 )
     except OSError:
         raise ValueError(f"pathlist file '{filename}' does not exist")
-    except OSError:
-        raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
         raise ValueError(f"cannot parse file '{filename}' as list of filenames")
     return file_list
@@ -439,7 +437,7 @@ class FileOutput:
     def open(self):
         if self.filename == "-" or self.filename is None:
             return sys.stdout
-        self.fp = open(
+        self.fp = open(         # noqa: SIM115
             self.filename, self.mode, newline=self.newline, encoding=self.encoding
         )
         return self.fp
@@ -489,9 +487,9 @@ class FileOutputCSV(FileOutput):
         if self.filename == "-" or self.filename is None:
             return sys.stdout
         if self.filename.endswith(".gz"):
-            self.fp = gzip.open(self.filename, "wt", newline="")
+            self.fp = gzip.open(self.filename, "wt", newline="") # noqa: SIM115
         else:
-            self.fp = open(self.filename, "w", newline="")
+            self.fp = open(self.filename, "w", newline="") # noqa: SIM115
         return self.fp
 
 

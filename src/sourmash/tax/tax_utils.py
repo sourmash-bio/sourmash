@@ -200,7 +200,7 @@ class BaseLineageInfo:
         for lin_tup in self.lineage:
             # now add input tuples in correct spots. This corrects for order and allows empty values.
             if not isinstance(lin_tup, LineagePair):
-                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.")
+                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.") # noqa: TRY004
             if lin_tup.rank:  # skip this tuple if rank is None or "" (empty lineage tuple. is this needed?)
                 try:
                     # find index for this rank
@@ -387,7 +387,7 @@ class RankLineageInfo(BaseLineageInfo):
         """
         null_names = {"[Blank]", "na", "null", "NA", ""}
         if not isinstance(self.lineage_dict, (dict)):
-            raise ValueError(f"{self.lineage_dict} is not dictionary")
+            raise ValueError(f"{self.lineage_dict} is not dictionary") # noqa: TRY004
         new_lineage = []
         taxpath = []
         # build empty lineage and taxpath
@@ -475,7 +475,7 @@ class ICTVRankLineageInfo(RankLineageInfo):
         """
         null_names = {"[Blank]", "na", "null", "NA", ""}
         if not isinstance(self.lineage_dict, (dict)):
-            raise ValueError(f"{self.lineage_dict} is not dictionary")
+            raise ValueError(f"{self.lineage_dict} is not dictionary") # noqa: TRY004
         new_lineage = []
         # build empty lineage and taxpath
         for rank in self.ranks:
@@ -608,7 +608,7 @@ class LINLineageInfo(BaseLineageInfo):
         for lin_tup in self.lineage:
             # make sure we're adding tax_utils.LineagePairs
             if not isinstance(lin_tup, LineagePair):
-                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.")
+                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.") # noqa: TRY004
             new_lineage.append(lin_tup)
             ranks.append(lin_tup.rank)
         # build list of filled ranks
@@ -666,7 +666,7 @@ class LineageTree:
         if not lineages:
             raise ValueError("empty assignment passed to build_tree")
         if not isinstance(lineages, abc.Iterable):
-            raise ValueError(
+            raise ValueError(   # noqa: TRY004
                 "Must pass in an iterable containing LineagePair or LineageInfo objects."
             )
         for lineageInf in lineages:
@@ -1353,7 +1353,7 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                num_rows += 1
+                num_rows += 1   # noqa: SIM113
                 if lins:
                     lineageInfo = LINLineageInfo(lineage_str=row["lin"])
                     if n_pos is not None:
@@ -1386,11 +1386,10 @@ class LineageDB(abc.Mapping):
                 if lineage:
                     # check duplicates
                     if ident in assignments:
-                        if assignments[ident] != lineage:
-                            if not force:
-                                raise ValueError(
-                                    f"multiple lineages for identifier {ident}"
-                                )
+                        if assignments[ident] != lineage and not force:
+                            raise ValueError(
+                                f"multiple lineages for identifier {ident}"
+                            )
                     else:
                         assignments[ident] = lineage
 
@@ -1441,7 +1440,7 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                num_rows += 1
+                num_rows += 1   # noqa: SIM113
 
                 name = row[ident_col]
                 ident = get_ident(name)
@@ -1459,7 +1458,7 @@ class LineageDB(abc.Mapping):
                 lineage = lineageInfo.filled_lineage
                 # check duplicates
                 if ident in assignments:
-                    if assignments[ident] != lineage:
+                    if assignments[ident] != lineage: # noqa: SIM102
                         # this should not happen with valid
                         # sourmash tax annotate output, but check anyway.
                         if not force:
@@ -1691,7 +1690,7 @@ class MultiLineageDB(abc.Mapping):
 
         is_filename = False
         try:
-            filename_or_fp.write
+            filename_or_fp.write # noqa: B018
         except AttributeError:
             is_filename = True
 
@@ -1706,9 +1705,9 @@ class MultiLineageDB(abc.Mapping):
             fp = filename_or_fp
             if is_filename:
                 if filename_or_fp.endswith(".gz"):
-                    fp = gzip.open(filename_or_fp, "wt", newline="")
+                    fp = gzip.open(filename_or_fp, "wt", newline="") # noqa: SIM115
                 else:
-                    fp = open(filename_or_fp, "w", newline="")
+                    fp = open(filename_or_fp, "w", newline="") # noqa: SIM115
 
             try:
                 self._save_csv(fp)
@@ -2160,7 +2159,7 @@ class SummarizedGatherResult:
             sD["num_bp_contained"] = str(int(self.bp_match_at_rank))
 
         if isinstance(self.lineage, LINLineageInfo):
-            raise ValueError("Cannot produce 'kreport' with LIN taxonomy.")
+            raise ValueError("Cannot produce 'kreport' with LIN taxonomy.") # noqa: TRY004
         if self.lineage != RankLineageInfo():
             this_rank = self.lineage.lowest_rank
             sD["rank_code"] = RANKCODE[this_rank]
@@ -2202,7 +2201,7 @@ class SummarizedGatherResult:
         Columns are: TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
         """
         if isinstance(self.lineage, LINLineageInfo):
-            raise ValueError("Cannot produce 'bioboxes' with LIN taxonomy.")
+            raise ValueError("Cannot produce 'bioboxes' with LIN taxonomy.") # noqa: TRY004
         if self.lineage != RankLineageInfo():  # if not unassigned
             taxid = self.lineage.lowest_lineage_taxid
             if taxid:
@@ -2383,12 +2382,12 @@ class QueryTaxResult:
                 lininfo and lininfo.filled_lineage
             ):  # won't always have lineage to summarize (skipped idents, missed idents)
                 # notify + track perfect matches
-                if taxres.f_unique_to_query >= 1.0:
-                    if taxres.match_ident not in self.perfect_match:
-                        notify(
-                            f"WARNING: 100% match! Is query '{self.query_name}' identical to its database match, '{taxres.match_ident}'?"
-                        )
-                        self.perfect_match.add(taxres.match_ident)
+                if taxres.f_unique_to_query >= 1.0 and \
+                   taxres.match_ident not in self.perfect_match:
+                    notify(
+                        f"WARNING: 100% match! Is query '{self.query_name}' identical to its database match, '{taxres.match_ident}'?"
+                    )
+                    self.perfect_match.add(taxres.match_ident)
                 # add this taxresult to summary
                 for rank in self.summarized_ranks:
                     if (

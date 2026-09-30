@@ -402,10 +402,7 @@ def overlap(args):
 
     notify(f"loaded one signature each from {args.signature1} and {args.signature2}")
 
-    try:
-        jaccard = sig1.jaccard(sig2)
-    except ValueError:
-        raise
+    jaccard = sig1.jaccard(sig2)
 
     # --- conditional containment info ---
     if sig1.minhash.scaled > 0 and sig2.minhash.scaled > 0:
@@ -905,9 +902,9 @@ def filter(args):
             abunds = mh.hashes
             abunds2 = {}
             for k, v in abunds.items():
-                if v >= args.min_abundance:
-                    if args.max_abundance is None or v <= args.max_abundance:
-                        abunds2[k] = v
+                if v >= args.min_abundance and \
+                   (args.max_abundance is None or v <= args.max_abundance):
+                    abunds2[k] = v
 
             filtered_mh = mh.copy_and_clear()
             filtered_mh.set_abundances(abunds2)
@@ -1558,7 +1555,7 @@ def check(args):
         n_input = 0
         n_output = 0
 
-        with sourmash_args.FileInputCSV(pickfile) as r:
+        with sourmash_args.FileInputCSV(pickfile) as r: # noqa: SIM117
             with open(args.output_missing, "w", newline="") as outfp:
                 w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
                 w.writeheader()
@@ -1640,7 +1637,7 @@ def collect(args):
                 collected_mf = CollectionManifest()
 
             if not isinstance(collected_mf, CollectionManifest):
-                raise Exception
+                raise Exception # noqa: TRY002
     except:
         error(
             f"ERROR loading '{args.output}' with --merge-previous. Is it of type {args.manifest_format}?"
