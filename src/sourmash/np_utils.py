@@ -12,7 +12,7 @@ def to_memmap(array):
     """
     import numpy as np
 
-    filename = tempfile.NamedTemporaryFile( # noqa: SIM115
+    filename = tempfile.NamedTemporaryFile(  # noqa: SIM115
         prefix="array", suffix=".mmap", delete=False
     ).name
     shape = array.shape

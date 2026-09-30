@@ -330,8 +330,9 @@ class _RwZipStorage(Storage):
 
         # might not have self.zipfile if was invalid zipfile and __init__
         # failed.
-        if hasattr(self, "zipfile") and \
-           (self.zipfile is not None or self.bufferzip is not None):
+        if hasattr(self, "zipfile") and (
+            self.zipfile is not None or self.bufferzip is not None
+        ):
             self.flush(keep_closed=True)
             self.zipfile.close()
             self.zipfile = None
@@ -364,7 +365,7 @@ class _RwZipStorage(Storage):
                     # bad news, need to create new file...
                     # create a temporary file to write the final version,
                     # which will be copied to the right place later.
-                    tempfile = NamedTemporaryFile(delete=False) # noqa: SIM115
+                    tempfile = NamedTemporaryFile(delete=False)  # noqa: SIM115
                     final_file = zipfile.ZipFile(tempfile, mode="w")
                     all_data = buffer_names.union(zf_names)
 
@@ -394,7 +395,7 @@ class _RwZipStorage(Storage):
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
                     if keep_closed:
-                        raise Exception("unexpected error") # noqa: TRY002
+                        raise Exception("unexpected error")  # noqa: TRY002
                     else:
                         zf = zipfile.ZipFile(
                             self.path, mode="a", compression=zipfile.ZIP_STORED
