@@ -101,16 +101,16 @@ class Index(ABC):
 
     @abstractmethod
     def insert(self, signature):
-        """ """
+        "TODO"
 
     @abstractmethod
     def save(self, path, storage=None, sparseness=0.0, structure_only=False):
-        """ """
+        "TODO"
 
     @classmethod
     @abstractmethod
     def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
-        """ """
+        "TODO"
 
     def find(self, search_fn, query, **kwargs):
         """Use search_fn to find matching signatures in the index.
@@ -163,11 +163,10 @@ class Index(ABC):
 
             score = search_fn.score_fn(query_size, shared_size, subj_size, total_size)
 
-            if search_fn.passes(score):
+            if search_fn.passes(score) and search_fn.collect(score, subj):
                 # note: here we yield the original signature, not the
                 # downsampled minhash.
-                if search_fn.collect(score, subj):
-                    yield IndexSearchResult(score, subj, location)
+                yield IndexSearchResult(score, subj, location)
 
     def search_abund(self, query, *, threshold=None, **kwargs):
         """Return list of IndexSearchResult with angular similarity above 'threshold'.
@@ -375,16 +374,14 @@ def select_signature(
     # 'scaled' and 'num' are incompatible
     if scaled and ss.minhash.num:
         return False
-    if num:
+    if num and (ss.minhash.scaled or num != ss.minhash.num):
         # note, here we check if 'num' is identical; this can be
         # changed later.
-        if ss.minhash.scaled or num != ss.minhash.num:
-            return False
+        return False
 
-    if abund:
+    if abund and not ss.minhash.track_abundance:
         # note: minhash w/abund can always be flattened
-        if not ss.minhash.track_abundance:
-            return False
+        return False
 
     return not (picklist is not None and ss not in picklist)
 
@@ -1227,9 +1224,15 @@ def _check_select_parameters(**kw):
         raise ValueError(f"ksize value '{ksize}' must be an integer, is: {type(ksize)}")
 
     moltype = kw.get("moltype")
-    if moltype is not None:
-        if moltype not in ["DNA", "protein", "dayhoff", "hp", "skipm1n3", "skipm2n3"]:
-            raise ValueError(f"unknown moltype: {moltype}")
+    if moltype is not None and moltype not in [
+        "DNA",
+        "protein",
+        "dayhoff",
+        "hp",
+        "skipm1n3",
+        "skipm2n3",
+    ]:
+        raise ValueError(f"unknown moltype: {moltype}")
 
     scaled = kw.get("scaled")
     if scaled is not None and not isinstance(scaled, int):

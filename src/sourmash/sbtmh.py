@@ -50,7 +50,7 @@ class SigLeaf(Leaf):
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
         # content...)
-        self.data
+        _ = self.data
 
         buf = signature.save_signatures_to_json([self.data], compression=1)
         return self.storage.save(path, buf)

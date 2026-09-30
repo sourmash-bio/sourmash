@@ -290,7 +290,7 @@ class SearchResult(BaseResult):
     searchtype: SearchType = None
 
     # columns for standard SearchResult output
-    search_write_cols = [
+    search_write_cols = [  # noqa: RUF012
         "similarity",
         "md5",
         "filename",
@@ -301,7 +301,7 @@ class SearchResult(BaseResult):
         "ani",
     ]
 
-    ci_cols = ["ani_low", "ani_high"]
+    ci_cols = ["ani_low", "ani_high"]  # noqa: RUF012
 
     search_write_cols_ci = search_write_cols + ci_cols
 
@@ -363,7 +363,7 @@ class PrefetchResult(BaseResult):
     """
 
     # current prefetch columns
-    prefetch_write_cols = [
+    prefetch_write_cols = [  # noqa: RUF012
         "intersect_bp",
         "jaccard",
         "max_containment",
@@ -389,7 +389,7 @@ class PrefetchResult(BaseResult):
         "potential_false_negative",
     ]  #'match_abundance'
 
-    ci_cols = [
+    ci_cols = [  # noqa: RUF012
         "query_containment_ani_low",
         "query_containment_ani_high",
         "match_containment_ani_low",
@@ -478,7 +478,7 @@ class GatherResult(PrefetchResult):
     total_weighted_hashes: int = None
     noident_len: int = 0
 
-    gather_write_cols = [
+    gather_write_cols = [  # noqa: RUF012
         "intersect_bp",
         "f_orig_query",
         "f_match",
@@ -513,7 +513,7 @@ class GatherResult(PrefetchResult):
         "total_weighted_hashes",
     ]
 
-    ci_cols = [
+    ci_cols = [  # noqa: RUF012
         "query_containment_ani_low",
         "query_containment_ani_high",
         "match_containment_ani_low",

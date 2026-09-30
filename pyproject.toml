@@ -207,7 +207,7 @@ macos-deployment-target = "10.14"
 macos-deployment-target = "11.0"
 
 [tool.ruff]
-extend-exclude = ["*.ipynb"]
+extend-exclude = ["*.ipynb", "tests/", "benchmarks/"]
 
 [tool.ruff.lint]
 extend-select = [

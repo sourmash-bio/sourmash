@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # sourmash documentation build configuration file, created by
 # sphinx-quickstart on Sat Jun  4 16:35:43 2016.
 #

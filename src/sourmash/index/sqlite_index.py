@@ -424,9 +424,10 @@ class SqliteIndex(Index):
 
             if search_fn.passes(score):
                 subj = self._load_sketch(c2, sketch_id)
-                if search_fn.collect(score, subj):
-                    if picklist is None or subj in picklist:
-                        yield IndexSearchResult(score, subj, self.location)
+                if search_fn.collect(score, subj) and (
+                    picklist is None or subj in picklist
+                ):
+                    yield IndexSearchResult(score, subj, self.location)
 
     def _select(self, *, num=0, track_abundance=False, **kwargs):
         _check_select_parameters(**kwargs)
@@ -734,7 +735,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         # check - is this manifest managed by SqliteIndex? If so, prevent
         # insertions unless SqliteIndex is the one calling it.
         if self.managed_by_index and not call_is_from_index:
-            raise Exception("must use SqliteIndex.insert to add to this manifest")
+            raise Exception("must use SqliteIndex.insert to add to this manifest")  # noqa: TRY002
 
         row = dict(row)
         if "seed" not in row:
@@ -863,7 +864,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         conditions, values, picklist = self._make_select()
         if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
+            conditions = "WHERE " + " AND ".join(conditions)
         else:
             conditions = ""
 
@@ -944,7 +945,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         conditions, values, _picklist = self._make_select()
         if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
+            conditions = "WHERE " + " AND ".join(conditions)
         else:
             conditions = ""
 
@@ -998,7 +999,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             mf = cls.create(location)
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
             if not append:
-                raise Exception(
+                raise Exception(  # noqa: TRY002
                     f"cannot create sqlite3 db at '{location}'; exception: {exc!s}"
                 )
             db = load_sqlite_index(location, request_manifest=True)

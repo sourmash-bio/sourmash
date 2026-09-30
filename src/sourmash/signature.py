@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """

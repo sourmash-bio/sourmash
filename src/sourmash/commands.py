@@ -838,7 +838,7 @@ def categorize(args):
     csv_w = None
     csv_fp = None
     if args.csv:
-        csv_fp = open(args.csv, "w", newline="")
+        csv_fp = open(args.csv, "w", newline="")  # noqa: SIM115
         csv_w = csv.writer(csv_fp)
 
     search_obj = make_jaccard_search_query(threshold=args.threshold)

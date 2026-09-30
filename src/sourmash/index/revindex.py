@@ -309,7 +309,7 @@ class RevIndex(RustObject, Index):
 
         if picklist is not None:
             if self._idx_picklist is not None:
-                raise Exception("cannot use picklists multiple times, sorry")
+                raise Exception("cannot use picklists multiple times, sorry")  # noqa: TRY002
 
             # select matching entries from our manifest:
             m = self.manifest.select_to_manifest(picklist=picklist)
@@ -376,7 +376,7 @@ class MemRevIndex(RevIndex):
         "Confirm that this object is not initialized, optionally raising exc."
         if self._objptr != ffi.NULL:
             if do_raise:
-                raise Exception("already initialized")
+                raise Exception("already initialized")  # noqa: TRY002
             return False
         return True
 

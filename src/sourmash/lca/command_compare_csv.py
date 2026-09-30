@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Compare two taxonomy spreadsheets.
 """

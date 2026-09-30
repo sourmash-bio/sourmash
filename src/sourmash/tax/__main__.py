@@ -648,9 +648,10 @@ def grep(args):
     # determine if lineage matches.
     def find_pattern(lineage, select_rank):
         for lp in lineage:
-            if select_rank is None or lp.rank == select_rank:
-                if pattern.search(lp.name):
-                    return True
+            if (select_rank is None or lp.rank == select_rank) and pattern.search(
+                lp.name
+            ):
+                return True
         return False
 
     if args.invert_match:

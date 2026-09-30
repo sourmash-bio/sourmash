@@ -65,7 +65,7 @@ def add_sourmash_internal(cursor, use_type, version):
     if val is not None:
         # do version compatibility foo here?
         if version != val:
-            raise Exception(
+            raise Exception(  # noqa: TRY002
                 f"sqlite problem: for {use_type}, want version {version}, got version {val}"
             )
     else:

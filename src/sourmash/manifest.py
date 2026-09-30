@@ -117,7 +117,7 @@ class BaseCollectionManifest:
                 with FileOutputCSV(filename) as fp:
                     return self.write_to_csv(fp, write_header=True)
             elif os.path.exists(filename) and not ok_if_exists:
-                raise Exception("output manifest already exists")
+                raise Exception("output manifest already exists")  # noqa: TRY002
 
         elif database_format == "sql":
             from sourmash.index.sqlite_index import SqliteCollectionManifest
@@ -313,7 +313,7 @@ class CollectionManifest(BaseCollectionManifest):
 
     def __iadd__(self, other):
         if self is other:
-            raise Exception("cannot directly add manifest to itself")
+            raise Exception("cannot directly add manifest to itself")  # noqa: TRY002
         self._add_rows(other.rows)
         return self
 

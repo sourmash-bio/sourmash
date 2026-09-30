@@ -83,7 +83,7 @@ class Nodegraph(RustObject):
         if not isinstance(mh, MinHash):
             # FIXME: we could take sets here too (or anything that can be
             # converted to a list of ints...)
-            raise ValueError("mh must be a MinHash")
+            raise ValueError("mh must be a MinHash")  # noqa: TRY004
 
         return self._methodcall(lib.nodegraph_matches, mh._objptr)
 

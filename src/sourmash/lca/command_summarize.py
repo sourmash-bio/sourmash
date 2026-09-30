@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """
 Summarize the taxonomic content of the given signatures, combined.
 """
@@ -187,7 +186,7 @@ def summarize_main(args):
     csv_fp = None
     write_header = True
     if args.output:
-        csv_fp = open(args.output, "w", newline="")
+        csv_fp = open(args.output, "w", newline="")  # noqa: SIM115
 
     try:
         for filename, sig, hashvals in load_singletons_and_count(

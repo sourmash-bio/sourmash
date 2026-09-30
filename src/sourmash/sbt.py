@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 """
@@ -253,11 +252,10 @@ class SBT(Index):
             )
 
         # containment requires 'scaled'.
-        if containment:
-            if not db_mh.scaled:
-                raise ValueError(
-                    "cannot search this SBT for containment; signatures are not calculated with scaled"
-                )
+        if containment and not db_mh.scaled:
+            raise ValueError(
+                "cannot search this SBT for containment; signatures are not calculated with scaled"
+            )
 
         # 'num' and 'scaled' do not mix.
         if num:
@@ -738,7 +736,7 @@ class SBT(Index):
 
             if structure_only is False:
                 # trigger data loading before saving to the new place
-                node.data
+                _ = node.data
 
                 node.storage = storage
 
@@ -794,7 +792,6 @@ class SBT(Index):
                 manifest_name, manifest_data, overwrite=True, compress=True
             )
         elif kind == "FS":
-            manifest_name = manifest_name
             manifest_path = storage.save(manifest_name, manifest_data, overwrite=True)
         else:
             manifest_path = None
@@ -865,7 +862,7 @@ class SBT(Index):
             if len(sbts) == 1:
                 tree_data = storage.load(sbts[0])
 
-                tempfile = NamedTemporaryFile()
+                tempfile = NamedTemporaryFile()  # noqa: SIM115
 
                 tempfile.write(tree_data)
                 tempfile.flush()
@@ -1300,7 +1297,7 @@ class SBT(Index):
                     except ValueError:
                         pass
 
-                if search_fn(parent.node, children=siblings, *args) or was_missing:
+                if search_fn(parent.node, children=siblings, *args) or was_missing:  # noqa: B026
                     queue.append(parent.pos)
 
             processed += 1

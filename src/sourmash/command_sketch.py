@@ -170,19 +170,37 @@ class _signatures_for_sketch_factory:
             if self.mult_ksize_by_3 and not def_dna:
                 ksizes = [k * 3 for k in ksizes]
 
-            def make_param(ksizes):
+            def make_param(
+                ksizes,
+                params_d=params_d,
+                def_seed=def_seed,
+                def_num=def_num,
+                def_abund=def_abund,
+                def_scaled=def_scaled,
+                def_protein=def_protein,
+                def_dayhoff=def_dayhoff,
+                def_hp=def_hp,
+                def_skipm1n3=def_skipm1n3,
+                def_skipm2n3=def_skipm2n3,
+                def_dna=def_dna,
+            ):
+                seed = params_d.get("seed", def_seed)
+                num_hashes = params_d.get("num", def_num)
+                track_abundance = params_d.get("track_abundance", def_abund)
+                scaled = params_d.get("scaled", def_scaled)
+
                 return ComputeParameters(
                     ksizes=ksizes,
-                    seed=params_d.get("seed", def_seed),
+                    seed=seed,
                     protein=def_protein,
                     dayhoff=def_dayhoff,
                     hp=def_hp,
                     dna=def_dna,
                     skipm1n3=def_skipm1n3,
                     skipm2n3=def_skipm2n3,
-                    num_hashes=params_d.get("num", def_num),
-                    track_abundance=params_d.get("track_abundance", def_abund),
-                    scaled=params_d.get("scaled", def_scaled),
+                    num_hashes=num_hashes,
+                    track_abundance=track_abundance,
+                    scaled=scaled,
                 )
 
             if split_ksizes:
@@ -388,8 +406,9 @@ def _output_csv_info(filename, sigs_to_build):
         )
         w.writeheader()
 
-        output_n = 0
-        for (name, filename), param_objs in sigs_to_build.items():
+        for output_n, (k, param_objs) in enumerate(sigs_to_build.items()):
+            name, inp_filename = k
+
             param_strs = []
 
             # should all be the same!
@@ -404,7 +423,7 @@ def _output_csv_info(filename, sigs_to_build):
                 param_strs.append(p.to_param_str())
 
             row = {
-                "filename": filename,
+                "filename": inp_filename,
                 "sketchtype": sketchtype,
                 "param_strs": "-p " + " -p ".join(param_strs),
                 "name": name,
@@ -413,24 +432,21 @@ def _output_csv_info(filename, sigs_to_build):
 
             w.writerow(row)
 
-            output_n += 1
-
 
 def fromfile(args):
     if args.license != "CC0":
         error("error: sourmash only supports CC0-licensed signatures. sorry!")
         sys.exit(-1)
 
-    if args.output_signatures and os.path.exists(args.output_signatures):
-        if not args.force_output_already_exists:
-            error(
-                f"** ERROR: output location '{args.output_signatures}' already exists!"
-            )
-            error("** Not overwriting/appending.")
-            error(
-                "** Use --force-output-already-exists if you want to overwrite/append."
-            )
-            sys.exit(-1)
+    if (
+        args.output_signatures
+        and os.path.exists(args.output_signatures)
+        and not args.force_output_already_exists
+    ):
+        error(f"** ERROR: output location '{args.output_signatures}' already exists!")
+        error("** Not overwriting/appending.")
+        error("** Use --force-output-already-exists if you want to overwrite/append.")
+        sys.exit(-1)
 
     # now, create the set of desired sketch specs.
     try:

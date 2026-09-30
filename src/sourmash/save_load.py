@@ -84,7 +84,7 @@ def SaveSignaturesToLocation(location):
             debug_literal(f"{cls} is a match!")
             return cls(location)
 
-    raise Exception(
+    raise Exception(  # noqa: TRY002
         f"cannot determine how to open location {location} for saving; this should never happen!?"
     )
 
@@ -247,11 +247,11 @@ def _error_on_fastaq(filename, **kwargs):
             _ = next(it)
 
             success = True
-    except:
+    except:  # noqa: S110
         pass
 
     if success:
-        raise Exception(
+        raise Exception(  # noqa: TRY002
             f"Error while reading signatures from '{filename}' - got sequences instead! Is this a FASTA/FASTQ file?"
         )
 
