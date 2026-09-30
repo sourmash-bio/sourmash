@@ -382,6 +382,80 @@ unsafe fn revindex_search_jaccard(
     Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
+
+// @CTB
+
+ffi_fn! {
+unsafe fn revindex_get_weighted_intersections(
+    db_ptr: *const SourmashRevIndex,
+    query_ptr: *const SourmashSignature,
+    threshold_bp: u64,
+    return_size: *mut usize,
+    dataset_picklist_ptr: *const SourmashDatasetPicklist,
+) -> Result<*const *const SourmashSearchResult> {
+    let revindex = &SourmashRevIndex::as_rust(db_ptr);
+    let sig = SourmashSignature::as_rust(query_ptr);
+
+    // extract KmerMinHash for query
+    let query_mh: KmerMinHash = sig.clone()
+        .try_into().expect("cannot get kmerminhash");
+    let scaled = query_mh.scaled();
+    let threshold_bp: u64 = threshold_bp as u64 / scaled as u64;
+
+    // picklist?
+    let dataset_picklist = retrieve_picklist(dataset_picklist_ptr);
+
+    // do search & get matches
+    let counter = revindex.counter_for_query(&query_mh, dataset_picklist)?;
+
+    // right now this iterates over all matches from 'counter.most_common()'.
+    // we could probably truncate the search here in some way, yes?
+    // but it would require changing this to a loop rather than using an
+    // iterator I think.
+    //
+    // we could also adjust 'counter_for_query' to respect a specific
+    // threshold...
+    let filename = revindex.location();
+    let results: Vec<(f64, Signature, String)> = counter
+        .most_common()
+        .into_iter()
+        .filter_map(|(dataset_id, size)| {
+            if size as u64 >= threshold_bp {
+                let sig: Signature = revindex
+                    .collection()
+                    .sig_for_dataset(dataset_id)
+                    .expect("dataset not found")
+                    .into();
+                let f_cont = size as f64 / query_mh.size() as f64;
+                let name = sig.name()?;
+
+                // now make a new signature with just the intersection
+                let match_mh: KmerMinHash = sig.try_into().expect("cannot get kmerminhash for match");
+
+                let mut new_sig: Signature = Default::default();
+                new_sig.set_name(&name);
+                let sketch = Sketch::MinHash(match_mh);
+                new_sig.push(sketch);
+
+                Some((f_cont, new_sig, filename.to_owned()))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // convert to ffi.
+    let ptr_results: Vec<*const SourmashSearchResult> = results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+        .collect();
+
+    let b = ptr_results.into_boxed_slice();
+    *return_size = b.len();
+    Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
+}
+}
+
 // retrieve best match.
 
 ffi_fn! {
