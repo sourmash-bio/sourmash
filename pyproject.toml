@@ -316,7 +316,7 @@ check-msrv = "cargo build --all-features"
 cargo-llvm-cov = "~=0.6.15"
 cargo-nextest = "~=0.9.78"
 git = "~=2.51.0"
-maturin = "~=1.12.0"
+#maturin = "~=1.12.0"
 rust = "~=1.94.0"
 
 pandoc = "3.1.3.*"
@@ -342,7 +342,7 @@ wasm-pack = "~=0.14.0"
 rocksdb = "~=10.4.0"
 
 [tool.pixi.feature.dev.tasks.install-tools]
-cmd = "cargo binstall -y cargo-feature-combinations && cargo binstall -y cbindgen --version 0.29.2"
+cmd = "cargo binstall -y cargo-feature-combinations && cargo binstall -y cbindgen --version 0.29.4"
 
 [tool.pixi.feature.dev.tasks.semver-check]
 cmd = "cargo semver-checks check-release --default-features --features branchwater"
@@ -419,6 +419,10 @@ ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
 [tool.pixi.activation.env]
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
+
+[tool.pixi.dependencies]
+pip = ">=26.2.1,<27"
+maturin = "==1.15.0"
 
 [tool.pixi.target.win-64.activation.env]
 CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
