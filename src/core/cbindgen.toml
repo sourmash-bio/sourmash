@@ -2,6 +2,7 @@ header = "/* c bindings to the sourmash library */"
 include_guard = "SOURMASH_H_INCLUDED"
 language = "C"
 style = "type"
+no_includes = true
 
 [parse]
 clean = true
