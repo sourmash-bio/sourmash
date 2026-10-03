@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PIXI_VERSION: "v0.66.0"
+  PIXI_VERSION: "v0.81.0"
 
 jobs:
   check:
