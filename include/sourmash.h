@@ -411,6 +411,12 @@ void revindex_disk_create(const SourmashSignature *const *sigs_ptr,
 
 void revindex_free(SourmashRevIndex *ptr);
 
+const SourmashSearchResult *const *revindex_get_weighted_intersections(const SourmashRevIndex *db_ptr,
+                                                                       const SourmashSignature *query_ptr,
+                                                                       uint64_t threshold_bp,
+                                                                       uintptr_t *return_size,
+                                                                       const SourmashDatasetPicklist *dataset_picklist_ptr);
+
 uint32_t revindex_ksize(const SourmashRevIndex *ptr);
 
 uint64_t revindex_len(const SourmashRevIndex *ptr,

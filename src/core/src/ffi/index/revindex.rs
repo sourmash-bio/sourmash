@@ -383,7 +383,8 @@ unsafe fn revindex_search_jaccard(
 }
 }
 
-// @CTB
+// prefetch/containment overlap -> all matches, but returns only the
+// intersections, inflated with the query abundances.
 
 ffi_fn! {
 unsafe fn revindex_get_weighted_intersections(
@@ -430,13 +431,24 @@ unsafe fn revindex_get_weighted_intersections(
                 let name = sig.name()?;
 
                 // now make a new signature with just the intersection
-                let match_mh: KmerMinHash = sig.try_into().expect("cannot get kmerminhash for match");
 
+                // retrieve match minhash
+                let mut match_mh: KmerMinHash = sig.try_into().expect("cannot get kmerminhash for match");
+
+                // build new signature
                 let mut new_sig: Signature = Default::default();
+
+                // set name, yada
                 new_sig.set_name(&name);
+
+                // inflate from query. This will be just the hashes that match.
+                match_mh.inflate(&query_mh).ok();
+
+                // build new sketch from MinHash, add to sig.
                 let sketch = Sketch::MinHash(match_mh);
                 new_sig.push(sketch);
 
+                // return!
                 Some((f_cont, new_sig, filename.to_owned()))
             } else {
                 None
