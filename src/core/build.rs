@@ -49,27 +49,34 @@ fn copy_c_bindings(crate_dir: &str) {
 
     let root_dir = find_root_dir(crate_dir);
     let header_path = root_dir.join("include").join("sourmash.h");
-    let header = std::fs::read_to_string(header_path).expect("error reading header");
 
-    // strip directives, not supported by the cffi C parser
-    let new_header: String = header
-        .lines()
-        .filter_map(|s| {
-            if s.starts_with('#') {
-                None
-            } else {
-                Some({
-                    let mut s = s.to_owned();
-                    s.push('\n');
-                    s
-                })
-            }
-        })
-        .collect();
+    println!("cargo:rerun-if-changed={}", header_path.display());
+
+    // Preprocess the cbindgen-generated header before giving it to CFFI.
+    // CFFI's C parser does not understand preprocessor directives, so we
+    // evaluate them here rather than simply stripping them.
+    let output = std::process::Command::new("clang")
+        .args(["-E", "-P", "-std=c11"])
+        .arg(&header_path)
+        .output()
+        .expect("error running clang preprocessor");
+
+    if !output.status.success() {
+        panic!(
+            "clang failed to preprocess {}:\n{}",
+            header_path.display(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let new_header = output.stdout;
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let target_dir = find_target_dir(&out_dir);
+
     std::fs::create_dir_all(&target_dir).expect("error creating target dir");
+
     let out_path = target_dir.join("header.h");
-    std::fs::write(out_path, new_header).expect("error writing header");
+
+    std::fs::write(&out_path, new_header).expect("error writing header");
 }
