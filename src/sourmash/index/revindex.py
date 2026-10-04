@@ -271,7 +271,7 @@ class RevIndex(RustObject, Index):
         threshold_bp = int(threshold_bp)
 
         size = ffi.new("uintptr_t *")
-        print('XXX')
+        print("XXX")
         results_ptr = self._methodcall(
             lib.revindex_get_weighted_intersections,
             query_ss._get_objptr(),
