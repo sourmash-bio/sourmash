@@ -3,11 +3,6 @@
 #ifndef SOURMASH_H_INCLUDED
 #define SOURMASH_H_INCLUDED
 
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-
 enum HashFunctions
 #if __STDC_VERSION__ >= 202311L
   : uint32_t
