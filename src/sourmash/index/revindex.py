@@ -260,6 +260,33 @@ class RevIndex(RustObject, Index):
             matches.append(match)
         return matches
 
+    def prefetch_weighted(self, query_ss, threshold_bp=0, **kwargs):
+        """
+        Return all containment matches above threshold for the query.
+        """
+        if not query_ss.minhash:
+            raise ValueError("empty query")
+
+        self._init_inner()
+        threshold_bp = int(threshold_bp)
+
+        size = ffi.new("uintptr_t *")
+        print("XXX")
+        results_ptr = self._methodcall(
+            lib.revindex_get_weighted_intersections,
+            query_ss._get_objptr(),
+            threshold_bp,
+            size,
+            self._ffi_idx_picklist,
+        )
+        size = size[0]
+
+        matches = []
+        for i in range(size):
+            match = SearchResult._from_objptr(results_ptr[i])
+            matches.append(match)
+        return matches
+
     def select(
         self,
         ksize=None,
