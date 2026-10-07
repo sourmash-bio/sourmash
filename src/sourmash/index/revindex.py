@@ -260,7 +260,7 @@ class RevIndex(RustObject, Index):
             matches.append(match)
         return matches
 
-    def prefetch_weighted(self, query_ss, threshold_bp=0, **kwargs):
+    def prefetch_weighted(self, query_ss, *, threshold_bp=0, **kwargs):
         """
         Return all containment matches above threshold for the query.
         """
@@ -271,7 +271,6 @@ class RevIndex(RustObject, Index):
         threshold_bp = int(threshold_bp)
 
         size = ffi.new("uintptr_t *")
-        print("XXX")
         results_ptr = self._methodcall(
             lib.revindex_get_weighted_intersections,
             query_ss._get_objptr(),
@@ -350,6 +349,8 @@ class RevIndex(RustObject, Index):
 class SearchResult(RustObject):
     """
     Hold SearchResults from Rust.
+
+    Attributes: 'score', 'signature', 'location'.
     """
 
     __dealloc_func__ = lib.searchresult_free

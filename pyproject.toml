@@ -422,6 +422,7 @@ PATH = "$PATH:$CARGO_HOME/bin"
 
 [tool.pixi.dependencies]
 pip = ">=26.2.1,<27"
+polars = ">=2.0.0,<3"
 
 [tool.pixi.target.win-64.activation.env]
 CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"

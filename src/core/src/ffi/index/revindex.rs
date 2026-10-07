@@ -2,6 +2,9 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
+
 use crate::collection::{Collection, CollectionSet};
 use crate::encodings::*;
 use crate::ffi::index::SourmashSearchResult;
@@ -428,42 +431,52 @@ unsafe fn revindex_get_weighted_intersections(
                     .expect("dataset not found")
                     .into();
                 let f_cont = size as f64 / query_mh.size() as f64;
-                let name = sig.name()?;
-
-                // now make a new signature with just the intersection
-
-                // retrieve match minhash
-                let mut match_mh: KmerMinHash = sig.try_into().expect("cannot get kmerminhash for match");
-
-                // build new signature
-                let mut new_sig: Signature = Default::default();
-
-                // set name, yada
-                new_sig.set_name(&name);
-
-                // inflate from query. This will be just the hashes that match.
-                match_mh.inflate(&query_mh).ok();
-
-                // build new sketch from MinHash, add to sig.
-                let sketch = Sketch::MinHash(match_mh);
-                new_sig.push(sketch);
-
-                // return!
-                Some((f_cont, new_sig, filename.to_owned()))
+                Some((f_cont, sig, filename.to_owned()))
             } else {
                 None
             }
         })
         .collect();
 
+    let isect_results: Vec<(f64, Signature, String)> = results
+        .into_par_iter()
+        .filter_map(|(f_cont, sig, filename)| {
+            let name = sig.name()?;
+
+            // now make a new signature with just the intersection
+
+            // retrieve match minhash
+            let mut match_mh: KmerMinHash = sig.try_into().expect("cannot get kmerminhash for match");
+
+            // build new signature
+            let mut new_sig: Signature = Default::default();
+
+            // set name, yada
+            new_sig.set_name(&name);
+
+            // inflate from query. This will be just the hashes that match.
+            match_mh.inflate(&query_mh).ok();
+
+            // build new sketch from MinHash, add to sig.
+            let sketch = Sketch::MinHash(match_mh);
+            new_sig.push(sketch);
+
+            Some((f_cont, new_sig, filename.to_owned()))
+        }).collect();
+   
     // convert to ffi.
-    let ptr_results: Vec<*const SourmashSearchResult> = results
+    let ptr_results: Vec<*const SourmashSearchResult> = isect_results
         .into_iter()
         .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+      .collect();
+/*    let ptr_isect: Vec<*mut SourmashSignature> = isect_results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *mut SourmashSignature)
         .collect();
-
+*/
     let b = ptr_results.into_boxed_slice();
     *return_size = b.len();
+    // let c = ptr_isect.into_boxed_slice();
     Ok(Box::into_raw(b) as *const *const SourmashSearchResult)
 }
 }
