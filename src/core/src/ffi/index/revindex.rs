@@ -422,7 +422,7 @@ unsafe fn revindex_get_weighted_intersections(
     let filename = revindex.location();
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
-        .into_iter()
+        .into_par_iter()
         .filter_map(|(dataset_id, size)| {
             if size as u64 >= threshold_bp {
                 let sig: Signature = revindex
