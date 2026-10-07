@@ -299,7 +299,7 @@ run.plugins = ["covdefaults"]
 [tool.pixi.workspace]
 channels = ["conda-forge", "https://prefix.dev/github-releases"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
-requires-pixi = ">=0.65.0"
+requires-pixi = ">=0.81.0"
 
 [tool.pixi.feature.build.dependencies]
 clangdev = ">=16.0.6,<16.1"
@@ -342,7 +342,7 @@ wasm-pack = "~=0.14.0"
 rocksdb = "~=10.4.0"
 
 [tool.pixi.feature.dev.tasks.install-tools]
-cmd = "cargo binstall -y cargo-feature-combinations && cargo binstall -y cbindgen --version 0.29.2"
+cmd = "cargo binstall -y cargo-feature-combinations && cargo binstall -y cbindgen --version 0.29.4"
 
 [tool.pixi.feature.dev.tasks.semver-check]
 cmd = "cargo semver-checks check-release --default-features --features branchwater"
@@ -419,6 +419,10 @@ ROCKSDB_LIB_DIR = "${CONDA_PREFIX}/lib"
 [tool.pixi.activation.env]
 CARGO_HOME = "$CONDA_PREFIX/.cargo_cache"
 PATH = "$PATH:$CARGO_HOME/bin"
+
+[tool.pixi.dependencies]
+pip = ">=26.2.1,<27"
+polars = ">=2.0.0,<3"
 
 [tool.pixi.target.win-64.activation.env]
 CARGO_HOME = "%CONDA_PREFIX%/.cargo_cache"
