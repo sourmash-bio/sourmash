@@ -57,9 +57,9 @@ jobs:
 
       - name: Set up IPFS
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.11')
-        uses: ibnesayeed/setup-ipfs@master
+        uses: oduwsdl/setup-ipfs@main
         with:
-          ipfs_version: 0.6
+          ipfs_version: 0.37
           run_daemon: true
 
       - name: Start Redis
