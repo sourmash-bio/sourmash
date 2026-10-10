@@ -1,6 +1,8 @@
 //! Scan a disk RevIndex for dataset IDs outside the manifest and for values that do not parse.
 //! Usage: cargo run --release --features branchwater --example scan_revindex_ids -- <index path>
 
+use std::collections::HashSet;
+
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use sourmash::index::revindex::{Datasets, RevIndex, RevIndexOps};
@@ -49,9 +51,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
             Ok(datasets) => {
-                let out_of_range: Vec<u32> =
-                    datasets.into_iter().filter(|&i| i >= n_datasets).collect();
+                let ids: HashSet<u32> = datasets.into_iter().collect();
+                let n_ids = ids.len();
+                let mut out_of_range: Vec<u32> =
+                    ids.iter().copied().filter(|&i| i >= n_datasets).collect();
+                out_of_range.sort_unstable();
                 if !out_of_range.is_empty() {
+                    // For each bad ID: the ID with bit 30 cleared, and whether the value also holds it.
+                    let cleared: Vec<(u32, bool)> = out_of_range
+                        .iter()
+                        .map(|&i| {
+                            let c = i & !(1 << 30);
+                            (c, ids.contains(&c))
+                        })
+                        .collect();
                     n_bad += 1;
                     let bytes = if value.len() <= 64 {
                         hex(&value)
@@ -59,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         format!("{} ...", hex(&value[..64]))
                     };
                     println!(
-                        "hash={hash} len={} out_of_range={out_of_range:?} bytes=[{bytes}]",
+                        "hash={hash} len={} n_ids={n_ids} out_of_range={out_of_range:?} cleared_bit30_present={cleared:?} bytes=[{bytes}]",
                         value.len()
                     );
                 }
