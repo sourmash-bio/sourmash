@@ -70,6 +70,10 @@ proptest = { version = "1.11.0", default-features = false, features = ["std"]}
 rand = "0.10.1"
 tempfile = "3.27.0"
 
+[[example]]
+name = "scan_revindex_ids"
+required-features = ["branchwater"]
+
 [[bench]]
 name = "compute"
 harness = false

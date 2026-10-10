@@ -423,14 +423,14 @@ impl Datasets {
     pub fn from_slice(slice: &[u8]) -> Result<Self> {
         use byteorder::ReadBytesExt;
 
-        if slice.len() == 1 {
+        if slice.len() == 8 {
+            // Unique
+            Ok(Self::Unique((&slice[..]).read_u32::<LittleEndian>()?))
+        } else if slice.len() == 1 {
             // Empty
             Ok(Self::Empty)
-        } else if slice.len() == 8 && slice[4..8] == [0, 0, 0, 0] {
-            // Unique (4-byte u32 + 4 padding zeros)
-            Ok(Self::Unique((&slice[..4]).read_u32::<LittleEndian>()?))
         } else {
-            // Many (RoaringBitmap serialization, including 8-byte serialized bitmaps)
+            // Many
             Ok(Self::Many(RoaringBitmap::deserialize_from(slice)?))
         }
     }
@@ -445,6 +445,9 @@ impl Datasets {
                     .expect("error writing bytes");
                 Some(buf)
             }
+            // An empty bitmap also serializes to 8 bytes, so write small bitmaps as Empty or Unique.
+            Self::Many(v) if v.is_empty() => Self::Empty.as_bytes(),
+            Self::Many(v) if v.len() == 1 => Self::Unique(v.min()?).as_bytes(),
             Self::Many(v) => {
                 let mut buf = vec![];
                 v.serialize_into(&mut buf).unwrap();
@@ -1439,33 +1442,27 @@ mod test {
     }
 
     #[test]
-    fn datasets_8_byte_roaring_bitmap_ambiguity() {
-        // Create a RoaringBitmap with 2 elements whose serialized length is 8 bytes
+    fn datasets_small_many_roundtrip() {
+        // An empty bitmap serializes to 8 bytes, the same length as Unique.
+        let empty = Datasets::Many(RoaringBitmap::new());
+        let serialized = empty.as_bytes().expect("serialization failed");
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+        assert!(matches!(deserialized, Datasets::Empty));
+
+        let single = Datasets::Many([12346].into_iter().collect());
+        let serialized = single.as_bytes().expect("serialization failed");
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+        assert!(matches!(deserialized, Datasets::Unique(12346)));
+
         let mut bm = RoaringBitmap::new();
         bm.insert(0);
         bm.insert(1);
-
-        let datasets_many = Datasets::Many(bm.clone());
-        let serialized = datasets_many.as_bytes().expect("serialization failed");
-
-        // Verify that the serialized representation is exactly 8 bytes long
-        assert_eq!(serialized.len(), 8);
-
-        // Deserializing must return Datasets::Many, NOT Datasets::Unique
-        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
-
-        match deserialized {
-            Datasets::Many(res_bm) => {
-                assert_eq!(res_bm, bm);
-            }
-            Datasets::Unique(idx) => {
-                panic!(
-                    "Bug reproduced: 8-byte RoaringBitmap was incorrectly deserialized as Datasets::Unique({idx})"
-                );
-            }
-            Datasets::Empty => {
-                panic!("Unexpected Datasets::Empty");
-            }
+        let serialized = Datasets::Many(bm.clone())
+            .as_bytes()
+            .expect("serialization failed");
+        match Datasets::from_slice(&serialized).expect("deserialization failed") {
+            Datasets::Many(res_bm) => assert_eq!(res_bm, bm),
+            _ => panic!("Expected Datasets::Many"),
         }
     }
 
