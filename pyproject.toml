@@ -298,8 +298,13 @@ run.plugins = ["covdefaults"]
 
 [tool.pixi.workspace]
 channels = ["conda-forge", "https://prefix.dev/github-releases"]
-platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
-requires-pixi = ">=0.65.0"
+platforms = [
+  "linux-64",
+  "linux-aarch64",
+  { name = "my-osx-64", platform = "osx-64", macos = "11.0" },
+  { name = "my-osx-arm64", platform = "osx-arm64", macos = "11.0" },
+  "win-64"]
+requires-pixi = ">=0.81.0"
 
 [tool.pixi.feature.build.dependencies]
 clangdev = ">=16.0.6,<16.1"
@@ -404,9 +409,6 @@ publish-npm = { cmd = "npm publish" , depends-on = ["pack-npm"], cwd = "pkg" }
 default = { features = ["dev", "build", "test", "demo", "doc", "storage", "all"], solve-group = "default" }
 msrv = { features = ["build", "msrv"], solve-group = "msrv", no-default-feature = true }
 wasm = { features = ["dev", "build", "wasm"], solve-group = "default", no-default-feature = true }
-
-[tool.pixi.system-requirements]
-macos = "11.0"
 
 [tool.pixi.target.linux-64.activation.env]
 ROCKSDB_INCLUDE_DIR = "$CONDA_PREFIX/include"
