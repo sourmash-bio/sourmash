@@ -203,22 +203,18 @@ impl Collection {
     }
 
     pub fn record_for_dataset(&self, dataset_id: Idx) -> Result<&Record> {
-        Ok(&self.manifest[dataset_id as usize])
+        self.manifest
+            .get(dataset_id as usize)
+            .ok_or_else(|| Error::Internal {
+                message: format!(
+                    "dataset {dataset_id} not in manifest ({} datasets)",
+                    self.manifest.len()
+                ),
+            })
     }
 
     pub fn sig_for_dataset(&self, dataset_id: Idx) -> Result<SigStore> {
-        let match_path = if self.manifest.is_empty() {
-            ""
-        } else {
-            self.manifest[dataset_id as usize]
-                .internal_location()
-                .as_str()
-        };
-
-        let selection = Selection::from_record(&self.manifest[dataset_id as usize])?;
-        let sig = self.storage.load_sig(match_path)?.select(&selection)?;
-        assert_eq!(sig.signatures.len(), 1);
-        Ok(sig)
+        self.sig_from_record(self.record_for_dataset(dataset_id)?)
     }
 
     pub fn sig_from_record(&self, record: &Record) -> Result<SigStore> {
@@ -267,6 +263,20 @@ mod test {
     use crate::prelude::Select;
     use crate::selection::Selection;
     use crate::signature::Signature;
+
+    #[test]
+    fn dataset_not_in_manifest() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/47+63-multisig.sig");
+        let file = File::open(filename).unwrap();
+        let sigs = Signature::from_reader(BufReader::new(file)).expect("Loading error");
+        let cl = Collection::from_sigs(sigs).unwrap();
+        let n = cl.len() as u32;
+
+        assert!(cl.record_for_dataset(n - 1).is_ok());
+        assert!(cl.record_for_dataset(n).is_err());
+        assert!(cl.sig_for_dataset(n).is_err());
+    }
 
     #[test]
     fn sigstore_selection_with_downsample() {

@@ -191,7 +191,7 @@ impl DiskRevIndex {
             // try to parse all values, in case any error is found
             // record what is the key (hash)
             info!("Iterating over DB to collect failing hashes");
-            let stats = stats_for_cf(db.db.clone(), HASHES, true, false);
+            let stats = stats_for_cf(db.db.clone(), HASHES, db.collection.len(), true, false);
 
             // pre-allocate a {hash, datasets} map to populate later
             let failed_hashes = dashmap::DashMap::<HashIntoType, Datasets>::from_iter(
@@ -404,7 +404,8 @@ impl RevIndexOps for DiskRevIndex {
             .into_iter()
             .filter_map(|r| r.ok().unwrap_or(None))
             .map(|raw_datasets| {
-                let new_vals = Datasets::from_slice(&raw_datasets)?;
+                let new_vals = Datasets::from_slice(&raw_datasets)?
+                    .ensure_in_manifest(self.collection.len())?;
 
                 // filter against picklist if need be.
                 if let Some(pl) = &picklist {
@@ -627,7 +628,7 @@ impl RevIndexOps for DiskRevIndex {
     }
 
     fn check(&self, quick: bool) -> DbStats {
-        stats_for_cf(self.db.clone(), HASHES, true, quick)
+        stats_for_cf(self.db.clone(), HASHES, self.collection.len(), true, quick)
     }
 
     fn compact(&self) {

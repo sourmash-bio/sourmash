@@ -15,7 +15,6 @@ use roaring::RoaringBitmap;
 use serde::{Deserialize, Serialize};
 
 use crate::HashIntoType;
-use crate::Result;
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
@@ -25,6 +24,7 @@ use crate::signature::Signature;
 use crate::sketch::Sketch;
 use crate::sketch::minhash::KmerMinHash;
 use crate::storage::rocksdb::{COLORS, DB, db_options};
+use crate::{Error, Result};
 
 type QueryColors = HashMap<Color, Datasets>;
 
@@ -497,6 +497,21 @@ impl Datasets {
             Self::Many(v) => v.contains(*value),
         }
     }
+
+    /// Fails if any dataset ID is not less than `n_datasets`, the manifest length.
+    fn ensure_in_manifest(self, n_datasets: usize) -> Result<Self> {
+        let max = match &self {
+            Self::Empty => None,
+            Self::Unique(v) => Some(*v),
+            Self::Many(v) => v.max(),
+        };
+        match max {
+            Some(id) if id as usize >= n_datasets => Err(Error::Internal {
+                message: format!("dataset {id} not in manifest ({n_datasets} datasets)"),
+            }),
+            _ => Ok(self),
+        }
+    }
 }
 
 #[derive(Getters, Setters, Debug)]
@@ -520,7 +535,14 @@ pub struct DbStats {
     failed_keys: HashSet<HashIntoType>,
 }
 
-fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> DbStats {
+/// A deep check also reports keys with dataset IDs not less than `n_datasets`.
+fn stats_for_cf(
+    db: Arc<DB>,
+    cf_name: &str,
+    n_datasets: usize,
+    deep_check: bool,
+    quick: bool,
+) -> DbStats {
     use byteorder::ReadBytesExt;
     use histogram::Histogram;
 
@@ -543,7 +565,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
         vcount += value.len();
 
         if !quick && deep_check {
-            match Datasets::from_slice(&value) {
+            match Datasets::from_slice(&value).and_then(|v| v.ensure_in_manifest(n_datasets)) {
                 Err(_) => {
                     failed_keys.insert(k);
                 }
@@ -1367,7 +1389,25 @@ mod test {
 
     #[test]
     fn disk_revindex_repair() -> Result<()> {
-        use crate::errors::SourmashError;
+        // Custom { kind: Other, error: "unknown cookie value" }
+        repair_corrupted_value(b"0xbadda7a", |e| {
+            matches!(e, crate::errors::SourmashError::IOError(_))
+        })
+    }
+
+    #[test]
+    fn disk_revindex_repair_dataset_not_in_manifest() -> Result<()> {
+        let bad_value = Datasets::Unique(1 << 30).as_bytes().unwrap();
+        repair_corrupted_value(&bad_value, |e| {
+            matches!(e, crate::errors::SourmashError::Internal { .. })
+        })
+    }
+
+    /// Writes `bad_value` for one query hash, then checks that query, check and repair handle it.
+    fn repair_corrupted_value(
+        bad_value: &[u8],
+        is_expected_error: fn(&crate::errors::SourmashError) -> bool,
+    ) -> Result<()> {
         use crate::index::revindex::disk_revindex::DiskRevIndex;
         use crate::storage::rocksdb::HASHES;
         use byteorder::{LittleEndian, WriteBytesExt};
@@ -1414,7 +1454,7 @@ mod test {
                 unsafe {
                     let db = index.db();
                     let cf_hashes = db.cf_handle(HASHES).unwrap();
-                    db.put_cf(&cf_hashes, &hash_bytes[..], b"0xbadda7a")
+                    db.put_cf(&cf_hashes, &hash_bytes[..], bad_value)
                         .expect("error putting new value");
                 }
             }
@@ -1423,8 +1463,10 @@ mod test {
         {
             let index = RevIndex::open(output.path(), true, None)?;
             let res = index.counter_for_query(&query, None);
-            // Custom { kind: Other, error: "unknown cookie value" }
-            assert!(matches!(res, Err(SourmashError::IOError(_))));
+            assert!(matches!(res, Err(ref e) if is_expected_error(e)));
+
+            let stats = index.check(false);
+            assert!(stats.failed_keys().contains(&failed_hash));
         }
 
         // Repair DB
