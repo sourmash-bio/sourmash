@@ -423,14 +423,14 @@ impl Datasets {
     pub fn from_slice(slice: &[u8]) -> Result<Self> {
         use byteorder::ReadBytesExt;
 
-        if slice.len() == 8 {
-            // Unique
-            Ok(Self::Unique((&slice[..]).read_u32::<LittleEndian>()?))
-        } else if slice.len() == 1 {
+        if slice.len() == 1 {
             // Empty
             Ok(Self::Empty)
+        } else if slice.len() == 8 && slice[4..8] == [0, 0, 0, 0] {
+            // Unique (4-byte u32 + 4 padding zeros)
+            Ok(Self::Unique((&slice[..4]).read_u32::<LittleEndian>()?))
         } else {
-            // Many
+            // Many (RoaringBitmap serialization, including 8-byte serialized bitmaps)
             Ok(Self::Many(RoaringBitmap::deserialize_from(slice)?))
         }
     }
@@ -568,6 +568,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 mod test {
     // CTB: should the disk_revindex tests be moved into disk_revindex.rs?
     use camino::Utf8PathBuf as PathBuf;
+    use roaring::RoaringBitmap;
     use tempfile::TempDir;
 
     use crate::Result;
@@ -581,7 +582,7 @@ mod test {
     use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
 
-    use super::{RevIndex, RevIndexOps, prepare_query};
+    use super::{Datasets, RevIndex, RevIndexOps, prepare_query};
 
     #[test]
     fn disk_revindex_index() -> Result<()> {
@@ -1435,5 +1436,49 @@ mod test {
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
 
         Ok(())
+    }
+
+    #[test]
+    fn datasets_8_byte_roaring_bitmap_ambiguity() {
+        // Create a RoaringBitmap with 2 elements whose serialized length is 8 bytes
+        let mut bm = RoaringBitmap::new();
+        bm.insert(0);
+        bm.insert(1);
+
+        let datasets_many = Datasets::Many(bm.clone());
+        let serialized = datasets_many.as_bytes().expect("serialization failed");
+
+        // Verify that the serialized representation is exactly 8 bytes long
+        assert_eq!(serialized.len(), 8);
+
+        // Deserializing must return Datasets::Many, NOT Datasets::Unique
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+
+        match deserialized {
+            Datasets::Many(res_bm) => {
+                assert_eq!(res_bm, bm);
+            }
+            Datasets::Unique(idx) => {
+                panic!(
+                    "Bug reproduced: 8-byte RoaringBitmap was incorrectly deserialized as Datasets::Unique({idx})"
+                );
+            }
+            Datasets::Empty => {
+                panic!("Unexpected Datasets::Empty");
+            }
+        }
+    }
+
+    #[test]
+    fn datasets_unique_roundtrip() {
+        let unique = Datasets::Unique(42);
+        let serialized = unique.as_bytes().expect("serialization failed");
+        assert_eq!(serialized.len(), 8);
+
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+        match deserialized {
+            Datasets::Unique(idx) => assert_eq!(idx, 42),
+            _ => panic!("Expected Datasets::Unique(42)"),
+        }
     }
 }
