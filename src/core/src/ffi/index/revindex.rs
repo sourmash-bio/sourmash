@@ -463,7 +463,7 @@ unsafe fn revindex_get_weighted_intersections(
 
             Some((f_cont, new_sig, filename.to_owned()))
         }).collect();
-   
+
     // convert to ffi.
     let ptr_results: Vec<*const SourmashSearchResult> = isect_results
         .into_iter()
