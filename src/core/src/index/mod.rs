@@ -130,7 +130,12 @@ pub trait Index<'a> {
     type Item: Comparable<Self::Item>;
     //type SignatureIterator: Iterator<Item = Self::Item>;
 
-    fn find<F>(&self, search_fn: F, sig: &Self::Item, threshold: f64) -> Result<Vec<&Self::Item>>
+    fn find<F>(
+        &'a self,
+        search_fn: F,
+        sig: &'a Self::Item,
+        threshold: f64,
+    ) -> Result<Vec<&Self::Item>>
     where
         F: Fn(&dyn Comparable<Self::Item>, &Self::Item, f64) -> bool,
     {
@@ -148,8 +153,8 @@ pub trait Index<'a> {
     }
 
     fn search(
-        &self,
-        sig: &Self::Item,
+        &'a self,
+        sig: &'a Self::Item,
         threshold: f64,
         containment: bool,
     ) -> Result<Vec<&Self::Item>> {
