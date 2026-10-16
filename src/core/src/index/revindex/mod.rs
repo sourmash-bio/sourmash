@@ -81,45 +81,34 @@ pub trait RevIndexOps {
         picklist: Option<DatasetPicklist>,
     ) -> Result<SigCounter>;
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
+    fn matches_from_counter(
+        &self,
+        counter: SigCounter,
+        threshold: usize,
+    ) -> Result<Vec<(String, usize)>> {
         counter
             .most_common()
             .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = &self
-                        .collection()
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
+            .filter(|(_, size)| *size >= threshold)
+            .map(|(dataset_id, size)| {
+                let row = self.collection().record_for_dataset(dataset_id)?;
 
-                    let name = [row.name(), row.filename(), row.md5()]
-                        .into_iter()
-                        .find(|v| !v.is_empty())
-                        .unwrap(); // guaranteed to succeed because `md5` always exists
+                let name = [row.name(), row.filename(), row.md5()]
+                    .into_iter()
+                    .find(|v| !v.is_empty())
+                    .unwrap(); // guaranteed to succeed because `md5` always exists
 
-                    Some((name.into(), size))
-                } else {
-                    None
-                }
+                Ok((name.into(), size))
             })
             .collect()
     }
 
-    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Result<Vec<&Record>> {
         counter
             .most_common()
             .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = self
-                        .collection()
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
-                    Some(row)
-                } else {
-                    None
-                }
-            })
+            .filter(|(_, size)| *size >= threshold)
+            .map(|(dataset_id, _)| self.collection().record_for_dataset(dataset_id))
             .collect()
     }
 
@@ -642,7 +631,7 @@ mod test {
         );
 
         let counter = index.counter_for_query(&query, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
 
@@ -689,7 +678,7 @@ mod test {
             RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
         let counter = index.counter_for_query(&q, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
         assert_eq!(matches[0].1, 45);
@@ -1050,11 +1039,11 @@ mod test {
 
         // also do a basic test of containment with picklists -
         let counter = index.counter_for_query(&query, Some(pl.clone()))?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
         assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
 
         let counter = index.counter_for_query(&query, Some(pl))?;
-        let records = index.records_from_counter(counter, 0);
+        let records = index.records_from_counter(counter, 0)?;
         assert_eq!(records.len(), 1);
 
         Ok(())
@@ -1110,6 +1099,31 @@ mod test {
     }
 
     #[test]
+    fn counter_dataset_not_in_manifest() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+        let search_sigs: Vec<PathBuf> = vec![
+            "../../tests/test-data/2.fa.sig".into(),
+            "../../tests/test-data/47.fa.sig".into(),
+        ];
+
+        let output = TempDir::new()?;
+        let collection = Collection::from_paths(&search_sigs[..])?.select(&selection)?;
+        let index = RevIndex::create(output.path(), collection.try_into()?)?;
+
+        let counter: crate::index::SigCounter = [0, 2].into_iter().collect();
+        assert!(matches!(
+            index.matches_from_counter(counter.clone(), 0),
+            Err(crate::errors::SourmashError::Internal { .. })
+        ));
+        assert!(matches!(
+            index.records_from_counter(counter, 0),
+            Err(crate::errors::SourmashError::Internal { .. })
+        ));
+
+        Ok(())
+    }
+
+    #[test]
     fn disk_revindex_move() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
@@ -1142,7 +1156,7 @@ mod test {
             let index = RevIndex::open(output.as_path(), false, None)?;
 
             let counter = index.counter_for_query(&query, None)?;
-            let matches = index.matches_from_counter(counter, 0);
+            let matches = index.matches_from_counter(counter, 0)?;
 
             assert!(matches[0].0.starts_with("NC_009665.1"));
             assert_eq!(matches[0].1, 514);
@@ -1162,7 +1176,7 @@ mod test {
         let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
 
         let counter = index.counter_for_query(&query, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
         assert_eq!(matches[0].1, 514);
@@ -1476,7 +1490,7 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
         let counter = index.counter_for_query(&query, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
 

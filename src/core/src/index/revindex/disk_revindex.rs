@@ -746,12 +746,8 @@ impl RevIndexOps for DiskRevIndex {
         let results: Vec<(f64, Signature, String)> = counter
             .most_common()
             .into_iter()
-            .filter_map(|(dataset_id, _size)| {
-                let sig: Signature = self
-                    .collection()
-                    .sig_for_dataset(dataset_id)
-                    .expect("dataset not found")
-                    .into();
+            .map(|(dataset_id, _size)| {
+                let sig: Signature = self.collection().sig_for_dataset(dataset_id)?.into();
 
                 let match_mh = sig.minhash().expect("cannot retrieve match");
 
@@ -770,12 +766,13 @@ impl RevIndexOps for DiskRevIndex {
                 };
 
                 if f_match >= threshold {
-                    Some((f_match, sig, filename.to_owned()))
+                    Ok(Some((f_match, sig, filename.to_owned())))
                 } else {
-                    None
+                    Ok(None)
                 }
             })
-            .collect();
+            .filter_map(Result::transpose)
+            .collect::<Result<_>>()?;
 
         Ok(results)
     }
