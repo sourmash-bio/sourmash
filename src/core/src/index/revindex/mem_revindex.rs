@@ -937,11 +937,11 @@ mod test {
 
         // also do a basic test of containment with picklists -
         let counter = index.counter_for_query(&query, Some(pl.clone()))?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
         assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
 
         let counter = index.counter_for_query(&query, Some(pl))?;
-        let records = index.records_from_counter(counter, 0);
+        let records = index.records_from_counter(counter, 0)?;
         assert_eq!(records.len(), 1);
 
         Ok(())
