@@ -83,7 +83,7 @@ dependencies = [
   "scipy",
   "deprecation>=2.0.6",
   "cachetools>=4,<8",
-  "bitstring>=3.1.9,<5",
+  "bitstring>=3.1.9,<6",
 ]
 
 requires-python = ">=3.11"
