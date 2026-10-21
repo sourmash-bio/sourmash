@@ -308,21 +308,14 @@ unsafe fn revindex_prefetch(
     let results: Vec<(f64, Signature, String)> = counter
         .most_common()
         .into_iter()
-        .filter_map(|(dataset_id, size)| {
-            if size as u64 >= threshold_bp {
-                let sig: Signature = revindex
-                    .collection()
-                    .sig_for_dataset(dataset_id)
-                    .expect("dataset not found")
-                    .into();
-                let f_cont = size as f64 / query_mh.size() as f64;
+        .filter(|(_, size)| *size as u64 >= threshold_bp)
+        .map(|(dataset_id, size)| {
+            let sig: Signature = revindex.collection().sig_for_dataset(dataset_id)?.into();
+            let f_cont = size as f64 / query_mh.size() as f64;
 
-                Some((f_cont, sig, filename.to_owned()))
-            } else {
-                None
-            }
+            Ok((f_cont, sig, filename.to_owned()))
         })
-        .collect();
+        .collect::<crate::Result<_>>()?;
 
     // convert to ffi.
     let ptr_results: Vec<*const SourmashSearchResult> = results
