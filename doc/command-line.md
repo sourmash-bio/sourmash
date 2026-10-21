@@ -239,6 +239,7 @@ Options:
 * `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
 * `--from-file <filelist.txt>` -- append the list of files in this text file to the input signatures.
 * `--ignore-abundance` -- ignore abundances in signatures and calculate Jaccard instead of angular similarity.
+* `--abundance-bray-curtis` -- calculate abundance-aware Bray-Curtis similarity instead of the default. Requires abundance-tracking scaled sketches.
 * `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 * `--csv <outfile.csv>` -- save the output matrix in CSV format.
 * `--labels-to <labels.csv>` -- create a CSV file (spreadsheet) that can be passed in to `sourmash plot` with `--labels-from` in order to customize the labels.

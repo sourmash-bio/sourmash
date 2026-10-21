@@ -11,7 +11,46 @@ from .logging import notify
 from sourmash.np_utils import to_memmap
 
 
-def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=False):
+DEFAULT_METRIC = "similarity"
+ABUNDANCE_BRAYCURTIS_METRIC = "abundance_braycurtis"
+
+
+def _pairwise_score(
+    sig1,
+    sig2,
+    ignore_abundance,
+    *,
+    downsample,
+    return_ani=False,
+    metric=DEFAULT_METRIC,
+):
+    if metric == DEFAULT_METRIC:
+        if return_ani:
+            ani = sig1.jaccard_ani(sig2, downsample=downsample).ani
+            if ani is None:
+                ani = 0.0
+            return ani
+        return sig1.similarity(
+            sig2, ignore_abundance=ignore_abundance, downsample=downsample
+        )
+    if metric == ABUNDANCE_BRAYCURTIS_METRIC:
+        if return_ani:
+            raise TypeError(
+                "ANI estimation is not supported for abundance-aware Bray-Curtis comparisons."
+            )
+        return sig1.braycurtis_similarity(sig2, downsample=downsample)
+
+    raise ValueError(f"unknown compare metric '{metric}'")
+
+
+def compare_serial(
+    siglist,
+    ignore_abundance,
+    *,
+    downsample=False,
+    return_ani=False,
+    metric=DEFAULT_METRIC,
+):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations serially on a single
     process. Best to use when there is few signatures.
@@ -27,6 +66,11 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
     :return: np.array similarity matrix
     """
     import numpy as np
+
+    if return_ani and metric != DEFAULT_METRIC:
+        raise TypeError(
+            "ANI estimation is only supported for the default Jaccard/containment comparison modes."
+        )
 
     n = len(siglist)
     jaccard_ani_untrustworthy = False
@@ -48,9 +92,18 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
             if ani is None:
                 ani = 0.0
             similarities[i][j] = similarities[j][i] = ani
-        else:
+        elif metric == DEFAULT_METRIC:
             similarities[i][j] = similarities[j][i] = siglist[i].similarity(
                 siglist[j], ignore_abundance=ignore_abundance, downsample=downsample
+            )
+        else:
+            similarities[i][j] = similarities[j][i] = _pairwise_score(
+                siglist[i],
+                siglist[j],
+                ignore_abundance,
+                downsample=downsample,
+                return_ani=return_ani,
+                metric=metric,
             )
 
     if jaccard_ani_untrustworthy:
@@ -187,23 +240,35 @@ def compare_serial_avg_containment(siglist, *, downsample=False, return_ani=Fals
     return containments
 
 
-def similarity_args_unpack(args, ignore_abundance, *, downsample, return_ani=False):
+def similarity_args_unpack(
+    args,
+    ignore_abundance,
+    *,
+    downsample,
+    return_ani=False,
+    metric=DEFAULT_METRIC,
+):
     """Helper function to unpack the arguments. Written to use in pool.imap
     as it can only be given one argument."""
     sig1, sig2 = args
-    if return_ani:
-        ani = sig1.jaccard_ani(sig2, downsample=downsample).ani
-        if ani is None:
-            ani = 0.0
-        return ani
-    else:
-        return sig1.similarity(
-            sig2, ignore_abundance=ignore_abundance, downsample=downsample
-        )
+    return _pairwise_score(
+        sig1,
+        sig2,
+        ignore_abundance,
+        downsample=downsample,
+        return_ani=return_ani,
+        metric=metric,
+    )
 
 
 def get_similarities_at_index(
-    index, ignore_abundance, downsample, siglist, *, return_ani=False
+    index,
+    ignore_abundance,
+    downsample,
+    siglist,
+    *,
+    return_ani=False,
+    metric=DEFAULT_METRIC,
 ):
     """Returns similarities of all the combinations of signature at index in
     the siglist with the rest of the indices starting at index + 1. Doesn't
@@ -229,6 +294,7 @@ def get_similarities_at_index(
         ignore_abundance=ignore_abundance,
         downsample=downsample,
         return_ani=return_ani,
+        metric=metric,
     )
     similarity_list = list(map(func, sig_iterator))
     notify(
@@ -239,7 +305,13 @@ def get_similarities_at_index(
 
 
 def compare_parallel(
-    siglist, ignore_abundance, downsample, n_jobs, *, return_ani=False
+    siglist,
+    ignore_abundance,
+    downsample,
+    n_jobs,
+    *,
+    return_ani=False,
+    metric=DEFAULT_METRIC,
 ):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations parallely on number of processes
@@ -284,6 +356,7 @@ def compare_parallel(
         ignore_abundance=ignore_abundance,
         downsample=downsample,
         return_ani=return_ani,
+        metric=metric,
     )
     notify("Created similarity func")
 
@@ -326,7 +399,12 @@ def compare_parallel(
 
 
 def compare_all_pairs(
-    siglist, ignore_abundance, downsample=False, n_jobs=None, return_ani=False
+    siglist,
+    ignore_abundance,
+    downsample=False,
+    n_jobs=None,
+    return_ani=False,
+    metric=DEFAULT_METRIC,
 ):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations either serially or
@@ -350,9 +428,15 @@ def compare_all_pairs(
             ignore_abundance=ignore_abundance,
             downsample=downsample,
             return_ani=return_ani,
+            metric=metric,
         )
     else:
         similarities = compare_parallel(
-            siglist, ignore_abundance, downsample, n_jobs, return_ani=return_ani
+            siglist,
+            ignore_abundance,
+            downsample,
+            n_jobs,
+            return_ani=return_ani,
+            metric=metric,
         )
     return similarities

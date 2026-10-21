@@ -52,6 +52,7 @@ def test_FracMinHashComparison(track_abundance):
         assert (
             cmp.cosine_similarity == a.angular_similarity(b) == b.angular_similarity(a)
         )
+        assert cmp.braycurtis_similarity == pytest.approx(2 / 3)
         assert (
             cmp.weighted_intersection(from_mh=cmp.mh1).hashes
             == intersect_mh.inflate(a).hashes
@@ -71,16 +72,20 @@ def test_FracMinHashComparison(track_abundance):
     else:
         with pytest.raises(TypeError) as exc:
             cmp.angular_similarity
-        print(str(exc))
         assert (
             "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
             in str(exc)
         )
         with pytest.raises(TypeError) as exc:
             cmp.cosine_similarity
-        print(str(exc))
         assert (
             "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
+            in str(exc)
+        )
+        with pytest.raises(TypeError) as exc:
+            cmp.braycurtis_similarity
+        assert (
+            "Error: Bray-Curtis similarity requires both sketches to track hash abundance."
             in str(exc)
         )
         assert cmp.weighted_intersection(from_mh=cmp.mh1).hashes == intersect_mh.hashes
@@ -138,6 +143,7 @@ def test_FracMinHashComparison_downsample(track_abundance):
             == ds_a.angular_similarity(ds_b)
             == ds_b.angular_similarity(ds_a)
         )
+        assert cmp.braycurtis_similarity == pytest.approx(2 / 3)
         assert (
             cmp.weighted_intersection(from_mh=cmp.mh1_cmp).hashes
             == intersect_mh.inflate(ds_a).hashes
@@ -157,16 +163,20 @@ def test_FracMinHashComparison_downsample(track_abundance):
     else:
         with pytest.raises(TypeError) as exc:
             cmp.angular_similarity
-        print(str(exc))
         assert (
             "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
             in str(exc)
         )
         with pytest.raises(TypeError) as exc:
             cmp.cosine_similarity
-        print(str(exc))
         assert (
             "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
+            in str(exc)
+        )
+        with pytest.raises(TypeError) as exc:
+            cmp.braycurtis_similarity
+        assert (
+            "Error: Bray-Curtis similarity requires both sketches to track hash abundance."
             in str(exc)
         )
         assert (
@@ -228,6 +238,7 @@ def test_FracMinHashComparison_autodownsample(track_abundance):
             == ds_a.angular_similarity(ds_b)
             == ds_b.angular_similarity(ds_a)
         )
+        assert cmp.braycurtis_similarity == pytest.approx(2 / 3)
         assert (
             cmp.weighted_intersection(from_mh=cmp.mh1_cmp).hashes
             == intersect_mh.inflate(ds_a).hashes
@@ -247,16 +258,20 @@ def test_FracMinHashComparison_autodownsample(track_abundance):
     else:
         with pytest.raises(TypeError) as exc:
             cmp.angular_similarity
-        print(str(exc))
         assert (
             "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
             in str(exc)
         )
         with pytest.raises(TypeError) as exc:
             cmp.cosine_similarity
-        print(str(exc))
         assert (
             "Error: Angular (cosine) similarity requires both sketches to track hash abundance."
+            in str(exc)
+        )
+        with pytest.raises(TypeError) as exc:
+            cmp.braycurtis_similarity
+        assert (
+            "Error: Bray-Curtis similarity requires both sketches to track hash abundance."
             in str(exc)
         )
         assert (

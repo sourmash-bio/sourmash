@@ -6,6 +6,7 @@ import pytest
 
 import sourmash
 from sourmash.compare import (
+    ABUNDANCE_BRAYCURTIS_METRIC,
     compare_all_pairs,
     compare_parallel,
     compare_serial,
@@ -38,6 +39,18 @@ def scaled_siglist():
         scaled_sigs = [s for s in these_sigs if s.minhash.scaled != 0]
         sigs.extend(scaled_sigs)
     return sigs
+
+
+@pytest.fixture()
+def abund_siglist():
+    sigfiles = [
+        utils.get_test_data("track_abund/47.fa.sig"),
+        utils.get_test_data("track_abund/63.fa.sig"),
+    ]
+    return [
+        next(sourmash.load_file_as_signatures(filename, ksize=31))
+        for filename in sigfiles
+    ]
 
 
 @pytest.fixture()
@@ -88,6 +101,50 @@ def test_compare_all_pairs(siglist, ignore_abundance):
         siglist, ignore_abundance, downsample=False, n_jobs=2
     )
     similarities_serial = compare_serial(siglist, ignore_abundance, downsample=False)
+    np.testing.assert_array_equal(similarities_parallel, similarities_serial)
+
+
+def test_compare_serial_abundance_braycurtis(abund_siglist):
+    bc = compare_serial(
+        abund_siglist,
+        ignore_abundance=False,
+        downsample=False,
+        metric=ABUNDANCE_BRAYCURTIS_METRIC,
+    )
+
+    expected = abund_siglist[0].braycurtis_similarity(abund_siglist[1])
+    true_bc = np.array([[1.0, expected], [expected, 1.0]])
+    np.testing.assert_array_almost_equal(bc, true_bc)
+
+
+def test_compare_parallel_abundance_braycurtis(abund_siglist):
+    bc = compare_parallel(
+        abund_siglist,
+        ignore_abundance=False,
+        downsample=False,
+        n_jobs=2,
+        metric=ABUNDANCE_BRAYCURTIS_METRIC,
+    )
+
+    expected = abund_siglist[0].braycurtis_similarity(abund_siglist[1])
+    true_bc = np.array([[1.0, expected], [expected, 1.0]])
+    np.testing.assert_array_almost_equal(bc, true_bc)
+
+
+def test_compare_all_pairs_abundance_braycurtis(abund_siglist):
+    similarities_parallel = compare_all_pairs(
+        abund_siglist,
+        ignore_abundance=False,
+        downsample=False,
+        n_jobs=2,
+        metric=ABUNDANCE_BRAYCURTIS_METRIC,
+    )
+    similarities_serial = compare_serial(
+        abund_siglist,
+        ignore_abundance=False,
+        downsample=False,
+        metric=ABUNDANCE_BRAYCURTIS_METRIC,
+    )
     np.testing.assert_array_equal(similarities_parallel, similarities_serial)
 
 
