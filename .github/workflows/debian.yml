@@ -1,0 +1,65 @@
+# Based on seqan3 CI:
+#   - https://github.com/seqan/seqan3/pull/3333
+# Copyright from original workflow:
+# SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: Debian
+
+on:
+  schedule:
+    - cron: "0 1 * * THU"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: debian-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TZ: America/Los_Angeles
+
+defaults:
+  run:
+    shell: bash -Eeuxo pipefail {0}
+
+jobs:
+  build:
+    name: Debian
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'sourmash-bio' || github.event_name == 'workflow_dispatch'
+    container:
+      image: debian:unstable
+    steps:
+      - name: Install Essentials
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends build-essential git cmake wget fakeroot ca-certificates
+
+      - name: Setup Repo
+        run: |
+          mkdir unstable && cd unstable
+          git clone --depth 1 https://github.com/sourmash-bio/sourmash.git
+          cd sourmash/
+          git remote add salsa https://salsa.debian.org/med-team/sourmash.git
+          git fetch --depth 1 salsa
+          git checkout salsa/master -- debian
+
+      - name: Install Dependencies
+        working-directory: unstable/sourmash
+        run: apt-get build-dep --yes --no-install-recommends .
+
+      - name: Build
+        working-directory: unstable/sourmash
+        run: dpkg-buildpackage --unsigned-changes --unsigned-source --build=binary
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-sourmash-artifacts
+          path: |
+            unstable/**/sourmash*.deb
+            unstable/**/sourmash*.changes
+            unstable/**/sourmash*.buildinfo
