@@ -289,28 +289,30 @@ static DAYHOFFTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
 // | N, C, S, T, D, E, R, H, K, Q          | p       |
 static HPTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
     [
-        // h
-        (b'A', b'h'),
-        (b'F', b'h'),
-        (b'G', b'h'),
-        (b'I', b'h'),
-        (b'L', b'h'),
-        (b'M', b'h'),
-        (b'P', b'h'),
-        (b'V', b'h'),
-        (b'W', b'h'),
-        (b'Y', b'h'),
-        // p
-        (b'N', b'p'),
-        (b'C', b'p'),
-        (b'S', b'p'),
-        (b'T', b'p'),
-        (b'D', b'p'),
-        (b'E', b'p'),
-        (b'R', b'p'),
-        (b'H', b'p'),
-        (b'K', b'p'),
-        (b'Q', b'p'),
+        // Hydrophobic (h) per PBotC Fig 8.30
+        (b'A', b'h'), // Ala
+        (b'V', b'h'), // Val
+        (b'I', b'h'), // Ile
+        (b'P', b'h'), // Pro
+        (b'L', b'h'), // Leu
+        (b'M', b'h'), // Met
+        (b'F', b'h'), // Phe
+        (b'W', b'h'), // Trp
+        (b'C', b'h'), // Cys
+        (b'Y', b'h'), // Tyr
+        
+        // Polar (p) per PBotC Fig 8.30
+        (b'G', b'p'), // Gly
+        (b'N', b'p'), // Asn
+        (b'S', b'p'), // Ser
+        (b'T', b'p'), // Thr
+        (b'E', b'p'), // Glu
+        (b'H', b'p'), // His
+        (b'R', b'p'), // Arg
+        (b'Q', b'p'), // Gln
+        (b'D', b'p'), // Asp
+        (b'K', b'p'), // Lys
+        
         // stop aa
         (b'*', b'*'),
     ]
