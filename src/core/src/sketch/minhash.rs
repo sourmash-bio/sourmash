@@ -426,8 +426,48 @@ impl KmerMinHash {
     }
 
     pub fn remove_from(&mut self, other: &KmerMinHash) -> Result<(), Error> {
-        for min in &other.mins {
-            self.remove_hash(*min);
+        /// Keep individual removals for tiny inputs to avoid scanning the target.
+        const SMALL_REMOVAL_LIMIT: usize = 8;
+        if other.mins.len() <= SMALL_REMOVAL_LIMIT {
+            for min in &other.mins {
+                self.remove_hash(*min);
+            }
+            return Ok(());
+        }
+
+        // Find the first deletion without scanning self when nothing overlaps.
+        let Some((first_remove, first_read)) = other
+            .mins
+            .iter()
+            .enumerate()
+            .find_map(|(i, hash)| self.mins.binary_search(hash).ok().map(|read| (i, read)))
+        else {
+            return Ok(());
+        };
+
+        // Both hash vectors are sorted. Compact survivors in place instead of
+        // shifting the remaining hashes and abundances after each removal.
+        let mut remove = other.mins[first_remove..].iter().peekable();
+        let mut kept = first_read;
+        for read in first_read..self.mins.len() {
+            let hash = self.mins[read];
+            while remove.peek().is_some_and(|&&value| value < hash) {
+                remove.next();
+            }
+            if remove.peek().is_none_or(|&&value| value != hash) {
+                self.mins[kept] = hash;
+                if let Some(abunds) = self.abunds.as_mut() {
+                    abunds[kept] = abunds[read];
+                }
+                kept += 1;
+            }
+        }
+        if kept != self.mins.len() {
+            self.mins.truncate(kept);
+            if let Some(abunds) = self.abunds.as_mut() {
+                abunds.truncate(kept);
+            }
+            self.reset_md5sum();
         }
         Ok(())
     }
