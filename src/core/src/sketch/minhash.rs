@@ -346,9 +346,9 @@ impl KmerMinHash {
         // empty mins? add it.
         if self.mins.is_empty() {
             self.mins.push(hash);
+            self.reset_md5sum();
             if let Some(ref mut abunds) = self.abunds {
                 abunds.push(abundance);
-                self.reset_md5sum();
             }
             return;
         }
@@ -684,7 +684,7 @@ impl KmerMinHash {
         if norm_a == 0. || norm_b == 0. {
             return Ok(0.0);
         }
-        let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+        let prod = f64::clamp(prod as f64 / (norm_a * norm_b), -1.0, 1.0);
         let distance = 2. * prod.acos() / PI;
         Ok(1. - distance)
     }
@@ -1914,5 +1914,17 @@ mod tests {
         // Extract and check the error message
         let error_message = format!("{}", result.unwrap_err());
         assert!(error_message.contains("Invalid hash function"));
+    }
+
+    #[test]
+    fn test_md5_cache_invalidation_on_first_hash() {
+        let mut mh = KmerMinHash::new(1000, 21, HashFunctions::Murmur64Dna, 42, false, 0);
+        let empty_md5 = mh.md5sum();
+        mh.add_hash(12345);
+        let updated_md5 = mh.md5sum();
+        assert_ne!(
+            empty_md5, updated_md5,
+            "MD5 cache must be properly invalidated when adding first hash to un-abundant sketch"
+        );
     }
 }
