@@ -125,6 +125,8 @@ class BaseCollectionManifest:
             SqliteCollectionManifest.load_from_manifest(
                 self, dbfile=filename, append=ok_if_exists
             )
+        else:
+            raise Exception("unknown output format for manifest")
 
     @classmethod
     def write_csv_header(cls, fp):
