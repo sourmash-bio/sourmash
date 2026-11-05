@@ -79,9 +79,12 @@ impl Nodegraph {
     }
 
     pub fn with_tables(tablesize: usize, n_tables: usize, ksize: usize) -> Nodegraph {
+        if tablesize == 0 || n_tables == 0 {
+            return Nodegraph::new(&[], ksize);
+        }
         let mut tablesizes = Vec::with_capacity(n_tables);
 
-        let mut i = u64::max((tablesize - 1) as u64, 2);
+        let mut i = u64::max(tablesize.saturating_sub(1) as u64, 2);
         if i % 2 == 0 {
             i -= 1
         }
@@ -90,7 +93,7 @@ impl Nodegraph {
             if primal_check::miller_rabin(i) {
                 tablesizes.push(i as usize);
             }
-            if i == 1 {
+            if i <= 2 {
                 break;
             }
             i -= 2;
@@ -108,6 +111,9 @@ impl Nodegraph {
         let mut is_new_kmer = false;
 
         for (i, bitset) in self.bs.iter_mut().enumerate() {
+            if bitset.len() == 0 {
+                continue;
+            }
             let bin = hash % bitset.len() as u64;
             if !bitset.put(bin as usize) {
                 if i == 0 {
@@ -124,7 +130,13 @@ impl Nodegraph {
     }
 
     pub fn get(&self, hash: HashIntoType) -> usize {
+        if self.bs.is_empty() {
+            return 0;
+        }
         for bitset in &self.bs {
+            if bitset.len() == 0 {
+                return 0;
+            }
             let bin = hash % bitset.len() as u64;
             if !bitset.contains(bin as usize) {
                 return 0;
@@ -139,7 +151,13 @@ impl Nodegraph {
     }
 
     pub fn expected_collisions(&self) -> f64 {
-        let min_size = self.bs.iter().map(|x| x.len()).min().unwrap();
+        if self.bs.is_empty() {
+            return 0.0;
+        }
+        let min_size = self.bs.iter().map(|x| x.len()).min().unwrap_or(0);
+        if min_size == 0 {
+            return 0.0;
+        }
         let n_ht = self.bs.len();
         let occupancy = self.occupied_bins;
 
@@ -1107,5 +1125,17 @@ mod test {
         {
             assert_eq!(ng.get(*h), 1);
         }
+    }
+
+    #[test]
+    fn test_nodegraph_zero_tables_and_empty_bitset() {
+        let mut ng_empty = Nodegraph::new(&[0], 21);
+        assert!(!ng_empty.count(12345));
+        assert_eq!(ng_empty.get(12345), 0);
+        assert_eq!(ng_empty.expected_collisions(), 0.0);
+
+        let ng_zero_tables = Nodegraph::with_tables(0, 1, 21);
+        assert_eq!(ng_zero_tables.ntables(), 0);
+        assert_eq!(ng_zero_tables.expected_collisions(), 0.0);
     }
 }
