@@ -15,7 +15,6 @@ use roaring::RoaringBitmap;
 use serde::{Deserialize, Serialize};
 
 use crate::HashIntoType;
-use crate::Result;
 use crate::collection::CollectionSet;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::{GatherResult, SigCounter};
@@ -25,6 +24,7 @@ use crate::signature::Signature;
 use crate::sketch::Sketch;
 use crate::sketch::minhash::KmerMinHash;
 use crate::storage::rocksdb::{COLORS, DB, db_options};
+use crate::{Error, Result};
 
 type QueryColors = HashMap<Color, Datasets>;
 
@@ -81,45 +81,34 @@ pub trait RevIndexOps {
         picklist: Option<DatasetPicklist>,
     ) -> Result<SigCounter>;
 
-    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)> {
+    fn matches_from_counter(
+        &self,
+        counter: SigCounter,
+        threshold: usize,
+    ) -> Result<Vec<(String, usize)>> {
         counter
             .most_common()
             .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = &self
-                        .collection()
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
+            .filter(|(_, size)| *size >= threshold)
+            .map(|(dataset_id, size)| {
+                let row = self.collection().record_for_dataset(dataset_id)?;
 
-                    let name = [row.name(), row.filename(), row.md5()]
-                        .into_iter()
-                        .find(|v| !v.is_empty())
-                        .unwrap(); // guaranteed to succeed because `md5` always exists
+                let name = [row.name(), row.filename(), row.md5()]
+                    .into_iter()
+                    .find(|v| !v.is_empty())
+                    .unwrap(); // guaranteed to succeed because `md5` always exists
 
-                    Some((name.into(), size))
-                } else {
-                    None
-                }
+                Ok((name.into(), size))
             })
             .collect()
     }
 
-    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<&Record> {
+    fn records_from_counter(&self, counter: SigCounter, threshold: usize) -> Result<Vec<&Record>> {
         counter
             .most_common()
             .into_iter()
-            .filter_map(|(dataset_id, size)| {
-                if size >= threshold {
-                    let row = self
-                        .collection()
-                        .record_for_dataset(dataset_id)
-                        .expect("dataset not found");
-                    Some(row)
-                } else {
-                    None
-                }
-            })
+            .filter(|(_, size)| *size >= threshold)
+            .map(|(dataset_id, _)| self.collection().record_for_dataset(dataset_id))
             .collect()
     }
 
@@ -445,6 +434,9 @@ impl Datasets {
                     .expect("error writing bytes");
                 Some(buf)
             }
+            // An empty bitmap also serializes to 8 bytes, so write small bitmaps as Empty or Unique.
+            Self::Many(v) if v.is_empty() => Self::Empty.as_bytes(),
+            Self::Many(v) if v.len() == 1 => Self::Unique(v.min()?).as_bytes(),
             Self::Many(v) => {
                 let mut buf = vec![];
                 v.serialize_into(&mut buf).unwrap();
@@ -494,6 +486,21 @@ impl Datasets {
             Self::Many(v) => v.contains(*value),
         }
     }
+
+    /// Fails if any dataset ID is not less than `n_datasets`, the manifest length.
+    fn ensure_in_manifest(self, n_datasets: usize) -> Result<Self> {
+        let max = match &self {
+            Self::Empty => None,
+            Self::Unique(v) => Some(*v),
+            Self::Many(v) => v.max(),
+        };
+        match max {
+            Some(id) if id as usize >= n_datasets => Err(Error::Internal {
+                message: format!("dataset {id} not in manifest ({n_datasets} datasets)"),
+            }),
+            _ => Ok(self),
+        }
+    }
 }
 
 #[derive(Getters, Setters, Debug)]
@@ -517,7 +524,14 @@ pub struct DbStats {
     failed_keys: HashSet<HashIntoType>,
 }
 
-fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> DbStats {
+/// A deep check also reports keys with dataset IDs not less than `n_datasets`.
+fn stats_for_cf(
+    db: Arc<DB>,
+    cf_name: &str,
+    n_datasets: usize,
+    deep_check: bool,
+    quick: bool,
+) -> DbStats {
     use byteorder::ReadBytesExt;
     use histogram::Histogram;
 
@@ -540,7 +554,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
         vcount += value.len();
 
         if !quick && deep_check {
-            match Datasets::from_slice(&value) {
+            match Datasets::from_slice(&value).and_then(|v| v.ensure_in_manifest(n_datasets)) {
                 Err(_) => {
                     failed_keys.insert(k);
                 }
@@ -568,6 +582,7 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) -> Db
 mod test {
     // CTB: should the disk_revindex tests be moved into disk_revindex.rs?
     use camino::Utf8PathBuf as PathBuf;
+    use roaring::RoaringBitmap;
     use tempfile::TempDir;
 
     use crate::Result;
@@ -581,7 +596,7 @@ mod test {
     use crate::sketch::minhash::KmerMinHash;
     use crate::storage::{InnerStorage, RocksDBStorage};
 
-    use super::{RevIndex, RevIndexOps, prepare_query};
+    use super::{Datasets, RevIndex, RevIndexOps, prepare_query};
 
     #[test]
     fn disk_revindex_index() -> Result<()> {
@@ -616,7 +631,7 @@ mod test {
         );
 
         let counter = index.counter_for_query(&query, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
 
@@ -663,7 +678,7 @@ mod test {
             RevIndex::open(output.path(), false, None)?.update(new_collection.try_into()?)?;
 
         let counter = index.counter_for_query(&q, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert!(matches[0].0.ends_with("/genome-s12.fa.gz"));
         assert_eq!(matches[0].1, 45);
@@ -1024,11 +1039,11 @@ mod test {
 
         // also do a basic test of containment with picklists -
         let counter = index.counter_for_query(&query, Some(pl.clone()))?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
         assert_eq!(matches, [("NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome".into(), 485)]);
 
         let counter = index.counter_for_query(&query, Some(pl))?;
-        let records = index.records_from_counter(counter, 0);
+        let records = index.records_from_counter(counter, 0)?;
         assert_eq!(records.len(), 1);
 
         Ok(())
@@ -1084,6 +1099,31 @@ mod test {
     }
 
     #[test]
+    fn counter_dataset_not_in_manifest() -> Result<()> {
+        let selection = Selection::builder().ksize(31).scaled(100000).build();
+        let search_sigs: Vec<PathBuf> = vec![
+            "../../tests/test-data/2.fa.sig".into(),
+            "../../tests/test-data/47.fa.sig".into(),
+        ];
+
+        let output = TempDir::new()?;
+        let collection = Collection::from_paths(&search_sigs[..])?.select(&selection)?;
+        let index = RevIndex::create(output.path(), collection.try_into()?)?;
+
+        let counter: crate::index::SigCounter = [0, 2].into_iter().collect();
+        assert!(matches!(
+            index.matches_from_counter(counter.clone(), 0),
+            Err(crate::errors::SourmashError::Internal { .. })
+        ));
+        assert!(matches!(
+            index.records_from_counter(counter, 0),
+            Err(crate::errors::SourmashError::Internal { .. })
+        ));
+
+        Ok(())
+    }
+
+    #[test]
     fn disk_revindex_move() -> Result<()> {
         let basedir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
@@ -1116,7 +1156,7 @@ mod test {
             let index = RevIndex::open(output.as_path(), false, None)?;
 
             let counter = index.counter_for_query(&query, None)?;
-            let matches = index.matches_from_counter(counter, 0);
+            let matches = index.matches_from_counter(counter, 0)?;
 
             assert!(matches[0].0.starts_with("NC_009665.1"));
             assert_eq!(matches[0].1, 514);
@@ -1136,7 +1176,7 @@ mod test {
         let index = RevIndex::open(output.as_path(), false, Some(&format!("zip://{}", new_zip)))?;
 
         let counter = index.counter_for_query(&query, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert!(matches[0].0.starts_with("NC_009665.1"));
         assert_eq!(matches[0].1, 514);
@@ -1363,7 +1403,25 @@ mod test {
 
     #[test]
     fn disk_revindex_repair() -> Result<()> {
-        use crate::errors::SourmashError;
+        // Custom { kind: Other, error: "unknown cookie value" }
+        repair_corrupted_value(b"0xbadda7a", |e| {
+            matches!(e, crate::errors::SourmashError::IOError(_))
+        })
+    }
+
+    #[test]
+    fn disk_revindex_repair_dataset_not_in_manifest() -> Result<()> {
+        let bad_value = Datasets::Unique(1 << 30).as_bytes().unwrap();
+        repair_corrupted_value(&bad_value, |e| {
+            matches!(e, crate::errors::SourmashError::Internal { .. })
+        })
+    }
+
+    /// Writes `bad_value` for one query hash, then checks that query, check and repair handle it.
+    fn repair_corrupted_value(
+        bad_value: &[u8],
+        is_expected_error: fn(&crate::errors::SourmashError) -> bool,
+    ) -> Result<()> {
         use crate::index::revindex::disk_revindex::DiskRevIndex;
         use crate::storage::rocksdb::HASHES;
         use byteorder::{LittleEndian, WriteBytesExt};
@@ -1410,7 +1468,7 @@ mod test {
                 unsafe {
                     let db = index.db();
                     let cf_hashes = db.cf_handle(HASHES).unwrap();
-                    db.put_cf(&cf_hashes, &hash_bytes[..], b"0xbadda7a")
+                    db.put_cf(&cf_hashes, &hash_bytes[..], bad_value)
                         .expect("error putting new value");
                 }
             }
@@ -1419,8 +1477,10 @@ mod test {
         {
             let index = RevIndex::open(output.path(), true, None)?;
             let res = index.counter_for_query(&query, None);
-            // Custom { kind: Other, error: "unknown cookie value" }
-            assert!(matches!(res, Err(SourmashError::IOError(_))));
+            assert!(matches!(res, Err(ref e) if is_expected_error(e)));
+
+            let stats = index.check(false);
+            assert!(stats.failed_keys().contains(&failed_hash));
         }
 
         // Repair DB
@@ -1430,10 +1490,48 @@ mod test {
 
         let index = RevIndex::open(output.path(), true, None)?;
         let counter = index.counter_for_query(&query, None)?;
-        let matches = index.matches_from_counter(counter, 0);
+        let matches = index.matches_from_counter(counter, 0)?;
 
         assert_eq!(matches, [("../genome-s10.fa.gz".into(), 48)]);
 
         Ok(())
+    }
+
+    #[test]
+    fn datasets_small_many_roundtrip() {
+        // An empty bitmap serializes to 8 bytes, the same length as Unique.
+        let empty = Datasets::Many(RoaringBitmap::new());
+        let serialized = empty.as_bytes().expect("serialization failed");
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+        assert!(matches!(deserialized, Datasets::Empty));
+
+        let single = Datasets::Many([12346].into_iter().collect());
+        let serialized = single.as_bytes().expect("serialization failed");
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+        assert!(matches!(deserialized, Datasets::Unique(12346)));
+
+        let mut bm = RoaringBitmap::new();
+        bm.insert(0);
+        bm.insert(1);
+        let serialized = Datasets::Many(bm.clone())
+            .as_bytes()
+            .expect("serialization failed");
+        match Datasets::from_slice(&serialized).expect("deserialization failed") {
+            Datasets::Many(res_bm) => assert_eq!(res_bm, bm),
+            _ => panic!("Expected Datasets::Many"),
+        }
+    }
+
+    #[test]
+    fn datasets_unique_roundtrip() {
+        let unique = Datasets::Unique(42);
+        let serialized = unique.as_bytes().expect("serialization failed");
+        assert_eq!(serialized.len(), 8);
+
+        let deserialized = Datasets::from_slice(&serialized).expect("deserialization failed");
+        match deserialized {
+            Datasets::Unique(idx) => assert_eq!(idx, 42),
+            _ => panic!("Expected Datasets::Unique(42)"),
+        }
     }
 }
