@@ -102,6 +102,14 @@ pub fn ani_ci_from_containment(
     } else if containment == 1.0 {
         return Ok((1.0, 1.0));
     }
+    if scaled == 0 {
+        return Err(Error::ANIEstimationError {
+            message: "scaled must be greater than 0 for containment ANI estimation".into(),
+        });
+    }
+    if n_unique_kmers == 0 {
+        return Ok((0.0, 0.0));
+    }
     let confidence = confidence.unwrap_or(0.95);
 
     // conversions needed throughout
@@ -111,7 +119,7 @@ pub fn ani_ci_from_containment(
     let alpha = 1.0 - confidence;
 
     let z_alpha = probit(1.0 - alpha / 2.0);
-    let bias_factor = 1.0 - (1.0 - f_scaled).powi(n_unique_kmers as i32);
+    let bias_factor = 1.0 - (1.0 - f_scaled).powf(n_unique_kmers);
     let term_1 = (1.0 - f_scaled) / (f_scaled * (n_unique_kmers).powi(3) * bias_factor.powi(2));
     let term_2 = |pest: f64| {
         n_unique_kmers * exp_n_mutated(n_unique_kmers, ksize, pest)
@@ -135,10 +143,16 @@ pub fn ani_ci_from_containment(
         max_iter: 1000,
     };
 
-    let dist_sol1 =
-        find_root_brent(0.0000001, 0.9999999, &f1, &mut convergency).unwrap_or_default();
-    let dist_sol2 =
-        find_root_brent(0.0000001, 0.9999999, &f2, &mut convergency).unwrap_or_default();
+    let dist_sol1 = find_root_brent(0.0000001, 0.9999999, &f1, &mut convergency).map_err(|e| {
+        Error::ANIEstimationError {
+            message: format!("Failed to find lower ANI root: {:?}", e),
+        }
+    })?;
+    let dist_sol2 = find_root_brent(0.0000001, 0.9999999, &f2, &mut convergency).map_err(|e| {
+        Error::ANIEstimationError {
+            message: format!("Failed to find upper ANI root: {:?}", e),
+        }
+    })?;
 
     Ok((1.0 - dist_sol1, 1.0 - dist_sol2))
 }
@@ -358,5 +372,25 @@ mod tests {
             "The result should be a valid probability"
         );
         assert!((result - 0.000026561398887587855) < EPSILON);
+    }
+
+    #[test]
+    fn test_containment_ani_ci_scaled_zero_error() {
+        let contain = 0.5;
+        let ksize = 21;
+        let scaled = 0;
+        let n_unique_kmers = 1000;
+        let res = ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, None);
+        assert!(res.is_err(), "Expected error when scaled == 0");
+    }
+
+    #[test]
+    fn test_containment_ani_ci_zero_unique_kmers() {
+        let contain = 0.5;
+        let ksize = 21;
+        let scaled = 100;
+        let n_unique_kmers = 0;
+        let res = ani_ci_from_containment(contain, ksize as f64, scaled, n_unique_kmers, None);
+        assert_eq!(res.unwrap(), (0.0, 0.0));
     }
 }
