@@ -53,7 +53,7 @@ primal-check = "0.3.4"
 rayon = { version = "1.12.0", optional = true }
 replace_with = "0.1.8"
 rkyv = { version = "0.8.15", optional = true }
-roaring = "0.11.0"
+roaring = "0.12.0"
 roots = "0.0.8"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
