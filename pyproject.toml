@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=1,<1.16.0",
+    "maturin>=1,<1.17.0",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -82,7 +82,7 @@ dependencies = [
   "matplotlib",
   "scipy",
   "deprecation>=2.0.6",
-  "cachetools>=4,<8",
+  "cachetools>=4,<9",
   "bitstring>=3.1.9,<6",
 ]
 
@@ -147,7 +147,7 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<9.2.0",
+  "pytest>=6.2.4,<9.3.0",
   "pytest-cov>=4,<8.0",
   "pytest-xdist>=3.1",
   "pyyaml>=6,<7",
@@ -169,7 +169,7 @@ doc = [
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
-  "sphinx-design==0.7.0",
+  "sphinx-design==0.8.0",
   "ipython",
   "sphinx-copybutton",
 ]
