@@ -751,3 +751,111 @@ def test_sig_collect_6_path_subdir_subdir(
     )
 
     runtmp.sourmash("sig", "cat", mf_path)
+
+
+def test_sig_collect_picklist_include(runtmp, manifest_db_format):
+    # collect a manifest from three .zip files
+    # then use a picklist to select a subset
+    protzip = utils.get_test_data("prot/protein.zip")
+    hpzip = utils.get_test_data("prot/hp.zip")
+    dayzip = utils.get_test_data("prot/dayhoff.zip")
+
+    # write a temp picklist file
+    picklist_path = runtmp.output("pick.txt")
+    with open(picklist_path, "w") as fp:
+        fp.write("md5sum\n")
+        fp.write("16869d2c8a1d29d1c8e56f5c561e585e\n")
+        fp.write("ea2a1ad233c2908529d124a330bcb672\n")
+        fp.write("fbca5e5211e4d58427997fd5c8343e9a\n")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        protzip,
+        hpzip,
+        dayzip,
+        "-o",
+        f"mf.{ext}",
+        "--picklist",
+        f"{picklist_path}:md5sum:md5",
+        "-F",
+        manifest_db_format,
+    )
+
+    manifest_fn = runtmp.output(f"mf.{ext}")
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    # print manifest
+    print(manifest)
+
+    assert len(manifest) == 3
+    md5_list = [row["md5"] for row in manifest.rows]
+    assert "16869d2c8a1d29d1c8e56f5c561e585e" in md5_list
+    assert "ea2a1ad233c2908529d124a330bcb672" in md5_list
+    assert "fbca5e5211e4d58427997fd5c8343e9a" in md5_list
+
+    assert "120d311cc785cc9d0df9dc0646b2b857" not in md5_list
+    assert "bb0e6d90df01b7bd5d0956a5f9e3ed12" not in md5_list
+    assert "1cbd888bf910f83ad8f1715509183223" not in md5_list
+
+    locations = set([row["internal_location"] for row in manifest.rows])
+    assert protzip in locations
+    assert hpzip in locations
+    assert dayzip in locations
+    assert len(locations) == 3, locations
+
+
+def test_sig_collect_picklist_exclude(runtmp, manifest_db_format):
+    # collect a manifest from three .zip files
+    # then use a picklist to select a subset
+    protzip = utils.get_test_data("prot/protein.zip")
+    hpzip = utils.get_test_data("prot/hp.zip")
+    dayzip = utils.get_test_data("prot/dayhoff.zip")
+
+    # write a temp picklist file
+    picklist_path = runtmp.output("pick.txt")
+    with open(picklist_path, "w") as fp:
+        fp.write("md5sum\n")
+        fp.write("16869d2c8a1d29d1c8e56f5c561e585e\n")
+        fp.write("ea2a1ad233c2908529d124a330bcb672\n")
+        fp.write("fbca5e5211e4d58427997fd5c8343e9a\n")
+
+    ext = "sqlmf" if manifest_db_format == "sql" else "csv"
+
+    runtmp.sourmash(
+        "sig",
+        "collect",
+        protzip,
+        hpzip,
+        dayzip,
+        "-o",
+        f"mf.{ext}",
+        "--picklist",
+        f"{picklist_path}:md5sum:md5:exclude",
+        "-F",
+        manifest_db_format,
+    )
+
+    manifest_fn = runtmp.output(f"mf.{ext}")
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    # print manifest
+    print(manifest)
+
+    assert len(manifest) == 3
+    md5_list = [row["md5"] for row in manifest.rows]
+    assert "16869d2c8a1d29d1c8e56f5c561e585e" not in md5_list
+    assert "ea2a1ad233c2908529d124a330bcb672" not in md5_list
+    assert "fbca5e5211e4d58427997fd5c8343e9a" not in md5_list
+
+    assert "120d311cc785cc9d0df9dc0646b2b857" in md5_list
+    assert "bb0e6d90df01b7bd5d0956a5f9e3ed12" in md5_list
+    assert "1cbd888bf910f83ad8f1715509183223" in md5_list
+
+    locations = set([row["internal_location"] for row in manifest.rows])
+    assert protzip in locations
+    assert hpzip in locations
+    assert dayzip in locations
+    assert len(locations) == 3, locations
