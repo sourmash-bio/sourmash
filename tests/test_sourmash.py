@@ -782,6 +782,67 @@ def test_compare_avg_containment(runtmp):
             assert containment == mat_val, (i, j)
 
 
+def test_compare_abundance_braycurtis(runtmp):
+    c = runtmp
+
+    testdata_sigs = [
+        utils.get_test_data("track_abund/47.fa.sig"),
+        utils.get_test_data("track_abund/63.fa.sig"),
+    ]
+
+    c.run_sourmash(
+        "compare",
+        "--abundance-bray-curtis",
+        "-k",
+        "31",
+        "--csv",
+        "output.csv",
+        *testdata_sigs,
+    )
+
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(
+        c.output("output.csv"), testdata_sigs
+    )
+
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            braycurtis = ss_j.braycurtis_similarity(ss_i)
+            assert round(braycurtis, 3) == round(mat[i][j], 3), (i, j)
+
+
+def test_compare_abundance_braycurtis_distance(runtmp):
+    c = runtmp
+
+    testdata_sigs = [
+        utils.get_test_data("track_abund/47.fa.sig"),
+        utils.get_test_data("track_abund/63.fa.sig"),
+    ]
+
+    c.run_sourmash(
+        "compare",
+        "--abundance-bray-curtis",
+        "--distance-matrix",
+        "-k",
+        "31",
+        "--csv",
+        "output.csv",
+        *testdata_sigs,
+    )
+
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(
+        c.output("output.csv"), testdata_sigs
+    )
+
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            braycurtis_distance = 1 - ss_j.braycurtis_similarity(ss_i)
+            assert round(braycurtis_distance, 3) == round(mat[i][j], 3), (i, j)
+
+
 def test_compare_max_containment_and_containment(runtmp):
     # make sure that can't specify both --max-containment and --containment
     c = runtmp
@@ -804,6 +865,29 @@ def test_compare_max_containment_and_containment(runtmp):
     print(c.last_result.err)
     assert (
         "ERROR: cannot specify more than one containment argument!" in c.last_result.err
+    )
+
+
+def test_compare_abundance_braycurtis_and_containment(runtmp):
+    c = runtmp
+
+    s47 = utils.get_test_data("track_abund/47.fa.sig")
+    s63 = utils.get_test_data("track_abund/63.fa.sig")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash(
+            "compare",
+            "--abundance-bray-curtis",
+            "--containment",
+            "-k",
+            "31",
+            s47,
+            s63,
+        )
+
+    assert (
+        "cannot specify --abundance-bray-curtis with --containment, --max-containment, or --avg-containment"
+        in c.last_result.err
     )
 
 
@@ -905,6 +989,86 @@ def test_compare_containment_require_scaled(runtmp):
         "must use scaled signatures with --containment, --max-containment, and --avg-containment"
         in c.last_result.err
     )
+    assert c.last_result.status != 0
+
+
+def test_compare_abundance_braycurtis_require_scaled(runtmp):
+    c = runtmp
+
+    s47 = utils.get_test_data("num/47.fa.sig")
+    s63 = utils.get_test_data("num/63.fa.sig")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash(
+            "compare", "--abundance-bray-curtis", "-k", "31", s47, s63, fail_ok=True
+        )
+
+    assert (
+        "must use scaled signatures with --abundance-bray-curtis" in c.last_result.err
+    )
+    assert c.last_result.status != 0
+
+
+def test_compare_abundance_braycurtis_require_abundance(runtmp):
+    c = runtmp
+
+    s47 = utils.get_test_data("scaled/genome-s10.fa.gz.sig")
+    s63 = utils.get_test_data("scaled/genome-s11.fa.gz.sig")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash(
+            "compare", "--abundance-bray-curtis", "-k", "31", s47, s63, fail_ok=True
+        )
+
+    assert (
+        "must use abundance-tracking signatures with --abundance-bray-curtis"
+        in c.last_result.err
+    )
+    assert c.last_result.status != 0
+
+
+def test_compare_abundance_braycurtis_reject_ignore_abundance(runtmp):
+    c = runtmp
+
+    s47 = utils.get_test_data("track_abund/47.fa.sig")
+    s63 = utils.get_test_data("track_abund/63.fa.sig")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash(
+            "compare",
+            "--abundance-bray-curtis",
+            "--ignore-abundance",
+            "-k",
+            "31",
+            s47,
+            s63,
+        )
+
+    assert (
+        "cannot use --ignore-abundance with --abundance-bray-curtis"
+        in c.last_result.err
+    )
+    assert c.last_result.status != 0
+
+
+def test_compare_abundance_braycurtis_reject_estimate_ani(runtmp):
+    c = runtmp
+
+    s47 = utils.get_test_data("track_abund/47.fa.sig")
+    s63 = utils.get_test_data("track_abund/63.fa.sig")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash(
+            "compare",
+            "--abundance-bray-curtis",
+            "--estimate-ani",
+            "-k",
+            "31",
+            s47,
+            s63,
+        )
+
+    assert "cannot use --estimate-ani with --abundance-bray-curtis" in c.last_result.err
     assert c.last_result.status != 0
 
 

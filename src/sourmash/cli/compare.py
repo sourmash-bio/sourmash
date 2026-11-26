@@ -4,7 +4,9 @@ usage = """
 
 The `compare` subcommand compares one or more signatures (created with
 `sketch`) using estimated Jaccard index [1] or (if signatures are
-created with `-p abund`) the angular similarity [2]).
+created with `-p abund`) the angular similarity [2]). The
+`--abundance-bray-curtis` flag switches to abundance-aware Bray-Curtis
+similarity instead.
 
 The default output is a text display of a similarity matrix where each
 entry `[i, j]` contains the estimated Jaccard index between input
@@ -70,6 +72,11 @@ def subparser(subparsers):
         "--average-containment",
         action="store_true",
         help="calculate average containment instead of similarity",
+    )
+    subparser.add_argument(
+        "--abundance-bray-curtis",
+        action="store_true",
+        help="calculate abundance-aware Bray-Curtis similarity instead of default similarity",
     )
     subparser.add_argument(
         "--estimate-ani",

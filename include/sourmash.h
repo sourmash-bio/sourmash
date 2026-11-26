@@ -226,6 +226,10 @@ void kmerminhash_add_word(SourmashKmerMinHash *ptr, const char *word);
 double kmerminhash_angular_similarity(const SourmashKmerMinHash *ptr,
                                       const SourmashKmerMinHash *other);
 
+double kmerminhash_braycurtis(const SourmashKmerMinHash *ptr,
+                              const SourmashKmerMinHash *other,
+                              bool downsample);
+
 void kmerminhash_clear(SourmashKmerMinHash *ptr);
 
 uint64_t kmerminhash_count_common(const SourmashKmerMinHash *ptr,

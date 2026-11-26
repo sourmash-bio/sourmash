@@ -12,6 +12,8 @@ import enum
 
 import screed
 from .compare import (
+    ABUNDANCE_BRAYCURTIS_METRIC,
+    DEFAULT_METRIC,
     compare_all_pairs,
     compare_serial_containment,
     compare_serial_max_containment,
@@ -131,6 +133,7 @@ def compare(args):
         sys.exit(-1)
 
     is_containment = False
+    is_braycurtis = bool(args.abundance_bray_curtis)
     if args.containment or args.max_containment or args.avg_containment:
         is_containment = True
 
@@ -143,11 +146,21 @@ def compare(args):
             notify("ERROR: cannot specify more than one containment argument!")
             sys.exit(-1)
 
+    if is_braycurtis and is_containment:
+        error(
+            "cannot specify --abundance-bray-curtis with --containment, --max-containment, or --avg-containment"
+        )
+        sys.exit(-1)
+
     # complain if --containment and not is_scaled
     if is_containment and not is_scaled:
         error(
             "must use scaled signatures with --containment, --max-containment, and --avg-containment"
         )
+        sys.exit(-1)
+
+    if is_braycurtis and not is_scaled:
+        error("must use scaled signatures with --abundance-bray-curtis")
         sys.exit(-1)
 
     # complain if --ani and not is_scaled
@@ -158,6 +171,20 @@ def compare(args):
     if return_ani and not is_scaled:
         error("must use scaled signatures with --estimate-ani")
         sys.exit(-1)
+
+    if is_braycurtis and args.ignore_abundance:
+        error("cannot use --ignore-abundance with --abundance-bray-curtis")
+        sys.exit(-1)
+
+    if is_braycurtis and return_ani:
+        error("cannot use --estimate-ani with --abundance-bray-curtis")
+        sys.exit(-1)
+
+    if is_braycurtis:
+        track_abundances = [s.minhash.track_abundance for s, _ in siglist]
+        if not all(track_abundances):
+            error("must use abundance-tracking signatures with --abundance-bray-curtis")
+            sys.exit(-1)
 
     # notify about implicit --ignore-abundance:
     if is_containment or return_ani:
@@ -225,11 +252,15 @@ def compare(args):
     elif args.avg_containment:
         similarity = compare_serial_avg_containment(sigsonly, return_ani=return_ani)
     else:
+        metric = DEFAULT_METRIC
+        if is_braycurtis:
+            metric = ABUNDANCE_BRAYCURTIS_METRIC
         similarity = compare_all_pairs(
             sigsonly,
             args.ignore_abundance,
             n_jobs=args.processes,
             return_ani=return_ani,
+            metric=metric,
         )
 
     # if distance matrix desired, switch to 1-similarity
